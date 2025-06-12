@@ -7,12 +7,12 @@ on:
   push:
     branches: ["main"]
     paths:
-      - "my_frontend/**"
+      - "frontend/**"
       - ".github/workflows/frontend-ci.yml"
   pull_request:
     branches: ["main"]
     paths:
-      - "my_frontend/**"
+      - "frontend/**"
       - ".github/workflows/frontend-ci.yml"
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
     # This is useful if your frontend code is in a subdirectory
     defaults:
       run:
-        working-directory: ./my_frontend
+        working-directory: ./frontend
 
     steps:
       # 1. Checks out your repository's code so the job can access it
@@ -38,7 +38,7 @@ jobs:
         with:
           node-version: "20.x"
           cache: "npm"
-          cache-dependency-path: my_frontend/package-lock.json
+          cache-dependency-path: frontend/package-lock.json
 
       # 3. Installs dependencies using npm ci for a clean, reliable install
       - name: Install Dependencies

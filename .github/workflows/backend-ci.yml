@@ -4,12 +4,12 @@ on:
   push:
     branches: ["main"]
     paths:
-      - "my_backend/**"
+      - "backend/**"
       - ".github/workflows/backend-ci.yml"
   pull_request:
     branches: ["main"]
     paths:
-      - "my_backend/**"
+      - "backend/**"
       - ".github/workflows/backend-ci.yml"
 
 jobs:
@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./my_backend
+        working-directory: ./backend
 
     steps:
       - uses: actions/checkout@v4
