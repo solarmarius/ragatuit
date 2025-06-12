@@ -1,0 +1,53 @@
+# .github/workflows/frontend-ci.yml
+
+name: Frontend CI
+
+# Controls when the workflow will run
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "my_frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "my_frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+
+jobs:
+  build-and-test:
+    name: Build and Test Frontend
+    runs-on: ubuntu-latest
+
+    # Sets the default working directory for all steps in this job
+    # This is useful if your frontend code is in a subdirectory
+    defaults:
+      run:
+        working-directory: ./my_frontend
+
+    steps:
+      # 1. Checks out your repository's code so the job can access it
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Sets up the specified version of Node.js
+      # Includes caching for npm packages to speed up future builds
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "npm"
+          cache-dependency-path: my_frontend/package-lock.json
+
+      # 3. Installs dependencies using npm ci for a clean, reliable install
+      - name: Install Dependencies
+        run: npm ci
+
+      # 4. Runs the linter to check for code quality and style issues
+      - name: Run Linter
+        run: npm run lint
+
+      # 5. Runs the tests to ensure all components and logic work as expected
+      - name: Run Tests
+        run: npm test

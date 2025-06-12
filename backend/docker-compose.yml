@@ -1,0 +1,29 @@
+services:
+  backend:
+    build: .
+    ports:
+      - "8000:80"
+    volumes:
+      - ./src/backend:/app/backend
+      - ./tests:/app/tests
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 80 --reload
+    env_file:
+      - ./.env
+  db:
+    image: postgres:16-alpine
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5432:5432"
+    env_file:
+      - ./.env
+
+  redis:
+    image: redis:7
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
