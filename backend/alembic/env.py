@@ -17,10 +17,15 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
+
+# Import your models here so Alembic can detect them
+from backend.api.models import User  # Adjust if you have more models or different paths
+from sqlmodel import SQLModel # Import SQLModel
+
 config.set_main_option(
-    "sqlalchemy.url", os.getenv("DATABASE_URL", "sqlite:///./app.db")
+    "sqlalchemy.url", os.getenv("DATABASE_URL", "sqlite:///./test.db") # Ensure this matches db.py
 )
-target_metadata = None
+target_metadata = SQLModel.metadata # Use SQLModel's metadata
 
 
 # other values from the config, defined by the needs of env.py,

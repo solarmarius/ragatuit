@@ -26,6 +26,9 @@ dependencies = [
     "python-dotenv (>=1.1.0,<2.0.0)",
     "prometheus-fastapi-instrumentator (>=7.1.0,<8.0.0)",
     "sentry-sdk (>=2.30.0,<3.0.0)",
+    "httpx (>=0.27.0,<0.28.0)",
+    "pydantic-settings (>=2.0.0,<3.0.0)", # Updated version constraint
+    "python-jose[cryptography] (>=3.3.0,<4.0.0)", # Added python-jose
 ]
 
 [tool.poetry]
@@ -40,6 +43,7 @@ pytest-asyncio = "^1.0.0"
 isort = "^6.0.1"
 mypy = "^1.16.0"
 pre-commit = "^4.2.0"
+pytest-mock = "^3.12.0" # Added pytest-mock
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
