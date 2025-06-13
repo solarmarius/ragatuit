@@ -1,0 +1,44 @@
+# Environment variables
+.env
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+*.env
+
+# IDE / Editor specific
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# SQLite database file (if used for local dev and not versioned)
+*.db
+app.db
+test.db
+
+# Poetry
+poetry.lock # Often committed, but can be ignored in some workflows if all devs use `poetry install` from pyproject.toml
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Coverage reports
+.coverage
+coverage.xml
+htmlcov/
+
+# MyPy cache
+.mypy_cache/
+
+# Pytest cache
+.pytest_cache/
