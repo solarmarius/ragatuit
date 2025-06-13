@@ -32,9 +32,9 @@ ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy our application's source code
 # We copy the inner `my_backend` folder from `src` to the root of our app
-COPY src/backend/ ./backend/
+COPY app/ ./app
 
 # Command to run the application
 # Uvicorn will be found in the venv's PATH
 # The app is at `my_backend.main:app`
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
