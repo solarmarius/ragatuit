@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def generate_password_reset_token(email: str) -> str:
-    delta = timedelta(hours=settings.EMAIL_RESET_TOKEN_EXPIRE_HOURS)
+    delta = timedelta(hours=1)
     now = datetime.now(timezone.utc)
     expires = now + delta
     exp = expires.timestamp()
