@@ -1,3 +1,11 @@
+.vscode
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+.env
+
 # Logs
 logs
 *.log
@@ -13,7 +21,6 @@ dist-ssr
 *.local
 
 # Editor directories and files
-.vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
@@ -25,10 +32,7 @@ dist-ssr
 
 venv/
 __pycache__/
-node_modules/
-.env
 *.pyc
 /dist/
 /build/
 .DS_Store
-.env
