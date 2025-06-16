@@ -1,5 +1,4 @@
 services:
-
   # Local services are available on their ports, but also available on:
   # http://api.localhost.tiangolo.com: backend
   # http://dashboard.localhost.tiangolo.com: frontend
@@ -86,12 +85,6 @@ services:
       SMTP_TLS: "false"
       EMAILS_FROM_EMAIL: "noreply@example.com"
 
-  mailcatcher:
-    image: schickling/mailcatcher
-    ports:
-      - "1080:1080"
-      - "1025:1025"
-
   frontend:
     restart: "no"
     ports:
@@ -112,7 +105,6 @@ services:
     ipc: host
     depends_on:
       - backend
-      - mailcatcher
     env_file:
       - .env
     environment:
