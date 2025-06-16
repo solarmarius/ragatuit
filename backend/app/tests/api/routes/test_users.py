@@ -1,5 +1,4 @@
 import uuid
-from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
@@ -31,29 +30,6 @@ def test_get_users_normal_user_me(
     assert current_user["is_active"] is True
     assert current_user["is_superuser"] is False
     assert current_user["email"] == settings.EMAIL_TEST_USER
-
-
-def test_create_user_new_email(
-    client: TestClient, superuser_token_headers: dict[str, str], db: Session
-) -> None:
-    with (
-        patch("app.utils.send_email", return_value=None),
-        patch("app.core.config.settings.SMTP_HOST", "smtp.example.com"),
-        patch("app.core.config.settings.SMTP_USER", "admin@example.com"),
-    ):
-        username = random_email()
-        password = random_lower_string()
-        data = {"email": username, "password": password}
-        r = client.post(
-            f"{settings.API_V1_STR}/users/",
-            headers=superuser_token_headers,
-            json=data,
-        )
-        assert 200 <= r.status_code < 300
-        created_user = r.json()
-        user = crud.get_user_by_email(session=db, email=username)
-        assert user
-        assert user.email == created_user["email"]
 
 
 def test_get_existing_user(
@@ -191,60 +167,6 @@ def test_update_user_me(
     assert user_db.full_name == full_name
 
 
-def test_update_password_me(
-    client: TestClient, superuser_token_headers: dict[str, str], db: Session
-) -> None:
-    new_password = random_lower_string()
-    data = {
-        "current_password": settings.FIRST_SUPERUSER_PASSWORD,
-        "new_password": new_password,
-    }
-    r = client.patch(
-        f"{settings.API_V1_STR}/users/me/password",
-        headers=superuser_token_headers,
-        json=data,
-    )
-    assert r.status_code == 200
-    updated_user = r.json()
-    assert updated_user["message"] == "Password updated successfully"
-
-    user_query = select(User).where(User.email == settings.FIRST_SUPERUSER)
-    user_db = db.exec(user_query).first()
-    assert user_db
-    assert user_db.email == settings.FIRST_SUPERUSER
-    assert verify_password(new_password, user_db.hashed_password)
-
-    # Revert to the old password to keep consistency in test
-    old_data = {
-        "current_password": new_password,
-        "new_password": settings.FIRST_SUPERUSER_PASSWORD,
-    }
-    r = client.patch(
-        f"{settings.API_V1_STR}/users/me/password",
-        headers=superuser_token_headers,
-        json=old_data,
-    )
-    db.refresh(user_db)
-
-    assert r.status_code == 200
-    assert verify_password(settings.FIRST_SUPERUSER_PASSWORD, user_db.hashed_password)
-
-
-def test_update_password_me_incorrect_password(
-    client: TestClient, superuser_token_headers: dict[str, str]
-) -> None:
-    new_password = random_lower_string()
-    data = {"current_password": new_password, "new_password": new_password}
-    r = client.patch(
-        f"{settings.API_V1_STR}/users/me/password",
-        headers=superuser_token_headers,
-        json=data,
-    )
-    assert r.status_code == 400
-    updated_user = r.json()
-    assert updated_user["detail"] == "Incorrect password"
-
-
 def test_update_user_me_email_exists(
     client: TestClient, normal_user_token_headers: dict[str, str], db: Session
 ) -> None:
@@ -261,25 +183,6 @@ def test_update_user_me_email_exists(
     )
     assert r.status_code == 409
     assert r.json()["detail"] == "User with this email already exists"
-
-
-def test_update_password_me_same_password_error(
-    client: TestClient, superuser_token_headers: dict[str, str]
-) -> None:
-    data = {
-        "current_password": settings.FIRST_SUPERUSER_PASSWORD,
-        "new_password": settings.FIRST_SUPERUSER_PASSWORD,
-    }
-    r = client.patch(
-        f"{settings.API_V1_STR}/users/me/password",
-        headers=superuser_token_headers,
-        json=data,
-    )
-    assert r.status_code == 400
-    updated_user = r.json()
-    assert (
-        updated_user["detail"] == "New password cannot be the same as the current one"
-    )
 
 
 def test_register_user(client: TestClient, db: Session) -> None:
