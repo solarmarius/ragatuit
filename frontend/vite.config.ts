@@ -1,27 +1,14 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
+import path from "node:path"
+import { TanStackRouterVite } from "@tanstack/router-vite-plugin"
+import react from "@vitejs/plugin-react-swc"
+import { defineConfig } from "vite"
 
-// https://vite.dev/config/
+// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: './src/setupTests.ts', // A file to run before each test file.
-    coverage: {
-      provider: 'v8', // or 'istanbul'
-      reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        'src/setupTests.ts',
-        'src/vitest.setup.ts',
-        'src/vite-env.d.ts',
-        'eslint.config.js',
-        'vite.config.ts',
-        'src/mocks/', // Exclude the whole mocks directory
-        'src/main.tsx', // It's okay to exclude the entry point
-      ],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
     },
   },
-});
+  plugins: [react(), TanStackRouterVite()],
+})

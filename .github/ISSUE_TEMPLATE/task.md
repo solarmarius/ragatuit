@@ -1,36 +1,44 @@
 ---
-name: ✅ Task
-about: Track a general development task or chore
-title: "[Task]: "
-labels: ["type:task"]
+name: 🚀 Feature Request
+about: Suggest a new feature or improvement for this project
+title: "[Feature]: "
+labels: ["type:feature"]
 assignees: ""
 ---
 
-## Task Description
+## Feature Description
 
-Describe the task that needs to be done. Provide enough context for anyone to pick it up.
+Clearly describe the feature or functionality you want to add.
 
-### Feature
+## Background
 
-- Feature: #
+Provide any additional background for the feature, ie. user scenarios, business value...
 
-## Goal
+## Why?
 
-What is the goal or outcome of completing this task?
+- What problem does this solve?
+- Why is this feature needed?
+
+## Constraints and Assumptions
+
+Call out any constraint and/or assumption relevant for the development and use of this feature.
+
+## Design Changes
+
+Provide a high level description of the suggested design.
 
 ## Acceptance Criteria
 
-What does “done” look like?
+List the conditions that must be met for this feature to be considered complete:
 
-- [ ] Task step 1
-- [ ] Task step 2
-- [ ] Task step 3
+- [ ] Task 1
+- [ ] Task 2
+- [ ] Task 3
 
-## Related Issues or Resources
+## Relevant Resources
 
-- Related issues: #
-- Resources: Links to relevant docs or files
+- API references, designs, mockups, or other relevant links.
 
 ## Labels
 
-Suggested labels: `type:task`, `priority:high/medium/low`
+Suggested labels: `type:feature`, `priority:high/medium/low`

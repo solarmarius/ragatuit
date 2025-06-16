@@ -1,40 +1,43 @@
-# ---- Builder Stage ----
-# This stage installs all our Python dependencies into a virtual environment.
-FROM python:3.12-slim as builder
+FROM python:3.10
 
-WORKDIR /app
+ENV PYTHONUNBUFFERED=1
 
-# Install Poetry
-RUN pip install poetry
+WORKDIR /app/
 
-# Configure Poetry to create the virtual environment inside the project's folder
-ENV POETRY_VIRTUALENVS_IN_PROJECT=true
+# Install uv
+# Ref: https://docs.astral.sh/uv/guides/integration/docker/#installing-uv
+COPY --from=ghcr.io/astral-sh/uv:0.5.11 /uv /uvx /bin/
 
-# Copy only the files needed to install dependencies
-COPY pyproject.toml poetry.lock ./
-
-# Install only production dependencies into the virtual environment
-RUN poetry install --no-root
-
-
-# ---- Final Stage ----
-# This stage copies the pre-built virtual environment and our source code
-# into a clean Python image to create a small, efficient production image.
-FROM python:3.12-slim as final
-
-WORKDIR /app
-
-# Copy the virtual environment from the builder stage
-COPY --from=builder /app/.venv ./.venv
-
-# Activate the virtual environment by adding it to the system's PATH
+# Place executables in the environment at the front of the path
+# Ref: https://docs.astral.sh/uv/guides/integration/docker/#using-the-environment
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Copy our application's source code
-# We copy the inner `my_backend` folder from `src` to the root of our app
-COPY src/backend/ ./backend/
+# Compile bytecode
+# Ref: https://docs.astral.sh/uv/guides/integration/docker/#compiling-bytecode
+ENV UV_COMPILE_BYTECODE=1
 
-# Command to run the application
-# Uvicorn will be found in the venv's PATH
-# The app is at `my_backend.main:app`
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "80"]
+# uv Cache
+# Ref: https://docs.astral.sh/uv/guides/integration/docker/#caching
+ENV UV_LINK_MODE=copy
+
+# Install dependencies
+# Ref: https://docs.astral.sh/uv/guides/integration/docker/#intermediate-layers
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --frozen --no-install-project
+
+ENV PYTHONPATH=/app
+
+COPY ./scripts /app/scripts
+
+COPY ./pyproject.toml ./uv.lock ./alembic.ini /app/
+
+COPY ./app /app/app
+
+# Sync the project
+# Ref: https://docs.astral.sh/uv/guides/integration/docker/#intermediate-layers
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync
+
+CMD ["fastapi", "run", "--workers", "4", "app/main.py"]

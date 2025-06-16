@@ -1,17 +1,8 @@
-# Git
-.git
-.gitignore
-
-# VS Code
-.vscode/
-
-# Docker
-.dockerignore
-Dockerfile
-docker-compose.yml
-
 # Python
-__pycache__/
+__pycache__
+app.egg-info
 *.pyc
-*.pyo
+.mypy_cache
+.coverage
+htmlcov
 .venv
