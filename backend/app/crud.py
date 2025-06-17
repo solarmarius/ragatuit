@@ -1,15 +1,18 @@
 import uuid
-from typing import Any
 
-from sqlmodel import Session, select
+from sqlmodel import Session, desc, select
 
-from app.core.security import get_password_hash, verify_password
-from app.models import Item, ItemCreate, User, UserCreate, UserUpdate
+from app.models import CanvasToken, Item, ItemCreate, TokenCreate, User, UserCreate
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
+    """Create a new user from Canvas OAuth data"""
     db_obj = User.model_validate(
-        user_create, update={"hashed_password": get_password_hash(user_create.password)}
+        user_create,
+        update={
+            "canvas_user_id": user_create.canvas_user_id,
+            "canvas_base_url": user_create.canvas_base_url,
+        },
     )
     session.add(db_obj)
     session.commit()
@@ -17,31 +20,62 @@ def create_user(*, session: Session, user_create: UserCreate) -> User:
     return db_obj
 
 
-def update_user(*, session: Session, db_user: User, user_in: UserUpdate) -> Any:
-    user_data = user_in.model_dump(exclude_unset=True)
-    extra_data = {}
-    if "password" in user_data:
-        password = user_data["password"]
-        hashed_password = get_password_hash(password)
-        extra_data["hashed_password"] = hashed_password
-    db_user.sqlmodel_update(user_data, update=extra_data)
-    session.add(db_user)
+def get_user_by_canvas_id(*, session: Session, canvas_user_id: str) -> User | None:
+    """Get user by Canvas user ID and base URL"""
+    statement = select(User).where(User.canvas_user_id == canvas_user_id)
+    return session.exec(statement).first()
+
+
+def create_canvas_token(*, session: Session, canvas_create: TokenCreate) -> CanvasToken:
+    """Create a new Canvas token for a user"""
+    db_obj = CanvasToken.model_validate(
+        canvas_create,
+        update={
+            "user_id": canvas_create.user_id,
+            "access_token": canvas_create.access_token,
+            "refresh_token": canvas_create.refresh_token,
+            "token_type": canvas_create.token_type,
+            "expires_at": canvas_create.expires_at,
+            "scope": canvas_create.scope,
+            "canvas_user_id": canvas_create.user_id,
+            "canvas_base_url": canvas_create.canvas_base_url,
+        },
+    )
+    session.add(db_obj)
     session.commit()
-    session.refresh(db_user)
-    return db_user
+    session.refresh(db_obj)
+    return db_obj
 
 
-def get_user_by_email(*, session: Session, email: str) -> User | None:
-    statement = select(User).where(User.email == email)
-    session_user = session.exec(statement).first()
-    return session_user
+def get_canvas_token(*, session: Session, user_id: uuid.UUID) -> CanvasToken | None:
+    """Get the most recent Canvas token for a user"""
+    statement = (
+        select(CanvasToken)
+        .where(CanvasToken.user_id == user_id)
+        .order_by(desc(CanvasToken.created_at))
+    )
+    return session.exec(statement).first()
 
 
-def authenticate(*, session: Session, email: str, password: str) -> User | None:
-    db_user = get_user_by_email(session=session, email=email)
+def delete_canvas_tokens(*, session: Session, user_id: uuid.UUID) -> bool:
+    """Delete all Canvas tokens for a user (for logout/disconnect)"""
+    statement = select(CanvasToken).where(CanvasToken.user_id == user_id)
+    tokens = session.exec(statement).all()
+
+    for token in tokens:
+        session.delete(token)
+
+    session.commit()
+    return True
+
+
+def authenticate(*, session: Session, canvas_user_id) -> User | None:
+    db_user = get_user_by_canvas_id(session=session, canvas_user_id=canvas_user_id)
     if not db_user:
         return None
-    if not verify_password(password, db_user.hashed_password):
+
+    token = get_canvas_token(session=session, user_id=canvas_user_id)
+    if not token:
         return None
     return db_user
 

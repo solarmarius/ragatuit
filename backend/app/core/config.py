@@ -38,6 +38,10 @@ class Settings(BaseSettings):
     FRONTEND_HOST: str = "http://localhost:5173"
     ENVIRONMENT: Literal["local", "staging", "production"] = "local"
 
+    BACKEND_HOST_FOR_CANVAS: str = (
+        "http://localhost:8000"  # Used for Canvas redirect URI
+    )
+
     BACKEND_CORS_ORIGINS: Annotated[
         list[AnyUrl] | str, BeforeValidator(parse_cors)
     ] = []
@@ -56,6 +60,10 @@ class Settings(BaseSettings):
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
+
+    CANVAS_BASE_URL: str = ""
+    CANVAS_CLIENT_ID: str = ""
+    CANVAS_CLIENT_SECRET: str = ""
 
     @computed_field  # type: ignore[prop-decorator]
     @property
