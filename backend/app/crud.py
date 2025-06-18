@@ -55,7 +55,7 @@ def clear_user_tokens(session: Session, user: User) -> User:
     return user
 
 
-def get_user_by_canvas_id(session: Session, canvas_id: str) -> User | None:
+def get_user_by_canvas_id(session: Session, canvas_id: int) -> User | None:
     statement = select(User).where(User.canvas_id == canvas_id)
     return session.exec(statement).first()
 

@@ -1,15 +1,8 @@
-import { Container, Input } from "@chakra-ui/react";
+import { Container, Text, VStack, Alert } from "@chakra-ui/react";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { type SubmitHandler, useForm } from "react-hook-form";
-import { FiLock, FiMail } from "react-icons/fi";
 
-import type { Body_login_login_access_token as AccessToken } from "@/client";
-import { Button } from "@/components/ui/button";
-import { Field } from "@/components/ui/field";
-import { InputGroup } from "@/components/ui/input-group";
-import { PasswordInput } from "@/components/ui/password-input";
-import useAuth, { isLoggedIn } from "@/hooks/useAuth";
-import { emailPattern, passwordRules } from "../utils";
+import CanvasLoginButton from "@/components/ui/canvas-button";
+import { isLoggedIn } from "@/hooks/useCanvasAuth";
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -20,75 +13,50 @@ export const Route = createFileRoute("/login")({
       });
     }
   },
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      error: search.error as string | undefined,
+    };
+  },
 });
 
 function Login() {
-  const { loginMutation, error, resetError } = useAuth();
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<AccessToken>({
-    mode: "onBlur",
-    criteriaMode: "all",
-    defaultValues: {
-      username: "",
-      password: "",
-    },
-  });
-
-  const onSubmit: SubmitHandler<AccessToken> = async (data) => {
-    if (isSubmitting) return;
-
-    resetError();
-
-    try {
-      await loginMutation.mutateAsync(data);
-    } catch {
-      // error is handled by useAuth hook
-    }
-  };
+  const { error } = Route.useSearch();
 
   return (
-    <>
-      <Container
-        as="form"
-        onSubmit={handleSubmit(onSubmit)}
-        h="100vh"
-        maxW="sm"
-        alignItems="stretch"
-        justifyContent="center"
-        gap={4}
-        centerContent
-      >
-        <Field
-          invalid={!!errors.username}
-          errorText={errors.username?.message || !!error}
-        >
-          <InputGroup w="100%" startElement={<FiMail />}>
-            <Input
-              id="username"
-              {...register("username", {
-                required: "Username is required",
-                pattern: emailPattern,
-              })}
-              placeholder="Email"
-              type="email"
-            />
-          </InputGroup>
-        </Field>
-        <PasswordInput
-          type="password"
-          startElement={<FiLock />}
-          {...register("password", passwordRules())}
-          placeholder="Password"
-          errors={errors}
-        />
+    <Container
+      h="100vh"
+      maxW="sm"
+      alignItems="stretch"
+      justifyContent="center"
+      gap={4}
+      centerContent
+    >
+      <VStack spacing={6} width="100%">
+        {/* App Title/Logo */}
+        <VStack spacing={2}>
+          <Text fontSize="2xl" fontWeight="bold" textAlign="center">
+            Welcome to RagATuit
+          </Text>
+          <Text fontSize="md" color="gray.600" textAlign="center">
+            Sign in with your Canvas account to continue
+          </Text>
+        </VStack>
 
-        <Button variant="solid" type="submit" loading={isSubmitting} size="md">
-          Log In
-        </Button>
-      </Container>
-    </>
+        {/* Error Display */}
+        {error && (
+          <Alert.Root status="error">
+            <Alert.Indicator />
+            <Alert.Title>
+              There was an error processing your request:{" "}
+              {decodeURIComponent(error)}
+            </Alert.Title>
+          </Alert.Root>
+        )}
+
+        {/* Canvas Login */}
+        <CanvasLoginButton />
+      </VStack>
+    </Container>
   );
 }

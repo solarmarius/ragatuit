@@ -10,7 +10,7 @@ from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.core.config import settings
 from app.core.security import create_access_token
-from app.models import CanvasAuthResponse, UserCreate
+from app.models import UserCreate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -51,17 +51,17 @@ async def auth_canvas(session: SessionDep, request: Request):
         print(f"Received authorization code: {code}")
         print(f"Received state: {state}")
 
+        if not code:
+            raise HTTPException(
+                status_code=400, detail="Authorization code not provided"
+            )
+
         # Parse Canvas base URL the same way as in login endpoint
         parsed_url = urlparse(str(settings.CANVAS_BASE_URL))
         if not parsed_url.scheme or not parsed_url.netloc:
             raise ValueError("Invalid Canvas base URL")
         canvas_base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
         print(f"Canvas base URL: {canvas_base_url}")
-
-        if not code:
-            raise HTTPException(
-                status_code=400, detail="Authorization code not provided"
-            )
 
         token_data = {
             "grant_type": "authorization_code",
@@ -77,7 +77,7 @@ async def auth_canvas(session: SessionDep, request: Request):
         async with httpx.AsyncClient(follow_redirects=False) as client:
             try:
                 response = await client.post(
-                    f"{canvas_base_url}/login/oauth2/token",
+                    "http://canvas-mock:8001/login/oauth2/token",
                     data=token_data,
                     headers={
                         "Content-Type": "application/x-www-form-urlencoded",
@@ -105,7 +105,11 @@ async def auth_canvas(session: SessionDep, request: Request):
 
         canvas_user_id = token_response["user"]["id"]
         canvas_user_name = token_response["user"]["name"]
-        user = crud.get_user_by_canvas_id(session, canvas_user_id)
+        print("Now trying to find user")
+        print(f"Session: {session}")
+        user = crud.get_user_by_canvas_id(session=session, canvas_id=canvas_user_id)
+
+        print(f"Found a user: {user}")
 
         if not user:
             # Create new user
@@ -133,16 +137,13 @@ async def auth_canvas(session: SessionDep, request: Request):
         )
 
         print("SUCCESS:", access_token)
-        return CanvasAuthResponse(
-            access_token=access_token,
-            user={"id": str(user.id), "canvas_id": user.canvas_id, "name": user.name},
-        )
+        redirect_url = f"{settings.FRONTEND_HOST}/login/success?token={access_token}"
+        return RedirectResponse(url=redirect_url)
 
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Canvas authentication failed: {str(e)}",
-        )
+        error_message = f"Canvas authentication failed: {str(e)}"
+        redirect_url = f"{settings.FRONTEND_HOST}/login?error={error_message}"
+        return RedirectResponse(url=redirect_url)
 
 
 @router.delete("/logout")

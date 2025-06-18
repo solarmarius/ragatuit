@@ -6,7 +6,7 @@ from sqlmodel import Field, SQLModel
 
 
 class UserCreate(SQLModel):
-    canvas_id: str = Field()
+    canvas_id: int = Field()
     name: str = Field()
     access_token: str = Field()
     refresh_token: str | None = Field(default=None)
@@ -20,7 +20,7 @@ class TokenUpdate(SQLModel):
 
 class User(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    canvas_id: str = Field(unique=True, index=True)
+    canvas_id: int = Field(unique=True, index=True)
     name: str | None = Field(default=None, max_length=255)
     created_at: datetime | None = Field(
         default=None,
@@ -36,6 +36,10 @@ class User(SQLModel, table=True):
     refresh_token: str | None = Field(default=None, description="Canvas refresh token")
     expires_at: datetime | None = Field(default=None)
     token_type: str = Field(default="Bearer")
+
+
+class UserPublic(SQLModel):
+    id: uuid.UUID
 
 
 class TokenPayload(SQLModel):

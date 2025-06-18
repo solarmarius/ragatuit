@@ -119,6 +119,18 @@ services:
     ports:
       - 9323:9323
 
+  canvas-mock:
+    build:
+      context: ./mocks
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    networks:
+      - default
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8001
+
 networks:
   traefik-public:
     # For local dev, don't expect an external Traefik network

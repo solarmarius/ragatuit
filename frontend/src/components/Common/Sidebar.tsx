@@ -1,11 +1,10 @@
-import { Box, Flex, IconButton, Text } from "@chakra-ui/react"
-import { useQueryClient } from "@tanstack/react-query"
-import { useState } from "react"
-import { FaBars } from "react-icons/fa"
-import { FiLogOut } from "react-icons/fi"
+import { Box, Button, Flex, IconButton, Text } from "@chakra-ui/react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { FaBars } from "react-icons/fa";
+import { FiLogOut } from "react-icons/fi";
 
-import type { UserPublic } from "@/client"
-import useAuth from "@/hooks/useAuth"
+import useAuth from "@/hooks/useCanvasAuth";
 import {
   DrawerBackdrop,
   DrawerBody,
@@ -13,18 +12,17 @@ import {
   DrawerContent,
   DrawerRoot,
   DrawerTrigger,
-} from "../ui/drawer"
-import SidebarItems from "./SidebarItems"
+} from "../ui/drawer";
+import SidebarItems from "./SidebarItems";
 
 const Sidebar = () => {
-  const queryClient = useQueryClient()
-  const currentUser = queryClient.getQueryData<UserPublic>(["currentUser"])
-  const { logout } = useAuth()
-  const [open, setOpen] = useState(false)
+  const queryClient = useQueryClient();
+  const { logout } = useAuth();
+  const [open, setOpen] = useState(false);
 
   const handleLogout = async () => {
-    logout()
-  }
+    logout();
+  };
 
   return (
     <>
@@ -66,11 +64,6 @@ const Sidebar = () => {
                   <Text>Log Out</Text>
                 </Flex>
               </Box>
-              {currentUser?.email && (
-                <Text fontSize="sm" p={2}>
-                  Logged in as: {currentUser.email}
-                </Text>
-              )}
             </Flex>
           </DrawerBody>
           <DrawerCloseTrigger />
@@ -91,9 +84,10 @@ const Sidebar = () => {
         <Box w="100%">
           <SidebarItems />
         </Box>
+        <Button onClick={handleLogout}>Log out</Button>
       </Box>
     </>
-  )
-}
+  );
+};
 
-export default Sidebar
+export default Sidebar;
