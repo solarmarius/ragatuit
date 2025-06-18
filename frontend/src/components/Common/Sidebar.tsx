@@ -15,25 +15,23 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Desktop */}
-
       <Box
         display={{ base: "none", md: "flex" }}
         position="sticky"
-        bg="bg.subtle"
+        bg="#013343"
         top={0}
-        minW="280px"
+        minW="150px"
         h="100vh"
-        p={4}
+        pl={4}
       >
-        <Flex direction="column" w="100%" h="100%">
+        <Flex direction="column" w="100%" h="100%" alignItems="center">
           <Link to="/">
-            <Image src={Logo} maxW="3xs" p={2} />
+            <Image src={Logo} maxW="130px" p={2} />
           </Link>
           <Box w="100%">
             <SidebarItems />
           </Box>
-          <Button onClick={handleLogout} w="100%" mt={4} colorPalette="blue">
+          <Button onClick={handleLogout} w="90%" mt={4} colorPalette="blue">
             Log out
           </Button>
         </Flex>

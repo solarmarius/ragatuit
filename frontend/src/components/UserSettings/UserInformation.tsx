@@ -120,6 +120,9 @@ const UserInformation = () => {
             )}
           </Flex>
         </Box>
+        <Heading size="sm" py={4}>
+          ! TODO: Insert LLM specific settings here (temperature, score etc...)
+        </Heading>
       </Container>
     </>
   );
