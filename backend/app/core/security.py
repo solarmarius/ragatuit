@@ -1,13 +1,11 @@
+import base64
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-import jwt
-from passlib.context import CryptContext
+from cryptography.fernet import Fernet
+from jose import jwt
 
 from app.core.config import settings
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 ALGORITHM = "HS256"
 
@@ -19,9 +17,33 @@ def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
     return encoded_jwt
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+class TokenEncryption:
+    """Handles encryption/decryption of sensitive tokens for storage"""
+
+    def __init__(self):
+        # Derive encryption key from SECRET_KEY to keep it centralized
+        key_material = settings.SECRET_KEY.encode()[:32]  # Take first 32 bytes
+        key = base64.urlsafe_b64encode(key_material.ljust(32, b"0"))  # Pad to 32 bytes
+        self.cipher = Fernet(key)
+
+    def encrypt_token(self, token: str) -> str:
+        """Encrypt a token for database storage"""
+        if not token:
+            return token
+        encrypted = self.cipher.encrypt(token.encode())
+        return base64.urlsafe_b64encode(encrypted).decode()
+
+    def decrypt_token(self, encrypted_token: str) -> str:
+        """Decrypt a token from database storage"""
+        if not encrypted_token:
+            return encrypted_token
+        try:
+            decoded = base64.urlsafe_b64decode(encrypted_token.encode())
+            decrypted = self.cipher.decrypt(decoded)
+            return decrypted.decode()
+        except Exception:
+            raise ValueError("Invalid encrypted token")
 
 
-def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+# Global instance
+token_encryption = TokenEncryption()

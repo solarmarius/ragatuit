@@ -1,8 +1,8 @@
-"""Initial migration with Canvas authorization
+"""Initial schema
 
-Revision ID: 0e6d35ba11f5
+Revision ID: f0f45029a617
 Revises:
-Create Date: 2025-06-16 14:59:46.027596
+Create Date: 2025-06-18 09:19:49.808550
 
 """
 from alembic import op
@@ -11,7 +11,7 @@ import sqlmodel.sql.sqltypes
 
 
 # revision identifiers, used by Alembic.
-revision = '0e6d35ba11f5'
+revision = 'f0f45029a617'
 down_revision = None
 branch_labels = None
 depends_on = None
