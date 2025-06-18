@@ -1,12 +1,18 @@
-import { OpenAPI } from "@/client";
+import { OpenAPI, type UserPublic, UsersService } from "@/client";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
 const isLoggedIn = () => {
   return localStorage.getItem("access_token") !== null;
 };
 
-const useCanvasAuth = () => {
+const useAuth = () => {
   const navigate = useNavigate();
+  const { data: user } = useQuery<UserPublic | null, Error>({
+    queryKey: ["currentUser"],
+    queryFn: UsersService.readUserMe,
+    enabled: isLoggedIn(),
+  });
 
   const initiateCanvasLogin = () => {
     // Simply redirect to the backend endpoint - it will handle the Canvas redirect
@@ -21,8 +27,9 @@ const useCanvasAuth = () => {
   return {
     initiateCanvasLogin,
     logout,
+    user,
   };
 };
 
 export { isLoggedIn };
-export default useCanvasAuth;
+export default useAuth;

@@ -16,6 +16,7 @@ import { Route as CallbackImport } from './routes/callback'
 import { Route as LayoutImport } from './routes/_layout'
 import { Route as LayoutIndexImport } from './routes/_layout/index'
 import { Route as LoginSuccessImport } from './routes/login/success'
+import { Route as LayoutSettingsImport } from './routes/_layout/settings'
 
 // Create/Update Routes
 
@@ -44,6 +45,11 @@ const LoginSuccessRoute = LoginSuccessImport.update({
   getParentRoute: () => LoginRoute,
 } as any)
 
+const LayoutSettingsRoute = LayoutSettingsImport.update({
+  path: '/settings',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
@@ -60,6 +66,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginImport
       parentRoute: typeof rootRoute
     }
+    '/_layout/settings': {
+      preLoaderRoute: typeof LayoutSettingsImport
+      parentRoute: typeof LayoutImport
+    }
     '/login/success': {
       preLoaderRoute: typeof LoginSuccessImport
       parentRoute: typeof LoginImport
@@ -74,7 +84,7 @@ declare module '@tanstack/react-router' {
 // Create and export the route tree
 
 export const routeTree = rootRoute.addChildren([
-  LayoutRoute.addChildren([LayoutIndexRoute]),
+  LayoutRoute.addChildren([LayoutSettingsRoute, LayoutIndexRoute]),
   CallbackRoute,
   LoginRoute.addChildren([LoginSuccessRoute]),
 ])

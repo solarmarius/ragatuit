@@ -8,6 +8,10 @@ import type {
   AuthAuthCanvasResponse,
   AuthLogoutCanvasResponse,
   AuthRefreshCanvasTokenResponse,
+  UsersReadUserMeResponse,
+  UsersDeleteUserMeResponse,
+  UsersUpdateUserMeData,
+  UsersUpdateUserMeResponse,
   UtilsHealthCheckResponse,
 } from "./types.gen"
 
@@ -58,6 +62,55 @@ export class AuthService {
     return __request(OpenAPI, {
       method: "POST",
       url: "/api/v1/auth/refresh",
+    })
+  }
+}
+
+export class UsersService {
+  /**
+   * Read User Me
+   * @returns UserPublic Successful Response
+   * @throws ApiError
+   */
+  public static readUserMe(): CancelablePromise<UsersReadUserMeResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/users/me",
+    })
+  }
+
+  /**
+   * Delete User Me
+   * Delete own user.
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static deleteUserMe(): CancelablePromise<UsersDeleteUserMeResponse> {
+    return __request(OpenAPI, {
+      method: "DELETE",
+      url: "/api/v1/users/me",
+    })
+  }
+
+  /**
+   * Update User Me
+   * Update own user.
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns UserPublic Successful Response
+   * @throws ApiError
+   */
+  public static updateUserMe(
+    data: UsersUpdateUserMeData,
+  ): CancelablePromise<UsersUpdateUserMeResponse> {
+    return __request(OpenAPI, {
+      method: "PATCH",
+      url: "/api/v1/users/me",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
     })
   }
 }

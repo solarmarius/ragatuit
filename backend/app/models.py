@@ -39,11 +39,20 @@ class User(SQLModel, table=True):
 
 
 class UserPublic(SQLModel):
-    id: uuid.UUID
+    name: str
+
+
+class UserUpdateMe(SQLModel):
+    name: str
 
 
 class TokenPayload(SQLModel):
     sub: str | None = None
+
+
+# Generic message
+class Message(SQLModel):
+    message: str
 
 
 # Request/Response Models

@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import useAuth from "@/hooks/useAuth";
+import useAuth from "@/hooks/useCanvasAuth";
 import useCustomToast from "@/hooks/useCustomToast";
 import { handleError } from "@/utils";
 
@@ -30,6 +30,7 @@ const DeleteConfirmation = () => {
   const { logout } = useAuth();
 
   const mutation = useMutation({
+    mutationFn: () => UsersService.deleteUserMe(),
     onSuccess: () => {
       showSuccessToast("Your account has been successfully deleted");
       setIsOpen(false);
