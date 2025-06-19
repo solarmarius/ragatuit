@@ -21,6 +21,11 @@ dependencies = [
     "pydantic-settings<3.0.0,>=2.2.1",
     "sentry-sdk[fastapi]<2.0.0,>=1.40.6",
     "pyjwt<3.0.0,>=2.8.0",
+    "cryptography>=45.0.4",
+    "python-jose>=3.5.0",
+    "psycopg2-binary>=2.9.10",
+    "pytest-asyncio>=0.23.8",
+    "bandit>=1.8.5",
 ]
 
 [tool.uv]
@@ -31,6 +36,7 @@ dev-dependencies = [
     "pre-commit<4.0.0,>=3.6.2",
     "types-passlib<2.0.0.0,>=1.7.7.20240106",
     "coverage<8.0.0,>=7.4.3",
+    "types-python-jose>=3.5.0.20250531",
 ]
 
 [build-system]

@@ -60,7 +60,7 @@ services:
       - "8000:8000"
     build:
       context: ./backend
-    # command: sleep infinity  # Infinite loop to keep container alive doing nothing
+    # command: sleep infinity # Infinite loop to keep container alive doing nothing
     command:
       - fastapi
       - run
@@ -118,6 +118,18 @@ services:
       - ./frontend/test-results:/app/test-results
     ports:
       - 9323:9323
+
+  canvas-mock:
+    build:
+      context: ./mocks
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    networks:
+      - default
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8001
 
 networks:
   traefik-public:

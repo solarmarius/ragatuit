@@ -1,389 +1,267 @@
-import uuid
+from unittest.mock import MagicMock
 
-from fastapi.testclient import TestClient
-from sqlmodel import Session, select
+import pytest
+from httpx import ASGITransport, AsyncClient
 
-from app import crud
-from app.core.config import settings
-from app.core.security import verify_password
-from app.models import User, UserCreate
-from app.tests.utils.utils import random_email, random_lower_string
+from app.api import deps
+from app.main import app
+from app.models import User
 
 
-def test_get_users_superuser_me(
-    client: TestClient, superuser_token_headers: dict[str, str]
-) -> None:
-    r = client.get(f"{settings.API_V1_STR}/users/me", headers=superuser_token_headers)
-    current_user = r.json()
-    assert current_user
-    assert current_user["is_active"] is True
-    assert current_user["is_superuser"]
-    assert current_user["email"] == settings.FIRST_SUPERUSER
-
-
-def test_get_users_normal_user_me(
-    client: TestClient, normal_user_token_headers: dict[str, str]
-) -> None:
-    r = client.get(f"{settings.API_V1_STR}/users/me", headers=normal_user_token_headers)
-    current_user = r.json()
-    assert current_user
-    assert current_user["is_active"] is True
-    assert current_user["is_superuser"] is False
-    assert current_user["email"] == settings.EMAIL_TEST_USER
-
-
-def test_get_existing_user(
-    client: TestClient, superuser_token_headers: dict[str, str], db: Session
-) -> None:
-    username = random_email()
-    password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
-    user_id = user.id
-    r = client.get(
-        f"{settings.API_V1_STR}/users/{user_id}",
-        headers=superuser_token_headers,
+@pytest.mark.asyncio
+async def test_read_user_me() -> None:
+    """Test reading current user profile"""
+    # Mock authenticated user
+    mock_user = User(
+        id="123e4567-e89b-12d3-a456-426614174000", canvas_id=12345, name="Test User"
     )
-    assert 200 <= r.status_code < 300
-    api_user = r.json()
-    existing_user = crud.get_user_by_email(session=db, email=username)
-    assert existing_user
-    assert existing_user.email == api_user["email"]
+
+    # Override the dependency
+    def mock_get_current_user() -> User:
+        return mock_user
+
+    app.dependency_overrides[deps.get_current_user] = mock_get_current_user
+
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
+            response = await ac.get("/api/v1/users/me")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == mock_user.name
+        # Should not include sensitive fields like tokens
+        assert "access_token" not in data
+        assert "refresh_token" not in data
+    finally:
+        # Clean up dependency override
+        app.dependency_overrides.clear()
 
 
-def test_get_existing_user_current_user(client: TestClient, db: Session) -> None:
-    username = random_email()
-    password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
-    user_id = user.id
-
-    login_data = {
-        "username": username,
-        "password": password,
-    }
-    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
-    tokens = r.json()
-    a_token = tokens["access_token"]
-    headers = {"Authorization": f"Bearer {a_token}"}
-
-    r = client.get(
-        f"{settings.API_V1_STR}/users/{user_id}",
-        headers=headers,
+@pytest.mark.asyncio
+async def test_update_user_me_name() -> None:
+    """Test updating current user's name"""
+    # Mock authenticated user
+    mock_user = User(
+        id="123e4567-e89b-12d3-a456-426614174000", canvas_id=12345, name="Old Name"
     )
-    assert 200 <= r.status_code < 300
-    api_user = r.json()
-    existing_user = crud.get_user_by_email(session=db, email=username)
-    assert existing_user
-    assert existing_user.email == api_user["email"]
+
+    # Mock session
+    mock_session = MagicMock()
+
+    # Override dependencies
+    def mock_get_current_user() -> User:
+        return mock_user
+
+    def mock_get_db() -> MagicMock:
+        return mock_session
+
+    app.dependency_overrides[deps.get_current_user] = mock_get_current_user
+    app.dependency_overrides[deps.get_db] = mock_get_db
+
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
+            response = await ac.patch("/api/v1/users/me", json={"name": "New Name"})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "New Name"
+
+        # Verify session operations were called
+        mock_session.add.assert_called_once_with(mock_user)
+        mock_session.commit.assert_called_once()
+        mock_session.refresh.assert_called_once_with(mock_user)
+    finally:
+        # Clean up dependency overrides
+        app.dependency_overrides.clear()
 
 
-def test_get_existing_user_permissions_error(
-    client: TestClient, normal_user_token_headers: dict[str, str]
-) -> None:
-    r = client.get(
-        f"{settings.API_V1_STR}/users/{uuid.uuid4()}",
-        headers=normal_user_token_headers,
+@pytest.mark.asyncio
+async def test_update_user_me_empty_data() -> None:
+    """Test updating user with empty data returns validation error"""
+    # Mock authenticated user
+    mock_user = User(
+        id="123e4567-e89b-12d3-a456-426614174000", canvas_id=12345, name="Test User"
     )
-    assert r.status_code == 403
-    assert r.json() == {"detail": "The user doesn't have enough privileges"}
+
+    # Override dependencies
+    def mock_get_current_user() -> User:
+        return mock_user
+
+    app.dependency_overrides[deps.get_current_user] = mock_get_current_user
+
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
+            response = await ac.patch("/api/v1/users/me", json={})
+
+        # Empty data should return validation error
+        assert response.status_code == 422
+        error_detail = response.json()
+        assert "detail" in error_detail
+    finally:
+        # Clean up dependency overrides
+        app.dependency_overrides.clear()
 
 
-def test_create_user_existing_username(
-    client: TestClient, superuser_token_headers: dict[str, str], db: Session
-) -> None:
-    username = random_email()
-    # username = email
-    password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
-    crud.create_user(session=db, user_create=user_in)
-    data = {"email": username, "password": password}
-    r = client.post(
-        f"{settings.API_V1_STR}/users/",
-        headers=superuser_token_headers,
-        json=data,
+@pytest.mark.asyncio
+async def test_update_user_me_invalid_field() -> None:
+    """Test updating user with invalid/protected field"""
+    # Mock authenticated user
+    mock_user = User(
+        id="123e4567-e89b-12d3-a456-426614174000", canvas_id=12345, name="Test User"
     )
-    created_user = r.json()
-    assert r.status_code == 400
-    assert "_id" not in created_user
+
+    # Mock session
+    mock_session = MagicMock()
+
+    # Override dependencies
+    def mock_get_current_user() -> User:
+        return mock_user
+
+    def mock_get_db() -> MagicMock:
+        return mock_session
+
+    app.dependency_overrides[deps.get_current_user] = mock_get_current_user
+    app.dependency_overrides[deps.get_db] = mock_get_db
+
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
+            response = await ac.patch(
+                "/api/v1/users/me",
+                json={
+                    "name": "New Name",
+                    "canvas_id": "999",  # This should be ignored
+                    "id": "new-id",  # This should be ignored
+                },
+            )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "New Name"
+    finally:
+        # Clean up dependency overrides
+        app.dependency_overrides.clear()
 
 
-def test_create_user_by_normal_user(
-    client: TestClient, normal_user_token_headers: dict[str, str]
-) -> None:
-    username = random_email()
-    password = random_lower_string()
-    data = {"email": username, "password": password}
-    r = client.post(
-        f"{settings.API_V1_STR}/users/",
-        headers=normal_user_token_headers,
-        json=data,
+@pytest.mark.asyncio
+async def test_delete_user_me() -> None:
+    """Test deleting current user"""
+    # Mock authenticated user
+    mock_user = User(
+        id="123e4567-e89b-12d3-a456-426614174000", canvas_id=12345, name="Test User"
     )
-    assert r.status_code == 403
+
+    # Mock session
+    mock_session = MagicMock()
+
+    # Override dependencies
+    def mock_get_current_user() -> User:
+        return mock_user
+
+    def mock_get_db() -> MagicMock:
+        return mock_session
+
+    app.dependency_overrides[deps.get_current_user] = mock_get_current_user
+    app.dependency_overrides[deps.get_db] = mock_get_db
+
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
+            response = await ac.delete("/api/v1/users/me")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["message"] == "User deleted successfully"
+
+        # Verify user was deleted from session
+        mock_session.delete.assert_called_once_with(mock_user)
+        mock_session.commit.assert_called_once()
+    finally:
+        # Clean up dependency overrides
+        app.dependency_overrides.clear()
 
 
-def test_retrieve_users(
-    client: TestClient, superuser_token_headers: dict[str, str], db: Session
-) -> None:
-    username = random_email()
-    password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
-    crud.create_user(session=db, user_create=user_in)
+@pytest.mark.asyncio
+async def test_users_routes_require_authentication() -> None:
+    """Test that all user routes require authentication"""
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        # Test GET /users/me
+        response = await ac.get("/api/v1/users/me")
+        assert response.status_code in [401, 403]  # Unauthorized or Forbidden
 
-    username2 = random_email()
-    password2 = random_lower_string()
-    user_in2 = UserCreate(email=username2, password=password2)
-    crud.create_user(session=db, user_create=user_in2)
+        # Test PATCH /users/me
+        response = await ac.patch("/api/v1/users/me", json={"name": "New Name"})
+        assert response.status_code in [401, 403]
 
-    r = client.get(f"{settings.API_V1_STR}/users/", headers=superuser_token_headers)
-    all_users = r.json()
-
-    assert len(all_users["data"]) > 1
-    assert "count" in all_users
-    for item in all_users["data"]:
-        assert "email" in item
+        # Test DELETE /users/me
+        response = await ac.delete("/api/v1/users/me")
+        assert response.status_code in [401, 403]
 
 
-def test_update_user_me(
-    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
-) -> None:
-    full_name = "Updated Name"
-    email = random_email()
-    data = {"full_name": full_name, "email": email}
-    r = client.patch(
-        f"{settings.API_V1_STR}/users/me",
-        headers=normal_user_token_headers,
-        json=data,
+@pytest.mark.asyncio
+async def test_update_user_me_invalid_json() -> None:
+    """Test updating user with invalid JSON data"""
+    # Mock authenticated user
+    mock_user = User(
+        id="123e4567-e89b-12d3-a456-426614174000", canvas_id=12345, name="Test User"
     )
-    assert r.status_code == 200
-    updated_user = r.json()
-    assert updated_user["email"] == email
-    assert updated_user["full_name"] == full_name
 
-    user_query = select(User).where(User.email == email)
-    user_db = db.exec(user_query).first()
-    assert user_db
-    assert user_db.email == email
-    assert user_db.full_name == full_name
+    # Mock session
+    mock_session = MagicMock()
 
+    # Override dependencies
+    def mock_get_current_user() -> User:
+        return mock_user
 
-def test_update_user_me_email_exists(
-    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
-) -> None:
-    username = random_email()
-    password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
+    def mock_get_db() -> MagicMock:
+        return mock_session
 
-    data = {"email": user.email}
-    r = client.patch(
-        f"{settings.API_V1_STR}/users/me",
-        headers=normal_user_token_headers,
-        json=data,
-    )
-    assert r.status_code == 409
-    assert r.json()["detail"] == "User with this email already exists"
+    app.dependency_overrides[deps.get_current_user] = mock_get_current_user
+    app.dependency_overrides[deps.get_db] = mock_get_db
 
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as ac:
+            # Send invalid data type for name
+            response = await ac.patch(
+                "/api/v1/users/me",
+                json={"name": 123},  # Should be string
+            )
 
-def test_register_user(client: TestClient, db: Session) -> None:
-    username = random_email()
-    password = random_lower_string()
-    full_name = random_lower_string()
-    data = {"email": username, "password": password, "full_name": full_name}
-    r = client.post(
-        f"{settings.API_V1_STR}/users/signup",
-        json=data,
-    )
-    assert r.status_code == 200
-    created_user = r.json()
-    assert created_user["email"] == username
-    assert created_user["full_name"] == full_name
-
-    user_query = select(User).where(User.email == username)
-    user_db = db.exec(user_query).first()
-    assert user_db
-    assert user_db.email == username
-    assert user_db.full_name == full_name
-    assert verify_password(password, user_db.hashed_password)
+        assert response.status_code == 422  # Validation error
+    finally:
+        # Clean up dependency overrides
+        app.dependency_overrides.clear()
 
 
-def test_register_user_already_exists_error(client: TestClient) -> None:
-    password = random_lower_string()
-    full_name = random_lower_string()
-    data = {
-        "email": settings.FIRST_SUPERUSER,
-        "password": password,
-        "full_name": full_name,
-    }
-    r = client.post(
-        f"{settings.API_V1_STR}/users/signup",
-        json=data,
-    )
-    assert r.status_code == 400
-    assert r.json()["detail"] == "The user with this email already exists in the system"
+@pytest.mark.asyncio
+async def test_users_routes_with_invalid_token() -> None:
+    """Test that routes with invalid token return 403"""
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
+        # Test with invalid Authorization header
+        headers = {"Authorization": "Bearer invalid_token"}
 
+        response = await ac.get("/api/v1/users/me", headers=headers)
+        assert response.status_code == 403
+        assert "Could not validate credentials" in response.json()["detail"]
 
-def test_update_user(
-    client: TestClient, superuser_token_headers: dict[str, str], db: Session
-) -> None:
-    username = random_email()
-    password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
+        response = await ac.patch(
+            "/api/v1/users/me", json={"name": "Test"}, headers=headers
+        )
+        assert response.status_code == 403
 
-    data = {"full_name": "Updated_full_name"}
-    r = client.patch(
-        f"{settings.API_V1_STR}/users/{user.id}",
-        headers=superuser_token_headers,
-        json=data,
-    )
-    assert r.status_code == 200
-    updated_user = r.json()
-
-    assert updated_user["full_name"] == "Updated_full_name"
-
-    user_query = select(User).where(User.email == username)
-    user_db = db.exec(user_query).first()
-    db.refresh(user_db)
-    assert user_db
-    assert user_db.full_name == "Updated_full_name"
-
-
-def test_update_user_not_exists(
-    client: TestClient, superuser_token_headers: dict[str, str]
-) -> None:
-    data = {"full_name": "Updated_full_name"}
-    r = client.patch(
-        f"{settings.API_V1_STR}/users/{uuid.uuid4()}",
-        headers=superuser_token_headers,
-        json=data,
-    )
-    assert r.status_code == 404
-    assert r.json()["detail"] == "The user with this id does not exist in the system"
-
-
-def test_update_user_email_exists(
-    client: TestClient, superuser_token_headers: dict[str, str], db: Session
-) -> None:
-    username = random_email()
-    password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
-
-    username2 = random_email()
-    password2 = random_lower_string()
-    user_in2 = UserCreate(email=username2, password=password2)
-    user2 = crud.create_user(session=db, user_create=user_in2)
-
-    data = {"email": user2.email}
-    r = client.patch(
-        f"{settings.API_V1_STR}/users/{user.id}",
-        headers=superuser_token_headers,
-        json=data,
-    )
-    assert r.status_code == 409
-    assert r.json()["detail"] == "User with this email already exists"
-
-
-def test_delete_user_me(client: TestClient, db: Session) -> None:
-    username = random_email()
-    password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
-    user_id = user.id
-
-    login_data = {
-        "username": username,
-        "password": password,
-    }
-    r = client.post(f"{settings.API_V1_STR}/login/access-token", data=login_data)
-    tokens = r.json()
-    a_token = tokens["access_token"]
-    headers = {"Authorization": f"Bearer {a_token}"}
-
-    r = client.delete(
-        f"{settings.API_V1_STR}/users/me",
-        headers=headers,
-    )
-    assert r.status_code == 200
-    deleted_user = r.json()
-    assert deleted_user["message"] == "User deleted successfully"
-    result = db.exec(select(User).where(User.id == user_id)).first()
-    assert result is None
-
-    user_query = select(User).where(User.id == user_id)
-    user_db = db.execute(user_query).first()
-    assert user_db is None
-
-
-def test_delete_user_me_as_superuser(
-    client: TestClient, superuser_token_headers: dict[str, str]
-) -> None:
-    r = client.delete(
-        f"{settings.API_V1_STR}/users/me",
-        headers=superuser_token_headers,
-    )
-    assert r.status_code == 403
-    response = r.json()
-    assert response["detail"] == "Super users are not allowed to delete themselves"
-
-
-def test_delete_user_super_user(
-    client: TestClient, superuser_token_headers: dict[str, str], db: Session
-) -> None:
-    username = random_email()
-    password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
-    user_id = user.id
-    r = client.delete(
-        f"{settings.API_V1_STR}/users/{user_id}",
-        headers=superuser_token_headers,
-    )
-    assert r.status_code == 200
-    deleted_user = r.json()
-    assert deleted_user["message"] == "User deleted successfully"
-    result = db.exec(select(User).where(User.id == user_id)).first()
-    assert result is None
-
-
-def test_delete_user_not_found(
-    client: TestClient, superuser_token_headers: dict[str, str]
-) -> None:
-    r = client.delete(
-        f"{settings.API_V1_STR}/users/{uuid.uuid4()}",
-        headers=superuser_token_headers,
-    )
-    assert r.status_code == 404
-    assert r.json()["detail"] == "User not found"
-
-
-def test_delete_user_current_super_user_error(
-    client: TestClient, superuser_token_headers: dict[str, str], db: Session
-) -> None:
-    super_user = crud.get_user_by_email(session=db, email=settings.FIRST_SUPERUSER)
-    assert super_user
-    user_id = super_user.id
-
-    r = client.delete(
-        f"{settings.API_V1_STR}/users/{user_id}",
-        headers=superuser_token_headers,
-    )
-    assert r.status_code == 403
-    assert r.json()["detail"] == "Super users are not allowed to delete themselves"
-
-
-def test_delete_user_without_privileges(
-    client: TestClient, normal_user_token_headers: dict[str, str], db: Session
-) -> None:
-    username = random_email()
-    password = random_lower_string()
-    user_in = UserCreate(email=username, password=password)
-    user = crud.create_user(session=db, user_create=user_in)
-
-    r = client.delete(
-        f"{settings.API_V1_STR}/users/{user.id}",
-        headers=normal_user_token_headers,
-    )
-    assert r.status_code == 403
-    assert r.json()["detail"] == "The user doesn't have enough privileges"
+        response = await ac.delete("/api/v1/users/me", headers=headers)
+        assert response.status_code == 403
