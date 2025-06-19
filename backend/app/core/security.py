@@ -5,9 +5,11 @@ from typing import Any
 from cryptography.fernet import Fernet
 from fastapi import HTTPException
 from jose import jwt
+from sqlmodel import Session
 
 from app import crud
 from app.core.config import settings
+from app.models import User
 
 ALGORITHM = "HS256"
 
@@ -48,7 +50,7 @@ def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
 class TokenEncryption:
     """Handles encryption/decryption of sensitive tokens for storage"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize TokenEncryption with Fernet cipher for secure token storage.
 
@@ -165,7 +167,7 @@ class TokenEncryption:
 token_encryption = TokenEncryption()
 
 
-async def ensure_valid_canvas_token(session, user) -> str:
+async def ensure_valid_canvas_token(session: Session, user: User) -> str:
     """
     Ensure Canvas token is valid, refresh if needed.
     Returns a valid Canvas access token.

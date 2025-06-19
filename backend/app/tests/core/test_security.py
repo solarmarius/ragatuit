@@ -18,7 +18,7 @@ from app.core.security import (
 from app.models import UserCreate
 
 
-def test_encrypt_decrypt_token():
+def test_encrypt_decrypt_token() -> None:
     """Test basic token encryption and decryption"""
     encryption = TokenEncryption()
     original_token = "test_access_token_12345"
@@ -35,29 +35,23 @@ def test_encrypt_decrypt_token():
     assert decrypted == original_token
 
 
-def test_encrypt_empty_token():
-    """Test encryption of empty/None tokens"""
+def test_encrypt_empty_token() -> None:
+    """Test encryption of empty tokens"""
     encryption = TokenEncryption()
 
     # Empty string should return empty string
     assert encryption.encrypt_token("") == ""
 
-    # None should return None
-    assert encryption.encrypt_token(None) is None
 
-
-def test_decrypt_empty_token():
-    """Test decryption of empty/None tokens"""
+def test_decrypt_empty_token() -> None:
+    """Test decryption of empty tokens"""
     encryption = TokenEncryption()
 
     # Empty string should return empty string
     assert encryption.decrypt_token("") == ""
 
-    # None should return None
-    assert encryption.decrypt_token(None) is None
 
-
-def test_decrypt_invalid_token():
+def test_decrypt_invalid_token() -> None:
     """Test decryption of invalid/corrupted tokens"""
     encryption = TokenEncryption()
 
@@ -71,7 +65,7 @@ def test_decrypt_invalid_token():
         encryption.decrypt_token(invalid_encrypted)
 
 
-def test_encrypt_different_tokens_produce_different_results():
+def test_encrypt_different_tokens_produce_different_results() -> None:
     """Test that different tokens produce different encrypted results"""
     encryption = TokenEncryption()
 
@@ -86,7 +80,7 @@ def test_encrypt_different_tokens_produce_different_results():
     assert encryption.decrypt_token(encrypted2) == token2
 
 
-def test_multiple_encryption_instances_are_compatible():
+def test_multiple_encryption_instances_are_compatible() -> None:
     """Test that multiple TokenEncryption instances can decrypt each other's tokens"""
     encryption1 = TokenEncryption()
     encryption2 = TokenEncryption()
@@ -98,7 +92,7 @@ def test_multiple_encryption_instances_are_compatible():
     assert decrypted == original_token
 
 
-def test_long_token_encryption():
+def test_long_token_encryption() -> None:
     """Test encryption of very long tokens"""
     encryption = TokenEncryption()
 
@@ -111,7 +105,7 @@ def test_long_token_encryption():
     assert decrypted == long_token
 
 
-def test_create_access_token_basic():
+def test_create_access_token_basic() -> None:
     """Test basic JWT token creation"""
     subject = "test_user_id"
     expires_delta = timedelta(minutes=30)
@@ -135,7 +129,7 @@ def test_create_access_token_basic():
     assert abs((exp_datetime - expected_exp).total_seconds()) < 5
 
 
-def test_create_access_token_different_subjects():
+def test_create_access_token_different_subjects() -> None:
     """Test token creation with different subject types"""
     expires_delta = timedelta(minutes=15)
 
@@ -158,7 +152,7 @@ def test_create_access_token_different_subjects():
     assert payload3["sub"] == str(test_uuid)
 
 
-def test_create_access_token_different_expiration_times():
+def test_create_access_token_different_expiration_times() -> None:
     """Test token creation with different expiration times"""
     subject = "test_user"
 
@@ -179,7 +173,7 @@ def test_create_access_token_different_expiration_times():
 
 
 @pytest.mark.asyncio
-async def test_ensure_valid_canvas_token_no_refresh_needed(db: Session):
+async def test_ensure_valid_canvas_token_no_refresh_needed(db: Session) -> None:
     """Test when token is valid and doesn't need refresh"""
     # Create user with token that expires in the future
     future_expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
@@ -202,7 +196,7 @@ async def test_ensure_valid_canvas_token_no_refresh_needed(db: Session):
 
 
 @pytest.mark.asyncio
-async def test_ensure_valid_canvas_token_refresh_success(db: Session):
+async def test_ensure_valid_canvas_token_refresh_success(db: Session) -> None:
     """Test token refresh when token expires soon"""
     # Create user with token that expires soon
     soon_expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=2)
@@ -229,7 +223,7 @@ async def test_ensure_valid_canvas_token_refresh_success(db: Session):
 
 
 @pytest.mark.asyncio
-async def test_ensure_valid_canvas_token_401_error(db: Session):
+async def test_ensure_valid_canvas_token_401_error(db: Session) -> None:
     """Test handling of 401 error during token refresh"""
     # Create user with expired token
     past_expiry = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=1)
@@ -260,7 +254,7 @@ async def test_ensure_valid_canvas_token_401_error(db: Session):
 
 
 @pytest.mark.asyncio
-async def test_ensure_valid_canvas_token_503_error(db: Session):
+async def test_ensure_valid_canvas_token_503_error(db: Session) -> None:
     """Test handling of 503 error during token refresh"""
     # Create user with expired token
     past_expiry = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=1)
@@ -289,7 +283,7 @@ async def test_ensure_valid_canvas_token_503_error(db: Session):
 
 
 @pytest.mark.asyncio
-async def test_ensure_valid_canvas_token_no_expiry_date(db: Session):
+async def test_ensure_valid_canvas_token_no_expiry_date(db: Session) -> None:
     """Test handling when user has no expiry date set"""
     user_in = UserCreate(
         canvas_id=123,

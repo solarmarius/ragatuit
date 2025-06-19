@@ -21,10 +21,10 @@ def init_db(session: Session) -> None:
     # This works because the models are already imported and registered from app.models
     # SQLModel.metadata.create_all(engine)
 
-    user = session.exec(select(User).where(User.canvas_id == "1111")).first()
+    user = session.exec(select(User).where(User.canvas_id == 1111)).first()
     if not user:
         user_in = UserCreate(
-            canvas_id="1111",
+            canvas_id=1111,
             name="testuser",
             access_token="test_token",
             refresh_token="refresh_test_token",

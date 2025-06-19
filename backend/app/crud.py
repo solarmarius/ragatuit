@@ -94,8 +94,8 @@ def update_user_tokens(
 
 def clear_user_tokens(session: Session, user: User) -> User:
     """Clear user's Canvas tokens"""
-    user.access_token = None
-    user.refresh_token = None
+    user.access_token = ""
+    user.refresh_token = ""
     user.expires_at = None
 
     session.add(user)
@@ -184,8 +184,6 @@ def get_decrypted_access_token(user: User) -> str:
     return token_encryption.decrypt_token(user.access_token)
 
 
-def get_decrypted_refresh_token(user: User) -> str | None:
+def get_decrypted_refresh_token(user: User) -> str:
     """Get decrypted refresh token"""
-    if user.refresh_token:
-        return token_encryption.decrypt_token(user.refresh_token)
-    return None
+    return token_encryption.decrypt_token(user.refresh_token)

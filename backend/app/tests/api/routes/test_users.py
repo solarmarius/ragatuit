@@ -9,7 +9,7 @@ from app.models import User
 
 
 @pytest.mark.asyncio
-async def test_read_user_me():
+async def test_read_user_me() -> None:
     """Test reading current user profile"""
     # Mock authenticated user
     mock_user = User(
@@ -17,7 +17,7 @@ async def test_read_user_me():
     )
 
     # Override the dependency
-    def mock_get_current_user():
+    def mock_get_current_user() -> User:
         return mock_user
 
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
@@ -40,7 +40,7 @@ async def test_read_user_me():
 
 
 @pytest.mark.asyncio
-async def test_update_user_me_name():
+async def test_update_user_me_name() -> None:
     """Test updating current user's name"""
     # Mock authenticated user
     mock_user = User(
@@ -51,10 +51,10 @@ async def test_update_user_me_name():
     mock_session = MagicMock()
 
     # Override dependencies
-    def mock_get_current_user():
+    def mock_get_current_user() -> User:
         return mock_user
 
-    def mock_get_db():
+    def mock_get_db() -> MagicMock:
         return mock_session
 
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
@@ -80,7 +80,7 @@ async def test_update_user_me_name():
 
 
 @pytest.mark.asyncio
-async def test_update_user_me_empty_data():
+async def test_update_user_me_empty_data() -> None:
     """Test updating user with empty data returns validation error"""
     # Mock authenticated user
     mock_user = User(
@@ -88,7 +88,7 @@ async def test_update_user_me_empty_data():
     )
 
     # Override dependencies
-    def mock_get_current_user():
+    def mock_get_current_user() -> User:
         return mock_user
 
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
@@ -109,7 +109,7 @@ async def test_update_user_me_empty_data():
 
 
 @pytest.mark.asyncio
-async def test_update_user_me_invalid_field():
+async def test_update_user_me_invalid_field() -> None:
     """Test updating user with invalid/protected field"""
     # Mock authenticated user
     mock_user = User(
@@ -120,10 +120,10 @@ async def test_update_user_me_invalid_field():
     mock_session = MagicMock()
 
     # Override dependencies
-    def mock_get_current_user():
+    def mock_get_current_user() -> User:
         return mock_user
 
-    def mock_get_db():
+    def mock_get_db() -> MagicMock:
         return mock_session
 
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
@@ -151,7 +151,7 @@ async def test_update_user_me_invalid_field():
 
 
 @pytest.mark.asyncio
-async def test_delete_user_me():
+async def test_delete_user_me() -> None:
     """Test deleting current user"""
     # Mock authenticated user
     mock_user = User(
@@ -162,10 +162,10 @@ async def test_delete_user_me():
     mock_session = MagicMock()
 
     # Override dependencies
-    def mock_get_current_user():
+    def mock_get_current_user() -> User:
         return mock_user
 
-    def mock_get_db():
+    def mock_get_db() -> MagicMock:
         return mock_session
 
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
@@ -190,7 +190,7 @@ async def test_delete_user_me():
 
 
 @pytest.mark.asyncio
-async def test_users_routes_require_authentication():
+async def test_users_routes_require_authentication() -> None:
     """Test that all user routes require authentication"""
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
@@ -209,7 +209,7 @@ async def test_users_routes_require_authentication():
 
 
 @pytest.mark.asyncio
-async def test_update_user_me_invalid_json():
+async def test_update_user_me_invalid_json() -> None:
     """Test updating user with invalid JSON data"""
     # Mock authenticated user
     mock_user = User(
@@ -220,10 +220,10 @@ async def test_update_user_me_invalid_json():
     mock_session = MagicMock()
 
     # Override dependencies
-    def mock_get_current_user():
+    def mock_get_current_user() -> User:
         return mock_user
 
-    def mock_get_db():
+    def mock_get_db() -> MagicMock:
         return mock_session
 
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
@@ -246,7 +246,7 @@ async def test_update_user_me_invalid_json():
 
 
 @pytest.mark.asyncio
-async def test_users_routes_with_invalid_token():
+async def test_users_routes_with_invalid_token() -> None:
     """Test that routes with invalid token return 403"""
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"

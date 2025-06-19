@@ -1,5 +1,6 @@
 import secrets
 from datetime import datetime, timedelta, timezone
+from typing import Any
 from urllib.parse import urlencode, urlparse
 
 import httpx
@@ -16,7 +17,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.get("/login/canvas")
-async def login_canvas():
+async def login_canvas() -> RedirectResponse:
     """
     Initiate Canvas OAuth2 authentication flow.
 
@@ -63,7 +64,7 @@ async def login_canvas():
 
 
 @router.get("/callback/canvas")
-async def auth_canvas(session: SessionDep, request: Request):
+async def auth_canvas(session: SessionDep, request: Request) -> RedirectResponse:
     """
     Handle Canvas OAuth2 callback and complete authentication.
 
@@ -199,7 +200,9 @@ async def auth_canvas(session: SessionDep, request: Request):
 
 
 @router.delete("/logout")
-async def logout_canvas(current_user: CurrentUser, session: SessionDep):
+async def logout_canvas(
+    current_user: CurrentUser, session: SessionDep
+) -> dict[str, str]:
     """
     Logout user and revoke Canvas tokens.
 
@@ -267,7 +270,9 @@ async def logout_canvas(current_user: CurrentUser, session: SessionDep):
 
 
 @router.post("/refresh")
-async def refresh_canvas_token(current_user: CurrentUser, session: SessionDep):
+async def refresh_canvas_token(
+    current_user: CurrentUser, session: SessionDep
+) -> dict[str, str]:
     """
     Refresh Canvas access token using stored refresh token.
 

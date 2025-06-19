@@ -13,7 +13,7 @@ from app.core.security import ALGORITHM, create_access_token
 from app.models import UserCreate
 
 
-def test_get_db():
+def test_get_db() -> None:
     """Test database session dependency"""
     db_generator = get_db()
     session = next(db_generator)
@@ -28,7 +28,7 @@ def test_get_db():
         pass  # Expected when generator is exhausted
 
 
-def test_get_current_user_valid_token(db: Session):
+def test_get_current_user_valid_token(db: Session) -> None:
     """Test get_current_user with valid JWT token"""
     # Create a test user
     user_in = UserCreate(
@@ -53,7 +53,7 @@ def test_get_current_user_valid_token(db: Session):
     assert result_user.name == user.name
 
 
-def test_get_current_user_invalid_token_format(db: Session):
+def test_get_current_user_invalid_token_format(db: Session) -> None:
     """Test get_current_user with invalid token format"""
     credentials = HTTPAuthorizationCredentials(
         scheme="Bearer", credentials="invalid_token"
@@ -66,7 +66,7 @@ def test_get_current_user_invalid_token_format(db: Session):
     assert "Could not validate credentials" in exc_info.value.detail
 
 
-def test_get_current_user_expired_token(db: Session):
+def test_get_current_user_expired_token(db: Session) -> None:
     """Test get_current_user with expired token"""
     # Create expired token
     import time
@@ -88,7 +88,7 @@ def test_get_current_user_expired_token(db: Session):
     assert "Could not validate credentials" in exc_info.value.detail
 
 
-def test_get_current_user_wrong_secret(db: Session):
+def test_get_current_user_wrong_secret(db: Session) -> None:
     """Test get_current_user with token signed with wrong secret"""
     # Create token with wrong secret
     wrong_token = jwt.encode(
@@ -104,7 +104,7 @@ def test_get_current_user_wrong_secret(db: Session):
     assert "Could not validate credentials" in exc_info.value.detail
 
 
-def test_get_current_user_malformed_payload(db: Session):
+def test_get_current_user_malformed_payload(db: Session) -> None:
     """Test get_current_user with malformed token payload"""
     # Create token with missing sub field
     malformed_token = jwt.encode(
@@ -126,7 +126,7 @@ def test_get_current_user_malformed_payload(db: Session):
     assert "User not found" in exc_info.value.detail
 
 
-def test_get_current_user_nonexistent_user(db: Session):
+def test_get_current_user_nonexistent_user(db: Session) -> None:
     """Test get_current_user with token for non-existent user"""
     import uuid
 
@@ -149,7 +149,7 @@ def test_get_current_user_nonexistent_user(db: Session):
 
 
 @pytest.mark.asyncio
-async def test_get_canvas_token_valid(db: Session):
+async def test_get_canvas_token_valid(db: Session) -> None:
     """Test get_canvas_token with valid user and token"""
     # Create user with future expiry
     from datetime import datetime, timedelta, timezone
@@ -174,7 +174,7 @@ async def test_get_canvas_token_valid(db: Session):
 
 
 @pytest.mark.asyncio
-async def test_get_canvas_token_valid_token(db: Session):
+async def test_get_canvas_token_valid_token(db: Session) -> None:
     """Test get_canvas_token with valid token that doesn't need refresh"""
     from datetime import datetime, timedelta, timezone
 
@@ -196,7 +196,7 @@ async def test_get_canvas_token_valid_token(db: Session):
     assert token == "valid_token"
 
 
-def test_get_canvas_token_dependency_structure():
+def test_get_canvas_token_dependency_structure() -> None:
     """Test that get_canvas_token is properly annotated as a dependency"""
     # This is a simple test to verify the dependency annotation exists
     from app.api.deps import CanvasToken

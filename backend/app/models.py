@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timedelta
+from typing import Any
 
 from sqlalchemy import Column, DateTime, func
 from sqlmodel import Field, SQLModel
@@ -32,8 +33,8 @@ class User(SQLModel, table=True):
         default=None,
         sa_column=Column(DateTime(timezone=True), onupdate=func.now(), nullable=True),
     )
-    access_token: str | None = Field(description="Canvas access token")
-    refresh_token: str | None = Field(description="Canvas refresh token")
+    access_token: str = Field(description="Canvas access token")
+    refresh_token: str = Field(description="Canvas refresh token")
     # 1 hour expiration from Canvas
     expires_at: datetime | None = Field(
         default=datetime.now() + timedelta(seconds=3600)
@@ -67,7 +68,7 @@ class CanvasAuthRequest(SQLModel):
 
 class CanvasAuthResponse(SQLModel):
     access_token: str
-    user: dict
+    user: dict[str, Any]
 
 
 class CanvasConfigResponse(SQLModel):

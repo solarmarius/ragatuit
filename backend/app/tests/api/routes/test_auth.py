@@ -11,7 +11,7 @@ from app.models import User
 
 
 @pytest.mark.asyncio
-async def test_login_canvas():
+async def test_login_canvas() -> None:
     """Test Canvas login redirect"""
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
@@ -28,7 +28,9 @@ async def test_login_canvas():
 @pytest.mark.asyncio
 @patch("app.api.routes.auth.httpx.AsyncClient")
 @patch("app.api.routes.auth.crud")
-async def test_auth_canvas_callback_new_user(mock_crud, mock_httpx):
+async def test_auth_canvas_callback_new_user(
+    mock_crud: MagicMock, mock_httpx: MagicMock
+) -> None:
     """Test Canvas callback for new user"""
     # Mock Canvas token response
     mock_response = MagicMock()
@@ -71,7 +73,9 @@ async def test_auth_canvas_callback_new_user(mock_crud, mock_httpx):
 @pytest.mark.asyncio
 @patch("app.api.routes.auth.httpx.AsyncClient")
 @patch("app.api.routes.auth.crud")
-async def test_auth_canvas_callback_existing_user(mock_crud, mock_httpx):
+async def test_auth_canvas_callback_existing_user(
+    mock_crud: MagicMock, mock_httpx: MagicMock
+) -> None:
     """Test Canvas callback for existing user"""
     # Mock Canvas token response
     mock_response = MagicMock()
@@ -113,7 +117,7 @@ async def test_auth_canvas_callback_existing_user(mock_crud, mock_httpx):
 
 @pytest.mark.asyncio
 @patch("app.api.routes.auth.httpx.AsyncClient")
-async def test_auth_canvas_callback_canvas_error(mock_httpx):
+async def test_auth_canvas_callback_canvas_error(mock_httpx: MagicMock) -> None:
     """Test Canvas callback when Canvas returns error"""
     mock_client = AsyncMock()
     mock_response = MagicMock()
@@ -147,7 +151,7 @@ async def test_auth_canvas_callback_canvas_error(mock_httpx):
 
 
 @pytest.mark.asyncio
-async def test_auth_canvas_callback_missing_code():
+async def test_auth_canvas_callback_missing_code() -> None:
     """Test Canvas callback without authorization code"""
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test", follow_redirects=False
@@ -164,13 +168,13 @@ async def test_auth_canvas_callback_missing_code():
 
 @pytest.mark.asyncio
 @patch("app.api.routes.auth.crud")
-async def test_logout_canvas(mock_crud):
+async def test_logout_canvas(mock_crud: MagicMock) -> None:
     """Test Canvas logout"""
     # Mock authenticated user
     mock_user = User(id=1, canvas_id="123", name="Test User")
 
     # Override the dependency
-    def mock_get_current_user():
+    def mock_get_current_user() -> User:
         return mock_user
 
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
@@ -192,7 +196,9 @@ async def test_logout_canvas(mock_crud):
 @pytest.mark.asyncio
 @patch("app.api.routes.auth.httpx.AsyncClient")
 @patch("app.api.routes.auth.crud")
-async def test_refresh_canvas_token_success(mock_crud, mock_httpx):
+async def test_refresh_canvas_token_success(
+    mock_crud: MagicMock, mock_httpx: MagicMock
+) -> None:
     """Test successful token refresh"""
     # Mock user with refresh token
     mock_user = User(
@@ -213,7 +219,7 @@ async def test_refresh_canvas_token_success(mock_crud, mock_httpx):
     mock_httpx.return_value.__aenter__.return_value = mock_client
 
     # Override the dependency
-    def mock_get_current_user():
+    def mock_get_current_user() -> User:
         return mock_user
 
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
@@ -233,12 +239,12 @@ async def test_refresh_canvas_token_success(mock_crud, mock_httpx):
 
 
 @pytest.mark.asyncio
-async def test_refresh_canvas_token_no_refresh_token():
+async def test_refresh_canvas_token_no_refresh_token() -> None:
     """Test token refresh when user has no refresh token"""
     mock_user = User(id=1, canvas_id="123", name="Test User", refresh_token=None)
 
     # Override the dependency
-    def mock_get_current_user():
+    def mock_get_current_user() -> User:
         return mock_user
 
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
@@ -259,7 +265,9 @@ async def test_refresh_canvas_token_no_refresh_token():
 @pytest.mark.asyncio
 @patch("app.api.routes.auth.httpx.AsyncClient")
 @patch("app.api.routes.auth.crud")
-async def test_refresh_canvas_token_canvas_error(mock_crud, mock_httpx):
+async def test_refresh_canvas_token_canvas_error(
+    mock_crud: MagicMock, mock_httpx: MagicMock
+) -> None:
     """Test token refresh when Canvas returns error"""
     mock_user = User(
         id=1, canvas_id="123", name="Test User", refresh_token="encrypted_token"
@@ -276,7 +284,7 @@ async def test_refresh_canvas_token_canvas_error(mock_crud, mock_httpx):
     mock_httpx.return_value.__aenter__.return_value = mock_client
 
     # Override the dependency
-    def mock_get_current_user():
+    def mock_get_current_user() -> User:
         return mock_user
 
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
@@ -295,7 +303,7 @@ async def test_refresh_canvas_token_canvas_error(mock_crud, mock_httpx):
 
 
 @pytest.mark.asyncio
-async def test_login_canvas_invalid_base_url():
+async def test_login_canvas_invalid_base_url() -> None:
     """Test login with invalid Canvas base URL"""
     with patch("app.core.config.settings.CANVAS_BASE_URL", "invalid-url"):
         async with AsyncClient(

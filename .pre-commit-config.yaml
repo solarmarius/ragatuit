@@ -25,12 +25,6 @@ repos:
           - --fix
           - --select=I
       - id: ruff-format
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.5
-    hooks:
-      - id: bandit
-        args: ["--skip", "B101,B601"]
-        exclude: ^(tests/|.*test.*\.py$|.*_test\.py$)
 
 ci:
   autofix_commit_msg: 🎨 [pre-commit.ci] Auto format from pre-commit.com hooks

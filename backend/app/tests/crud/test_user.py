@@ -108,8 +108,8 @@ def test_clear_user_tokens(db: Session) -> None:
     cleared_user = crud.clear_user_tokens(session=db, user=user)
 
     # Check that tokens are cleared
-    assert cleared_user.access_token is None
-    assert cleared_user.refresh_token is None
+    assert cleared_user.access_token == ""
+    assert cleared_user.refresh_token == ""
 
 
 def test_token_encryption_integration(db: Session) -> None:
