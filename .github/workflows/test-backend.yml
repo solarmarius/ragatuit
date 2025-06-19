@@ -36,6 +36,12 @@ jobs:
       DOCKER_IMAGE_BACKEND: backend
       DOCKER_IMAGE_FRONTEND: frontend
 
+      # Canvas configuration
+      CANVAS_CLIENT_ID: ${{ secrets.CANVAS_CLIENT_ID }}
+      CANVAS_CLIENT_SECRET: ${{ secrets.CANVAS_CLIENT_SECRET }}
+      CANVAS_REDIRECT_URI: ${{ secrets.CANVAS_REDIRECT_URI }}
+      CANVAS_BASE_URL: ${{ secrets.CANVAS_BASE_URL }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -59,6 +65,10 @@ jobs:
           SENTRY_DSN=
           DOCKER_IMAGE_BACKEND=backend
           DOCKER_IMAGE_FRONTEND=frontend
+          CANVAS_CLIENT_ID=${{ secrets.CANVAS_CLIENT_ID }}
+          CANVAS_CLIENT_SECRET=${{ secrets.CANVAS_CLIENT_SECRET }}
+          CANVAS_REDIRECT_URI=${{ secrets.CANVAS_REDIRECT_URI }}
+          CANVAS_BASE_URL=${{ secrets.CANVAS_BASE_URL }}
           EOF
       - name: Set up Python
         uses: actions/setup-python@v5
