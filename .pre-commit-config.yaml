@@ -25,6 +25,14 @@ repos:
           - --fix
           - --select=I
       - id: ruff-format
+  - repo: local
+    hooks:
+      - id: mypy
+        name: mypy
+        entry: bash -c 'cd backend && source .venv/bin/activate && mypy app'
+        language: system
+        files: ^backend/.*\.py$
+        args: [--ignore-missing-imports, --disallow-untyped-defs]
 
 ci:
   autofix_commit_msg: 🎨 [pre-commit.ci] Auto format from pre-commit.com hooks
