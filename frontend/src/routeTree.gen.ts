@@ -12,7 +12,6 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as LoginImport } from './routes/login'
-import { Route as CallbackImport } from './routes/callback'
 import { Route as LayoutImport } from './routes/_layout'
 import { Route as LayoutIndexImport } from './routes/_layout/index'
 import { Route as LoginSuccessImport } from './routes/login/success'
@@ -22,11 +21,6 @@ import { Route as LayoutSettingsImport } from './routes/_layout/settings'
 
 const LoginRoute = LoginImport.update({
   path: '/login',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const CallbackRoute = CallbackImport.update({
-  path: '/callback',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -58,10 +52,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutImport
       parentRoute: typeof rootRoute
     }
-    '/callback': {
-      preLoaderRoute: typeof CallbackImport
-      parentRoute: typeof rootRoute
-    }
     '/login': {
       preLoaderRoute: typeof LoginImport
       parentRoute: typeof rootRoute
@@ -85,7 +75,6 @@ declare module '@tanstack/react-router' {
 
 export const routeTree = rootRoute.addChildren([
   LayoutRoute.addChildren([LayoutSettingsRoute, LayoutIndexRoute]),
-  CallbackRoute,
   LoginRoute.addChildren([LoginSuccessRoute]),
 ])
 

@@ -1,4 +1,4 @@
-import { OpenAPI, type UserPublic, UsersService } from "@/client";
+import { OpenAPI, type UserPublic, UsersService, AuthService } from "@/client";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -19,9 +19,15 @@ const useAuth = () => {
     window.location.href = `${OpenAPI.BASE}/api/v1/auth/login/canvas`;
   };
 
-  const logout = () => {
-    localStorage.removeItem("access_token");
-    navigate({ to: "/login" });
+  const logout = async () => {
+    try {
+      await AuthService.logoutCanvas();
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      localStorage.removeItem("access_token");
+      navigate({ to: "/login" });
+    }
   };
 
   return {

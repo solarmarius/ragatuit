@@ -41,13 +41,14 @@ mock_courses = [
 # Store authorization codes and tokens
 auth_codes = {}
 access_tokens = {}
+refresh_tokens = {}
 
 
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "Bearer"
     user: dict
-    refresh_token: Optional[str] = None
     expires_in: Optional[int] = 3600
 
 
@@ -165,54 +166,175 @@ async def get_token(
     grant_type: str = Form(...),
     client_id: str = Form(...),
     client_secret: str = Form(...),
-    redirect_uri: str = Form(...),
-    code: str = Form(...),
+    redirect_uri: str = Form(None),
+    code: str = Form(None),
+    refresh_token: str = Form(None),
 ):
     """Mock Canvas token exchange endpoint"""
 
     print(
-        f"Token exchange request: grant_type={grant_type}, client_id={client_id}, code={code}"
+        f"Token exchange request: grant_type={grant_type}, client_id={client_id}, code={code}, refresh_token={refresh_token}"
     )
 
-    # Validate grant type
-    if grant_type != "authorization_code":
+    if grant_type == "authorization_code":
+        # Original authorization code flow
+        if not code or not redirect_uri:
+            raise HTTPException(status_code=400, detail="Missing code or redirect_uri")
+
+        # Validate authorization code
+        if code not in auth_codes:
+            print(f"Available auth codes: {list(auth_codes.keys())}")
+            raise HTTPException(status_code=400, detail="Invalid authorization code")
+
+        auth_data = auth_codes[code]
+
+        # Check if code is expired
+        if datetime.now() > auth_data["expires_at"]:
+            raise HTTPException(status_code=400, detail="Authorization code expired")
+
+        # Validate client_id matches
+        if auth_data["client_id"] != client_id:
+            raise HTTPException(status_code=400, detail="Invalid client_id")
+
+        # Generate access token and refresh token
+        access_token = f"mock_access_token_{uuid.uuid4().hex}"
+        new_refresh_token = f"mock_refresh_token_{uuid.uuid4().hex}"
+        user_id = auth_data["user_id"]
+
+        # Store access token
+        access_tokens[access_token] = {
+            "user_id": user_id,
+            "client_id": client_id,
+            "scope": auth_data["scope"],
+            "expires_at": datetime.now() + timedelta(hours=1),
+            "refresh_token": new_refresh_token,
+        }
+
+        # Store refresh token
+        refresh_tokens[new_refresh_token] = {
+            "user_id": user_id,
+            "client_id": client_id,
+            "scope": auth_data["scope"],
+            "expires_at": datetime.now()
+            + timedelta(days=30),  # Refresh tokens last longer
+        }
+
+        # Clean up authorization code
+        del auth_codes[code]
+
+        print(f"Generated access token: {access_token}")
+        print(f"Generated refresh token: {new_refresh_token}")
+
+        return TokenResponse(
+            access_token=access_token,
+            user=mock_users[user_id],
+            refresh_token=new_refresh_token,
+            expires_in=3600,
+        )
+
+    elif grant_type == "refresh_token":
+        # Refresh token flow
+        if not refresh_token:
+            raise HTTPException(status_code=400, detail="Missing refresh_token")
+
+        # Validate refresh token
+        if refresh_token not in refresh_tokens:
+            print(f"Available refresh tokens: {list(refresh_tokens.keys())}")
+            raise HTTPException(status_code=400, detail="Invalid refresh token")
+
+        refresh_data = refresh_tokens[refresh_token]
+
+        # Check if refresh token is expired
+        if datetime.now() > refresh_data["expires_at"]:
+            raise HTTPException(status_code=400, detail="Refresh token expired")
+
+        # Validate client_id matches
+        if refresh_data["client_id"] != client_id:
+            raise HTTPException(status_code=400, detail="Invalid client_id")
+
+        # Generate new access token and refresh token
+        new_access_token = f"mock_access_token_{uuid.uuid4().hex}"
+        new_refresh_token = f"mock_refresh_token_{uuid.uuid4().hex}"
+        user_id = refresh_data["user_id"]
+
+        # Store new access token
+        access_tokens[new_access_token] = {
+            "user_id": user_id,
+            "client_id": client_id,
+            "scope": refresh_data["scope"],
+            "expires_at": datetime.now() + timedelta(hours=1),
+            "refresh_token": new_refresh_token,
+        }
+
+        # Store new refresh token
+        refresh_tokens[new_refresh_token] = {
+            "user_id": user_id,
+            "client_id": client_id,
+            "scope": refresh_data["scope"],
+            "expires_at": datetime.now() + timedelta(days=30),
+        }
+
+        # Clean up old refresh token
+        del refresh_tokens[refresh_token]
+
+        print(f"Refreshed access token: {new_access_token}")
+        print(f"Generated new refresh token: {new_refresh_token}")
+
+        return TokenResponse(
+            access_token=new_access_token,
+            user=mock_users[user_id],
+            refresh_token=new_refresh_token,
+            expires_in=3600,
+        )
+
+    else:
         raise HTTPException(status_code=400, detail="Invalid grant_type")
 
-    # Validate authorization code
-    if code not in auth_codes:
-        print(f"Available auth codes: {list(auth_codes.keys())}")
-        raise HTTPException(status_code=400, detail="Invalid authorization code")
 
-    auth_data = auth_codes[code]
+# OAuth2 Token revocation endpoint
+@app.delete("/login/oauth2/token")
+async def revoke_token(
+    authorization: str = Header(None),
+    access_token: str = Form(None),
+):
+    """Mock Canvas token revocation endpoint"""
 
-    # Check if code is expired
-    if datetime.now() > auth_data["expires_at"]:
-        raise HTTPException(status_code=400, detail="Authorization code expired")
+    token_to_revoke = None
 
-    # Validate client_id matches
-    if auth_data["client_id"] != client_id:
-        raise HTTPException(status_code=400, detail="Invalid client_id")
+    # Check if token is provided in Authorization header
+    if authorization and authorization.startswith("Bearer "):
+        token_to_revoke = authorization.replace("Bearer ", "")
+    # Check if token is provided as form parameter
+    elif access_token:
+        token_to_revoke = access_token
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Access token required in Authorization header or as access_token parameter",
+        )
 
-    # Generate access token
-    access_token = f"mock_access_token_{uuid.uuid4().hex}"
-    user_id = auth_data["user_id"]
+    print(f"Token revocation request for token: {token_to_revoke}")
 
-    # Store access token
-    access_tokens[access_token] = {
-        "user_id": user_id,
-        "client_id": client_id,
-        "scope": auth_data["scope"],
-        "expires_at": datetime.now() + timedelta(hours=1),
-    }
+    # Validate that the token exists
+    if token_to_revoke not in access_tokens:
+        print(f"Available tokens: {list(access_tokens.keys())}")
+        raise HTTPException(status_code=401, detail="Invalid access token")
 
-    # Clean up authorization code
-    del auth_codes[code]
+    token_data = access_tokens[token_to_revoke]
 
-    print(f"Generated access token: {access_token}")
+    # Remove the access token
+    del access_tokens[token_to_revoke]
 
-    return TokenResponse(
-        access_token=access_token, user=mock_users[user_id], expires_in=3600
-    )
+    # Also revoke the associated refresh token if it exists
+    refresh_token_to_remove = token_data.get("refresh_token")
+    if refresh_token_to_remove and refresh_token_to_remove in refresh_tokens:
+        del refresh_tokens[refresh_token_to_remove]
+        print(f"Also revoked associated refresh token: {refresh_token_to_remove}")
+
+    print(f"Successfully revoked access token: {token_to_revoke}")
+
+    # Return 200 OK with empty response body (Canvas behavior)
+    return {}
 
 
 # Helper function to validate access token
@@ -292,6 +414,7 @@ async def debug_state():
     return {
         "auth_codes": list(auth_codes.keys()),
         "access_tokens": list(access_tokens.keys()),
+        "refresh_tokens": list(refresh_tokens.keys()),
         "mock_users": list(mock_users.keys()),
     }
 

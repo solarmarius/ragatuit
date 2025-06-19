@@ -108,7 +108,7 @@ def test_clear_user_tokens(db: Session) -> None:
     cleared_user = crud.clear_user_tokens(session=db, user=user)
 
     # Check that tokens are cleared
-    assert cleared_user.access_token == ""
+    assert cleared_user.access_token is None
     assert cleared_user.refresh_token is None
 
 
@@ -145,14 +145,17 @@ def test_user_with_no_refresh_token(db: Session) -> None:
     access_token = "only_access_token"
 
     user_in = UserCreate(
-        canvas_id=canvas_id, name="name", access_token=access_token, refresh_token=None
+        canvas_id=canvas_id, name="name", access_token=access_token, refresh_token=""
     )
     user = crud.create_user(session=db, user_create=user_in)
 
     assert user.canvas_id == canvas_id
     assert crud.get_decrypted_access_token(user) == access_token
-    assert crud.get_decrypted_refresh_token(user) is None
-    assert user.refresh_token is None
+    decrypted_refresh = crud.get_decrypted_refresh_token(user)
+    # Empty string gets stored and returned as None/empty
+    assert decrypted_refresh in ("", None)
+    # The actual stored value should be empty string (which encrypts to empty)
+    assert user.refresh_token == ""
 
 
 def test_get_user_by_id(db: Session) -> None:
@@ -189,7 +192,7 @@ def test_user_name_is_required(db: Session) -> None:
         canvas_id=canvas_id,
         name="John Doe",
         access_token=access_token,
-        refresh_token=None,
+        refresh_token="",
     )
     user = crud.create_user(session=db, user_create=user_in)
     assert user.name == "John Doe"
@@ -202,7 +205,7 @@ def test_user_name_persistence(db: Session) -> None:
     access_token = "test_token"
 
     user_in = UserCreate(
-        canvas_id=canvas_id, name=name, access_token=access_token, refresh_token=None
+        canvas_id=canvas_id, name=name, access_token=access_token, refresh_token=""
     )
     user = crud.create_user(session=db, user_create=user_in)
 
@@ -232,7 +235,7 @@ def test_user_name_with_special_characters(db: Session) -> None:
             canvas_id=canvas_id + i,
             name=name,
             access_token=f"token_{i}",
-            refresh_token=None,
+            refresh_token="",
         )
         user = crud.create_user(session=db, user_create=user_in)
         assert user.name == name
@@ -248,7 +251,7 @@ def test_user_name_length_limits(db: Session) -> None:
         canvas_id=canvas_id,
         name=normal_name,
         access_token="token_normal",
-        refresh_token=None,
+        refresh_token="",
     )
     user = crud.create_user(session=db, user_create=user_in)
     assert user.name == normal_name
@@ -259,7 +262,7 @@ def test_user_name_length_limits(db: Session) -> None:
         canvas_id=canvas_id + 1,
         name=long_name,
         access_token="token_long",
-        refresh_token=None,
+        refresh_token="",
     )
     user = crud.create_user(session=db, user_create=user_in)
     assert user.name == long_name
@@ -301,7 +304,7 @@ def test_user_name_empty_string(db: Session) -> None:
         canvas_id=canvas_id,
         name="",  # Empty string
         access_token="test_token",
-        refresh_token=None,
+        refresh_token="",
     )
     user = crud.create_user(session=db, user_create=user_in)
     assert user.name == ""

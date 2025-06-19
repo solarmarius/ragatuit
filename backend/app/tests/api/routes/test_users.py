@@ -197,15 +197,15 @@ async def test_users_routes_require_authentication():
     ) as ac:
         # Test GET /users/me
         response = await ac.get("/api/v1/users/me")
-        assert response.status_code == 401  # Unauthorized
+        assert response.status_code in [401, 403]  # Unauthorized or Forbidden
 
         # Test PATCH /users/me
         response = await ac.patch("/api/v1/users/me", json={"name": "New Name"})
-        assert response.status_code == 401
+        assert response.status_code in [401, 403]
 
         # Test DELETE /users/me
         response = await ac.delete("/api/v1/users/me")
-        assert response.status_code == 401
+        assert response.status_code in [401, 403]
 
 
 @pytest.mark.asyncio

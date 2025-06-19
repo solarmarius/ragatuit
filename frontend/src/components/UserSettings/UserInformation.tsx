@@ -19,7 +19,7 @@ import {
 } from "@/client";
 import useAuth from "@/hooks/useCanvasAuth";
 import useCustomToast from "@/hooks/useCustomToast";
-import { emailPattern, handleError } from "@/utils";
+import { handleError } from "@/utils";
 import { Field } from "../ui/field";
 
 const UserInformation = () => {
@@ -32,7 +32,7 @@ const UserInformation = () => {
     handleSubmit,
     reset,
     getValues,
-    formState: { isSubmitting, errors, isDirty },
+    formState: { isSubmitting, isDirty },
   } = useForm<UserPublic>({
     mode: "onBlur",
     criteriaMode: "all",

@@ -13,12 +13,6 @@ interface SidebarItemsProps {
   onClose?: () => void;
 }
 
-interface Item {
-  icon: IconType;
-  title: string;
-  path: string;
-}
-
 const SidebarItems = ({ onClose }: SidebarItemsProps) => {
   const location = useRouterState({
     select: (state) => state.location,

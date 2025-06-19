@@ -27,5 +27,6 @@ def init_db(session: Session) -> None:
             canvas_id="1111",
             name="testuser",
             access_token="test_token",
+            refresh_token="refresh_test_token",
         )
         user = crud.create_user(session=session, user_create=user_in)

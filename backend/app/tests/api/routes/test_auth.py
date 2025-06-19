@@ -182,7 +182,7 @@ async def test_logout_canvas(mock_crud):
             response = await ac.delete("/api/v1/auth/logout")
 
         assert response.status_code == 200
-        assert "disconnected successfully" in response.json()["Message"]
+        assert "disconnected successfully" in response.json()["message"]
         mock_crud.clear_user_tokens.assert_called_once()
     finally:
         # Clean up dependency override
@@ -249,8 +249,8 @@ async def test_refresh_canvas_token_no_refresh_token():
         ) as ac:
             response = await ac.post("/api/v1/auth/refresh")
 
-        assert response.status_code == 400
-        assert "No refresh token available" in response.json()["detail"]
+        assert response.status_code == 401
+        assert "No refresh token found" in response.json()["detail"]
     finally:
         # Clean up dependency override
         app.dependency_overrides.clear()
