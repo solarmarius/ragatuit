@@ -1,7 +1,6 @@
 import { Box, Flex, Icon, Text } from "@chakra-ui/react";
 import { Link as RouterLink, useRouterState } from "@tanstack/react-router";
 import { FiFileText, FiHome, FiSettings } from "react-icons/fi";
-import type { IconType } from "react-icons/lib";
 
 const items = [
   { icon: FiHome, title: "Dashboard", path: "/" },
@@ -17,7 +16,6 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
   const location = useRouterState({
     select: (state) => state.location,
   });
-  console.log(location);
 
   const listItems = items.map(({ icon, title, path }) => {
     const isActive = location.pathname === path;
