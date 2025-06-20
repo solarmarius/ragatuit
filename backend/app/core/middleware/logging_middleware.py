@@ -7,7 +7,8 @@ including timing information, request/response metadata, and correlation IDs.
 
 import time
 import uuid
-from typing import Any, Awaitable, Callable, List, Optional
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -27,7 +28,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
     - Handles exceptions gracefully
     """
 
-    def __init__(self, app: Any, exclude_paths: Optional[List[str]] = None) -> None:
+    def __init__(self, app: Any, exclude_paths: list[str] | None = None) -> None:
         """
         Initialize logging middleware.
 

@@ -9,7 +9,7 @@ for development.
 import logging
 import logging.config
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 import structlog
 
@@ -32,7 +32,7 @@ def configure_logging() -> None:
     )
 
     # Configure structlog processors
-    processors: List[Any] = [
+    processors: list[Any] = [
         structlog.stdlib.filter_by_level,
         structlog.stdlib.add_logger_name,
         structlog.stdlib.add_log_level,
@@ -73,9 +73,7 @@ def _get_log_level() -> int:
     return log_levels.get(settings.ENVIRONMENT, logging.INFO)
 
 
-def _add_request_context(
-    logger: Any, method_name: str, event_dict: Dict[str, Any]
-) -> Dict[str, Any]:
+def _add_request_context(event_dict: dict[str, Any]) -> dict[str, Any]:
     """
     Add request context to log entries.
 
@@ -100,9 +98,7 @@ def _add_request_context(
     return event_dict
 
 
-def _add_user_context(
-    logger: Any, method_name: str, event_dict: Dict[str, Any]
-) -> Dict[str, Any]:
+def _add_user_context(event_dict: dict[str, Any]) -> dict[str, Any]:
     """
     Add user context to log entries.
 

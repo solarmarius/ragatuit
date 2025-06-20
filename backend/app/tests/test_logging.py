@@ -2,9 +2,7 @@
 Tests for logging configuration and functionality.
 """
 
-import json
 import logging
-from io import StringIO
 from typing import Any
 
 import pytest
