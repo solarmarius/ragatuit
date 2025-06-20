@@ -155,21 +155,3 @@ def test_log_levels() -> None:
     logger.info("info_message", level="info")
     logger.warning("warning_message", level="warning")
     logger.error("error_message", level="error")
-
-    # If we get here without exceptions, all levels work
-
-
-if __name__ == "__main__":
-    # Simple manual test
-    configure_logging()
-    logger = get_logger("manual.test")
-
-    print("Testing logging configuration...")
-
-    logger.info("manual_test_started", test_type="configuration")
-    logger.warning("test_warning", message="This is a test warning")
-    logger.error(
-        "test_error", message="This is a test error", test_data={"key": "value"}
-    )
-
-    print("Logging test completed successfully!")

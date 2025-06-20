@@ -12,7 +12,6 @@ import sys
 from typing import Any, Dict, List
 
 import structlog
-from pythonjsonlogger import jsonlogger
 
 from app.core.config import settings
 
