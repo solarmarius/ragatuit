@@ -9,10 +9,13 @@ from fastapi.responses import RedirectResponse
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
 from app.core.config import settings
+from app.core.logging_config import get_logger
+from app.core.middleware.logging_middleware import add_user_to_logs
 from app.core.security import create_access_token
 from app.models import UserCreate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = get_logger("auth")
 
 
 @router.get("/login/canvas")
@@ -57,8 +60,21 @@ async def login_canvas() -> RedirectResponse:
         }
 
         auth_url = f"{canvas_base_url}/login/oauth2/auth?{urlencode(auth_params)}"
+
+        logger.info(
+            "canvas_oauth_initiated",
+            state=state,
+            canvas_base_url=canvas_base_url,
+            redirect_uri=str(settings.CANVAS_REDIRECT_URI),
+        )
+
         return RedirectResponse(url=auth_url)
     except ValueError as e:
+        logger.error(
+            "canvas_oauth_init_failed",
+            error=str(e),
+            canvas_base_url=str(settings.CANVAS_BASE_URL),
+        )
         raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -162,6 +178,13 @@ async def auth_canvas(session: SessionDep, request: Request) -> RedirectResponse
         canvas_user_id = token_response["user"]["id"]
         canvas_user_name = token_response["user"]["name"]
 
+        logger.info(
+            "canvas_oauth_token_exchanged",
+            canvas_user_id=canvas_user_id,
+            canvas_user_name=canvas_user_name,
+            expires_in=token_response.get("expires_in", "unknown"),
+        )
+
         user = crud.get_user_by_canvas_id(session=session, canvas_id=canvas_user_id)
 
         if not user:
@@ -173,6 +196,13 @@ async def auth_canvas(session: SessionDep, request: Request) -> RedirectResponse
                 refresh_token=token_response["refresh_token"],
             )
             user = crud.create_user(session, user_create)
+
+            logger.info(
+                "new_user_created",
+                user_id=str(user.id),
+                canvas_user_id=canvas_user_id,
+                canvas_user_name=canvas_user_name,
+            )
         else:
             # Update existing user tokens
             user = crud.update_user_tokens(
@@ -184,15 +214,38 @@ async def auth_canvas(session: SessionDep, request: Request) -> RedirectResponse
                 + timedelta(seconds=token_response["expires_in"]),
             )
 
+            logger.info(
+                "existing_user_tokens_updated",
+                user_id=str(user.id),
+                canvas_user_id=canvas_user_id,
+            )
+
+        # Add user context to logs for this request
+        add_user_to_logs(request, str(user.id), canvas_user_id)
+
         access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
         access_token = create_access_token(
             subject=str(user.id), expires_delta=access_token_expires
         )
 
         redirect_url = f"{settings.FRONTEND_HOST}/login/success?token={access_token}"
+
+        logger.info(
+            "canvas_oauth_completed_successfully",
+            user_id=str(user.id),
+            canvas_user_id=canvas_user_id,
+            redirect_url=settings.FRONTEND_HOST,
+        )
+
         return RedirectResponse(url=redirect_url)
 
     except Exception as e:
+        logger.error(
+            "canvas_oauth_failed",
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
         error_message = f"Canvas authentication failed: {str(e)}"
         redirect_url = f"{settings.FRONTEND_HOST}/login?error={error_message}"
         return RedirectResponse(url=redirect_url)
@@ -234,6 +287,12 @@ async def logout_canvas(
         Authorization: Bearer jwt_token
         -> {"message": "Canvas account disconnected successfully"}
     """
+    logger.info(
+        "logout_initiated",
+        user_id=str(current_user.id),
+        canvas_id=current_user.canvas_id,
+    )
+
     # Get Canvas access token before clearing it
     try:
         canvas_access_token = crud.get_decrypted_access_token(current_user)
@@ -248,23 +307,43 @@ async def logout_canvas(
                     )
                     # Canvas returns 200 on successful revocation
                     response.raise_for_status()
+
+                    logger.info(
+                        "canvas_token_revoked_successfully",
+                        user_id=str(current_user.id),
+                        canvas_id=current_user.canvas_id,
+                    )
                 except httpx.HTTPStatusError as e:
                     # Log error but don't fail logout if Canvas revocation fails
-                    print(
-                        f"Warning: Failed to revoke Canvas token: {e.response.status_code} - {e.response.text}"
+                    logger.warning(
+                        "canvas_token_revocation_failed",
+                        status_code=e.response.status_code,
+                        response_text=e.response.text,
+                        error=str(e),
                     )
                 except httpx.RequestError as e:
                     # Log network error but don't fail logout
-                    print(
-                        f"Warning: Network error during Canvas token revocation: {str(e)}"
+                    logger.warning(
+                        "canvas_token_revocation_network_error",
+                        error=str(e),
+                        error_type=type(e).__name__,
                     )
 
     except Exception as e:
         # If we can't get the token, still proceed with logout
-        print(f"Warning: Could not retrieve Canvas token for revocation: {str(e)}")
+        logger.warning(
+            "canvas_token_retrieval_failed", error=str(e), error_type=type(e).__name__
+        )
 
     # Clear tokens from our database
     crud.clear_user_tokens(session, current_user)
+
+    logger.info(
+        "logout_completed",
+        user_id=str(current_user.id),
+        canvas_id=current_user.canvas_id,
+    )
+
     return {"message": "Canvas account disconnected successfully"}
 
 
@@ -308,7 +387,18 @@ async def refresh_canvas_token(
         This endpoint is automatically called by the token validation middleware
         when Canvas tokens are near expiration, but can also be called manually.
     """
+    logger.info(
+        "token_refresh_initiated",
+        user_id=str(current_user.id),
+        canvas_id=current_user.canvas_id,
+    )
+
     if not current_user.refresh_token:
+        logger.warning(
+            "token_refresh_failed_no_refresh_token",
+            user_id=str(current_user.id),
+            canvas_id=current_user.canvas_id,
+        )
         raise HTTPException(
             status_code=401,
             detail="No refresh token found. Please re-login via /auth/login/canvas",
@@ -316,6 +406,11 @@ async def refresh_canvas_token(
     try:
         refresh_token = crud.get_decrypted_refresh_token(current_user)
         if not refresh_token:
+            logger.error(
+                "token_refresh_failed_decryption_error",
+                user_id=str(current_user.id),
+                canvas_id=current_user.canvas_id,
+            )
             raise HTTPException(
                 status_code=401,
                 detail="Refresh token decryption failed. Please re-login via /auth/login/canvas",
@@ -352,9 +447,24 @@ async def refresh_canvas_token(
             expires_at=expires_at,
         )
 
+        logger.info(
+            "token_refresh_completed_successfully",
+            user_id=str(current_user.id),
+            canvas_id=current_user.canvas_id,
+            expires_at=expires_at.isoformat() if expires_at else None,
+        )
+
         return {"message": "Token refreshed successfully"}
 
     except Exception as e:
+        logger.error(
+            "token_refresh_failed",
+            user_id=str(current_user.id),
+            canvas_id=current_user.canvas_id,
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Token refresh failed: {str(e)}",
