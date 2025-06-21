@@ -6,6 +6,8 @@ import {
   Heading,
   Input,
   Text,
+  Alert,
+  Link,
 } from "@chakra-ui/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -120,9 +122,22 @@ const UserInformation = () => {
             )}
           </Flex>
         </Box>
-        <Heading size="sm" py={4}>
-          ! TODO: Insert LLM specific settings here (temperature, score etc...)
-        </Heading>
+
+        <Alert.Root status="info" variant="subtle" mt={6} colorPalette="teal">
+          <Alert.Content>
+            <Alert.Description>
+              Review our{" "}
+              <Link
+                href="/privacy-policy"
+                color="blue.500"
+                textDecoration="underline"
+              >
+                Privacy Policy
+              </Link>{" "}
+              to understand how we handle your data.
+            </Alert.Description>
+          </Alert.Content>
+        </Alert.Root>
       </Container>
     </>
   );
