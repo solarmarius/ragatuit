@@ -2,6 +2,8 @@ import { Box, Container, Text } from "@chakra-ui/react";
 import { createFileRoute } from "@tanstack/react-router";
 
 import useAuth from "@/hooks/useCanvasAuth";
+import { useOnboarding } from "@/hooks/useOnboarding";
+import { OnboardingModal } from "@/components/Onboarding/OnboardingModal";
 
 export const Route = createFileRoute("/_layout/")({
   component: Dashboard,
@@ -9,6 +11,14 @@ export const Route = createFileRoute("/_layout/")({
 
 function Dashboard() {
   const { user: currentUser } = useAuth();
+  const {
+    currentStep,
+    isOpen,
+    nextStep,
+    previousStep,
+    markOnboardingCompleted,
+    skipOnboarding,
+  } = useOnboarding();
 
   return (
     <>
@@ -20,6 +30,15 @@ function Dashboard() {
           <Text>Welcome back, nice to see you again!</Text>
         </Box>
       </Container>
+
+      <OnboardingModal
+        isOpen={isOpen}
+        currentStep={currentStep}
+        onNext={nextStep}
+        onPrevious={previousStep}
+        onComplete={markOnboardingCompleted}
+        onSkip={skipOnboarding}
+      />
     </>
   );
 }

@@ -16,6 +16,7 @@ import { Route as LayoutImport } from './routes/_layout'
 import { Route as LayoutIndexImport } from './routes/_layout/index'
 import { Route as LoginSuccessImport } from './routes/login/success'
 import { Route as LayoutSettingsImport } from './routes/_layout/settings'
+import { Route as LayoutPrivacyPolicyImport } from './routes/_layout/privacy-policy'
 
 // Create/Update Routes
 
@@ -44,6 +45,11 @@ const LayoutSettingsRoute = LayoutSettingsImport.update({
   getParentRoute: () => LayoutRoute,
 } as any)
 
+const LayoutPrivacyPolicyRoute = LayoutPrivacyPolicyImport.update({
+  path: '/privacy-policy',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
@@ -55,6 +61,10 @@ declare module '@tanstack/react-router' {
     '/login': {
       preLoaderRoute: typeof LoginImport
       parentRoute: typeof rootRoute
+    }
+    '/_layout/privacy-policy': {
+      preLoaderRoute: typeof LayoutPrivacyPolicyImport
+      parentRoute: typeof LayoutImport
     }
     '/_layout/settings': {
       preLoaderRoute: typeof LayoutSettingsImport
@@ -74,7 +84,11 @@ declare module '@tanstack/react-router' {
 // Create and export the route tree
 
 export const routeTree = rootRoute.addChildren([
-  LayoutRoute.addChildren([LayoutSettingsRoute, LayoutIndexRoute]),
+  LayoutRoute.addChildren([
+    LayoutPrivacyPolicyRoute,
+    LayoutSettingsRoute,
+    LayoutIndexRoute,
+  ]),
   LoginRoute.addChildren([LoginSuccessRoute]),
 ])
 
