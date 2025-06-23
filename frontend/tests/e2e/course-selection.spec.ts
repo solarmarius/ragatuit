@@ -15,9 +15,6 @@ test.describe("Course Selection Feature", () => {
 
   const mockEmptyCoursesResponse: never[] = [];
 
-  const mockErrorResponse = {
-    detail: "Canvas access token expired. Please re-login.",
-  };
 
   test.beforeEach(async ({ page }) => {
     // Start from the authenticated dashboard
@@ -263,12 +260,12 @@ test.describe("Course Selection Feature", () => {
   });
 
   test("should handle API error gracefully", async ({ page }) => {
-    // Mock error response
+    // Mock error response (use 500 to test generic error handling without auth redirect)
     await page.route("**/api/v1/canvas/courses", async (route) => {
       await route.fulfill({
-        status: 401,
+        status: 500,
         contentType: "application/json",
-        body: JSON.stringify(mockErrorResponse),
+        body: JSON.stringify({ detail: "Canvas API temporarily unavailable" }),
       });
     });
 
