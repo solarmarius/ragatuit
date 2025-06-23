@@ -75,10 +75,24 @@ class Quiz(SQLModel, table=True):
         if not self.selected_modules:
             return {}
 
-        parsed = json.loads(self.selected_modules)
-        if isinstance(parsed, dict):
-            return {int(k): str(v) for k, v in parsed.items()}
-        return {}
+        try:
+            parsed = json.loads(self.selected_modules)
+            if isinstance(parsed, dict):
+                result = {}
+                for k, v in parsed.items():
+                    try:
+                        # Convert key to int and value to string safely
+                        key = int(k)
+                        value = str(v) if v is not None else ""
+                        result[key] = value
+                    except (ValueError, TypeError):
+                        # Skip invalid key-value pairs
+                        continue
+                return result
+            return {}
+        except (json.JSONDecodeError, TypeError):
+            # Return empty dict if JSON is malformed
+            return {}
 
     @modules_dict.setter
     def modules_dict(self, value: dict[int, str]) -> None:

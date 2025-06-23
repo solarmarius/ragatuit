@@ -78,7 +78,7 @@ async def get_courses(
                 else:
                     raise HTTPException(
                         status_code=503,
-                        detail=f"Canvas API error: {e.response.status_code}",
+                        detail="Canvas service is temporarily unavailable. Please try again later.",
                     )
             except httpx.RequestError as e:
                 logger.error(
@@ -201,6 +201,18 @@ async def get_course_modules(
             {"id": 173468, "name": "Ressurssider for studenter"}
         ]
     """
+    # Validate course_id parameter
+    if course_id <= 0:
+        logger.warning(
+            "modules_fetch_invalid_course_id",
+            user_id=str(current_user.id),
+            canvas_id=current_user.canvas_id,
+            course_id=course_id,
+        )
+        raise HTTPException(
+            status_code=400, detail="Course ID must be a positive integer"
+        )
+
     logger.info(
         "modules_fetch_initiated",
         user_id=str(current_user.id),
@@ -248,7 +260,7 @@ async def get_course_modules(
                 else:
                     raise HTTPException(
                         status_code=503,
-                        detail=f"Canvas API error: {e.response.status_code}",
+                        detail="Canvas service is temporarily unavailable. Please try again later.",
                     )
             except httpx.RequestError as e:
                 logger.error(
