@@ -8,7 +8,7 @@ export const Route = createFileRoute("/_layout/privacy-policy")({
 function PrivacyPolicy() {
   return (
     <Container maxW="4xl" py={8}>
-      <VStack spacing={8} align="stretch">
+      <VStack gap={8} align="stretch">
         <Heading size="2xl" textAlign="center">
           Privacy Policy
         </Heading>
