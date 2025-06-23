@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -9,14 +10,14 @@ from httpx import ASGITransport, AsyncClient
 
 from app.api import deps
 from app.main import app
-from app.models import CanvasCourse, User
+from app.models import CanvasCourse, CanvasModule, User
 
 
 @pytest.mark.asyncio
 async def test_get_courses_success() -> None:
     """Test successful course retrieval with teacher enrollment"""
     # Mock Canvas API response
-    mock_canvas_courses = [
+    mock_canvas_courses: list[dict[str, Any]] = [
         {
             "id": 37823,
             "name": "SB_ME_INF-0005 Praktisk kunstig intelligens",
@@ -305,7 +306,10 @@ async def test_get_courses_canvas_api_error() -> None:
                 response = await ac.get("/api/v1/canvas/courses")
 
             assert response.status_code == 503
-            assert "Canvas API error: 500" in response.json()["detail"]
+            assert (
+                "Canvas service is temporarily unavailable. Please try again later."
+                in response.json()["detail"]
+            )
         finally:
             app.dependency_overrides.clear()
 
@@ -457,3 +461,391 @@ async def test_canvas_course_model() -> None:
     )
     assert course_from_dict.id == 456
     assert course_from_dict.name == "Another Course"
+
+
+# ==================== MODULE ENDPOINT TESTS ====================
+
+
+@pytest.mark.asyncio
+async def test_get_course_modules_success() -> None:
+    """Test successful module retrieval for a course"""
+    course_id = 37823
+
+    # Mock Canvas API response
+    mock_canvas_modules: list[dict[str, Any]] = [
+        {
+            "id": 173467,
+            "name": "Templates",
+            "position": 1,
+            "unlock_at": None,
+            "require_sequential_progress": False,
+            "published": True,
+            "items_count": 0,
+        },
+        {
+            "id": 173468,
+            "name": "Ressurssider for studenter",
+            "position": 2,
+            "unlock_at": None,
+            "require_sequential_progress": False,
+            "published": True,
+            "items_count": 2,
+        },
+        {
+            "id": 173469,
+            "name": "Hjelperessurser for underviser",
+            "position": 3,
+            "unlock_at": None,
+            "require_sequential_progress": False,
+            "published": False,
+            "items_count": 1,
+        },
+    ]
+
+    # Mock authenticated user
+    mock_user = User(
+        id=uuid.UUID("123e4567-e89b-12d3-a456-426614174000"),
+        canvas_id=71202,
+        name="Test Teacher",
+        access_token="encrypted_token",
+        refresh_token="encrypted_refresh",
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+    )
+
+    def mock_get_current_user() -> User:
+        return mock_user
+
+    async def mock_get_canvas_token() -> str:
+        return "valid_canvas_token"
+
+    app.dependency_overrides[deps.get_current_user] = mock_get_current_user
+    app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
+
+    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+        # Mock Canvas API response
+        mock_response = MagicMock()
+        mock_response.json.return_value = mock_canvas_modules
+        mock_response.raise_for_status.return_value = None
+        mock_response.status_code = 200
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+        mock_httpx.return_value.__aenter__.return_value = mock_client
+
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as ac:
+                response = await ac.get(f"/api/v1/canvas/courses/{course_id}/modules")
+
+            assert response.status_code == 200
+            modules = response.json()
+
+            # Should return all modules (simplified to id and name only)
+            assert len(modules) == 3
+            assert modules[0]["id"] == 173467
+            assert modules[0]["name"] == "Templates"
+            assert modules[1]["id"] == 173468
+            assert modules[1]["name"] == "Ressurssider for studenter"
+            assert modules[2]["id"] == 173469
+            assert modules[2]["name"] == "Hjelperessurser for underviser"
+
+            # Should only have id and name fields (simplified model)
+            for module in modules:
+                assert list(module.keys()) == ["id", "name"]
+
+            # Verify Canvas API was called correctly
+            mock_client.get.assert_called_once_with(
+                f"http://canvas-mock:8001/api/v1/courses/{course_id}/modules",
+                headers={
+                    "Authorization": "Bearer valid_canvas_token",
+                    "Accept": "application/json",
+                },
+            )
+        finally:
+            app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_get_course_modules_empty_course() -> None:
+    """Test module retrieval for course with no modules"""
+    course_id = 37823
+
+    # Mock Canvas API response with empty modules
+    mock_canvas_modules: list[Any] = []
+
+    mock_user = User(
+        id=uuid.UUID("123e4567-e89b-12d3-a456-426614174000"),
+        canvas_id=71202,
+        name="Test Teacher",
+        access_token="encrypted_token",
+        refresh_token="encrypted_refresh",
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+    )
+
+    def mock_get_current_user() -> User:
+        return mock_user
+
+    async def mock_get_canvas_token() -> str:
+        return "valid_canvas_token"
+
+    app.dependency_overrides[deps.get_current_user] = mock_get_current_user
+    app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
+
+    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+        mock_response = MagicMock()
+        mock_response.json.return_value = mock_canvas_modules
+        mock_response.raise_for_status.return_value = None
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+        mock_httpx.return_value.__aenter__.return_value = mock_client
+
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as ac:
+                response = await ac.get(f"/api/v1/canvas/courses/{course_id}/modules")
+
+            assert response.status_code == 200
+            modules = response.json()
+            assert len(modules) == 0  # No modules
+        finally:
+            app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_get_course_modules_unauthorized() -> None:
+    """Test module retrieval when user doesn't have access to course"""
+    course_id = 99999  # Course user doesn't have access to
+
+    mock_user = User(
+        id=uuid.UUID("123e4567-e89b-12d3-a456-426614174000"),
+        canvas_id=71202,
+        name="Test User",
+        access_token="encrypted_token",
+        refresh_token="encrypted_refresh",
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+    )
+
+    def mock_get_current_user() -> User:
+        return mock_user
+
+    async def mock_get_canvas_token() -> str:
+        return "valid_canvas_token"
+
+    app.dependency_overrides[deps.get_current_user] = mock_get_current_user
+    app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
+
+    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+        # Mock Canvas API 403 response
+        mock_response = MagicMock()
+        mock_response.status_code = 403
+        mock_response.text = "Forbidden"
+
+        mock_http_error = httpx.HTTPStatusError(
+            "Forbidden", request=MagicMock(), response=mock_response
+        )
+
+        mock_client = AsyncMock()
+        mock_client.get.side_effect = mock_http_error
+        mock_httpx.return_value.__aenter__.return_value = mock_client
+
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as ac:
+                response = await ac.get(f"/api/v1/canvas/courses/{course_id}/modules")
+
+            assert response.status_code == 403
+            assert "You don't have access to this course" in response.json()["detail"]
+        finally:
+            app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_get_course_modules_malformed_data() -> None:
+    """Test module retrieval with malformed Canvas API response"""
+    course_id = 37823
+
+    # Mock Canvas API response with malformed data
+    mock_canvas_modules: list[dict[str, Any] | str] = [
+        {
+            "id": 173467,
+            "name": "Valid Module",
+            "position": 1,
+        },
+        {
+            # Missing id field
+            "name": "Invalid Module 1",
+            "position": 2,
+        },
+        {
+            "id": 173469,
+            # Missing name field
+            "position": 3,
+        },
+        {
+            "id": "173470",  # String ID (should be converted)
+            "name": "Module with String ID",
+            "position": 4,
+        },
+        "invalid_module_type",  # Not a dict
+    ]
+
+    mock_user = User(
+        id=uuid.UUID("123e4567-e89b-12d3-a456-426614174000"),
+        canvas_id=71202,
+        name="Test User",
+        access_token="encrypted_token",
+        refresh_token="encrypted_refresh",
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+    )
+
+    def mock_get_current_user() -> User:
+        return mock_user
+
+    async def mock_get_canvas_token() -> str:
+        return "valid_canvas_token"
+
+    app.dependency_overrides[deps.get_current_user] = mock_get_current_user
+    app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
+
+    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+        mock_response = MagicMock()
+        mock_response.json.return_value = mock_canvas_modules
+        mock_response.raise_for_status.return_value = None
+
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+        mock_httpx.return_value.__aenter__.return_value = mock_client
+
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as ac:
+                response = await ac.get(f"/api/v1/canvas/courses/{course_id}/modules")
+
+            assert response.status_code == 200
+            modules = response.json()
+
+            # Should only return valid modules (2 out of 5)
+            assert len(modules) == 2
+            assert modules[0]["id"] == 173467
+            assert modules[0]["name"] == "Valid Module"
+            assert modules[1]["id"] == 173470  # Converted from string
+            assert modules[1]["name"] == "Module with String ID"
+        finally:
+            app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_get_course_modules_canvas_token_expired() -> None:
+    """Test module retrieval when Canvas token is expired"""
+    course_id = 37823
+
+    mock_user = User(
+        id=uuid.UUID("123e4567-e89b-12d3-a456-426614174000"),
+        canvas_id=71202,
+        name="Test User",
+        access_token="encrypted_token",
+        refresh_token="encrypted_refresh",
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+    )
+
+    def mock_get_current_user() -> User:
+        return mock_user
+
+    async def mock_get_canvas_token() -> str:
+        return "expired_canvas_token"
+
+    app.dependency_overrides[deps.get_current_user] = mock_get_current_user
+    app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
+
+    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+        # Mock Canvas API 401 response
+        mock_response = MagicMock()
+        mock_response.status_code = 401
+        mock_response.text = "Unauthorized"
+
+        mock_http_error = httpx.HTTPStatusError(
+            "Unauthorized", request=MagicMock(), response=mock_response
+        )
+
+        mock_client = AsyncMock()
+        mock_client.get.side_effect = mock_http_error
+        mock_httpx.return_value.__aenter__.return_value = mock_client
+
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as ac:
+                response = await ac.get(f"/api/v1/canvas/courses/{course_id}/modules")
+
+            assert response.status_code == 401
+            assert "Canvas access token invalid" in response.json()["detail"]
+        finally:
+            app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_get_course_modules_network_error() -> None:
+    """Test module retrieval when network connection to Canvas fails"""
+    course_id = 37823
+
+    mock_user = User(
+        id=uuid.UUID("123e4567-e89b-12d3-a456-426614174000"),
+        canvas_id=71202,
+        name="Test User",
+        access_token="encrypted_token",
+        refresh_token="encrypted_refresh",
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+    )
+
+    def mock_get_current_user() -> User:
+        return mock_user
+
+    async def mock_get_canvas_token() -> str:
+        return "valid_canvas_token"
+
+    app.dependency_overrides[deps.get_current_user] = mock_get_current_user
+    app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
+
+    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+        # Mock network error
+        mock_request_error = httpx.RequestError("Connection failed")
+
+        mock_client = AsyncMock()
+        mock_client.get.side_effect = mock_request_error
+        mock_httpx.return_value.__aenter__.return_value = mock_client
+
+        try:
+            async with AsyncClient(
+                transport=ASGITransport(app=app), base_url="http://test"
+            ) as ac:
+                response = await ac.get(f"/api/v1/canvas/courses/{course_id}/modules")
+
+            assert response.status_code == 503
+            assert "Failed to connect to Canvas API" in response.json()["detail"]
+        finally:
+            app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_canvas_module_model() -> None:
+    """Test CanvasModule model validation"""
+    # Valid module
+    module = CanvasModule(id=123, name="Test Module")
+    assert module.id == 123
+    assert module.name == "Test Module"
+
+    # Test serialization
+    module_dict = module.model_dump()
+    assert module_dict == {"id": 123, "name": "Test Module"}
+
+    # Test deserialization
+    module_from_dict = CanvasModule.model_validate(
+        {"id": 456, "name": "Another Module"}
+    )
+    assert module_from_dict.id == 456
+    assert module_from_dict.name == "Another Module"

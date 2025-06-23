@@ -1,4 +1,4 @@
-import { Box, Text, Stack } from '@chakra-ui/react';
+import { Box, Stack, Text } from "@chakra-ui/react"
 
 export const SetupStep = () => {
   return (
@@ -8,9 +8,10 @@ export const SetupStep = () => {
           You're All Set!
         </Text>
         <Text fontSize="lg" color="gray.600" maxW="400px" lineHeight="tall">
-          Congratulations! You're ready to start using our platform. This is placeholder content for the final step of the onboarding process.
+          Congratulations! You're ready to start using our platform. This is
+          placeholder content for the final step of the onboarding process.
         </Text>
       </Box>
     </Stack>
-  );
-};
+  )
+}

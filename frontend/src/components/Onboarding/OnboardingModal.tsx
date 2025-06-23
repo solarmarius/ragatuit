@@ -1,23 +1,23 @@
-import { Button, Card, HStack, Stack, Text } from "@chakra-ui/react";
+import { Button, Card, HStack, Stack, Text } from "@chakra-ui/react"
 import {
-  DialogRoot,
-  DialogContent,
-  DialogHeader,
-  DialogBody,
-  DialogFooter,
   DialogBackdrop,
-} from "../ui/dialog";
-import { WelcomeStep } from "./steps/WelcomeStep";
-import { FeatureStep } from "./steps/FeatureStep";
-import { SetupStep } from "./steps/SetupStep";
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogRoot,
+} from "../ui/dialog"
+import { FeatureStep } from "./steps/FeatureStep"
+import { SetupStep } from "./steps/SetupStep"
+import { WelcomeStep } from "./steps/WelcomeStep"
 
 interface OnboardingModalProps {
-  isOpen: boolean;
-  currentStep: number;
-  onNext: () => void;
-  onPrevious: () => void;
-  onComplete: () => void;
-  onSkip: () => void;
+  isOpen: boolean
+  currentStep: number
+  onNext: () => void
+  onPrevious: () => void
+  onComplete: () => void
+  onSkip: () => void
 }
 
 export const OnboardingModal = ({
@@ -28,24 +28,24 @@ export const OnboardingModal = ({
   onComplete,
   onSkip,
 }: OnboardingModalProps) => {
-  const totalSteps = 3;
-  const progressValue = (currentStep / totalSteps) * 100;
+  const totalSteps = 3
+  const progressValue = (currentStep / totalSteps) * 100
 
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 1:
-        return <WelcomeStep />;
+        return <WelcomeStep />
       case 2:
-        return <FeatureStep />;
+        return <FeatureStep />
       case 3:
-        return <SetupStep />;
+        return <SetupStep />
       default:
-        return <WelcomeStep />;
+        return <WelcomeStep />
     }
-  };
+  }
 
-  const isLastStep = currentStep === totalSteps;
-  const isFirstStep = currentStep === 1;
+  const isLastStep = currentStep === totalSteps
+  const isFirstStep = currentStep === 1
 
   return (
     <DialogRoot open={isOpen} size="lg" placement="center">
@@ -108,5 +108,5 @@ export const OnboardingModal = ({
         </DialogFooter>
       </DialogContent>
     </DialogRoot>
-  );
-};
+  )
+}

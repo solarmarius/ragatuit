@@ -1,17 +1,17 @@
 import {
+  Alert,
+  AspectRatio,
+  Box,
   Container,
+  Image,
   Text,
   VStack,
-  Alert,
-  Image,
-  Box,
-  AspectRatio,
-} from "@chakra-ui/react";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+} from "@chakra-ui/react"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 
-import Illustration from "/assets/images/test-illustration.svg";
-import CanvasLoginButton from "@/components/ui/canvas-button";
-import { isLoggedIn } from "@/hooks/useCanvasAuth";
+import CanvasLoginButton from "@/components/ui/canvas-button"
+import { isLoggedIn } from "@/hooks/useCanvasAuth"
+import Illustration from "/assets/images/test-illustration.svg"
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -19,18 +19,18 @@ export const Route = createFileRoute("/login")({
     if (isLoggedIn()) {
       throw redirect({
         to: "/",
-      });
+      })
     }
   },
   validateSearch: (search: Record<string, unknown>) => {
     return {
       error: search.error as string | undefined,
-    };
+    }
   },
-});
+})
 
 function Login() {
-  const { error } = Route.useSearch();
+  const { error } = Route.useSearch()
 
   return (
     <Container
@@ -88,7 +88,7 @@ function Login() {
                 borderRadius: "8px",
                 border: "none",
               }}
-            ></iframe>
+            />
           </AspectRatio>
           <Text fontSize="xs" color="gray.600">
             Watch how QuizCrafter seamlessly integrates with Canvas to analyze
@@ -98,5 +98,5 @@ function Login() {
         </Box>
       </VStack>
     </Container>
-  );
+  )
 }

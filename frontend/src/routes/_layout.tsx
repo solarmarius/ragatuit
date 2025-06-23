@@ -1,8 +1,8 @@
-import { Flex } from "@chakra-ui/react";
-import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
+import { Flex } from "@chakra-ui/react"
+import { Outlet, createFileRoute, redirect } from "@tanstack/react-router"
 
-import Sidebar from "@/components/Common/Sidebar";
-import { isLoggedIn } from "@/hooks/useCanvasAuth";
+import Sidebar from "@/components/Common/Sidebar"
+import { isLoggedIn } from "@/hooks/useCanvasAuth"
 
 export const Route = createFileRoute("/_layout")({
   component: Layout,
@@ -10,10 +10,10 @@ export const Route = createFileRoute("/_layout")({
     if (!isLoggedIn()) {
       throw redirect({
         to: "/login",
-      });
+      })
     }
   },
-});
+})
 
 function Layout() {
   return (
@@ -25,7 +25,7 @@ function Layout() {
         </Flex>
       </Flex>
     </Flex>
-  );
+  )
 }
 
-export default Layout;
+export default Layout
