@@ -1,3 +1,4 @@
+import json
 import uuid
 from datetime import datetime, timedelta
 from typing import Any
@@ -67,11 +68,28 @@ class Quiz(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), onupdate=func.now(), nullable=True),
     )
 
+    # Methods to handle JSON strings for selected_modules field
+    @property
+    def modules_dict(self) -> dict[int, str]:
+        """Get selected_modules as a dictionary."""
+        if not self.selected_modules:
+            return {}
+
+        parsed = json.loads(self.selected_modules)
+        if isinstance(parsed, dict):
+            return {int(k): str(v) for k, v in parsed.items()}
+        return {}
+
+    @modules_dict.setter
+    def modules_dict(self, value: dict[int, str]) -> None:
+        """Set selected_modules from a dictionary."""
+        self.selected_modules = json.dumps(value)
+
 
 class QuizCreate(SQLModel):
     canvas_course_id: int
     canvas_course_name: str
-    selected_modules: list[dict[str, int]]
+    selected_modules: dict[int, str]
 
 
 class UserPublic(SQLModel):
@@ -113,5 +131,10 @@ class CanvasConfigResponse(SQLModel):
 
 
 class CanvasCourse(SQLModel):
+    id: int
+    name: str
+
+
+class CanvasModule(SQLModel):
     id: int
     name: str

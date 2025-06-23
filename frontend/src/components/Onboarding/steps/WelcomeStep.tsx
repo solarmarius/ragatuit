@@ -1,4 +1,4 @@
-import { Box, Text, Stack } from '@chakra-ui/react';
+import { Box, Stack, Text } from "@chakra-ui/react"
 
 export const WelcomeStep = () => {
   return (
@@ -8,9 +8,10 @@ export const WelcomeStep = () => {
           Welcome to our site! 🎉
         </Text>
         <Text fontSize="lg" color="gray.600" maxW="400px" lineHeight="tall">
-          We're excited to have you here. Let us show you around and help you get started with everything our platform has to offer.
+          We're excited to have you here. Let us show you around and help you
+          get started with everything our platform has to offer.
         </Text>
       </Box>
     </Stack>
-  );
-};
+  )
+}

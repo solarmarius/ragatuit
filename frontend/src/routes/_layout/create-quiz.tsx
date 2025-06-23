@@ -1,69 +1,70 @@
-import { useState } from "react";
 import {
-  Container,
-  VStack,
-  HStack,
-  Text,
-  Button,
-  Progress,
   Box,
+  Button,
   Card,
-} from "@chakra-ui/react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+  Container,
+  HStack,
+  Progress,
+  Text,
+  VStack,
+} from "@chakra-ui/react"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { useState } from "react"
 
-import { CourseSelectionStep } from "@/components/QuizCreation/CourseSelectionStep";
+import { CourseSelectionStep } from "@/components/QuizCreation/CourseSelectionStep"
+import { ModuleSelectionStep } from "@/components/QuizCreation/ModuleSelectionStep"
 
 export const Route = createFileRoute("/_layout/create-quiz")({
   component: CreateQuiz,
-});
+})
 
 interface QuizFormData {
   selectedCourse?: {
-    id: number;
-    name: string;
-  };
-  // Future steps will add more fields
+    id: number
+    name: string
+  }
+  selectedModules?: { [id: number]: string }
 }
 
-const TOTAL_STEPS = 3; // Course selection, Module selection, Quiz settings
+const TOTAL_STEPS = 3 // Course selection, Module selection, Quiz settings
 
 function CreateQuiz() {
-  const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<QuizFormData>({});
+  const navigate = useNavigate()
+  const [currentStep, setCurrentStep] = useState(1)
+  const [formData, setFormData] = useState<QuizFormData>({})
 
   const handleNext = () => {
     if (currentStep < TOTAL_STEPS) {
-      setCurrentStep(currentStep + 1);
+      setCurrentStep(currentStep + 1)
     }
-  };
+  }
 
   const handlePrevious = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+      setCurrentStep(currentStep - 1)
     }
-  };
+  }
 
   const handleCancel = () => {
-    navigate({ to: "/" });
-  };
+    navigate({ to: "/" })
+  }
 
   const updateFormData = (data: Partial<QuizFormData>) => {
-    setFormData((prev) => ({ ...prev, ...data }));
-  };
+    setFormData((prev) => ({ ...prev, ...data }))
+  }
 
   const getStepTitle = () => {
     switch (currentStep) {
       case 1:
-        return "Select Course";
+        return "Select Course"
       case 2:
-        return "Select Modules";
+        return "Select Modules"
       case 3:
-        return "Quiz Settings";
+        return "Quiz Settings"
       default:
-        return "Create Quiz";
+        return "Create Quiz"
     }
-  };
+  }
 
   const renderStep = () => {
     switch (currentStep) {
@@ -71,41 +72,47 @@ function CreateQuiz() {
         return (
           <CourseSelectionStep
             selectedCourse={formData.selectedCourse}
-            onCourseSelect={(course) => updateFormData({ selectedCourse: course })}
+            onCourseSelect={(course) =>
+              updateFormData({ selectedCourse: course })
+            }
           />
-        );
+        )
       case 2:
         return (
-          <Box>
-            <Text>Module selection step - Coming soon</Text>
-            <Text fontSize="sm" color="gray.600">
-              Selected course: {formData.selectedCourse?.name}
-            </Text>
-          </Box>
-        );
+          <ModuleSelectionStep
+            courseId={formData.selectedCourse?.id || 0}
+            selectedModules={formData.selectedModules || {}}
+            onModulesSelect={(modules) =>
+              updateFormData({ selectedModules: modules })
+            }
+          />
+        )
       case 3:
         return (
           <Box>
             <Text>Quiz settings step - Coming soon</Text>
           </Box>
-        );
+        )
       default:
-        return null;
+        return null
     }
-  };
+  }
 
   const isStepValid = () => {
     switch (currentStep) {
       case 1:
-        return formData.selectedCourse != null;
+        return formData.selectedCourse != null
       case 2:
-        return true; // TODO: Add module selection validation
+        return (
+          formData.selectedModules != null &&
+          Object.keys(formData.selectedModules).length > 0
+        )
       case 3:
-        return true; // TODO: Add quiz settings validation
+        return true // TODO: Add quiz settings validation
       default:
-        return false;
+        return false
     }
-  };
+  }
 
   return (
     <Container maxW="4xl" py={8}>
@@ -134,9 +141,7 @@ function CreateQuiz() {
 
         {/* Step Content */}
         <Card.Root>
-          <Card.Body p={8}>
-            {renderStep()}
-          </Card.Body>
+          <Card.Body p={8}>{renderStep()}</Card.Body>
         </Card.Root>
 
         {/* Navigation Buttons */}
@@ -166,7 +171,7 @@ function CreateQuiz() {
                 disabled={!isStepValid()}
                 onClick={() => {
                   // TODO: Submit quiz creation
-                  console.log("Creating quiz with data:", formData);
+                  console.log("Creating quiz with data:", formData)
                 }}
               >
                 Create Quiz
@@ -176,5 +181,5 @@ function CreateQuiz() {
         </HStack>
       </VStack>
     </Container>
-  );
+  )
 }

@@ -1,25 +1,25 @@
 import {
-  VStack,
-  Text,
+  Alert,
   Box,
   Card,
-  RadioGroup,
-  Alert,
-  Skeleton,
   HStack,
-} from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
+  RadioGroup,
+  Skeleton,
+  Text,
+  VStack,
+} from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
 
-import { CanvasService } from "@/client";
+import { CanvasService } from "@/client"
 
 interface Course {
-  id: number;
-  name: string;
+  id: number
+  name: string
 }
 
 interface CourseSelectionStepProps {
-  selectedCourse?: Course;
-  onCourseSelect: (course: Course) => void;
+  selectedCourse?: Course
+  onCourseSelect: (course: Course) => void
 }
 
 export function CourseSelectionStep({
@@ -36,7 +36,7 @@ export function CourseSelectionStep({
     retry: 1, // Only retry once instead of default 3 times
     retryDelay: 1000, // Wait 1 second between retries
     staleTime: 30000, // Consider data stale after 30 seconds
-  });
+  })
 
   if (isLoading) {
     return (
@@ -48,7 +48,7 @@ export function CourseSelectionStep({
           <Skeleton key={i} height="60px" borderRadius="md" />
         ))}
       </VStack>
-    );
+    )
   }
 
   if (error) {
@@ -61,7 +61,7 @@ export function CourseSelectionStep({
           check your Canvas connection.
         </Alert.Description>
       </Alert.Root>
-    );
+    )
   }
 
   if (!courses || courses.length === 0) {
@@ -74,7 +74,7 @@ export function CourseSelectionStep({
           check your Canvas account or contact your administrator.
         </Alert.Description>
       </Alert.Root>
-    );
+    )
   }
 
   return (
@@ -102,7 +102,7 @@ export function CourseSelectionStep({
               }
               bg={selectedCourse?.id === course.id ? "blue.50" : "white"}
               onClick={() => {
-                onCourseSelect(course);
+                onCourseSelect(course)
               }}
               data-testid={`course-card-${course.id}`}
             >
@@ -112,11 +112,7 @@ export function CourseSelectionStep({
                     <RadioGroup.ItemControl />
                   </RadioGroup.Item>
                   <Box flex={1}>
-                    <Text
-                      fontWeight="medium"
-                      fontSize="md"
-                      lineClamp={2}
-                    >
+                    <Text fontWeight="medium" fontSize="md" lineClamp={2}>
                       {course.name || "Unnamed Course"}
                     </Text>
                     <Text fontSize="sm" color="gray.600">
@@ -139,5 +135,5 @@ export function CourseSelectionStep({
         </Alert.Root>
       )}
     </VStack>
-  );
+  )
 }

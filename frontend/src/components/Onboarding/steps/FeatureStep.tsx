@@ -1,4 +1,4 @@
-import { Box, Text, Stack } from '@chakra-ui/react';
+import { Box, Stack, Text } from "@chakra-ui/react"
 
 export const FeatureStep = () => {
   return (
@@ -8,9 +8,11 @@ export const FeatureStep = () => {
           Discover Our Features
         </Text>
         <Text fontSize="lg" color="gray.600" maxW="400px" lineHeight="tall">
-          Explore the powerful tools and features that will help you accomplish your goals. This is placeholder content for step 2 of the onboarding process.
+          Explore the powerful tools and features that will help you accomplish
+          your goals. This is placeholder content for step 2 of the onboarding
+          process.
         </Text>
       </Box>
     </Stack>
-  );
-};
+  )
+}

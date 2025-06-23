@@ -5,6 +5,11 @@ export type CanvasCourse = {
   name: string
 }
 
+export type CanvasModule = {
+  id: number
+  name: string
+}
+
 export type HTTPValidationError = {
   detail?: Array<ValidationError>
 }
@@ -42,6 +47,12 @@ export type AuthRefreshCanvasTokenResponse = {
 }
 
 export type CanvasGetCoursesResponse = Array<CanvasCourse>
+
+export type CanvasGetCourseModulesData = {
+  courseId: number
+}
+
+export type CanvasGetCourseModulesResponse = Array<CanvasModule>
 
 export type UsersReadUserMeResponse = UserPublic
 

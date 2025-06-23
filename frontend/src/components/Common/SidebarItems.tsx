@@ -1,26 +1,27 @@
-import { Box, Flex, Icon, Text } from "@chakra-ui/react";
-import { Link as RouterLink, useRouterState } from "@tanstack/react-router";
-import { FiFileText, FiHome, FiSettings } from "react-icons/fi";
+import { Box, Flex, Icon, Text } from "@chakra-ui/react"
+import { Link as RouterLink, useRouterState } from "@tanstack/react-router"
+import { FiFileText, FiHome, FiSettings } from "react-icons/fi"
 
 const items = [
   { icon: FiHome, title: "Dashboard", path: "/" },
   { icon: FiFileText, title: "Quizzes", path: "/quiz" },
   { icon: FiSettings, title: "Settings", path: "/settings" },
-];
+]
 
 interface SidebarItemsProps {
-  onClose?: () => void;
+  onClose?: () => void
 }
 
 const SidebarItems = ({ onClose }: SidebarItemsProps) => {
   const location = useRouterState({
     select: (state) => state.location,
-  });
+  })
 
   const listItems = items.map(({ icon, title, path }) => {
-    const isActive = title === "Quizzes"
-      ? location.pathname === path || location.pathname === "/create-quiz"
-      : location.pathname === path;
+    const isActive =
+      title === "Quizzes"
+        ? location.pathname === path || location.pathname === "/create-quiz"
+        : location.pathname === path
 
     return (
       <RouterLink key={title} to={path} onClick={onClose}>
@@ -41,14 +42,14 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
           <Text>{title}</Text>
         </Flex>
       </RouterLink>
-    );
-  });
+    )
+  })
 
   return (
     <>
       <Box>{listItems}</Box>
     </>
-  );
-};
+  )
+}
 
-export default SidebarItems;
+export default SidebarItems

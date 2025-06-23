@@ -1,26 +1,26 @@
-import { Container, Heading, Tabs } from "@chakra-ui/react";
-import { createFileRoute } from "@tanstack/react-router";
+import { Container, Heading, Tabs } from "@chakra-ui/react"
+import { createFileRoute } from "@tanstack/react-router"
 
-import Appearance from "@/components/UserSettings/Appearance";
-import DeleteAccount from "@/components/UserSettings/DeleteAccount";
-import UserInformation from "@/components/UserSettings/UserInformation";
-import useAuth from "@/hooks/useCanvasAuth";
+import Appearance from "@/components/UserSettings/Appearance"
+import DeleteAccount from "@/components/UserSettings/DeleteAccount"
+import UserInformation from "@/components/UserSettings/UserInformation"
+import useAuth from "@/hooks/useCanvasAuth"
 
 const tabsConfig = [
   { value: "my-profile", title: "My profile", component: UserInformation },
   { value: "appearance", title: "Appearance", component: Appearance },
   { value: "danger-zone", title: "Danger zone", component: DeleteAccount },
-];
+]
 
 export const Route = createFileRoute("/_layout/settings")({
   component: UserSettings,
-});
+})
 
 function UserSettings() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser } = useAuth()
 
   if (!currentUser) {
-    return null;
+    return null
   }
 
   return (
@@ -44,5 +44,5 @@ function UserSettings() {
         ))}
       </Tabs.Root>
     </Container>
-  );
+  )
 }

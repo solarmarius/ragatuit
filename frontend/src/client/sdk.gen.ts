@@ -4,13 +4,15 @@ import type { CancelablePromise } from "./core/CancelablePromise"
 import { OpenAPI } from "./core/OpenAPI"
 import { request as __request } from "./core/request"
 import type {
-  AuthLoginCanvasResponse,
   AuthAuthCanvasResponse,
+  AuthLoginCanvasResponse,
   AuthLogoutCanvasResponse,
   AuthRefreshCanvasTokenResponse,
+  CanvasGetCourseModulesData,
+  CanvasGetCourseModulesResponse,
   CanvasGetCoursesResponse,
-  UsersReadUserMeResponse,
   UsersDeleteUserMeResponse,
+  UsersReadUserMeResponse,
   UsersUpdateUserMeData,
   UsersUpdateUserMeResponse,
   UtilsHealthCheckResponse,
@@ -215,6 +217,53 @@ export class CanvasService {
     return __request(OpenAPI, {
       method: "GET",
       url: "/api/v1/canvas/courses",
+    })
+  }
+
+  /**
+   * Get Course Modules
+   * Fetch Canvas modules for a specific course.
+   *
+   * Returns a list of modules where the authenticated user has access.
+   * This endpoint fetches modules to allow teachers to select content for quiz generation.
+   *
+   * **Parameters:**
+   * course_id (int): The Canvas course ID to fetch modules from
+   *
+   * **Returns:**
+   * List[CanvasModule]: List of modules with id and name only
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Raises:**
+   * HTTPException: 401 if Canvas token is invalid or expired
+   * HTTPException: 403 if user doesn't have access to the course
+   * HTTPException: 503 if unable to connect to Canvas
+   * HTTPException: 500 if Canvas API returns unexpected data
+   *
+   * **Example Response:**
+   * [
+   * {"id": 173467, "name": "Templates"},
+   * {"id": 173468, "name": "Ressurssider for studenter"}
+   * ]
+   * @param data The data for the request.
+   * @param data.courseId
+   * @returns CanvasModule Successful Response
+   * @throws ApiError
+   */
+  public static getCourseModules(
+    data: CanvasGetCourseModulesData,
+  ): CancelablePromise<CanvasGetCourseModulesResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/canvas/courses/{course_id}/modules",
+      path: {
+        course_id: data.courseId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
     })
   }
 }
