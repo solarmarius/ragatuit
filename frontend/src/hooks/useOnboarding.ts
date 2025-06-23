@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { UsersService } from '@/client';
-import useAuth from './useCanvasAuth';
+import { useState, useEffect } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { UsersService } from "@/client";
+import useAuth from "./useCanvasAuth";
 
 export const useOnboarding = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -10,14 +10,15 @@ export const useOnboarding = () => {
   const queryClient = useQueryClient();
 
   const updateOnboardingMutation = useMutation({
-    mutationFn: () => UsersService.updateUserMe({
-      requestBody: {
-        name: user?.name || '',
-        onboarding_completed: true,
-      },
-    }),
+    mutationFn: () =>
+      UsersService.updateUserMe({
+        requestBody: {
+          name: user?.name || "",
+          onboarding_completed: true,
+        },
+      }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       setIsOpen(false);
     },
   });
