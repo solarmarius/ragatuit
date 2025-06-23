@@ -193,7 +193,7 @@ async def ensure_valid_canvas_token(session: Session, user: User) -> str:
                 else:
                     raise HTTPException(
                         status_code=503,
-                        detail="Canvas temporarly unavailable. Please try again.",
+                        detail="Canvas temporarily unavailable. Please try again.",
                     )
 
     return crud.get_decrypted_access_token(user)

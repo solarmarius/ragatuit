@@ -112,11 +112,15 @@ export function CourseSelectionStep({
                     <RadioGroup.ItemControl />
                   </RadioGroup.Item>
                   <Box flex={1}>
-                    <Text fontWeight="medium" fontSize="md">
-                      {course.name}
+                    <Text
+                      fontWeight="medium"
+                      fontSize="md"
+                      lineClamp={2}
+                    >
+                      {course.name || "Unnamed Course"}
                     </Text>
                     <Text fontSize="sm" color="gray.600">
-                      Course ID: {course.id}
+                      Course ID: {course.id || "Unknown"}
                     </Text>
                   </Box>
                 </HStack>

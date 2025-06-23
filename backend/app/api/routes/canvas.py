@@ -96,15 +96,46 @@ async def get_courses(
         teacher_courses = []
         for course in courses_data:
             try:
+                # Validate course data structure
+                if not isinstance(course, dict):
+                    logger.warning(
+                        "courses_parse_error_invalid_course_type",
+                        user_id=str(current_user.id),
+                        course_type=type(course).__name__,
+                    )
+                    continue
+
                 # Check if course has enrollments and user is a teacher
                 enrollments = course.get("enrollments", [])
                 is_teacher = any(
                     enrollment.get("type") == "teacher" for enrollment in enrollments
                 )
 
-                if is_teacher and "id" in course and "name" in course:
+                # Validate required fields and data types
+                course_id = course.get("id")
+                course_name = course.get("name")
+
+                if (
+                    is_teacher
+                    and course_id is not None
+                    and course_name is not None
+                    and isinstance(course_id, (int, str))
+                    and isinstance(course_name, str)
+                ):
+                    # Convert string IDs to int if needed
+                    try:
+                        course_id = int(course_id)
+                    except (ValueError, TypeError):
+                        logger.warning(
+                            "courses_parse_error_invalid_id",
+                            user_id=str(current_user.id),
+                            course_id=course_id,
+                            course_name=course_name,
+                        )
+                        continue
+
                     teacher_courses.append(
-                        CanvasCourse(id=course["id"], name=course["name"])
+                        CanvasCourse(id=course_id, name=course_name.strip())
                     )
 
             except (KeyError, TypeError) as e:
