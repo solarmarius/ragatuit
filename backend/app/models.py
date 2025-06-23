@@ -40,14 +40,19 @@ class User(SQLModel, table=True):
         default=datetime.now() + timedelta(seconds=3600)
     )
     token_type: str = Field(default="Bearer")
+    onboarding_completed: bool = Field(
+        default=False, description="Whether user has completed onboarding"
+    )
 
 
 class UserPublic(SQLModel):
     name: str
+    onboarding_completed: bool
 
 
 class UserUpdateMe(SQLModel):
     name: str
+    onboarding_completed: bool | None = Field(default=None)
 
 
 class TokenPayload(SQLModel):

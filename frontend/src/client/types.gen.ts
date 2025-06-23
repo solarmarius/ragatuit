@@ -10,10 +10,12 @@ export type Message = {
 
 export type UserPublic = {
   name: string
+  onboarding_completed: boolean
 }
 
 export type UserUpdateMe = {
   name: string
+  onboarding_completed?: boolean | null
 }
 
 export type ValidationError = {
@@ -26,9 +28,13 @@ export type AuthLoginCanvasResponse = unknown
 
 export type AuthAuthCanvasResponse = unknown
 
-export type AuthLogoutCanvasResponse = unknown
+export type AuthLogoutCanvasResponse = {
+  [key: string]: string
+}
 
-export type AuthRefreshCanvasTokenResponse = unknown
+export type AuthRefreshCanvasTokenResponse = {
+  [key: string]: string
+}
 
 export type UsersReadUserMeResponse = UserPublic
 

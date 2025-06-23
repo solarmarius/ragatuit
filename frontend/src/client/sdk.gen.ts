@@ -18,7 +18,26 @@ import type {
 export class AuthService {
   /**
    * Login Canvas
-   * Generate Canvas OAuth2 authorization URL and redirect
+   * Initiate Canvas OAuth2 authentication flow.
+   *
+   * Generates a Canvas OAuth2 authorization URL with a secure state parameter
+   * and redirects the user to Canvas for authentication.
+   *
+   * **Flow:**
+   * 1. Generates a secure random state parameter for CSRF protection
+   * 2. Validates the Canvas base URL configuration
+   * 3. Constructs OAuth2 authorization URL with required parameters
+   * 4. Redirects user to Canvas login page
+   *
+   * **Returns:**
+   * RedirectResponse: 307 redirect to Canvas OAuth2 authorization endpoint
+   *
+   * **Raises:**
+   * HTTPException: 400 if Canvas base URL is invalid or malformed
+   *
+   * **Example:**
+   * GET /api/v1/auth/login/canvas
+   * -> Redirects to: https://canvas.example.com/login/oauth2/auth?client_id=...&state=...
    * @returns unknown Successful Response
    * @throws ApiError
    */
@@ -31,6 +50,40 @@ export class AuthService {
 
   /**
    * Auth Canvas
+   * Handle Canvas OAuth2 callback and complete authentication.
+   *
+   * Processes the OAuth2 authorization code returned by Canvas, exchanges it
+   * for access/refresh tokens, and creates or updates the user account.
+   *
+   * **Parameters:**
+   * session (SessionDep): Database session for user operations
+   * request (Request): HTTP request containing OAuth2 callback parameters
+   *
+   * **Query Parameters:**
+   * code (str): Authorization code from Canvas OAuth2 flow
+   * state (str): State parameter for CSRF protection (currently not validated)
+   *
+   * **Flow:**
+   * 1. Extracts authorization code from callback URL
+   * 2. Exchanges code for Canvas access/refresh tokens
+   * 3. Retrieves Canvas user information
+   * 4. Creates new user or updates existing user tokens
+   * 5. Generates JWT session token for the application
+   * 6. Redirects to frontend with success token
+   *
+   * **Returns:**
+   * RedirectResponse: Redirect to frontend login success page with JWT token
+   *
+   * **Raises:**
+   * HTTPException: 400 if authorization code missing or Canvas returns error
+   * HTTPException: 503 if unable to connect to Canvas
+   *
+   * **Example:**
+   * GET /api/v1/auth/callback/canvas?code=abc123&state=xyz789
+   * -> Redirects to: http://localhost:5173/login/success?token=jwt_token
+   *
+   * **Error Handling:**
+   * On any error, redirects to frontend login page with error message
    * @returns unknown Successful Response
    * @throws ApiError
    */
@@ -43,7 +96,37 @@ export class AuthService {
 
   /**
    * Logout Canvas
-   * @returns unknown Successful Response
+   * Logout user and revoke Canvas tokens.
+   *
+   * Safely logs out the authenticated user by revoking their Canvas access token
+   * and clearing all stored authentication data from the database.
+   *
+   * **Parameters:**
+   * current_user (CurrentUser): Authenticated user from JWT token
+   * session (SessionDep): Database session for token cleanup
+   *
+   * **Flow:**
+   * 1. Retrieves and decrypts user's Canvas access token
+   * 2. Attempts to revoke token on Canvas side (gracefully handles failures)
+   * 3. Clears all user tokens from database
+   * 4. Returns success confirmation
+   *
+   * **Returns:**
+   * dict: Success message confirming logout completion
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Error Handling:**
+   * - Canvas token revocation failures are logged but don't prevent logout
+   * - Network errors to Canvas are handled gracefully
+   * - Database token cleanup always proceeds regardless of Canvas API status
+   *
+   * **Example:**
+   * DELETE /api/v1/auth/logout
+   * Authorization: Bearer jwt_token
+   * -> {"message": "Canvas account disconnected successfully"}
+   * @returns string Successful Response
    * @throws ApiError
    */
   public static logoutCanvas(): CancelablePromise<AuthLogoutCanvasResponse> {
@@ -55,7 +138,41 @@ export class AuthService {
 
   /**
    * Refresh Canvas Token
-   * @returns unknown Successful Response
+   * Refresh Canvas access token using stored refresh token.
+   *
+   * Exchanges the user's stored Canvas refresh token for a new access token,
+   * ensuring continued access to Canvas APIs without requiring re-authentication.
+   *
+   * **Parameters:**
+   * current_user (CurrentUser): Authenticated user from JWT token
+   * session (SessionDep): Database session for token updates
+   *
+   * **Flow:**
+   * 1. Validates user has a stored refresh token
+   * 2. Decrypts the refresh token from database
+   * 3. Calls Canvas token refresh endpoint
+   * 4. Updates user's access token and expiration in database
+   * 5. Returns success confirmation
+   *
+   * **Returns:**
+   * dict: Success message confirming token refresh
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Raises:**
+   * HTTPException: 401 if no refresh token available or decryption fails
+   * HTTPException: 400 if Canvas token refresh fails or returns error
+   *
+   * **Example:**
+   * POST /api/v1/auth/refresh
+   * Authorization: Bearer jwt_token
+   * -> {"message": "Token refreshed successfully"}
+   *
+   * **Note:**
+   * This endpoint is automatically called by the token validation middleware
+   * when Canvas tokens are near expiration, but can also be called manually.
+   * @returns string Successful Response
    * @throws ApiError
    */
   public static refreshCanvasToken(): CancelablePromise<AuthRefreshCanvasTokenResponse> {
@@ -69,6 +186,42 @@ export class AuthService {
 export class UsersService {
   /**
    * Read User Me
+   * Get current user profile information.
+   *
+   * Returns the authenticated user's public profile data including their name
+   * and Canvas information. This endpoint provides user data for displaying
+   * in the frontend interface.
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Parameters:**
+   * current_user (CurrentUser): Authenticated user from JWT token validation
+   *
+   * **Returns:**
+   * UserPublic: User's public profile information (excludes sensitive data)
+   *
+   * **Response Model:**
+   * - name (str): User's display name from Canvas
+   * - Additional public fields as defined in UserPublic schema
+   *
+   * **Usage:**
+   * GET /api/v1/users/me
+   * Authorization: Bearer <jwt_token>
+   *
+   * **Example Response:**
+   * {
+   * "name": "John Doe"
+   * }
+   *
+   * **Security:**
+   * - Only returns public user information (no tokens or sensitive data)
+   * - Requires valid authentication to access
+   * - User can only access their own profile information
+   *
+   * **Frontend Integration:**
+   * Used by frontend to display user information in navigation, profile sections,
+   * and user settings pages.
    * @returns UserPublic Successful Response
    * @throws ApiError
    */
@@ -81,7 +234,62 @@ export class UsersService {
 
   /**
    * Delete User Me
-   * Delete own user.
+   * Permanently delete current user account and all associated data.
+   *
+   * **⚠️ DESTRUCTIVE OPERATION ⚠️**
+   *
+   * This endpoint permanently removes the user's account from the system,
+   * including all Canvas OAuth tokens and user data. This action cannot be undone.
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Parameters:**
+   * session (SessionDep): Database session for the deletion transaction
+   * current_user (CurrentUser): Authenticated user from JWT token validation
+   *
+   * **Returns:**
+   * Message: Confirmation message that the account was deleted
+   *
+   * **Usage:**
+   * DELETE /api/v1/users/me
+   * Authorization: Bearer <jwt_token>
+   *
+   * **Example Response:**
+   * {
+   * "message": "User deleted successfully"
+   * }
+   *
+   * **Data Removed:**
+   * - User account record
+   * - Encrypted Canvas OAuth tokens
+   * - User profile information
+   * - All associated user data
+   *
+   * **Side Effects:**
+   * - All JWT tokens for this user become invalid immediately
+   * - User must re-authenticate with Canvas to create a new account
+   * - Canvas connection is severed (tokens are deleted)
+   * - User loses access to all application features
+   *
+   * **Security:**
+   * - Users can only delete their own account
+   * - Requires active authentication (prevents accidental deletion)
+   * - Immediate token invalidation prevents further access
+   *
+   * **Frontend Integration:**
+   * - Should show confirmation dialog before calling this endpoint
+   * - Redirect to login page after successful deletion
+   * - Clear any stored authentication state
+   *
+   * **Recovery:**
+   * - No account recovery possible after deletion
+   * - User can create new account by authenticating with Canvas again
+   * - Previous data and settings will not be restored
+   *
+   * **Note:**
+   * This operation is final. Consider implementing account deactivation
+   * instead of deletion for better user experience.
    * @returns Message Successful Response
    * @throws ApiError
    */
@@ -94,7 +302,54 @@ export class UsersService {
 
   /**
    * Update User Me
-   * Update own user.
+   * Update current user's profile information.
+   *
+   * Allows authenticated users to modify their profile data such as display name.
+   * Only updates fields provided in the request body, leaving other fields unchanged.
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Parameters:**
+   * session (SessionDep): Database session for the update transaction
+   * user_in (UserUpdateMe): Updated user data (only provided fields are changed)
+   * current_user (CurrentUser): Authenticated user from JWT token validation
+   *
+   * **Request Body (UserUpdateMe):**
+   * - name (str, optional): New display name for the user
+   *
+   * **Returns:**
+   * UserPublic: Updated user profile with new information
+   *
+   * **Usage:**
+   * PATCH /api/v1/users/me
+   * Authorization: Bearer <jwt_token>
+   * Content-Type: application/json
+   *
+   * {
+   * "name": "New Display Name"
+   * }
+   *
+   * **Example Response:**
+   * {
+   * "name": "New Display Name"
+   * }
+   *
+   * **Behavior:**
+   * - Partial updates: Only provided fields are modified
+   * - Validation: Input validated against UserUpdateMe schema
+   * - Database: Changes are committed immediately
+   * - Response: Returns updated user information
+   *
+   * **Security:**
+   * - Users can only update their own profile
+   * - Sensitive fields (tokens, Canvas ID) cannot be modified
+   * - Input validation prevents malicious data
+   *
+   * **Error Handling:**
+   * - Validation errors return 422 with details
+   * - Authentication errors return 401/403
+   * - Database errors return 500
    * @param data The data for the request.
    * @param data.requestBody
    * @returns UserPublic Successful Response
