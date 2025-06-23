@@ -1,8 +1,7 @@
 import httpx
 from fastapi import APIRouter, HTTPException
 
-from app import crud
-from app.api.deps import CurrentUser
+from app.api.deps import CanvasToken, CurrentUser
 from app.core.config import settings
 from app.core.logging_config import get_logger
 from app.models import CanvasCourse
@@ -12,7 +11,9 @@ logger = get_logger("canvas")
 
 
 @router.get("/courses", response_model=list[CanvasCourse])
-async def get_courses(current_user: CurrentUser) -> list[CanvasCourse]:
+async def get_courses(
+    current_user: CurrentUser, canvas_token: CanvasToken
+) -> list[CanvasCourse]:
     """
     Fetch Canvas courses where the current user has teacher enrollment.
 
@@ -43,19 +44,8 @@ async def get_courses(current_user: CurrentUser) -> list[CanvasCourse]:
     )
 
     try:
-        # Get the user's Canvas access token
-        canvas_access_token = crud.get_decrypted_access_token(current_user)
-
-        if not canvas_access_token:
-            logger.error(
-                "courses_fetch_failed_no_token",
-                user_id=str(current_user.id),
-                canvas_id=current_user.canvas_id,
-            )
-            raise HTTPException(
-                status_code=401,
-                detail="Canvas access token not available. Please re-login.",
-            )
+        # Canvas token is automatically refreshed by the CanvasToken dependency
+        # if it's expiring within 5 minutes
 
         # Call Canvas API to get courses
         async with httpx.AsyncClient() as client:
@@ -63,7 +53,7 @@ async def get_courses(current_user: CurrentUser) -> list[CanvasCourse]:
                 response = await client.get(
                     f"http://canvas-mock:8001/api/v1/courses",
                     headers={
-                        "Authorization": f"Bearer {canvas_access_token}",
+                        "Authorization": f"Bearer {canvas_token}",
                         "Accept": "application/json",
                     },
                 )
@@ -71,25 +61,22 @@ async def get_courses(current_user: CurrentUser) -> list[CanvasCourse]:
                 courses_data = response.json()
 
             except httpx.HTTPStatusError as e:
+                logger.error(
+                    "courses_fetch_failed_canvas_error",
+                    user_id=str(current_user.id),
+                    canvas_id=current_user.canvas_id,
+                    status_code=e.response.status_code,
+                    response_text=e.response.text,
+                )
+
                 if e.response.status_code == 401:
-                    logger.warning(
-                        "courses_fetch_failed_canvas_unauthorized",
-                        user_id=str(current_user.id),
-                        canvas_id=current_user.canvas_id,
-                        status_code=e.response.status_code,
-                    )
+                    # This should not happen if CanvasToken dependency works correctly,
+                    # but handle it gracefully just in case
                     raise HTTPException(
                         status_code=401,
-                        detail="Canvas access token expired. Please re-login.",
+                        detail="Canvas access token invalid. Please re-login.",
                     )
                 else:
-                    logger.error(
-                        "courses_fetch_failed_canvas_error",
-                        user_id=str(current_user.id),
-                        canvas_id=current_user.canvas_id,
-                        status_code=e.response.status_code,
-                        response_text=e.response.text,
-                    )
                     raise HTTPException(
                         status_code=503,
                         detail=f"Canvas API error: {e.response.status_code}",

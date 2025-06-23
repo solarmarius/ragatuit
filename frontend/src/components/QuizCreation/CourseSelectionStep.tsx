@@ -33,6 +33,9 @@ export function CourseSelectionStep({
   } = useQuery({
     queryKey: ["canvas-courses"],
     queryFn: CanvasService.getCourses,
+    retry: 1, // Only retry once instead of default 3 times
+    retryDelay: 1000, // Wait 1 second between retries
+    staleTime: 30000, // Consider data stale after 30 seconds
   });
 
   if (isLoading) {
@@ -101,6 +104,7 @@ export function CourseSelectionStep({
               onClick={() => {
                 onCourseSelect(course);
               }}
+              data-testid={`course-card-${course.id}`}
             >
               <Card.Body p={4}>
                 <HStack gap={3}>
