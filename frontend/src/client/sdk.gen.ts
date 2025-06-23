@@ -8,6 +8,7 @@ import type {
   AuthAuthCanvasResponse,
   AuthLogoutCanvasResponse,
   AuthRefreshCanvasTokenResponse,
+  CanvasGetCoursesResponse,
   UsersReadUserMeResponse,
   UsersDeleteUserMeResponse,
   UsersUpdateUserMeData,
@@ -179,6 +180,41 @@ export class AuthService {
     return __request(OpenAPI, {
       method: "POST",
       url: "/api/v1/auth/refresh",
+    })
+  }
+}
+
+export class CanvasService {
+  /**
+   * Get Courses
+   * Fetch Canvas courses where the current user has teacher enrollment.
+   *
+   * Returns a list of courses where the authenticated user is enrolled as a teacher.
+   * This endpoint filters courses to only include those where the user can create quizzes.
+   *
+   * **Returns:**
+   * List[CanvasCourse]: List of courses with id and name only
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Raises:**
+   * HTTPException: 401 if Canvas token is invalid or expired
+   * HTTPException: 503 if unable to connect to Canvas
+   * HTTPException: 500 if Canvas API returns unexpected data
+   *
+   * **Example Response:**
+   * [
+   * {"id": 37823, "name": "SB_ME_INF-0005 Praktisk kunstig intelligens"},
+   * {"id": 37824, "name": "SB_ME_INF-0006 Bruk av generativ KI"}
+   * ]
+   * @returns CanvasCourse Successful Response
+   * @throws ApiError
+   */
+  public static getCourses(): CancelablePromise<CanvasGetCoursesResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/canvas/courses",
     })
   }
 }

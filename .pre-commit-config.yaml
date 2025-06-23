@@ -33,6 +33,12 @@ repos:
         language: system
         files: ^backend/.*\.py$
         args: [--ignore-missing-imports, --disallow-untyped-defs]
+      - id: ruff-check-app
+        name: ruff-check-app
+        entry: bash -c 'cd backend && source .venv/bin/activate && ruff check app'
+        language: system
+        files: ^backend/app/.*\.py$
+        pass_filenames: false
 
 ci:
   autofix_commit_msg: 🎨 [pre-commit.ci] Auto format from pre-commit.com hooks

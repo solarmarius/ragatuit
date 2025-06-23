@@ -18,7 +18,9 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
   });
 
   const listItems = items.map(({ icon, title, path }) => {
-    const isActive = location.pathname === path;
+    const isActive = title === "Quizzes"
+      ? location.pathname === path || location.pathname === "/create-quiz"
+      : location.pathname === path;
 
     return (
       <RouterLink key={title} to={path} onClick={onClose}>

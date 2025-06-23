@@ -279,7 +279,7 @@ async def test_ensure_valid_canvas_token_503_error(db: Session) -> None:
             await ensure_valid_canvas_token(db, user)
 
         assert exc_info.value.status_code == 503
-        assert "Canvas temporarly unavailable" in exc_info.value.detail
+        assert "Canvas temporarily unavailable" in exc_info.value.detail
 
 
 @pytest.mark.asyncio
