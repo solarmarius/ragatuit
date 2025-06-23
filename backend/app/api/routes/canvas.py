@@ -2,7 +2,6 @@ import httpx
 from fastapi import APIRouter, HTTPException
 
 from app.api.deps import CanvasToken, CurrentUser
-from app.core.config import settings
 from app.core.logging_config import get_logger
 from app.models import CanvasCourse
 
@@ -51,7 +50,7 @@ async def get_courses(
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
-                    f"http://canvas-mock:8001/api/v1/courses",
+                    "http://canvas-mock:8001/api/v1/courses",
                     headers={
                         "Authorization": f"Bearer {canvas_token}",
                         "Accept": "application/json",
@@ -119,7 +118,7 @@ async def get_courses(
                     is_teacher
                     and course_id is not None
                     and course_name is not None
-                    and isinstance(course_id, (int, str))
+                    and isinstance(course_id, int | str)
                     and isinstance(course_name, str)
                 ):
                     # Convert string IDs to int if needed
