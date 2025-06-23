@@ -306,7 +306,10 @@ async def test_get_courses_canvas_api_error() -> None:
                 response = await ac.get("/api/v1/canvas/courses")
 
             assert response.status_code == 503
-            assert "Canvas API error: 500" in response.json()["detail"]
+            assert (
+                "Canvas service is temporarily unavailable. Please try again later."
+                in response.json()["detail"]
+            )
         finally:
             app.dependency_overrides.clear()
 
