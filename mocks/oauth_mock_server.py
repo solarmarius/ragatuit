@@ -21,20 +21,229 @@ mock_users = {
 
 mock_courses = [
     {
-        "id": 101,
-        "name": "Introduction to Biology",
-        "course_code": "BIO101",
-        "enrollment_term_id": 1,
-        "created_at": "2024-01-15T10:00:00Z",
-        "workflow_state": "available",
+        "id": 37823,
+        "name": "SB_ME_INF-0005 Praktisk kunstig intelligens",
+        "account_id": 27925,
+        "uuid": "hfv2nToY5ae1MbmNWTfNhTpzVbwq9ENcT00yTEiK",
+        "start_at": None,
+        "grading_standard_id": None,
+        "is_public": False,
+        "created_at": "2025-03-06T16:18:18Z",
+        "course_code": "SB_ME_IFI_0005",
+        "default_view": "wiki",
+        "root_account_id": 1,
+        "enrollment_term_id": 3,
+        "license": "private",
+        "grade_passback_setting": None,
+        "end_at": None,
+        "public_syllabus": False,
+        "public_syllabus_to_auth": True,
+        "storage_quota_mb": 3145,
+        "is_public_to_auth_users": True,
+        "homeroom_course": False,
+        "course_color": None,
+        "friendly_name": None,
+        "apply_assignment_group_weights": False,
+        "calendar": {
+            "ics": "https://uit.instructure.com/feeds/calendars/course_hfv2nToY5ae1MbmNWTfNhTpzVbwq9ENcT00yTEiK.ics"
+        },
+        "time_zone": "Europe/Copenhagen",
+        "blueprint": False,
+        "template": False,
+        "sis_course_id": None,
+        "integration_id": None,
+        "enrollments": [
+            {
+                "type": "teacher",
+                "role": "TeacherEnrollment",
+                "role_id": 4,
+                "user_id": 71202,
+                "enrollment_state": "active",
+                "limit_privileges_to_course_section": False,
+            }
+        ],
+        "hide_final_grades": False,
+        "workflow_state": "unpublished",
+        "restrict_enrollments_to_course_dates": False,
     },
     {
-        "id": 102,
-        "name": "Advanced Chemistry",
-        "course_code": "CHEM301",
-        "enrollment_term_id": 1,
-        "created_at": "2024-01-20T10:00:00Z",
-        "workflow_state": "available",
+        "id": 37824,
+        "name": "SB_ME_INF-0006 Bruk av generativ KI",
+        "account_id": 27925,
+        "uuid": "Z7bzNStMko53AmlPm6R7qYPbBlLUWkGobbpBqlJ3",
+        "start_at": None,
+        "grading_standard_id": None,
+        "is_public": False,
+        "created_at": "2025-03-06T16:18:29Z",
+        "course_code": "SB_ME_IFI_0006",
+        "default_view": "wiki",
+        "root_account_id": 1,
+        "enrollment_term_id": 3,
+        "license": "private",
+        "grade_passback_setting": None,
+        "end_at": None,
+        "public_syllabus": False,
+        "public_syllabus_to_auth": True,
+        "storage_quota_mb": 3145,
+        "is_public_to_auth_users": True,
+        "homeroom_course": False,
+        "course_color": None,
+        "friendly_name": None,
+        "apply_assignment_group_weights": False,
+        "calendar": {
+            "ics": "https://uit.instructure.com/feeds/calendars/course_Z7bzNStMko53AmlPm6R7qYPbBlLUWkGobbpBqlJ3.ics"
+        },
+        "time_zone": "Europe/Copenhagen",
+        "blueprint": False,
+        "template": False,
+        "sis_course_id": None,
+        "integration_id": None,
+        "enrollments": [
+            {
+                "type": "teacher",
+                "role": "TeacherEnrollment",
+                "role_id": 4,
+                "user_id": 71202,
+                "enrollment_state": "active",
+                "limit_privileges_to_course_section": False,
+            }
+        ],
+        "hide_final_grades": False,
+        "workflow_state": "unpublished",
+        "restrict_enrollments_to_course_dates": False,
+    },
+]
+
+mock_modules = [
+    {
+        "id": 173467,
+        "name": "Templates",
+        "position": 1,
+        "unlock_at": None,
+        "require_sequential_progress": False,
+        "requirement_type": "all",
+        "publish_final_grade": False,
+        "prerequisite_module_ids": [],
+        "published": True,
+        "items_count": 0,
+        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173467/items",
+    },
+    {
+        "id": 173574,
+        "name": "Templates",
+        "position": 2,
+        "unlock_at": None,
+        "require_sequential_progress": False,
+        "requirement_type": "all",
+        "publish_final_grade": False,
+        "prerequisite_module_ids": [],
+        "published": False,
+        "items_count": 5,
+        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173574/items",
+    },
+    {
+        "id": 173468,
+        "name": "Ressurssider for studenter",
+        "position": 3,
+        "unlock_at": None,
+        "require_sequential_progress": False,
+        "requirement_type": "all",
+        "publish_final_grade": False,
+        "prerequisite_module_ids": [],
+        "published": True,
+        "items_count": 2,
+        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173468/items",
+    },
+    {
+        "id": 173469,
+        "name": "Hjelperessurser for underviser",
+        "position": 4,
+        "unlock_at": None,
+        "require_sequential_progress": False,
+        "requirement_type": "all",
+        "publish_final_grade": False,
+        "prerequisite_module_ids": [],
+        "published": False,
+        "items_count": 1,
+        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173469/items",
+    },
+    {
+        "id": 173579,
+        "name": "Hjelperessurser for underviser",
+        "position": 5,
+        "unlock_at": None,
+        "require_sequential_progress": False,
+        "requirement_type": "all",
+        "publish_final_grade": False,
+        "prerequisite_module_ids": [],
+        "published": False,
+        "items_count": 1,
+        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173579/items",
+    },
+    {
+        "id": 173577,
+        "name": "Ressurssider for studenter",
+        "position": 6,
+        "unlock_at": None,
+        "require_sequential_progress": False,
+        "requirement_type": "all",
+        "publish_final_grade": False,
+        "prerequisite_module_ids": [],
+        "published": True,
+        "items_count": 3,
+        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173577/items",
+    },
+    {
+        "id": 173682,
+        "name": "Module 1",
+        "position": 7,
+        "unlock_at": None,
+        "require_sequential_progress": False,
+        "requirement_type": "all",
+        "publish_final_grade": False,
+        "prerequisite_module_ids": [],
+        "published": False,
+        "items_count": 5,
+        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173682/items",
+    },
+    {
+        "id": 173685,
+        "name": "Module 2",
+        "position": 8,
+        "unlock_at": None,
+        "require_sequential_progress": False,
+        "requirement_type": "all",
+        "publish_final_grade": False,
+        "prerequisite_module_ids": [],
+        "published": False,
+        "items_count": 5,
+        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173685/items",
+    },
+    {
+        "id": 173688,
+        "name": "Module 3",
+        "position": 9,
+        "unlock_at": None,
+        "require_sequential_progress": False,
+        "requirement_type": "all",
+        "publish_final_grade": False,
+        "prerequisite_module_ids": [],
+        "published": False,
+        "items_count": 5,
+        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173688/items",
+    },
+    {
+        "id": 173690,
+        "name": "Module 4",
+        "position": 10,
+        "unlock_at": None,
+        "require_sequential_progress": False,
+        "requirement_type": "all",
+        "publish_final_grade": False,
+        "prerequisite_module_ids": [],
+        "published": False,
+        "items_count": 6,
+        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173690/items",
     },
 ]
 
@@ -81,9 +290,9 @@ async def authorize(
         <style>
             body {{ font-family: Arial, sans-serif; margin: 40px; }}
             .container {{ max-width: 500px; margin: 0 auto; }}
-            .button {{ background: #008EE2; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; }}
+            .button {{ background: #008EE2; color: white; padding: 10px 20px; border: None; border-radius: 4px; cursor: pointer; text-decoration: None; display: inline-block; }}
             .button:hover {{ background: #0078c7; }}
-            .deny-button {{ background: #d93025; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; margin-left: 10px; }}
+            .deny-button {{ background: #d93025; color: white; padding: 10px 20px; border: None; border-radius: 4px; cursor: pointer; text-decoration: None; display: inline-block; margin-left: 10px; }}
             .info {{ background: #f5f5f5; padding: 15px; border-radius: 4px; margin: 20px 0; }}
         </style>
     </head>
@@ -97,7 +306,7 @@ async def authorize(
                 Client ID: {client_id}<br>
                 Redirect URI: {redirect_uri}<br>
                 Requested Scope: {scope or 'default'}<br>
-                State: {state or 'none'}
+                State: {state or 'None'}
             </div>
 
             <p>This application is requesting access to your Canvas account.</p>
@@ -381,6 +590,23 @@ async def get_courses(authorization: str = Header(None)):
 
     # Return mock courses for the authenticated user
     return mock_courses
+
+
+@app.get("/api/v1/courses/{course_id}/modules")
+async def get_course_modules(course_id: int, authorization: str = Header(None)):
+    """Mock Canvas course modules endpoint"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+
+    validate_token(authorization)
+
+    # Only return modules for course ID 37823, otherwise return unauthorized
+    if course_id != 37823:
+        raise HTTPException(
+            status_code=403, detail="Unauthorized access to course modules"
+        )
+
+    return mock_modules
 
 
 @app.get("/api/v1/users/{user_id}/profile")

@@ -1,5 +1,5 @@
-import { Box, Container, Text } from "@chakra-ui/react";
-import { createFileRoute } from "@tanstack/react-router";
+import { Box, Container, Text, Button, VStack } from "@chakra-ui/react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import useAuth from "@/hooks/useCanvasAuth";
 import { useOnboarding } from "@/hooks/useOnboarding";
@@ -10,6 +10,7 @@ export const Route = createFileRoute("/_layout/")({
 });
 
 function Dashboard() {
+  const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const {
     currentStep,
@@ -20,15 +21,31 @@ function Dashboard() {
     skipOnboarding,
   } = useOnboarding();
 
+  const handleCreateQuiz = () => {
+    navigate({ to: "/create-quiz" });
+  };
+
   return (
     <>
       <Container maxW="full">
-        <Box pt={12} m={4}>
-          <Text fontSize="2xl" truncate maxW="sm">
-            Hi, {currentUser?.name} 👋🏼
-          </Text>
-          <Text>Welcome back, nice to see you again!</Text>
-        </Box>
+        <VStack gap={6} align="stretch" pt={12} m={4}>
+          <Box>
+            <Text fontSize="2xl" truncate maxW="sm">
+              Hi, {currentUser?.name} 👋🏼
+            </Text>
+            <Text>Welcome back, nice to see you again!</Text>
+          </Box>
+
+          <Box>
+            <Button
+              colorScheme="blue"
+              size="lg"
+              onClick={handleCreateQuiz}
+            >
+              Create Quiz
+            </Button>
+          </Box>
+        </VStack>
       </Container>
 
       <OnboardingModal

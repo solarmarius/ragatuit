@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import Column, DateTime, func
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 
 
 class UserCreate(SQLModel):
@@ -43,6 +43,35 @@ class User(SQLModel, table=True):
     onboarding_completed: bool = Field(
         default=False, description="Whether user has completed onboarding"
     )
+    quizzes: list["Quiz"] = Relationship(back_populates="owner", cascade_delete=True)
+
+
+class Quiz(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    owner_id: uuid.UUID = Field(
+        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+    )
+    owner: User | None = Relationship(back_populates="quizzes")
+    canvas_course_id: int = Field(index=True)
+    canvas_course_name: str
+    selected_modules: str = Field(description="JSON array of selected Canvas modules")
+    title: str = Field(min_length=1)
+    created_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(
+            DateTime(timezone=True), server_default=func.now(), nullable=True
+        ),
+    )
+    updated_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), onupdate=func.now(), nullable=True),
+    )
+
+
+class QuizCreate(SQLModel):
+    canvas_course_id: int
+    canvas_course_name: str
+    selected_modules: list[dict[str, int]]
 
 
 class UserPublic(SQLModel):
@@ -81,3 +110,8 @@ class CanvasConfigResponse(SQLModel):
     client_id: str
     redirect_uri: str
     scope: str
+
+
+class CanvasCourse(SQLModel):
+    id: int
+    name: str
