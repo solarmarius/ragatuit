@@ -5,7 +5,6 @@ import {
   Container,
   HStack,
   Skeleton,
-  Spinner,
   Text,
   VStack,
 } from "@chakra-ui/react";
@@ -13,6 +12,8 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { QuizService } from "@/client";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { StatusDescription } from "@/components/ui/status-description";
 import { StatusLight } from "@/components/ui/status-light";
 import useCustomToast from "@/hooks/useCustomToast";
 
@@ -317,116 +318,4 @@ function QuizDetailSkeleton() {
       </VStack>
     </Container>
   );
-}
-
-interface StatusBadgeProps {
-  status: string;
-}
-
-function StatusBadge({ status }: StatusBadgeProps) {
-  const getStatusConfig = () => {
-    switch (status) {
-      case "pending":
-        return { icon: "⏳", color: "gray", text: "Waiting" };
-      case "processing":
-        return {
-          icon: <Spinner size="xs" />,
-          color: "blue",
-          text: "Processing",
-        };
-      case "completed":
-        return { icon: "✅", color: "green", text: "Completed" };
-      case "failed":
-        return { icon: "❌", color: "red", text: "Failed" };
-      default:
-        return { icon: "❓", color: "gray", text: "Unknown" };
-    }
-  };
-
-  const config = getStatusConfig();
-
-  return (
-    <Badge variant="outline" colorScheme={config.color}>
-      <HStack gap={1} align="center">
-        {typeof config.icon === "string" ? (
-          <Text fontSize="xs">{config.icon}</Text>
-        ) : (
-          config.icon
-        )}
-        <Text>{config.text}</Text>
-      </HStack>
-    </Badge>
-  );
-}
-
-interface StatusDescriptionProps {
-  status: string;
-  type: "extraction" | "generation";
-  timestamp?: string | null;
-}
-
-function StatusDescription({
-  status,
-  type,
-  timestamp,
-}: StatusDescriptionProps) {
-  const getDescription = () => {
-    const isExtraction = type === "extraction";
-
-    switch (status) {
-      case "pending":
-        return isExtraction
-          ? "Waiting to extract content from selected modules"
-          : "Waiting for content extraction to complete";
-      case "processing":
-        return isExtraction
-          ? "Extracting and cleaning content from Canvas pages..."
-          : "Generating questions using the language model...";
-      case "completed":
-        const timeAgo = timestamp ? formatTimeAgo(timestamp) : "";
-        return isExtraction
-          ? `Content extracted successfully${timeAgo ? ` (${timeAgo})` : ""}`
-          : `Questions generated successfully${timeAgo ? ` (${timeAgo})` : ""}`;
-      case "failed":
-        return isExtraction
-          ? "Failed to extract content. Please try again."
-          : "Failed to generate questions. Please try again.";
-      default:
-        return "Status unknown";
-    }
-  };
-
-  return (
-    <Text fontSize="sm" color="gray.600">
-      {getDescription()}
-    </Text>
-  );
-}
-
-function formatTimeAgo(timestamp: string): string {
-  try {
-    // Ensure the timestamp is treated as UTC if it doesn't have timezone info
-    let normalizedTimestamp = timestamp;
-    if (!timestamp.includes('Z') && !timestamp.includes('+') && !timestamp.includes('-', 10)) {
-      normalizedTimestamp = timestamp + 'Z';
-    }
-
-    const date = new Date(normalizedTimestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-
-    if (diffMins < 1) return "just now";
-    if (diffMins < 60)
-      return `${diffMins} minute${diffMins === 1 ? "" : "s"} ago`;
-
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24)
-      return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
-
-    const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
-  } catch {
-    return "";
-  }
 }
