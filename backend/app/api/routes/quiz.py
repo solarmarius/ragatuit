@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from app.api.deps import CanvasToken, CurrentUser, SessionDep
 from app.core.db import engine
@@ -288,8 +288,10 @@ async def extract_content_for_quiz(
     # Create a new database session for the background task
     with Session(engine) as session:
         try:
-            # Update quiz status to processing
-            quiz = session.get(Quiz, quiz_id)
+            # Use SELECT FOR UPDATE to prevent race conditions
+            stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
+            quiz = session.exec(stmt).first()
+
             if not quiz:
                 logger.error(
                     "content_extraction_quiz_not_found",
@@ -297,6 +299,16 @@ async def extract_content_for_quiz(
                 )
                 return
 
+            # Check if extraction is already in progress to prevent duplicate work
+            if quiz.content_extraction_status == "processing":
+                logger.warning(
+                    "content_extraction_already_in_progress",
+                    quiz_id=str(quiz_id),
+                    current_status=quiz.content_extraction_status,
+                )
+                return
+
+            # Atomically update status to processing
             quiz.content_extraction_status = "processing"
             session.add(quiz)
             session.commit()
@@ -312,12 +324,16 @@ async def extract_content_for_quiz(
             # Get content summary for logging
             content_summary = extraction_service.get_content_summary(extracted_content)
 
-            # Update quiz with extracted content
-            quiz.content_dict = extracted_content
-            quiz.content_extraction_status = "completed"
-            quiz.content_extracted_at = datetime.now(timezone.utc)
-            session.add(quiz)
-            session.commit()
+            # Update quiz with extracted content using fresh lock
+            stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
+            quiz = session.exec(stmt).first()
+
+            if quiz:
+                quiz.content_dict = extracted_content
+                quiz.content_extraction_status = "completed"
+                quiz.content_extracted_at = datetime.now(timezone.utc)
+                session.add(quiz)
+                session.commit()
 
             logger.info(
                 "content_extraction_completed",
@@ -338,9 +354,10 @@ async def extract_content_for_quiz(
                 exc_info=True,
             )
 
-            # Update quiz status to failed
+            # Update quiz status to failed with locking
             try:
-                quiz = session.get(Quiz, quiz_id)
+                stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
+                quiz = session.exec(stmt).first()
                 if quiz:
                     quiz.content_extraction_status = "failed"
                     session.add(quiz)
@@ -387,8 +404,10 @@ async def trigger_content_extraction(
     )
 
     try:
-        # Get the quiz and verify ownership
-        quiz = get_quiz_by_id(session, quiz_id)
+        # Get the quiz and verify ownership with locking
+        stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
+        quiz = session.exec(stmt).first()
+
         if not quiz:
             logger.warning(
                 "manual_extraction_quiz_not_found",
@@ -405,6 +424,18 @@ async def trigger_content_extraction(
                 quiz_owner_id=str(quiz.owner_id),
             )
             raise HTTPException(status_code=404, detail="Quiz not found")
+
+        # Check if extraction is already in progress
+        if quiz.content_extraction_status == "processing":
+            logger.warning(
+                "manual_extraction_already_in_progress",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+                current_status=quiz.content_extraction_status,
+            )
+            raise HTTPException(
+                status_code=409, detail="Content extraction is already in progress"
+            )
 
         # Reset extraction status to pending
         quiz.content_extraction_status = "pending"
