@@ -445,8 +445,8 @@ test.describe('Quiz Detail Component', () => {
 
     await page.reload();
 
-    // Check that quiz ID has monospace font family
-    const quizIdElement = page.locator(`text=${mockQuizId}`);
+    // Check that quiz ID has monospace font family - target the specific quiz ID in metadata section
+    const quizIdElement = page.locator('p').filter({ hasText: mockQuizId });
     await expect(quizIdElement).toBeVisible();
     await expect(quizIdElement).toHaveCSS('font-family', /mono/);
   });

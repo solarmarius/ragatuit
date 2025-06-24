@@ -133,9 +133,9 @@ test.describe("Quiz Workflow End-to-End", () => {
     // Click on "Advanced settings" tab to access LLM model and temperature
     await page.getByText("Advanced Settings").click();
 
-    // Select different model
+    // Select different model - use exact display text from dropdown
     await page.getByRole("combobox").click();
-    await page.getByRole("option", { name: "gpt-4o" }).click();
+    await page.getByRole("option", { name: "GPT-4o" }).click();
 
     // Adjust temperature
     const slider = page.locator('[data-part="thumb"]').first(); // or be more specific if multiple sliders
