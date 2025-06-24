@@ -207,12 +207,10 @@ test.describe("ModuleSelectionStep Component", () => {
     await page.click("button:has-text('Next')");
 
     // Should show error message
-    await expect(
-      page.locator("text=Failed to load course modules")
-    ).toBeVisible();
+    await expect(page.locator("text=Canvas server error")).toBeVisible();
     await expect(
       page.locator(
-        "text=There was an error loading the modules for this course"
+        "text=There's an issue with the Canvas integration. Please try again in a few minutes."
       )
     ).toBeVisible();
   });

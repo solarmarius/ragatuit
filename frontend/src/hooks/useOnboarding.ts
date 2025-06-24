@@ -1,13 +1,13 @@
-import { UsersService } from "@/client"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
-import useAuth from "./useCanvasAuth"
+import { UsersService } from "@/client";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import useAuth from "./useCanvasAuth";
 
 export const useOnboarding = () => {
-  const [currentStep, setCurrentStep] = useState(1)
-  const [isOpen, setIsOpen] = useState(false)
-  const { user } = useAuth()
-  const queryClient = useQueryClient()
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const updateOnboardingMutation = useMutation({
     mutationFn: () =>
@@ -18,50 +18,50 @@ export const useOnboarding = () => {
         },
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["currentUser"] })
-      setIsOpen(false)
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
+      setIsOpen(false);
     },
-  })
+  });
 
   const isOnboardingCompleted = (): boolean => {
-    return user?.onboarding_completed ?? false
-  }
+    return user?.onboarding_completed ?? false;
+  };
 
   const markOnboardingCompleted = (): void => {
-    updateOnboardingMutation.mutate()
-  }
+    updateOnboardingMutation.mutate();
+  };
 
   const startOnboarding = (): void => {
     if (!isOnboardingCompleted()) {
-      setCurrentStep(1)
-      setIsOpen(true)
+      setCurrentStep(1);
+      setIsOpen(true);
     }
-  }
+  };
 
   const nextStep = (): void => {
     if (currentStep < 3) {
-      setCurrentStep(currentStep + 1)
+      setCurrentStep(currentStep + 1);
     }
-  }
+  };
 
   const previousStep = (): void => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
+      setCurrentStep(currentStep - 1);
     }
-  }
+  };
 
   const skipOnboarding = (): void => {
-    markOnboardingCompleted()
-  }
+    markOnboardingCompleted();
+  };
 
   useEffect(() => {
     if (user && !isOnboardingCompleted()) {
       const timer = setTimeout(() => {
-        startOnboarding()
-      }, 500)
-      return () => clearTimeout(timer)
+        startOnboarding();
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [user])
+  }, [user]);
 
   return {
     currentStep,
@@ -74,5 +74,5 @@ export const useOnboarding = () => {
     skipOnboarding,
     setIsOpen,
     isLoading: updateOnboardingMutation.isPending,
-  }
-}
+  };
+};

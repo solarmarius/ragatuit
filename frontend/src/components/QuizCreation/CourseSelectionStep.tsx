@@ -8,22 +8,23 @@ import {
   Skeleton,
   Text,
   VStack,
-} from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
+} from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
 
-import { CanvasService } from "@/client";
-import { Field } from "@/components/ui/field";
+import { CanvasService } from "@/client"
+import { Field } from "@/components/ui/field"
+import { analyzeCanvasError } from "@/utils"
 
 interface Course {
-  id: number;
-  name: string;
+  id: number
+  name: string
 }
 
 interface CourseSelectionStepProps {
-  selectedCourse?: Course;
-  onCourseSelect: (course: Course) => void;
-  title?: string;
-  onTitleChange: (title: string) => void;
+  selectedCourse?: Course
+  onCourseSelect: (course: Course) => void
+  title?: string
+  onTitleChange: (title: string) => void
 }
 
 export function CourseSelectionStep({
@@ -42,7 +43,7 @@ export function CourseSelectionStep({
     retry: 1, // Only retry once instead of default 3 times
     retryDelay: 1000, // Wait 1 second between retries
     staleTime: 30000, // Consider data stale after 30 seconds
-  });
+  })
 
   if (isLoading) {
     return (
@@ -54,20 +55,24 @@ export function CourseSelectionStep({
           <Skeleton key={i} height="60px" borderRadius="md" />
         ))}
       </VStack>
-    );
+    )
   }
 
   if (error) {
+    const errorInfo = analyzeCanvasError(error)
+
     return (
       <Alert.Root status="error">
         <Alert.Indicator />
         <Alert.Title>Failed to load courses</Alert.Title>
         <Alert.Description>
-          There was an error loading your Canvas courses. Please try again or
-          check your Canvas connection.
+          <Text mb={2}>{errorInfo.userFriendlyMessage}</Text>
+          <Text fontSize="sm" color="gray.600">
+            {errorInfo.actionableGuidance}
+          </Text>
         </Alert.Description>
       </Alert.Root>
-    );
+    )
   }
 
   if (!courses || courses.length === 0) {
@@ -80,7 +85,7 @@ export function CourseSelectionStep({
           check your Canvas account or contact your administrator.
         </Alert.Description>
       </Alert.Root>
-    );
+    )
   }
 
   return (
@@ -111,7 +116,7 @@ export function CourseSelectionStep({
               }
               bg={selectedCourse?.id === course.id ? "blue.50" : "white"}
               onClick={() => {
-                onCourseSelect(course);
+                onCourseSelect(course)
               }}
               data-testid={`course-card-${course.id}`}
             >
@@ -161,5 +166,5 @@ export function CourseSelectionStep({
         </VStack>
       )}
     </VStack>
-  );
+  )
 }

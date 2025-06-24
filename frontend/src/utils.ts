@@ -1,48 +1,5 @@
-import type { ApiError } from "./client"
+import { ApiError } from "./client"
 import useCustomToast from "./hooks/useCustomToast"
-
-export const emailPattern = {
-  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-  message: "Invalid email address",
-}
-
-export const namePattern = {
-  value: /^[A-Za-z\s\u00C0-\u017F]{1,30}$/,
-  message: "Invalid name",
-}
-
-export const passwordRules = (isRequired = true) => {
-  const rules: any = {
-    minLength: {
-      value: 8,
-      message: "Password must be at least 8 characters",
-    },
-  }
-
-  if (isRequired) {
-    rules.required = "Password is required"
-  }
-
-  return rules
-}
-
-export const confirmPasswordRules = (
-  getValues: () => any,
-  isRequired = true,
-) => {
-  const rules: any = {
-    validate: (value: string) => {
-      const password = getValues().password || getValues().new_password
-      return value === password ? true : "The passwords do not match"
-    },
-  }
-
-  if (isRequired) {
-    rules.required = "Password confirmation is required"
-  }
-
-  return rules
-}
 
 export const handleError = (err: ApiError) => {
   const { showErrorToast } = useCustomToast()
@@ -52,4 +9,77 @@ export const handleError = (err: ApiError) => {
     errorMessage = errDetail[0].msg
   }
   showErrorToast(errorMessage)
+}
+
+export interface CanvasErrorInfo {
+  isCanvasError: boolean
+  isPermissionError: boolean
+  userFriendlyMessage: string
+  actionableGuidance: string
+}
+
+export function analyzeCanvasError(error: unknown): CanvasErrorInfo {
+  // Default response for non-API errors
+  if (!(error instanceof ApiError)) {
+    return {
+      isCanvasError: false,
+      isPermissionError: false,
+      userFriendlyMessage: "An unexpected error occurred",
+      actionableGuidance:
+        "Please try again or contact support if the problem persists.",
+    }
+  }
+
+  const isCanvasApiCall = error.url?.includes("/canvas") || false
+
+  // Handle 403 errors from Canvas API calls
+  if (error.status === 403 && isCanvasApiCall) {
+    return {
+      isCanvasError: true,
+      isPermissionError: true,
+      userFriendlyMessage:
+        "You don't have permission to access this Canvas content",
+      actionableGuidance:
+        "This course may be restricted or you may need additional permissions. Contact your Canvas administrator or course instructor for access.",
+    }
+  }
+
+  // Handle other Canvas-related errors
+  if (isCanvasApiCall) {
+    if (error.status === 404) {
+      return {
+        isCanvasError: true,
+        isPermissionError: false,
+        userFriendlyMessage: "Canvas content not found",
+        actionableGuidance:
+          "The requested course or modules may have been removed or are no longer available.",
+      }
+    }
+
+    if (error.status === 500) {
+      return {
+        isCanvasError: true,
+        isPermissionError: false,
+        userFriendlyMessage: "Canvas server error",
+        actionableGuidance:
+          "There's an issue with the Canvas integration. Please try again in a few minutes.",
+      }
+    }
+
+    return {
+      isCanvasError: true,
+      isPermissionError: false,
+      userFriendlyMessage: "Canvas connection issue",
+      actionableGuidance: "Please check your Canvas connection and try again.",
+    }
+  }
+
+  // Generic API error
+  return {
+    isCanvasError: false,
+    isPermissionError: false,
+    userFriendlyMessage: "An error occurred while loading data",
+    actionableGuidance:
+      "Please try again or contact support if the problem persists.",
+  }
 }

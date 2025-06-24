@@ -120,7 +120,9 @@ test.describe("Course Selection Feature", () => {
     await expect(nextButton).toBeDisabled();
 
     // Title input should not be visible initially
-    await expect(page.locator('[data-testid="quiz-title-input"]')).not.toBeVisible();
+    await expect(
+      page.locator('[data-testid="quiz-title-input"]')
+    ).not.toBeVisible();
 
     // Click on first course card
     const firstCourse = page.locator(
@@ -140,13 +142,19 @@ test.describe("Course Selection Feature", () => {
     await expect(titleInput).toBeVisible();
 
     // Title input should be pre-filled with course name
-    await expect(titleInput).toHaveValue("SB_ME_INF-0005 Praktisk kunstig intelligens");
+    await expect(titleInput).toHaveValue(
+      "SB_ME_INF-0005 Praktisk kunstig intelligens"
+    );
 
     // Should show Quiz Title label
-    await expect(page.locator("label", { hasText: "Quiz Title" })).toBeVisible();
+    await expect(
+      page.locator("label", { hasText: "Quiz Title" })
+    ).toBeVisible();
 
     // Should show helper text
-    await expect(page.locator("text=This is the quiz title shown in Canvas")).toBeVisible();
+    await expect(
+      page.locator("text=This is the quiz title shown in Canvas")
+    ).toBeVisible();
 
     // Next button should now be enabled (course selected + title filled)
     await expect(nextButton).toBeEnabled();
@@ -184,7 +192,9 @@ test.describe("Course Selection Feature", () => {
 
     // Check title is pre-filled with first course name
     const titleInput = page.locator('[data-testid="quiz-title-input"]');
-    await expect(titleInput).toHaveValue("SB_ME_INF-0005 Praktisk kunstig intelligens");
+    await expect(titleInput).toHaveValue(
+      "SB_ME_INF-0005 Praktisk kunstig intelligens"
+    );
 
     // Select second course
     await page.locator("text=SB_ME_INF-0006 Bruk av generativ KI").click();
@@ -291,7 +301,9 @@ test.describe("Course Selection Feature", () => {
     await expect(nextButton).toBeEnabled();
   });
 
-  test("should maintain title when switching back from step 2", async ({ page }) => {
+  test("should maintain title when switching back from step 2", async ({
+    page,
+  }) => {
     // Mock successful API responses
     await page.route("**/api/v1/canvas/courses", async (route) => {
       await route.fulfill({
@@ -302,16 +314,19 @@ test.describe("Course Selection Feature", () => {
     });
 
     // Mock modules API for step 2
-    await page.route("**/api/v1/canvas/courses/37823/modules", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([
-          { id: 1, name: "Module 1" },
-          { id: 2, name: "Module 2" }
-        ]),
-      });
-    });
+    await page.route(
+      "**/api/v1/canvas/courses/37823/modules",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([
+            { id: 1, name: "Module 1" },
+            { id: 2, name: "Module 2" },
+          ]),
+        });
+      }
+    );
 
     await page.goto("/create-quiz");
     await page.waitForLoadState("networkidle");
@@ -327,7 +342,9 @@ test.describe("Course Selection Feature", () => {
 
     // Go to step 2
     await page.locator('button:has-text("Next")').click();
-    await expect(page.locator("text=Step 2 of 3: Select Modules")).toBeVisible();
+    await expect(
+      page.locator("text=Step 2 of 3: Select Modules")
+    ).toBeVisible();
 
     // Go back to step 1
     await page.locator('button:has-text("Previous")').click();
@@ -366,7 +383,9 @@ test.describe("Course Selection Feature", () => {
 
     // Title should be auto-filled and Next should be enabled
     const titleInput = page.locator('[data-testid="quiz-title-input"]');
-    await expect(titleInput).toHaveValue("SB_ME_INF-0005 Praktisk kunstig intelligens");
+    await expect(titleInput).toHaveValue(
+      "SB_ME_INF-0005 Praktisk kunstig intelligens"
+    );
 
     // Click Next
     await page.locator('button:has-text("Next")').click();
@@ -417,12 +436,12 @@ test.describe("Course Selection Feature", () => {
     await expect(page).toHaveURL("/create-quiz");
 
     // Should show error message (with longer timeout for reEtries)
-    await expect(page.locator("text=Failed to load courses")).toBeVisible({
+    await expect(page.locator("text=Canvas server error")).toBeVisible({
       timeout: 10000,
     });
     await expect(
       page.locator(
-        "text=There was an error loading your Canvas courses. Please try again or"
+        "text=There's an issue with the Canvas integration. Please try again in a few minutes."
       )
     ).toBeVisible();
 

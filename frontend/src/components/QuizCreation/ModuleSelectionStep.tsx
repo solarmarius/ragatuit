@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query"
 import type React from "react"
 
 import { CanvasService } from "@/client"
+import { analyzeCanvasError } from "@/utils"
 
 interface Module {
   id: number
@@ -81,13 +82,17 @@ export function ModuleSelectionStep({
   }
 
   if (error) {
+    const errorInfo = analyzeCanvasError(error)
+
     return (
       <Alert.Root status="error">
         <Alert.Indicator />
         <Alert.Title>Failed to load course modules</Alert.Title>
         <Alert.Description>
-          There was an error loading the modules for this course. Please try
-          again or check your Canvas connection.
+          <Text mb={2}>{errorInfo.userFriendlyMessage}</Text>
+          <Text fontSize="sm" color="gray.600">
+            {errorInfo.actionableGuidance}
+          </Text>
         </Alert.Description>
       </Alert.Root>
     )
