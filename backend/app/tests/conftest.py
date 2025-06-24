@@ -3,24 +3,91 @@ from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, delete
+from sqlalchemy import text
+from sqlmodel import Session, SQLModel, create_engine
 
 from app import crud
-from app.core.db import engine, init_db
+from app.core.config import settings
 from app.main import app
-from app.models import Quiz, User, UserCreate
+from app.models import UserCreate
+
+
+def create_test_database() -> None:
+    """Create the test database if it doesn't exist."""
+    # Connect to default postgres database to create test database
+    admin_engine = create_engine(
+        f"postgresql://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_SERVER}:{settings.POSTGRES_PORT}/postgres"
+    )
+
+    test_db_name = f"{settings.POSTGRES_DB}_test"
+
+    try:
+        with admin_engine.connect() as conn:
+            # Check if test database exists
+            result = conn.execute(
+                text("SELECT 1 FROM pg_database WHERE datname = :db_name"),
+                {"db_name": test_db_name},
+            )
+
+            if not result.fetchone():
+                # Create test database
+                conn.execute(text("COMMIT"))  # End any existing transaction
+                conn.execute(text(f"CREATE DATABASE {test_db_name}"))
+                print(f"Created test database: {test_db_name}")
+            else:
+                print(f"Test database already exists: {test_db_name}")
+    except Exception as e:
+        print(f"Warning: Could not create test database: {e}")
+        print("Make sure PostgreSQL is running and accessible")
+    finally:
+        admin_engine.dispose()
+
+
+# Create test database programmatically
+create_test_database()
+
+# Create test engine using separate test database
+test_engine = create_engine(
+    str(settings.SQLALCHEMY_TEST_DATABASE_URI),
+    echo=False,  # Set to True for SQL query debugging
+)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_test_database() -> Generator[None, None, None]:
+    """
+    Set up test database for the entire test session.
+
+    Creates tables at the start and cleans up at the end.
+    This runs automatically for all tests.
+    """
+    # Create tables at the start of test session
+    SQLModel.metadata.create_all(test_engine)
+
+    yield
+
+    # Clean up at the end of test session
+    SQLModel.metadata.drop_all(test_engine)
 
 
 @pytest.fixture(scope="function")
 def db() -> Generator[Session, None, None]:
-    with Session(engine) as session:
-        init_db(session)
+    """
+    Provide a clean database session for each test.
+
+    Uses the isolated test database, not the development database.
+    Each test gets a fresh transaction that is rolled back after the test.
+    """
+    connection = test_engine.connect()
+    transaction = connection.begin()
+    session = Session(bind=connection)
+
+    try:
         yield session
-        quiz_statement = delete(Quiz)
-        session.execute(quiz_statement)
-        user_statement = delete(User)
-        session.execute(user_statement)
-        session.commit()
+    finally:
+        session.close()
+        transaction.rollback()
+        connection.close()
 
 
 @pytest.fixture(scope="function")
