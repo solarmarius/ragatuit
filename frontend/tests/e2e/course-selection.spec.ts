@@ -100,7 +100,7 @@ test.describe("Course Selection Feature", () => {
     ).not.toBeVisible();
   });
 
-  test("should handle course selection and enable next button", async ({
+  test("should handle course selection and show title input", async ({
     page,
   }) => {
     // Mock successful API response
@@ -119,6 +119,9 @@ test.describe("Course Selection Feature", () => {
     const nextButton = page.locator('button:has-text("Next")');
     await expect(nextButton).toBeDisabled();
 
+    // Title input should not be visible initially
+    await expect(page.locator('[data-testid="quiz-title-input"]')).not.toBeVisible();
+
     // Click on first course card
     const firstCourse = page.locator(
       "text=SB_ME_INF-0005 Praktisk kunstig intelligens"
@@ -132,7 +135,20 @@ test.describe("Course Selection Feature", () => {
       })
     ).toBeVisible();
 
-    // Next button should now be enabled
+    // Title input should now be visible
+    const titleInput = page.locator('[data-testid="quiz-title-input"]');
+    await expect(titleInput).toBeVisible();
+
+    // Title input should be pre-filled with course name
+    await expect(titleInput).toHaveValue("SB_ME_INF-0005 Praktisk kunstig intelligens");
+
+    // Should show Quiz Title label
+    await expect(page.locator("label", { hasText: "Quiz Title" })).toBeVisible();
+
+    // Should show helper text
+    await expect(page.locator("text=This is the quiz title shown in Canvas")).toBeVisible();
+
+    // Next button should now be enabled (course selected + title filled)
     await expect(nextButton).toBeEnabled();
 
     // Check for visual indication that course is selected (blue background)
@@ -143,7 +159,7 @@ test.describe("Course Selection Feature", () => {
     ); // blue.50
   });
 
-  test("should switch course selection correctly", async ({ page }) => {
+  test("should switch course selection and update title", async ({ page }) => {
     // Mock successful API response
     await page.route("**/api/v1/canvas/courses", async (route) => {
       await route.fulfill({
@@ -166,6 +182,10 @@ test.describe("Course Selection Feature", () => {
       })
     ).toBeVisible();
 
+    // Check title is pre-filled with first course name
+    const titleInput = page.locator('[data-testid="quiz-title-input"]');
+    await expect(titleInput).toHaveValue("SB_ME_INF-0005 Praktisk kunstig intelligens");
+
     // Select second course
     await page.locator("text=SB_ME_INF-0006 Bruk av generativ KI").click();
 
@@ -175,6 +195,9 @@ test.describe("Course Selection Feature", () => {
         hasText: "SB_ME_INF-0006 Bruk av generativ KI",
       })
     ).toBeVisible();
+
+    // Title should be updated to second course name
+    await expect(titleInput).toHaveValue("SB_ME_INF-0006 Bruk av generativ KI");
 
     // Should not show first course as selected anymore
     await expect(
@@ -193,7 +216,135 @@ test.describe("Course Selection Feature", () => {
     ); // blue.50
   });
 
-  test("should proceed to next step when course is selected", async ({
+  test("should allow editing quiz title", async ({ page }) => {
+    // Mock successful API response
+    await page.route("**/api/v1/canvas/courses", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mockCoursesResponse),
+      });
+    });
+
+    await page.goto("/create-quiz");
+    await page.waitForLoadState("networkidle");
+
+    // Select a course
+    await page
+      .locator("text=SB_ME_INF-0005 Praktisk kunstig intelligens")
+      .click();
+
+    const titleInput = page.locator('[data-testid="quiz-title-input"]');
+
+    // Clear and enter custom title
+    await titleInput.clear();
+    await titleInput.fill("My Custom Quiz Title");
+
+    // Should show the custom title
+    await expect(titleInput).toHaveValue("My Custom Quiz Title");
+
+    // Next button should still be enabled
+    const nextButton = page.locator('button:has-text("Next")');
+    await expect(nextButton).toBeEnabled();
+  });
+
+  test("should disable next button when title is empty", async ({ page }) => {
+    // Mock successful API response
+    await page.route("**/api/v1/canvas/courses", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mockCoursesResponse),
+      });
+    });
+
+    await page.goto("/create-quiz");
+    await page.waitForLoadState("networkidle");
+
+    // Select a course
+    await page
+      .locator("text=SB_ME_INF-0005 Praktisk kunstig intelligens")
+      .click();
+
+    const titleInput = page.locator('[data-testid="quiz-title-input"]');
+    const nextButton = page.locator('button:has-text("Next")');
+
+    // Should be enabled initially (course selected + title pre-filled)
+    await expect(nextButton).toBeEnabled();
+
+    // Clear the title
+    await titleInput.clear();
+
+    // Next button should be disabled
+    await expect(nextButton).toBeDisabled();
+
+    // Enter just whitespace
+    await titleInput.fill("   ");
+
+    // Next button should still be disabled
+    await expect(nextButton).toBeDisabled();
+
+    // Enter valid title
+    await titleInput.fill("Valid Title");
+
+    // Next button should be enabled again
+    await expect(nextButton).toBeEnabled();
+  });
+
+  test("should maintain title when switching back from step 2", async ({ page }) => {
+    // Mock successful API responses
+    await page.route("**/api/v1/canvas/courses", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mockCoursesResponse),
+      });
+    });
+
+    // Mock modules API for step 2
+    await page.route("**/api/v1/canvas/courses/37823/modules", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          { id: 1, name: "Module 1" },
+          { id: 2, name: "Module 2" }
+        ]),
+      });
+    });
+
+    await page.goto("/create-quiz");
+    await page.waitForLoadState("networkidle");
+
+    // Select course and modify title
+    await page
+      .locator("text=SB_ME_INF-0005 Praktisk kunstig intelligens")
+      .click();
+
+    const titleInput = page.locator('[data-testid="quiz-title-input"]');
+    await titleInput.clear();
+    await titleInput.fill("My Custom Quiz Title");
+
+    // Go to step 2
+    await page.locator('button:has-text("Next")').click();
+    await expect(page.locator("text=Step 2 of 3: Select Modules")).toBeVisible();
+
+    // Go back to step 1
+    await page.locator('button:has-text("Previous")').click();
+    await expect(page.locator("text=Step 1 of 3: Select Course")).toBeVisible();
+
+    // Title should be preserved
+    await expect(titleInput).toHaveValue("My Custom Quiz Title");
+
+    // Course should still be selected
+    await expect(
+      page.locator("text=Selected:").locator("strong", {
+        hasText: "SB_ME_INF-0005 Praktisk kunstig intelligens",
+      })
+    ).toBeVisible();
+  });
+
+  test("should proceed to next step when course is selected and title is filled", async ({
     page,
   }) => {
     // Mock successful API response
@@ -212,6 +363,10 @@ test.describe("Course Selection Feature", () => {
     await page
       .locator("text=SB_ME_INF-0005 Praktisk kunstig intelligens")
       .click();
+
+    // Title should be auto-filled and Next should be enabled
+    const titleInput = page.locator('[data-testid="quiz-title-input"]');
+    await expect(titleInput).toHaveValue("SB_ME_INF-0005 Praktisk kunstig intelligens");
 
     // Click Next
     await page.locator('button:has-text("Next")').click();

@@ -24,6 +24,7 @@ interface QuizFormData {
     name: string
   }
   selectedModules?: { [id: number]: string }
+  title?: string
 }
 
 const TOTAL_STEPS = 3 // Course selection, Module selection, Quiz settings
@@ -73,8 +74,13 @@ function CreateQuiz() {
           <CourseSelectionStep
             selectedCourse={formData.selectedCourse}
             onCourseSelect={(course) =>
-              updateFormData({ selectedCourse: course })
+              updateFormData({
+                selectedCourse: course,
+                title: course.name // Auto-fill title with course name
+              })
             }
+            title={formData.title}
+            onTitleChange={(title) => updateFormData({ title })}
           />
         )
       case 2:
@@ -101,7 +107,7 @@ function CreateQuiz() {
   const isStepValid = () => {
     switch (currentStep) {
       case 1:
-        return formData.selectedCourse != null
+        return formData.selectedCourse != null && formData.title != null && formData.title.trim().length > 0
       case 2:
         return (
           formData.selectedModules != null &&
