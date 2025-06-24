@@ -4,15 +4,20 @@ import type { CancelablePromise } from "./core/CancelablePromise"
 import { OpenAPI } from "./core/OpenAPI"
 import { request as __request } from "./core/request"
 import type {
-  AuthAuthCanvasResponse,
   AuthLoginCanvasResponse,
+  AuthAuthCanvasResponse,
   AuthLogoutCanvasResponse,
   AuthRefreshCanvasTokenResponse,
+  CanvasGetCoursesResponse,
   CanvasGetCourseModulesData,
   CanvasGetCourseModulesResponse,
-  CanvasGetCoursesResponse,
-  UsersDeleteUserMeResponse,
+  QuizGetUserQuizzesEndpointResponse,
+  QuizCreateNewQuizData,
+  QuizCreateNewQuizResponse,
+  QuizGetQuizData,
+  QuizGetQuizResponse,
   UsersReadUserMeResponse,
+  UsersDeleteUserMeResponse,
   UsersUpdateUserMeData,
   UsersUpdateUserMeResponse,
   UtilsHealthCheckResponse,
@@ -260,6 +265,166 @@ export class CanvasService {
       url: "/api/v1/canvas/courses/{course_id}/modules",
       path: {
         course_id: data.courseId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+}
+
+export class QuizService {
+  /**
+   * Get User Quizzes Endpoint
+   * Retrieve all quizzes created by the authenticated user.
+   *
+   * Returns a list of all quizzes owned by the current user, ordered by creation date
+   * (most recent first). Each quiz includes full details including settings and metadata.
+   *
+   * **Returns:**
+   * List[Quiz]: List of quiz objects owned by the user
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Raises:**
+   * HTTPException: 500 if database operation fails
+   *
+   * **Example Response:**
+   * ```json
+   * [
+   * {
+   * "id": "12345678-1234-5678-9abc-123456789abc",
+   * "owner_id": "87654321-4321-8765-cba9-987654321abc",
+   * "canvas_course_id": 12345,
+   * "canvas_course_name": "Introduction to AI",
+   * "selected_modules": "{"173467": "Machine Learning Basics"}",
+   * "title": "AI Fundamentals Quiz",
+   * "question_count": 50,
+   * "llm_model": "gpt-4o",
+   * "llm_temperature": 0.3,
+   * "created_at": "2023-01-01T12:00:00Z",
+   * "updated_at": "2023-01-01T12:00:00Z"
+   * }
+   * ]
+   * ```
+   * @returns Quiz Successful Response
+   * @throws ApiError
+   */
+  public static getUserQuizzesEndpoint(): CancelablePromise<QuizGetUserQuizzesEndpointResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/quiz/",
+    })
+  }
+
+  /**
+   * Create New Quiz
+   * Create a new quiz with the specified settings.
+   *
+   * Creates a quiz with Canvas course integration, module selection, and LLM configuration.
+   * The quiz is associated with the authenticated user as the owner.
+   *
+   * **Parameters:**
+   * quiz_data (QuizCreate): Quiz creation data including:
+   * - canvas_course_id: Canvas course ID
+   * - canvas_course_name: Canvas course name
+   * - selected_modules: Dict mapping module IDs to names
+   * - title: Quiz title
+   * - question_count: Number of questions to generate (1-200, default 100)
+   * - llm_model: LLM model to use (default "o3-pro")
+   * - llm_temperature: LLM temperature setting (0.0-2.0, default 0.3)
+   *
+   * **Returns:**
+   * Quiz: The created quiz object with generated UUID and timestamps
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Raises:**
+   * HTTPException: 400 if quiz data is invalid
+   * HTTPException: 500 if database operation fails
+   *
+   * **Example Request:**
+   * ```json
+   * {
+   * "canvas_course_id": 12345,
+   * "canvas_course_name": "Introduction to AI",
+   * "selected_modules": {"173467": "Machine Learning Basics"},
+   * "title": "AI Fundamentals Quiz",
+   * "question_count": 50,
+   * "llm_model": "gpt-4o",
+   * "llm_temperature": 0.3
+   * }
+   * ```
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns Quiz Successful Response
+   * @throws ApiError
+   */
+  public static createNewQuiz(
+    data: QuizCreateNewQuizData,
+  ): CancelablePromise<QuizCreateNewQuizResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/quiz/",
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get Quiz
+   * Retrieve a quiz by its ID.
+   *
+   * Returns the quiz details if the authenticated user is the owner.
+   * Includes all quiz settings, Canvas course information, and selected modules.
+   *
+   * **Parameters:**
+   * quiz_id (UUID): The UUID of the quiz to retrieve
+   *
+   * **Returns:**
+   * Quiz: The quiz object with all details
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Raises:**
+   * HTTPException: 404 if quiz not found or user doesn't own it
+   * HTTPException: 500 if database operation fails
+   *
+   * **Example Response:**
+   * ```json
+   * {
+   * "id": "12345678-1234-5678-9abc-123456789abc",
+   * "owner_id": "87654321-4321-8765-cba9-987654321abc",
+   * "canvas_course_id": 12345,
+   * "canvas_course_name": "Introduction to AI",
+   * "selected_modules": "{"173467": "Machine Learning Basics"}",
+   * "title": "AI Fundamentals Quiz",
+   * "question_count": 50,
+   * "llm_model": "gpt-4o",
+   * "llm_temperature": 0.3,
+   * "created_at": "2023-01-01T12:00:00Z",
+   * "updated_at": "2023-01-01T12:00:00Z"
+   * }
+   * ```
+   * @param data The data for the request.
+   * @param data.quizId
+   * @returns Quiz Successful Response
+   * @throws ApiError
+   */
+  public static getQuiz(
+    data: QuizGetQuizData,
+  ): CancelablePromise<QuizGetQuizResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/quiz/{quiz_id}",
+      path: {
+        quiz_id: data.quizId,
       },
       errors: {
         422: "Validation Error",

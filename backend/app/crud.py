@@ -1,10 +1,11 @@
+import json
 from datetime import datetime
 from uuid import UUID
 
-from sqlmodel import Session, select
+from sqlmodel import Session, desc, select
 
 from app.core.security import token_encryption
-from app.models import User, UserCreate
+from app.models import Quiz, QuizCreate, User, UserCreate
 
 
 def create_user(session: Session, user_create: UserCreate) -> User:
@@ -187,3 +188,57 @@ def get_decrypted_access_token(user: User) -> str:
 def get_decrypted_refresh_token(user: User) -> str:
     """Get decrypted refresh token"""
     return token_encryption.decrypt_token(user.refresh_token)
+
+
+def create_quiz(session: Session, quiz_create: QuizCreate, owner_id: UUID) -> Quiz:
+    """
+    Create a new quiz with the specified settings.
+
+    **Parameters:**
+        session (Session): Database session for the transaction
+        quiz_create (QuizCreate): Quiz creation data including course info and LLM settings
+        owner_id (UUID): ID of the user creating the quiz
+
+    **Returns:**
+        Quiz: The newly created quiz object with generated UUID and timestamps
+    """
+    quiz_data = quiz_create.model_dump()
+    quiz_data["selected_modules"] = json.dumps(quiz_create.selected_modules)
+    quiz_data["owner_id"] = owner_id
+
+    db_quiz = Quiz.model_validate(quiz_data)
+    session.add(db_quiz)
+    session.commit()
+    session.refresh(db_quiz)
+    return db_quiz
+
+
+def get_quiz_by_id(session: Session, quiz_id: UUID) -> Quiz | None:
+    """
+    Retrieve a quiz by its UUID.
+
+    **Parameters:**
+        session (Session): Database session for the query
+        quiz_id (UUID): Quiz UUID to look up
+
+    **Returns:**
+        Quiz | None: Quiz object if found, None if not found
+    """
+    return session.get(Quiz, quiz_id)
+
+
+def get_user_quizzes(session: Session, user_id: UUID) -> list[Quiz]:
+    """
+    Retrieve all quizzes created by a specific user.
+
+    **Parameters:**
+        session (Session): Database session for the query
+        user_id (UUID): User UUID to get quizzes for
+
+    **Returns:**
+        list[Quiz]: List of quiz objects owned by the user
+    """
+    statement = (
+        select(Quiz).where(Quiz.owner_id == user_id).order_by(desc(Quiz.created_at))
+    )
+    return list(session.exec(statement).all())
