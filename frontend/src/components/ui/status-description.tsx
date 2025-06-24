@@ -22,8 +22,8 @@ export function StatusDescription({
           : "Waiting for content extraction to complete";
       case "processing":
         return isExtraction
-          ? "Extracting and cleaning content from Canvas pages..."
-          : "Generating questions using the language model...";
+          ? "Extracting and cleaning content from Canvas pages. This may take a few minutes depending on the amount of content."
+          : "Generating questions using the language model. This process typically takes 2-5 minutes.";
       case "completed":
         const timeAgo = timestamp ? formatTimeAgo(timestamp) : "";
         return isExtraction
@@ -31,8 +31,8 @@ export function StatusDescription({
           : `Questions generated successfully${timeAgo ? ` (${timeAgo})` : ""}`;
       case "failed":
         return isExtraction
-          ? "Failed to extract content. Please try again."
-          : "Failed to generate questions. Please try again.";
+          ? "Content extraction failed. This may be due to network issues, Canvas permissions, or content size limits. Try again or contact support if the issue persists."
+          : "Question generation failed. This may be due to LLM service issues or content processing errors. Try again or contact support if the issue persists.";
       default:
         return "Status unknown";
     }

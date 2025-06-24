@@ -1,6 +1,7 @@
 import {
   Badge,
   Box,
+  Button,
   Card,
   Container,
   HStack,
@@ -8,7 +9,7 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { QuizService } from "@/client";
@@ -23,7 +24,8 @@ export const Route = createFileRoute("/_layout/quiz/$id")({
 
 function QuizDetail() {
   const { id } = Route.useParams();
-  const { showErrorToast } = useCustomToast();
+  const { showErrorToast, showSuccessToast } = useCustomToast();
+  const queryClient = useQueryClient();
 
   const {
     data: quiz,
@@ -59,6 +61,21 @@ function QuizDetail() {
       return false; // Stop polling when both are completed or failed
     },
     refetchIntervalInBackground: false, // Only poll when tab is active
+  });
+
+  // Retry content extraction mutation
+  const retryExtractionMutation = useMutation({
+    mutationFn: async () => {
+      return await QuizService.triggerContentExtraction({ quizId: id });
+    },
+    onSuccess: () => {
+      showSuccessToast("Content extraction restarted");
+      queryClient.invalidateQueries({ queryKey: ["quiz", id] });
+    },
+    onError: (error: any) => {
+      const message = error?.body?.detail || "Failed to restart content extraction";
+      showErrorToast(message);
+    },
   });
 
   if (isLoading) {
@@ -265,6 +282,20 @@ function QuizDetail() {
                   type="extraction"
                   timestamp={quiz.content_extracted_at || null}
                 />
+
+                {/* Retry button for failed content extraction */}
+                {quiz.content_extraction_status === "failed" && (
+                  <Button
+                    size="sm"
+                    colorScheme="blue"
+                    variant="outline"
+                    isLoading={retryExtractionMutation.isPending}
+                    onClick={() => retryExtractionMutation.mutate()}
+                    mt={2}
+                  >
+                    Retry Content Extraction
+                  </Button>
+                )}
               </Box>
 
               {/* LLM Generation Status */}
