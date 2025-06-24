@@ -104,6 +104,7 @@ class QuizCreate(SQLModel):
     canvas_course_id: int
     canvas_course_name: str
     selected_modules: dict[int, str]
+    title: str = Field(min_length=1)
 
 
 class UserPublic(SQLModel):

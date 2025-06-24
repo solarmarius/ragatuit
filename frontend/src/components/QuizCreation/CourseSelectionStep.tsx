@@ -3,28 +3,34 @@ import {
   Box,
   Card,
   HStack,
+  Input,
   RadioGroup,
   Skeleton,
   Text,
   VStack,
-} from "@chakra-ui/react"
-import { useQuery } from "@tanstack/react-query"
+} from "@chakra-ui/react";
+import { useQuery } from "@tanstack/react-query";
 
-import { CanvasService } from "@/client"
+import { CanvasService } from "@/client";
+import { Field } from "@/components/ui/field";
 
 interface Course {
-  id: number
-  name: string
+  id: number;
+  name: string;
 }
 
 interface CourseSelectionStepProps {
-  selectedCourse?: Course
-  onCourseSelect: (course: Course) => void
+  selectedCourse?: Course;
+  onCourseSelect: (course: Course) => void;
+  title?: string;
+  onTitleChange: (title: string) => void;
 }
 
 export function CourseSelectionStep({
   selectedCourse,
   onCourseSelect,
+  title,
+  onTitleChange,
 }: CourseSelectionStepProps) {
   const {
     data: courses,
@@ -36,7 +42,7 @@ export function CourseSelectionStep({
     retry: 1, // Only retry once instead of default 3 times
     retryDelay: 1000, // Wait 1 second between retries
     staleTime: 30000, // Consider data stale after 30 seconds
-  })
+  });
 
   if (isLoading) {
     return (
@@ -48,7 +54,7 @@ export function CourseSelectionStep({
           <Skeleton key={i} height="60px" borderRadius="md" />
         ))}
       </VStack>
-    )
+    );
   }
 
   if (error) {
@@ -61,7 +67,7 @@ export function CourseSelectionStep({
           check your Canvas connection.
         </Alert.Description>
       </Alert.Root>
-    )
+    );
   }
 
   if (!courses || courses.length === 0) {
@@ -74,7 +80,7 @@ export function CourseSelectionStep({
           check your Canvas account or contact your administrator.
         </Alert.Description>
       </Alert.Root>
-    )
+    );
   }
 
   return (
@@ -84,8 +90,11 @@ export function CourseSelectionStep({
           Select a course to create a quiz for
         </Text>
         <Text color="gray.600" fontSize="sm">
+          Here is the courses we found where you have a teacher role.
+        </Text>
+        <Text color="gray.600" fontSize="sm">
           Choose the course where you want to generate quiz questions from the
-          course materials.
+          module materials.
         </Text>
       </Box>
 
@@ -102,7 +111,7 @@ export function CourseSelectionStep({
               }
               bg={selectedCourse?.id === course.id ? "blue.50" : "white"}
               onClick={() => {
-                onCourseSelect(course)
+                onCourseSelect(course);
               }}
               data-testid={`course-card-${course.id}`}
             >
@@ -127,13 +136,30 @@ export function CourseSelectionStep({
       </RadioGroup.Root>
 
       {selectedCourse && (
-        <Alert.Root status="success">
-          <Alert.Indicator />
-          <Alert.Description>
-            Selected: <strong>{selectedCourse.name}</strong>
-          </Alert.Description>
-        </Alert.Root>
+        <VStack gap={4} align="stretch">
+          <Alert.Root status="success">
+            <Alert.Indicator />
+            <Alert.Description>
+              Selected: <strong>{selectedCourse.name}</strong>
+            </Alert.Description>
+          </Alert.Root>
+
+          <Box>
+            <Field label="Quiz Title" required>
+              <Input
+                value={title || ""}
+                onChange={(e) => onTitleChange(e.target.value)}
+                placeholder="Enter quiz title"
+                data-testid="quiz-title-input"
+              />
+            </Field>
+            <Text fontSize="sm" color="gray.600" mt={1}>
+              This is the quiz title shown in Canvas and when browsing quizzes.
+              You can modify it before continuing.
+            </Text>
+          </Box>
+        </VStack>
       )}
     </VStack>
-  )
+  );
 }
