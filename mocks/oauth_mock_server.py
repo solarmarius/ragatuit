@@ -12,8 +12,8 @@ app = FastAPI(title="Mock Canvas Server", version="1.0.0")
 mock_users = {
     "12345": {
         "id": 12345,
-        "name": "John Teacher",
-        "email": "john.teacher@example.com",
+        "name": "Marius Solaas",
+        "email": "marius.solaas@example.com",
         "login_id": "jteacher",
         "avatar_url": "https://example.com/avatar.jpg",
     }
@@ -22,14 +22,14 @@ mock_users = {
 mock_courses = [
     {
         "id": 37823,
-        "name": "SB_ME_INF-0005 Praktisk kunstig intelligens",
+        "name": "AUT-2600 Ølbrygging",
         "account_id": 27925,
         "uuid": "hfv2nToY5ae1MbmNWTfNhTpzVbwq9ENcT00yTEiK",
         "start_at": None,
         "grading_standard_id": None,
         "is_public": False,
         "created_at": "2025-03-06T16:18:18Z",
-        "course_code": "SB_ME_IFI_0005",
+        "course_code": "AUT-2600",
         "default_view": "wiki",
         "root_account_id": 1,
         "enrollment_term_id": 3,
@@ -68,14 +68,14 @@ mock_courses = [
     },
     {
         "id": 37824,
-        "name": "SB_ME_INF-0006 Bruk av generativ KI",
+        "name": "ALI-1111 Episk diktning fra ca 1800 til i dag",
         "account_id": 27925,
         "uuid": "Z7bzNStMko53AmlPm6R7qYPbBlLUWkGobbpBqlJ3",
         "start_at": None,
         "grading_standard_id": None,
         "is_public": False,
         "created_at": "2025-03-06T16:18:29Z",
-        "course_code": "SB_ME_IFI_0006",
+        "course_code": "ALI-1111",
         "default_view": "wiki",
         "root_account_id": 1,
         "enrollment_term_id": 3,
@@ -117,7 +117,7 @@ mock_courses = [
 mock_modules = [
     {
         "id": 173467,
-        "name": "Templates",
+        "name": "Administrativ informasjon",
         "position": 1,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -130,7 +130,7 @@ mock_modules = [
     },
     {
         "id": 173574,
-        "name": "Templates",
+        "name": "Mesking og vørterbehandling",
         "position": 2,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -143,7 +143,7 @@ mock_modules = [
     },
     {
         "id": 173468,
-        "name": "Ressurssider for studenter",
+        "name": "Humle og bitterhet, smak og aroma",
         "position": 3,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -156,7 +156,7 @@ mock_modules = [
     },
     {
         "id": 173469,
-        "name": "Hjelperessurser for underviser",
+        "name": "Stivelse, enzymer, sukkertyper og fermenterbarhet",
         "position": 4,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -169,7 +169,7 @@ mock_modules = [
     },
     {
         "id": 173579,
-        "name": "Hjelperessurser for underviser",
+        "name": "Gjær og pitching av gjær, oksygenering",
         "position": 5,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -182,7 +182,7 @@ mock_modules = [
     },
     {
         "id": 173577,
-        "name": "Ressurssider for studenter",
+        "name": "Fermentering (de ulike fasene)",
         "position": 6,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -195,7 +195,7 @@ mock_modules = [
     },
     {
         "id": 173682,
-        "name": "Module 1",
+        "name": "Vask og desinfisering",
         "position": 7,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -208,7 +208,7 @@ mock_modules = [
     },
     {
         "id": 173685,
-        "name": "Module 2",
+        "name": "Vann og vannbehandling",
         "position": 8,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -221,7 +221,7 @@ mock_modules = [
     },
     {
         "id": 173688,
-        "name": "Module 3",
+        "name": "Tapping og karbonisering",
         "position": 9,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -234,7 +234,7 @@ mock_modules = [
     },
     {
         "id": 173690,
-        "name": "Module 4",
+        "name": "Smak, lukt, farge, klarhet",
         "position": 10,
         "unlock_at": None,
         "require_sequential_progress": False,

@@ -16,8 +16,10 @@ import { Route as LayoutImport } from './routes/_layout'
 import { Route as LayoutIndexImport } from './routes/_layout/index'
 import { Route as LoginSuccessImport } from './routes/login/success'
 import { Route as LayoutSettingsImport } from './routes/_layout/settings'
+import { Route as LayoutQuizzesImport } from './routes/_layout/quizzes'
 import { Route as LayoutPrivacyPolicyImport } from './routes/_layout/privacy-policy'
 import { Route as LayoutCreateQuizImport } from './routes/_layout/create-quiz'
+import { Route as LayoutQuizIdImport } from './routes/_layout/quiz.$id'
 
 // Create/Update Routes
 
@@ -46,6 +48,11 @@ const LayoutSettingsRoute = LayoutSettingsImport.update({
   getParentRoute: () => LayoutRoute,
 } as any)
 
+const LayoutQuizzesRoute = LayoutQuizzesImport.update({
+  path: '/quizzes',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
 const LayoutPrivacyPolicyRoute = LayoutPrivacyPolicyImport.update({
   path: '/privacy-policy',
   getParentRoute: () => LayoutRoute,
@@ -53,6 +60,11 @@ const LayoutPrivacyPolicyRoute = LayoutPrivacyPolicyImport.update({
 
 const LayoutCreateQuizRoute = LayoutCreateQuizImport.update({
   path: '/create-quiz',
+  getParentRoute: () => LayoutRoute,
+} as any)
+
+const LayoutQuizIdRoute = LayoutQuizIdImport.update({
+  path: '/quiz/$id',
   getParentRoute: () => LayoutRoute,
 } as any)
 
@@ -76,6 +88,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutPrivacyPolicyImport
       parentRoute: typeof LayoutImport
     }
+    '/_layout/quizzes': {
+      preLoaderRoute: typeof LayoutQuizzesImport
+      parentRoute: typeof LayoutImport
+    }
     '/_layout/settings': {
       preLoaderRoute: typeof LayoutSettingsImport
       parentRoute: typeof LayoutImport
@@ -88,6 +104,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutIndexImport
       parentRoute: typeof LayoutImport
     }
+    '/_layout/quiz/$id': {
+      preLoaderRoute: typeof LayoutQuizIdImport
+      parentRoute: typeof LayoutImport
+    }
   }
 }
 
@@ -97,8 +117,10 @@ export const routeTree = rootRoute.addChildren([
   LayoutRoute.addChildren([
     LayoutCreateQuizRoute,
     LayoutPrivacyPolicyRoute,
+    LayoutQuizzesRoute,
     LayoutSettingsRoute,
     LayoutIndexRoute,
+    LayoutQuizIdRoute,
   ]),
   LoginRoute.addChildren([LoginSuccessRoute]),
 ])

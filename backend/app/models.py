@@ -32,7 +32,11 @@ class User(SQLModel, table=True):
     )
     updated_at: datetime | None = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), onupdate=func.now(), nullable=True),
+        sa_column=Column(
+            DateTime(timezone=True),
+            onupdate=func.now(),
+            nullable=True,
+        ),
     )
     access_token: str = Field(description="Canvas access token")
     refresh_token: str = Field(description="Canvas refresh token")
@@ -57,6 +61,9 @@ class Quiz(SQLModel, table=True):
     canvas_course_name: str
     selected_modules: str = Field(description="JSON array of selected Canvas modules")
     title: str = Field(min_length=1)
+    question_count: int = Field(default=100, ge=1, le=200)
+    llm_model: str = Field(default="o3-pro")
+    llm_temperature: float = Field(default=0.3, ge=0.0, le=2.0)
     created_at: datetime | None = Field(
         default=None,
         sa_column=Column(
@@ -65,7 +72,11 @@ class Quiz(SQLModel, table=True):
     )
     updated_at: datetime | None = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), onupdate=func.now(), nullable=True),
+        sa_column=Column(
+            DateTime(timezone=True),
+            onupdate=func.now(),
+            nullable=True,
+        ),
     )
 
     # Methods to handle JSON strings for selected_modules field
@@ -104,7 +115,10 @@ class QuizCreate(SQLModel):
     canvas_course_id: int
     canvas_course_name: str
     selected_modules: dict[int, str]
-    title: str = Field(min_length=1)
+    title: str = Field(min_length=1, max_length=255)
+    question_count: int = Field(default=100, ge=1, le=200)
+    llm_model: str = Field(default="o3-pro")
+    llm_temperature: float = Field(default=0.3, ge=0.0, le=2.0)
 
 
 class UserPublic(SQLModel):

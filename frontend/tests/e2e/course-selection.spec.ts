@@ -491,7 +491,7 @@ test.describe("Course Selection Feature", () => {
     await expect(sidebar).toBeVisible();
 
     // Quizzes link should be highlighted/active (white background)
-    const quizzesLink = page.locator('a[href="/quiz"] > div');
+    const quizzesLink = page.locator('a[href="/quizzes"] > div');
     await expect(quizzesLink).toHaveCSS(
       "background-color",
       "rgb(255, 255, 255)"

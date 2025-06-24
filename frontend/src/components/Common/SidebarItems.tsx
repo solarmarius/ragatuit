@@ -4,7 +4,7 @@ import { FiFileText, FiHome, FiSettings } from "react-icons/fi"
 
 const items = [
   { icon: FiHome, title: "Dashboard", path: "/" },
-  { icon: FiFileText, title: "Quizzes", path: "/quiz" },
+  { icon: FiFileText, title: "Quizzes", path: "/quizzes" },
   { icon: FiSettings, title: "Settings", path: "/settings" },
 ]
 
@@ -20,7 +20,7 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
   const listItems = items.map(({ icon, title, path }) => {
     const isActive =
       title === "Quizzes"
-        ? location.pathname === path || location.pathname === "/create-quiz"
+        ? location.pathname === path || location.pathname === "/create-quiz" || location.pathname.startsWith("/quiz/")
         : location.pathname === path
 
     return (

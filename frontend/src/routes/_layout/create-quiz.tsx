@@ -7,65 +7,114 @@ import {
   Progress,
   Text,
   VStack,
-} from "@chakra-ui/react"
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useState } from "react"
+} from "@chakra-ui/react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 
-import { CourseSelectionStep } from "@/components/QuizCreation/CourseSelectionStep"
-import { ModuleSelectionStep } from "@/components/QuizCreation/ModuleSelectionStep"
+import { CourseSelectionStep } from "@/components/QuizCreation/CourseSelectionStep";
+import { ModuleSelectionStep } from "@/components/QuizCreation/ModuleSelectionStep";
+import { QuizSettingsStep } from "@/components/QuizCreation/QuizSettingsStep";
+import { QuizService } from "@/client";
+import useCustomToast from "@/hooks/useCustomToast";
 
 export const Route = createFileRoute("/_layout/create-quiz")({
   component: CreateQuiz,
-})
+});
 
 interface QuizFormData {
   selectedCourse?: {
-    id: number
-    name: string
-  }
-  selectedModules?: { [id: number]: string }
-  title?: string
+    id: number;
+    name: string;
+  };
+  selectedModules?: { [id: number]: string };
+  title?: string;
+  questionCount?: number;
+  llmModel?: string;
+  llmTemperature?: number;
 }
 
-const TOTAL_STEPS = 3 // Course selection, Module selection, Quiz settings
+const TOTAL_STEPS = 3; // Course selection, Module selection, Quiz settings
 
 function CreateQuiz() {
-  const navigate = useNavigate()
-  const [currentStep, setCurrentStep] = useState(1)
-  const [formData, setFormData] = useState<QuizFormData>({})
+  const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState(1);
+  const [formData, setFormData] = useState<QuizFormData>({});
+  const [isCreating, setIsCreating] = useState(false);
+  const { showSuccessToast, showErrorToast } = useCustomToast();
 
   const handleNext = () => {
     if (currentStep < TOTAL_STEPS) {
-      setCurrentStep(currentStep + 1)
+      setCurrentStep(currentStep + 1);
     }
-  }
+  };
 
   const handlePrevious = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1)
+      setCurrentStep(currentStep - 1);
     }
-  }
+  };
 
   const handleCancel = () => {
-    navigate({ to: "/" })
-  }
+    navigate({ to: "/" });
+  };
 
   const updateFormData = (data: Partial<QuizFormData>) => {
-    setFormData((prev) => ({ ...prev, ...data }))
-  }
+    setFormData((prev) => ({ ...prev, ...data }));
+  };
+
+  const handleCreateQuiz = async () => {
+    if (
+      !formData.selectedCourse ||
+      !formData.selectedModules ||
+      !formData.title
+    ) {
+      showErrorToast("Missing required quiz data");
+      return;
+    }
+
+    setIsCreating(true);
+
+    try {
+      const quizData = {
+        canvas_course_id: formData.selectedCourse.id,
+        canvas_course_name: formData.selectedCourse.name,
+        selected_modules: formData.selectedModules,
+        title: formData.title,
+        question_count: formData.questionCount || 100,
+        llm_model: formData.llmModel || "o3-pro",
+        llm_temperature: formData.llmTemperature || 0.3,
+      };
+
+      const response = await QuizService.createNewQuiz({
+        requestBody: quizData,
+      });
+
+      if (response) {
+        showSuccessToast("Quiz created successfully!");
+        navigate({ to: `/quiz/${response.id}` });
+      } else {
+        throw new Error("Failed to create quiz");
+      }
+    } catch (error) {
+      console.error("Error creating quiz:", error);
+      showErrorToast("Failed to create quiz. Please try again.");
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const getStepTitle = () => {
     switch (currentStep) {
       case 1:
-        return "Select Course"
+        return "Select Course";
       case 2:
-        return "Select Modules"
+        return "Select Modules";
       case 3:
-        return "Quiz Settings"
+        return "Quiz Settings";
       default:
-        return "Create Quiz"
+        return "Create Quiz";
     }
-  }
+  };
 
   const renderStep = () => {
     switch (currentStep) {
@@ -76,13 +125,13 @@ function CreateQuiz() {
             onCourseSelect={(course) =>
               updateFormData({
                 selectedCourse: course,
-                title: course.name // Auto-fill title with course name
+                title: course.name, // Auto-fill title with course name
               })
             }
             title={formData.title}
             onTitleChange={(title) => updateFormData({ title })}
           />
-        )
+        );
       case 2:
         return (
           <ModuleSelectionStep
@@ -92,33 +141,59 @@ function CreateQuiz() {
               updateFormData({ selectedModules: modules })
             }
           />
-        )
+        );
       case 3:
         return (
-          <Box>
-            <Text>Quiz settings step - Coming soon</Text>
-          </Box>
-        )
+          <QuizSettingsStep
+            settings={{
+              questionCount: formData.questionCount || 100,
+              llmModel: formData.llmModel || "o3-pro",
+              llmTemperature: formData.llmTemperature || 0.3,
+            }}
+            onSettingsChange={(settings) =>
+              updateFormData({
+                questionCount: settings.questionCount,
+                llmModel: settings.llmModel,
+                llmTemperature: settings.llmTemperature,
+              })
+            }
+          />
+        );
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   const isStepValid = () => {
     switch (currentStep) {
       case 1:
-        return formData.selectedCourse != null && formData.title != null && formData.title.trim().length > 0
+        return (
+          formData.selectedCourse != null &&
+          formData.title != null &&
+          formData.title.trim().length > 0
+        );
       case 2:
         return (
           formData.selectedModules != null &&
           Object.keys(formData.selectedModules).length > 0
-        )
+        );
       case 3:
-        return true // TODO: Add quiz settings validation
+        // Step 3 is always valid since we have default values
+        const questionCount = formData.questionCount || 100;
+        const llmModel = formData.llmModel || "o3-pro";
+        const llmTemperature = formData.llmTemperature || 0.3;
+        return (
+          questionCount >= 1 &&
+          questionCount <= 200 &&
+          llmModel != null &&
+          llmTemperature != null &&
+          llmTemperature >= 0 &&
+          llmTemperature <= 2
+        );
       default:
-        return false
+        return false;
     }
-  }
+  };
 
   return (
     <Container maxW="4xl" py={8}>
@@ -175,10 +250,8 @@ function CreateQuiz() {
               <Button
                 colorScheme="green"
                 disabled={!isStepValid()}
-                onClick={() => {
-                  // TODO: Submit quiz creation
-                  console.log("Creating quiz with data:", formData)
-                }}
+                onClick={handleCreateQuiz}
+                loading={isCreating}
               >
                 Create Quiz
               </Button>
@@ -187,5 +260,5 @@ function CreateQuiz() {
         </HStack>
       </VStack>
     </Container>
-  )
+  );
 }

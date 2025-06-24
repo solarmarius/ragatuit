@@ -28,7 +28,7 @@ test.describe("Sidebar Component", () => {
     await expect(dashboardLink).toContainText("Dashboard")
 
     // Check Quizzes link
-    const quizzesLink = page.locator('a[href="/quiz"]')
+    const quizzesLink = page.locator('a[href="/quizzes"]')
     await expect(quizzesLink).toBeVisible()
     await expect(quizzesLink).toContainText("Quizzes")
 
@@ -107,7 +107,7 @@ test.describe("Sidebar Component", () => {
   })
 
   test("should show hover effects on navigation items", async ({ page }) => {
-    const quizzesLink = page.locator('a[href="/quiz"]')
+    const quizzesLink = page.locator('a[href="/quizzes"]')
     const flexElement = quizzesLink.locator("div")
 
     // Hover over quizzes link

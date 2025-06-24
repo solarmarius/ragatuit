@@ -18,6 +18,35 @@ export type Message = {
   message: string
 }
 
+export type Quiz = {
+  id?: string
+  owner_id: string
+  canvas_course_id: number
+  canvas_course_name: string
+  /**
+   * JSON array of selected Canvas modules
+   */
+  selected_modules: string
+  title: string
+  question_count?: number
+  llm_model?: string
+  llm_temperature?: number
+  created_at?: string | null
+  updated_at?: string | null
+}
+
+export type QuizCreate = {
+  canvas_course_id: number
+  canvas_course_name: string
+  selected_modules: {
+    [key: string]: string
+  }
+  title: string
+  question_count?: number
+  llm_model?: string
+  llm_temperature?: number
+}
+
 export type UserPublic = {
   name: string
   onboarding_completed: boolean
@@ -53,6 +82,20 @@ export type CanvasGetCourseModulesData = {
 }
 
 export type CanvasGetCourseModulesResponse = Array<CanvasModule>
+
+export type QuizGetUserQuizzesEndpointResponse = Array<Quiz>
+
+export type QuizCreateNewQuizData = {
+  requestBody: QuizCreate
+}
+
+export type QuizCreateNewQuizResponse = Quiz
+
+export type QuizGetQuizData = {
+  quizId: string
+}
+
+export type QuizGetQuizResponse = Quiz
 
 export type UsersReadUserMeResponse = UserPublic
 

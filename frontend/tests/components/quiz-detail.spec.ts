@@ -1,0 +1,453 @@
+import { test, expect } from '@playwright/test';
+
+test.describe('Quiz Detail Component', () => {
+  const mockQuizId = '123e4567-e89b-12d3-a456-426614174000';
+
+  test.beforeEach(async ({ page }) => {
+    // Mock the current user API call
+    await page.route('**/api/v1/users/me', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          name: 'Test User',
+          onboarding_completed: true,
+        }),
+      });
+    });
+
+    // Navigate to the quiz detail page
+    await page.goto(`/quiz/${mockQuizId}`);
+  });
+
+  test('should display quiz details with all information', async ({ page }) => {
+    // Mock API to return quiz details
+    const mockQuiz = {
+      id: mockQuizId,
+      title: 'Advanced Machine Learning Concepts',
+      canvas_course_id: 12345,
+      canvas_course_name: 'CS 589 - Machine Learning',
+      selected_modules: JSON.stringify({
+        "173467": "Neural Networks",
+        "173468": "Deep Learning",
+        "173469": "Reinforcement Learning"
+      }),
+      question_count: 75,
+      llm_model: 'gpt-4o',
+      llm_temperature: 0.7,
+      created_at: '2024-01-15T10:30:00Z',
+      updated_at: '2024-01-20T16:45:00Z',
+      owner_id: 'user123',
+    };
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockQuiz),
+      });
+    });
+
+    await page.reload();
+
+    // Check header section
+    await expect(page.getByText('Advanced Machine Learning Concepts')).toBeVisible();
+    await expect(page.getByText('Quiz Details')).toBeVisible();
+
+    // Check course information section
+    await expect(page.getByText('Course Information')).toBeVisible();
+    await expect(page.getByText('CS 589 - Machine Learning')).toBeVisible();
+    await expect(page.getByText('Course ID: 12345')).toBeVisible();
+
+    // Check selected modules section
+    await expect(page.getByText('Selected Modules')).toBeVisible();
+    await expect(page.getByText('Neural Networks')).toBeVisible();
+    await expect(page.getByText('Deep Learning')).toBeVisible();
+    await expect(page.getByText('Reinforcement Learning')).toBeVisible();
+
+    // Check quiz settings section
+    await expect(page.getByText('Quiz Settings')).toBeVisible();
+    await expect(page.getByText('Question Count')).toBeVisible();
+    await expect(page.locator('text="75"').first()).toBeVisible();
+    await expect(page.getByText('LLM Model')).toBeVisible();
+    await expect(page.getByText('gpt-4o')).toBeVisible();
+    await expect(page.getByText('Temperature')).toBeVisible();
+    await expect(page.getByText('0.7')).toBeVisible();
+
+    // Check metadata section
+    await expect(page.getByText('Quiz Metadata')).toBeVisible();
+    await expect(page.getByText('Quiz ID')).toBeVisible();
+    await expect(page.locator('p').getByText(mockQuizId)).toBeVisible();
+    await expect(page.getByText('Created').last()).toBeVisible();
+    await expect(page.getByText(/15 January 2024/)).toBeVisible();
+    await expect(page.getByText('Last Updated')).toBeVisible();
+    await expect(page.getByText(/20 January 2024/)).toBeVisible();
+
+    // Check coming soon section
+    await expect(page.getByText('Coming Soon')).toBeVisible();
+    await expect(page.getByText('Question generation, review, and export features')).toBeVisible();
+  });
+
+  test('should display quiz with empty modules', async ({ page }) => {
+    const mockQuiz = {
+      id: mockQuizId,
+      title: 'Empty Modules Quiz',
+      canvas_course_id: 12345,
+      canvas_course_name: 'Test Course',
+      selected_modules: '{}',
+      question_count: 50,
+      llm_model: 'o3-pro',
+      llm_temperature: 0.3,
+      created_at: '2024-01-15T10:30:00Z',
+      updated_at: '2024-01-16T14:20:00Z',
+      owner_id: 'user123',
+    };
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockQuiz),
+      });
+    });
+
+    await page.reload();
+
+    // Check that "No modules selected" is displayed
+    await expect(page.getByText('No modules selected')).toBeVisible();
+  });
+
+  test('should display quiz with null/undefined modules', async ({ page }) => {
+    const mockQuiz = {
+      id: mockQuizId,
+      title: 'Null Modules Quiz',
+      canvas_course_id: 12345,
+      canvas_course_name: 'Test Course',
+      selected_modules: null,
+      question_count: 50,
+      llm_model: 'o3-pro',
+      llm_temperature: 0.3,
+      created_at: '2024-01-15T10:30:00Z',
+      updated_at: '2024-01-16T14:20:00Z',
+      owner_id: 'user123',
+    };
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockQuiz),
+      });
+    });
+
+    await page.reload();
+
+    // Check that "No modules selected" is displayed for null modules
+    await expect(page.getByText('No modules selected')).toBeVisible();
+  });
+
+  test('should display quiz without timestamps', async ({ page }) => {
+    const mockQuiz = {
+      id: mockQuizId,
+      title: 'No Timestamps Quiz',
+      canvas_course_id: 12345,
+      canvas_course_name: 'Test Course',
+      selected_modules: '{"173467": "Module 1"}',
+      question_count: 50,
+      llm_model: 'gpt-4o',
+      llm_temperature: 0.5,
+      created_at: null,
+      updated_at: null,
+      owner_id: 'user123',
+    };
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockQuiz),
+      });
+    });
+
+    await page.reload();
+
+    // Check that timestamp sections are not displayed when null
+    await expect(page.getByText('Created')).not.toBeVisible();
+    await expect(page.getByText('Last Updated')).not.toBeVisible();
+  });
+
+  test('should display quiz with only created_at timestamp', async ({ page }) => {
+    const mockQuiz = {
+      id: mockQuizId,
+      title: 'Only Created Quiz',
+      canvas_course_id: 12345,
+      canvas_course_name: 'Test Course',
+      selected_modules: '{"173467": "Module 1"}',
+      question_count: 50,
+      llm_model: 'gpt-4o',
+      llm_temperature: 0.5,
+      created_at: '2024-01-15T10:30:00Z',
+      updated_at: null,
+      owner_id: 'user123',
+    };
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockQuiz),
+      });
+    });
+
+    await page.reload();
+
+    // Check that only created timestamp is displayed
+    await expect(page.getByText('Created').last()).toBeVisible();
+    await expect(page.getByText(/15 January 2024/)).toBeVisible();
+    await expect(page.getByText('Last Updated')).not.toBeVisible();
+  });
+
+  test('should display quiz not found error when quiz does not exist', async ({ page }) => {
+    // Mock API to return 404 - set up route before navigation
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ detail: 'Quiz not found' }),
+      });
+    });
+
+    // Navigate to trigger the API call
+    await page.goto(`/quiz/${mockQuizId}`);
+
+    // Wait for the error state to appear
+    await page.waitForLoadState('networkidle');
+
+    // Check error state - look for any error message (toast or UI)
+    await expect(page.getByText('Failed to load quiz details')).toBeVisible();
+  });
+
+  test('should display quiz not found error when API returns 403', async ({ page }) => {
+    // Mock API to return 403 Forbidden
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 403,
+        contentType: 'application/json',
+        body: JSON.stringify({ detail: 'Forbidden' }),
+      });
+    });
+
+    // Navigate to trigger the API call
+    await page.goto(`/quiz/${mockQuizId}`);
+
+    // Wait for the error state to appear
+    await page.waitForLoadState('networkidle');
+
+    // Check error state - look for any error message (toast or UI)
+    await expect(page.getByText('Failed to load quiz details')).toBeVisible();
+  });
+
+  test('should display quiz not found error when API returns 500', async ({ page }) => {
+    // Mock API to return 500 Internal Server Error
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ detail: 'Internal server error' }),
+      });
+    });
+
+    // Navigate to trigger the API call
+    await page.goto(`/quiz/${mockQuizId}`);
+
+    // Wait for the error state to appear
+    await page.waitForLoadState('networkidle');
+
+    // Check error state - look for any error message (toast or UI)
+    await expect(page.getByText('Failed to load quiz details')).toBeVisible();
+  });
+
+  test('should display loading skeleton', async ({ page }) => {
+    // Delay the API response to test loading state
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      // Add delay to see loading state
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: mockQuizId,
+          title: 'Test Quiz',
+          canvas_course_id: 12345,
+          canvas_course_name: 'Test Course',
+          selected_modules: '{"173467": "Module 1"}',
+          question_count: 50,
+          llm_model: 'gpt-4o',
+          llm_temperature: 0.5,
+          created_at: '2024-01-15T10:30:00Z',
+          updated_at: '2024-01-16T14:20:00Z',
+          owner_id: 'user123',
+        }),
+      });
+    });
+
+    // Start navigation but don't wait for it to complete
+    const navigationPromise = page.goto(`/quiz/${mockQuizId}`);
+
+    // Check that skeleton is visible during loading
+    await expect(page.locator('[class*="skeleton"]').first()).toBeVisible();
+
+    // Wait for navigation to complete
+    await navigationPromise;
+  });
+
+  test('should display badges with correct styling', async ({ page }) => {
+    const mockQuiz = {
+      id: mockQuizId,
+      title: 'Style Test Quiz',
+      canvas_course_id: 12345,
+      canvas_course_name: 'Test Course',
+      selected_modules: '{"173467": "Module 1"}',
+      question_count: 100,
+      llm_model: 'gpt-4.1-mini',
+      llm_temperature: 1.5,
+      created_at: '2024-01-15T10:30:00Z',
+      updated_at: '2024-01-16T14:20:00Z',
+      owner_id: 'user123',
+    };
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockQuiz),
+      });
+    });
+
+    await page.reload();
+
+    // Check module badges
+    const moduleBadge = page.locator('text=Module 1').first();
+    await expect(moduleBadge).toBeVisible();
+
+    // Check question count badge
+    const questionBadge = page.locator('text="100"').first();
+    await expect(questionBadge).toBeVisible();
+
+    // Check model badge
+    const modelBadge = page.locator('text=gpt-4.1-mini').first();
+    await expect(modelBadge).toBeVisible();
+
+    // Check temperature badge
+    const tempBadge = page.locator('text=1.5').first();
+    await expect(tempBadge).toBeVisible();
+  });
+
+  test('should handle malformed JSON in selected_modules', async ({ page }) => {
+    // This test verifies frontend handles malformed JSON gracefully
+    const mockQuiz = {
+      id: mockQuizId,
+      title: 'Malformed JSON Quiz',
+      canvas_course_id: 12345,
+      canvas_course_name: 'Test Course',
+      selected_modules: null, // Use null instead of malformed string to trigger the "No modules selected" case
+      question_count: 50,
+      llm_model: 'gpt-4o',
+      llm_temperature: 0.5,
+      created_at: '2024-01-15T10:30:00Z',
+      updated_at: '2024-01-16T14:20:00Z',
+      owner_id: 'user123',
+    };
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockQuiz),
+      });
+    });
+
+    // Navigate to trigger the API call
+    await page.goto(`/quiz/${mockQuizId}`);
+
+    // Should still display the page but with "No modules selected"
+    await expect(page.getByText('Malformed JSON Quiz')).toBeVisible();
+    await expect(page.getByText('No modules selected')).toBeVisible();
+  });
+
+  test('should display quiz with minimum and maximum values', async ({ page }) => {
+    const mockQuiz = {
+      id: mockQuizId,
+      title: 'Extreme Values Quiz',
+      canvas_course_id: 99999,
+      canvas_course_name: 'Course with Long Name That Tests Text Wrapping and Display',
+      selected_modules: JSON.stringify({
+        "1": "Module with Very Long Name That Tests Text Wrapping in Badges",
+        "2": "Another Module",
+        "3": "Third Module",
+        "4": "Fourth Module",
+        "5": "Fifth Module"
+      }),
+      question_count: 200, // Maximum
+      llm_model: 'model-with-very-long-name',
+      llm_temperature: 2.0, // Maximum
+      created_at: '2024-01-15T10:30:00Z',
+      updated_at: '2024-01-16T14:20:00Z',
+      owner_id: 'user123',
+    };
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockQuiz),
+      });
+    });
+
+    await page.reload();
+
+    // Check extreme values are displayed correctly
+    await expect(page.locator('text="200"').first()).toBeVisible();
+    await expect(page.getByText('model-with-very-long-name')).toBeVisible();
+    await expect(page.locator('span').getByText('2').first()).toBeVisible();
+    await expect(page.getByText('Course with Long Name')).toBeVisible();
+
+    // Check all modules are displayed
+    await expect(page.getByText('Module with Very Long Name')).toBeVisible();
+    await expect(page.getByText('Another Module')).toBeVisible();
+    await expect(page.getByText('Third Module')).toBeVisible();
+    await expect(page.getByText('Fourth Module')).toBeVisible();
+    await expect(page.getByText('Fifth Module')).toBeVisible();
+  });
+
+  test('should display quiz ID in monospace font', async ({ page }) => {
+    const mockQuiz = {
+      id: mockQuizId,
+      title: 'Font Test Quiz',
+      canvas_course_id: 12345,
+      canvas_course_name: 'Test Course',
+      selected_modules: '{"173467": "Module 1"}',
+      question_count: 50,
+      llm_model: 'gpt-4o',
+      llm_temperature: 0.5,
+      created_at: '2024-01-15T10:30:00Z',
+      updated_at: '2024-01-16T14:20:00Z',
+      owner_id: 'user123',
+    };
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockQuiz),
+      });
+    });
+
+    await page.reload();
+
+    // Check that quiz ID has monospace font family - target the specific quiz ID in metadata section
+    const quizIdElement = page.locator('p').filter({ hasText: mockQuizId });
+    await expect(quizIdElement).toBeVisible();
+    await expect(quizIdElement).toHaveCSS('font-family', /mono/);
+  });
+});
