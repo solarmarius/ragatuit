@@ -38,7 +38,7 @@ test.describe("Navigation", () => {
 
   test("should show quizzes link in sidebar", async ({ page }) => {
     // Verify quizzes link exists in sidebar (even if route doesn't exist yet)
-    const quizzesLink = page.locator('a[href="/quiz"]')
+    const quizzesLink = page.locator('a[href="/quizzes"]')
     await expect(quizzesLink).toBeVisible()
 
     // Click should work even if it goes to 404
@@ -48,7 +48,7 @@ test.describe("Navigation", () => {
     // Should either be on quiz route or 404 - both are acceptable
     const currentUrl = page.url()
     expect(
-      currentUrl.includes("/quiz") || currentUrl.includes("/"),
+      currentUrl.includes("/quizzes") || currentUrl.includes("/"),
     ).toBeTruthy()
   })
 

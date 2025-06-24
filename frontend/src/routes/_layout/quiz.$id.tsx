@@ -7,20 +7,20 @@ import {
   Skeleton,
   Text,
   VStack,
-} from "@chakra-ui/react"
-import { createFileRoute } from "@tanstack/react-router"
-import { useQuery } from "@tanstack/react-query"
+} from "@chakra-ui/react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 
-import { QuizService } from "@/client"
-import useCustomToast from "@/hooks/useCustomToast"
+import { QuizService } from "@/client";
+import useCustomToast from "@/hooks/useCustomToast";
 
 export const Route = createFileRoute("/_layout/quiz/$id")({
   component: QuizDetail,
-})
+});
 
 function QuizDetail() {
-  const { id } = Route.useParams()
-  const { showErrorToast } = useCustomToast()
+  const { id } = Route.useParams();
+  const { showErrorToast } = useCustomToast();
 
   const {
     data: quiz,
@@ -30,17 +30,17 @@ function QuizDetail() {
     queryKey: ["quiz", id],
     queryFn: async () => {
       try {
-        const response = await QuizService.getQuiz({ quizId: id })
-        return response
+        const response = await QuizService.getQuiz({ quizId: id });
+        return response;
       } catch (err) {
-        showErrorToast("Failed to load quiz details")
-        throw err
+        showErrorToast("Failed to load quiz details");
+        throw err;
       }
     },
-  })
+  });
 
   if (isLoading) {
-    return <QuizDetailSkeleton />
+    return <QuizDetailSkeleton />;
   }
 
   if (error || !quiz) {
@@ -53,18 +53,19 @@ function QuizDetail() {
                 Quiz Not Found
               </Text>
               <Text color="gray.600">
-                The quiz you're looking for doesn't exist or you don't have permission to view it.
+                The quiz you're looking for doesn't exist or you don't have
+                permission to view it.
               </Text>
             </VStack>
           </Card.Body>
         </Card.Root>
       </Container>
-    )
+    );
   }
 
   // Parse selected modules from JSON string
-  const selectedModules = JSON.parse(quiz.selected_modules || "{}")
-  const moduleNames = Object.values(selectedModules) as string[]
+  const selectedModules = JSON.parse(quiz.selected_modules || "{}");
+  const moduleNames = Object.values(selectedModules) as string[];
 
   return (
     <Container maxW="4xl" py={8}>
@@ -131,8 +132,8 @@ function QuizDetail() {
                 <Text fontWeight="medium" color="gray.700">
                   Question Count
                 </Text>
-                <Badge variant="solid" colorScheme="green">
-                  {quiz.question_count} questions
+                <Badge variant="outline" colorScheme="purple">
+                  {quiz.question_count}
                 </Badge>
               </HStack>
 
@@ -181,7 +182,7 @@ function QuizDetail() {
                     Created
                   </Text>
                   <Text color="gray.600">
-                    {new Date(quiz.created_at).toLocaleDateString("en-US", {
+                    {new Date(quiz.created_at).toLocaleDateString("en-GB", {
                       year: "numeric",
                       month: "long",
                       day: "numeric",
@@ -198,7 +199,7 @@ function QuizDetail() {
                     Last Updated
                   </Text>
                   <Text color="gray.600">
-                    {new Date(quiz.updated_at).toLocaleDateString("en-US", {
+                    {new Date(quiz.updated_at).toLocaleDateString("en-GB", {
                       year: "numeric",
                       month: "long",
                       day: "numeric",
@@ -220,14 +221,15 @@ function QuizDetail() {
                 Coming Soon
               </Text>
               <Text color="gray.500" textAlign="center">
-                Question generation, review, and export features will be available here.
+                Question generation, review, and export features will be
+                available here.
               </Text>
             </VStack>
           </Card.Body>
         </Card.Root>
       </VStack>
     </Container>
-  )
+  );
 }
 
 function QuizDetailSkeleton() {
@@ -257,5 +259,5 @@ function QuizDetailSkeleton() {
         ))}
       </VStack>
     </Container>
-  )
+  );
 }
