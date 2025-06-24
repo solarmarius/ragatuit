@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { QuizService } from "@/client";
+import { StatusLight } from "@/components/ui/status-light";
 import useCustomToast from "@/hooks/useCustomToast";
 
 export const Route = createFileRoute("/_layout/quiz/$id")({
@@ -92,9 +93,15 @@ function QuizDetail() {
       <VStack gap={6} align="stretch">
         {/* Header */}
         <Box>
-          <Text fontSize="3xl" fontWeight="bold">
-            {quiz.title}
-          </Text>
+          <HStack gap={3} align="center">
+            <Text fontSize="3xl" fontWeight="bold">
+              {quiz.title}
+            </Text>
+            <StatusLight
+              extractionStatus={quiz.content_extraction_status || "pending"}
+              generationStatus={quiz.llm_generation_status || "pending"}
+            />
+          </HStack>
           <Text color="gray.600" fontSize="lg">
             Quiz Details
           </Text>
@@ -398,7 +405,13 @@ function StatusDescription({
 
 function formatTimeAgo(timestamp: string): string {
   try {
-    const date = new Date(timestamp);
+    // Ensure the timestamp is treated as UTC if it doesn't have timezone info
+    let normalizedTimestamp = timestamp;
+    if (!timestamp.includes('Z') && !timestamp.includes('+') && !timestamp.includes('-', 10)) {
+      normalizedTimestamp = timestamp + 'Z';
+    }
+
+    const date = new Date(normalizedTimestamp);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / (1000 * 60));

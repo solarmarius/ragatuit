@@ -14,6 +14,7 @@ import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
 
 import { QuizService } from "@/client"
 import { Button } from "@/components/ui/button"
+import { StatusLight } from "@/components/ui/status-light"
 import useCustomToast from "@/hooks/useCustomToast"
 
 export const Route = createFileRoute("/_layout/quizzes")({
@@ -111,6 +112,7 @@ function QuizList() {
                     <Table.ColumnHeader>Course</Table.ColumnHeader>
                     <Table.ColumnHeader>Questions</Table.ColumnHeader>
                     <Table.ColumnHeader>LLM Model</Table.ColumnHeader>
+                    <Table.ColumnHeader>Status</Table.ColumnHeader>
                     <Table.ColumnHeader>Created</Table.ColumnHeader>
                     <Table.ColumnHeader>Actions</Table.ColumnHeader>
                   </Table.Row>
@@ -151,6 +153,34 @@ function QuizList() {
                           <Badge variant="outline" colorScheme="purple">
                             {quiz.llm_model}
                           </Badge>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <HStack gap={2} align="center">
+                            <StatusLight
+                              extractionStatus={quiz.content_extraction_status || "pending"}
+                              generationStatus={quiz.llm_generation_status || "pending"}
+                            />
+                            <Text fontSize="sm" color="gray.600">
+                              {(() => {
+                                const extractionStatus = quiz.content_extraction_status || "pending";
+                                const generationStatus = quiz.llm_generation_status || "pending";
+
+                                if (extractionStatus === "failed" || generationStatus === "failed") {
+                                  return "Failed";
+                                }
+
+                                if (extractionStatus === "completed" && generationStatus === "completed") {
+                                  return "Complete";
+                                }
+
+                                if (extractionStatus === "processing" || generationStatus === "processing") {
+                                  return "Processing";
+                                }
+
+                                return "Pending";
+                              })()}
+                            </Text>
+                          </HStack>
                         </Table.Cell>
                         <Table.Cell>
                           <Text fontSize="sm">
