@@ -34,7 +34,6 @@ class User(SQLModel, table=True):
         default=None,
         sa_column=Column(
             DateTime(timezone=True),
-            server_default=func.now(),
             onupdate=func.now(),
             nullable=True,
         ),
@@ -75,7 +74,6 @@ class Quiz(SQLModel, table=True):
         default=None,
         sa_column=Column(
             DateTime(timezone=True),
-            server_default=func.now(),
             onupdate=func.now(),
             nullable=True,
         ),
