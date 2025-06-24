@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlmodel import Session, desc, select
@@ -202,9 +202,12 @@ def create_quiz(session: Session, quiz_create: QuizCreate, owner_id: UUID) -> Qu
     **Returns:**
         Quiz: The newly created quiz object with generated UUID and timestamps
     """
+
     quiz_data = quiz_create.model_dump()
     quiz_data["selected_modules"] = json.dumps(quiz_create.selected_modules)
     quiz_data["owner_id"] = owner_id
+    current_time = datetime.now(timezone.utc)
+    quiz_data["updated_at"] = current_time
 
     db_quiz = Quiz.model_validate(quiz_data)
     session.add(db_quiz)

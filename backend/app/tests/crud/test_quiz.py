@@ -39,6 +39,7 @@ def test_create_quiz(db: Session, user_id: uuid.UUID) -> None:
     assert quiz.llm_model == llm_model
     assert quiz.llm_temperature == llm_temperature
     assert quiz.created_at is not None
+    assert quiz.updated_at is not None
 
     # Check that modules are stored as JSON string
     assert quiz.selected_modules is not None
