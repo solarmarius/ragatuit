@@ -32,7 +32,12 @@ class User(SQLModel, table=True):
     )
     updated_at: datetime | None = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), onupdate=func.now(), nullable=True),
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now(),
+            onupdate=func.now(),
+            nullable=True,
+        ),
     )
     access_token: str = Field(description="Canvas access token")
     refresh_token: str = Field(description="Canvas refresh token")
@@ -68,7 +73,12 @@ class Quiz(SQLModel, table=True):
     )
     updated_at: datetime | None = Field(
         default=None,
-        sa_column=Column(DateTime(timezone=True), onupdate=func.now(), nullable=True),
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now(),
+            onupdate=func.now(),
+            nullable=True,
+        ),
     )
 
     # Methods to handle JSON strings for selected_modules field
