@@ -8,20 +8,20 @@ import {
   Table,
   Text,
   VStack,
-} from "@chakra-ui/react";
-import { createFileRoute, Link as RouterLink } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+} from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
+import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
 
-import { QuizService } from "@/client";
-import { Button } from "@/components/ui/button";
-import useCustomToast from "@/hooks/useCustomToast";
+import { QuizService } from "@/client"
+import { Button } from "@/components/ui/button"
+import useCustomToast from "@/hooks/useCustomToast"
 
 export const Route = createFileRoute("/_layout/quizzes")({
   component: QuizList,
-});
+})
 
 function QuizList() {
-  const { showErrorToast } = useCustomToast();
+  const { showErrorToast } = useCustomToast()
 
   const {
     data: quizzes,
@@ -31,17 +31,17 @@ function QuizList() {
     queryKey: ["user-quizzes"],
     queryFn: async () => {
       try {
-        const response = await QuizService.getUserQuizzesEndpoint();
-        return response;
+        const response = await QuizService.getUserQuizzesEndpoint()
+        return response
       } catch (err) {
-        showErrorToast("Failed to load quizzes");
-        throw err;
+        showErrorToast("Failed to load quizzes")
+        throw err
       }
     },
-  });
+  })
 
   if (isLoading) {
-    return <QuizListSkeleton />;
+    return <QuizListSkeleton />
   }
 
   if (error) {
@@ -60,7 +60,7 @@ function QuizList() {
           </Card.Body>
         </Card.Root>
       </Container>
-    );
+    )
   }
 
   return (
@@ -119,9 +119,9 @@ function QuizList() {
                   {quizzes.map((quiz) => {
                     // Parse selected modules for display
                     const selectedModules = JSON.parse(
-                      quiz.selected_modules || "{}"
-                    );
-                    const moduleCount = Object.keys(selectedModules).length;
+                      quiz.selected_modules || "{}",
+                    )
+                    const moduleCount = Object.keys(selectedModules).length
 
                     return (
                       <Table.Row key={quiz.id}>
@@ -161,7 +161,7 @@ function QuizList() {
                                     year: "numeric",
                                     month: "short",
                                     day: "numeric",
-                                  }
+                                  },
                                 )
                               : "Unknown"}
                           </Text>
@@ -176,7 +176,7 @@ function QuizList() {
                           </HStack>
                         </Table.Cell>
                       </Table.Row>
-                    );
+                    )
                   })}
                 </Table.Body>
               </Table.Root>
@@ -185,7 +185,7 @@ function QuizList() {
         )}
       </VStack>
     </Container>
-  );
+  )
 }
 
 function QuizListSkeleton() {
@@ -220,5 +220,5 @@ function QuizListSkeleton() {
         </Card.Root>
       </VStack>
     </Container>
-  );
+  )
 }

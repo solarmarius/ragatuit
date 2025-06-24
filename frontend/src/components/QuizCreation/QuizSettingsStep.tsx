@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button"
+import { Field } from "@/components/ui/field"
 import {
   Box,
   Card,
@@ -9,27 +11,25 @@ import {
   Text,
   VStack,
   createListCollection,
-} from "@chakra-ui/react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Field } from "@/components/ui/field";
+} from "@chakra-ui/react"
+import { useState } from "react"
 
 interface QuizSettings {
-  questionCount: number;
-  llmModel: string;
-  llmTemperature: number;
+  questionCount: number
+  llmModel: string
+  llmTemperature: number
 }
 
 interface QuizSettingsStepProps {
-  settings?: QuizSettings;
-  onSettingsChange: (settings: QuizSettings) => void;
+  settings?: QuizSettings
+  onSettingsChange: (settings: QuizSettings) => void
 }
 
 const DEFAULT_SETTINGS: QuizSettings = {
   questionCount: 100,
   llmModel: "o3-pro",
   llmTemperature: 0.3,
-};
+}
 
 const SUPPORTED_MODELS = createListCollection({
   items: [
@@ -38,28 +38,27 @@ const SUPPORTED_MODELS = createListCollection({
     { value: "gpt-o3", label: "GPT-o3" },
     { value: "o3-pro", label: "o3-pro" },
   ],
-});
+})
 
 export function QuizSettingsStep({
   settings = DEFAULT_SETTINGS,
   onSettingsChange,
 }: QuizSettingsStepProps) {
   const [activeTab, setActiveTab] = useState<"recommended" | "advanced">(
-    "recommended"
-  );
-  const [currentSettings, setCurrentSettings] =
-    useState<QuizSettings>(settings);
+    "recommended",
+  )
+  const [currentSettings, setCurrentSettings] = useState<QuizSettings>(settings)
 
   const updateSettings = (updates: Partial<QuizSettings>) => {
-    const newSettings = { ...currentSettings, ...updates };
-    setCurrentSettings(newSettings);
-    onSettingsChange(newSettings);
-  };
+    const newSettings = { ...currentSettings, ...updates }
+    setCurrentSettings(newSettings)
+    onSettingsChange(newSettings)
+  }
 
   const resetToRecommended = () => {
-    setCurrentSettings(DEFAULT_SETTINGS);
-    onSettingsChange(DEFAULT_SETTINGS);
-  };
+    setCurrentSettings(DEFAULT_SETTINGS)
+    onSettingsChange(DEFAULT_SETTINGS)
+  }
 
   return (
     <VStack gap={6} align="stretch">
@@ -70,7 +69,9 @@ export function QuizSettingsStep({
             type="number"
             value={currentSettings.questionCount}
             onChange={(e) =>
-              updateSettings({ questionCount: parseInt(e.target.value) || 100 })
+              updateSettings({
+                questionCount: Number.parseInt(e.target.value) || 100,
+              })
             }
             min={1}
             max={200}
@@ -235,5 +236,5 @@ export function QuizSettingsStep({
         </VStack>
       </Box>
     </VStack>
-  );
+  )
 }

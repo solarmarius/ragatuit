@@ -20,7 +20,9 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
   const listItems = items.map(({ icon, title, path }) => {
     const isActive =
       title === "Quizzes"
-        ? location.pathname === path || location.pathname === "/create-quiz" || location.pathname.startsWith("/quiz/")
+        ? location.pathname === path ||
+          location.pathname === "/create-quiz" ||
+          location.pathname.startsWith("/quiz/")
         : location.pathname === path
 
     return (
