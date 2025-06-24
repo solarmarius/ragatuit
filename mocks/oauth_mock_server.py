@@ -248,6 +248,7 @@ mock_modules = [
 ]
 
 mock_items = [
+    # Items for module 173690 (Smak, lukt, farge, klarhet)
     {
         "id": 1149209,
         "title": "Module_X: Introduksjon",
@@ -335,6 +336,53 @@ mock_items = [
         "publish_at": None,
         "url": "https://uit.instructure.com/api/v1/courses/37823/pages/testpage",
         "published": False,
+        "unpublishable": True,
+    },
+    # Items for module 173579 (Gjær og pitching av gjær, oksygenering)
+    {
+        "id": 1149300,
+        "title": "Introduksjon til gjær",
+        "position": 1,
+        "indent": 0,
+        "quiz_lti": False,
+        "type": "Page",
+        "module_id": 173579,
+        "html_url": "https://uit.instructure.com/courses/37823/modules/items/1149300",
+        "page_url": "introduksjon-til-gjaer",
+        "publish_at": None,
+        "url": "https://uit.instructure.com/api/v1/courses/37823/pages/introduksjon-til-gjaer",
+        "published": True,
+        "unpublishable": True,
+    },
+    {
+        "id": 1149301,
+        "title": "Pitching av gjær",
+        "position": 2,
+        "indent": 0,
+        "quiz_lti": False,
+        "type": "Page",
+        "module_id": 173579,
+        "html_url": "https://uit.instructure.com/courses/37823/modules/items/1149301",
+        "page_url": "pitching-av-gjaer",
+        "publish_at": None,
+        "url": "https://uit.instructure.com/api/v1/courses/37823/pages/pitching-av-gjaer",
+        "published": True,
+        "unpublishable": True,
+    },
+    # Items for module 173574 (Mesking og vørterbehandling)
+    {
+        "id": 1149400,
+        "title": "Mesking prosess",
+        "position": 1,
+        "indent": 0,
+        "quiz_lti": False,
+        "type": "Page",
+        "module_id": 173574,
+        "html_url": "https://uit.instructure.com/courses/37823/modules/items/1149400",
+        "page_url": "mesking-prosess",
+        "publish_at": None,
+        "url": "https://uit.instructure.com/api/v1/courses/37823/pages/mesking-prosess",
+        "published": True,
         "unpublishable": True,
     },
 ]
@@ -728,7 +776,7 @@ async def get_course_modules(course_id: int, authorization: str = Header(None)):
 
 @app.get("/api/v1/courses/{course_id}/modules/{module_id}/items")
 async def get_module_items(
-    course_id: int, _module_id: int, authorization: str = Header(None)
+    course_id: int, module_id: int, authorization: str = Header(None)
 ):
     """Mock Canvas module items endpoint"""
     if not authorization:
@@ -742,7 +790,11 @@ async def get_module_items(
             status_code=403, detail="Unauthorized access to course module items"
         )
 
-    return mock_items
+    # Filter items by module_id - return items that belong to the requested module
+    module_items = [item for item in mock_items if item.get("module_id") == module_id]
+
+    # If no items found, return empty list (not an error)
+    return module_items
 
 
 @app.get("/api/v1/courses/{course_id}/pages/{page_url}")

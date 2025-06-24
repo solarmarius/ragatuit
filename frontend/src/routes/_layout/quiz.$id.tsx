@@ -5,22 +5,23 @@ import {
   Container,
   HStack,
   Skeleton,
+  Spinner,
   Text,
   VStack,
-} from "@chakra-ui/react"
-import { useQuery } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
+} from "@chakra-ui/react";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
 
-import { QuizService } from "@/client"
-import useCustomToast from "@/hooks/useCustomToast"
+import { QuizService } from "@/client";
+import useCustomToast from "@/hooks/useCustomToast";
 
 export const Route = createFileRoute("/_layout/quiz/$id")({
   component: QuizDetail,
-})
+});
 
 function QuizDetail() {
-  const { id } = Route.useParams()
-  const { showErrorToast } = useCustomToast()
+  const { id } = Route.useParams();
+  const { showErrorToast } = useCustomToast();
 
   const {
     data: quiz,
@@ -30,17 +31,36 @@ function QuizDetail() {
     queryKey: ["quiz", id],
     queryFn: async () => {
       try {
-        const response = await QuizService.getQuiz({ quizId: id })
-        return response
+        const response = await QuizService.getQuiz({ quizId: id });
+        return response;
       } catch (err) {
-        showErrorToast("Failed to load quiz details")
-        throw err
+        showErrorToast("Failed to load quiz details");
+        throw err;
       }
     },
-  })
+    refetchInterval: (query) => {
+      // Poll every 5 seconds if any status is pending or processing
+      const data = query?.state?.data;
+      if (data) {
+        const extractionStatus = data.content_extraction_status || "pending";
+        const generationStatus = data.llm_generation_status || "pending";
+
+        if (
+          extractionStatus === "pending" ||
+          extractionStatus === "processing" ||
+          generationStatus === "pending" ||
+          generationStatus === "processing"
+        ) {
+          return 5000; // 5 seconds
+        }
+      }
+      return false; // Stop polling when both are completed or failed
+    },
+    refetchIntervalInBackground: false, // Only poll when tab is active
+  });
 
   if (isLoading) {
-    return <QuizDetailSkeleton />
+    return <QuizDetailSkeleton />;
   }
 
   if (error || !quiz) {
@@ -60,12 +80,12 @@ function QuizDetail() {
           </Card.Body>
         </Card.Root>
       </Container>
-    )
+    );
   }
 
   // Parse selected modules from JSON string
-  const selectedModules = JSON.parse(quiz.selected_modules || "{}")
-  const moduleNames = Object.values(selectedModules) as string[]
+  const selectedModules = JSON.parse(quiz.selected_modules || "{}");
+  const moduleNames = Object.values(selectedModules) as string[];
 
   return (
     <Container maxW="4xl" py={8}>
@@ -213,23 +233,53 @@ function QuizDetail() {
           </Card.Body>
         </Card.Root>
 
-        {/* Placeholder for Future Features */}
+        {/* Quiz Generation Status */}
         <Card.Root>
+          <Card.Header>
+            <Text fontSize="xl" fontWeight="semibold">
+              Quiz Generation Status
+            </Text>
+          </Card.Header>
           <Card.Body>
-            <VStack gap={3}>
-              <Text fontSize="lg" fontWeight="semibold" color="gray.600">
-                Coming Soon
-              </Text>
-              <Text color="gray.500" textAlign="center">
-                Question generation, review, and export features will be
-                available here.
-              </Text>
+            <VStack gap={4} align="stretch">
+              {/* Content Extraction Status */}
+              <Box>
+                <HStack justify="space-between" mb={2}>
+                  <Text fontWeight="medium" color="gray.700">
+                    Content Extraction
+                  </Text>
+                  <StatusBadge
+                    status={quiz.content_extraction_status || "pending"}
+                  />
+                </HStack>
+                <StatusDescription
+                  status={quiz.content_extraction_status || "pending"}
+                  type="extraction"
+                  timestamp={quiz.content_extracted_at || null}
+                />
+              </Box>
+
+              {/* LLM Generation Status */}
+              <Box>
+                <HStack justify="space-between" mb={2}>
+                  <Text fontWeight="medium" color="gray.700">
+                    Question Generation
+                  </Text>
+                  <StatusBadge
+                    status={quiz.llm_generation_status || "pending"}
+                  />
+                </HStack>
+                <StatusDescription
+                  status={quiz.llm_generation_status || "pending"}
+                  type="generation"
+                />
+              </Box>
             </VStack>
           </Card.Body>
         </Card.Root>
       </VStack>
     </Container>
-  )
+  );
 }
 
 function QuizDetailSkeleton() {
@@ -259,5 +309,111 @@ function QuizDetailSkeleton() {
         ))}
       </VStack>
     </Container>
-  )
+  );
+}
+
+interface StatusBadgeProps {
+  status: string;
+}
+
+function StatusBadge({ status }: StatusBadgeProps) {
+  const getStatusConfig = () => {
+    switch (status) {
+      case "pending":
+        return { icon: "⏳", color: "gray", text: "Waiting" };
+      case "processing":
+        return {
+          icon: <Spinner size="xs" />,
+          color: "blue",
+          text: "Processing",
+        };
+      case "completed":
+        return { icon: "✅", color: "green", text: "Completed" };
+      case "failed":
+        return { icon: "❌", color: "red", text: "Failed" };
+      default:
+        return { icon: "❓", color: "gray", text: "Unknown" };
+    }
+  };
+
+  const config = getStatusConfig();
+
+  return (
+    <Badge variant="outline" colorScheme={config.color}>
+      <HStack gap={1} align="center">
+        {typeof config.icon === "string" ? (
+          <Text fontSize="xs">{config.icon}</Text>
+        ) : (
+          config.icon
+        )}
+        <Text>{config.text}</Text>
+      </HStack>
+    </Badge>
+  );
+}
+
+interface StatusDescriptionProps {
+  status: string;
+  type: "extraction" | "generation";
+  timestamp?: string | null;
+}
+
+function StatusDescription({
+  status,
+  type,
+  timestamp,
+}: StatusDescriptionProps) {
+  const getDescription = () => {
+    const isExtraction = type === "extraction";
+
+    switch (status) {
+      case "pending":
+        return isExtraction
+          ? "Waiting to extract content from selected modules"
+          : "Waiting for content extraction to complete";
+      case "processing":
+        return isExtraction
+          ? "Extracting and cleaning content from Canvas pages..."
+          : "Generating questions using the language model...";
+      case "completed":
+        const timeAgo = timestamp ? formatTimeAgo(timestamp) : "";
+        return isExtraction
+          ? `Content extracted successfully${timeAgo ? ` (${timeAgo})` : ""}`
+          : `Questions generated successfully${timeAgo ? ` (${timeAgo})` : ""}`;
+      case "failed":
+        return isExtraction
+          ? "Failed to extract content. Please try again."
+          : "Failed to generate questions. Please try again.";
+      default:
+        return "Status unknown";
+    }
+  };
+
+  return (
+    <Text fontSize="sm" color="gray.600">
+      {getDescription()}
+    </Text>
+  );
+}
+
+function formatTimeAgo(timestamp: string): string {
+  try {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+
+    if (diffMins < 1) return "just now";
+    if (diffMins < 60)
+      return `${diffMins} minute${diffMins === 1 ? "" : "s"} ago`;
+
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24)
+      return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
+
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+  } catch {
+    return "";
+  }
 }

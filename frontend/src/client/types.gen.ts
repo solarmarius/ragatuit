@@ -31,6 +31,22 @@ export type Quiz = {
   question_count?: number
   llm_model?: string
   llm_temperature?: number
+  /**
+   * Status of content extraction: pending, processing, completed, failed
+   */
+  content_extraction_status?: string
+  /**
+   * Status of LLM generation: pending, processing, completed, failed
+   */
+  llm_generation_status?: string
+  /**
+   * JSON string of extracted page content
+   */
+  extracted_content?: string | null
+  /**
+   * Timestamp when content extraction was completed
+   */
+  content_extracted_at?: string | null
   created_at?: string | null
   updated_at?: string | null
 }
@@ -83,6 +99,24 @@ export type CanvasGetCourseModulesData = {
 
 export type CanvasGetCourseModulesResponse = Array<CanvasModule>
 
+export type CanvasGetModuleItemsData = {
+  courseId: number
+  moduleId: number
+}
+
+export type CanvasGetModuleItemsResponse = Array<{
+  [key: string]: unknown
+}>
+
+export type CanvasGetPageContentData = {
+  courseId: number
+  pageUrl: string
+}
+
+export type CanvasGetPageContentResponse = {
+  [key: string]: unknown
+}
+
 export type QuizGetUserQuizzesEndpointResponse = Array<Quiz>
 
 export type QuizCreateNewQuizData = {
@@ -96,6 +130,14 @@ export type QuizGetQuizData = {
 }
 
 export type QuizGetQuizResponse = Quiz
+
+export type QuizTriggerContentExtractionData = {
+  quizId: string
+}
+
+export type QuizTriggerContentExtractionResponse = {
+  [key: string]: string
+}
 
 export type UsersReadUserMeResponse = UserPublic
 

@@ -64,6 +64,20 @@ class Quiz(SQLModel, table=True):
     question_count: int = Field(default=100, ge=1, le=200)
     llm_model: str = Field(default="o3-pro")
     llm_temperature: float = Field(default=0.3, ge=0.0, le=2.0)
+    content_extraction_status: str = Field(
+        default="pending",
+        description="Status of content extraction: pending, processing, completed, failed",
+    )
+    llm_generation_status: str = Field(
+        default="pending",
+        description="Status of LLM generation: pending, processing, completed, failed",
+    )
+    extracted_content: str | None = Field(
+        default=None, description="JSON string of extracted page content"
+    )
+    content_extracted_at: datetime | None = Field(
+        default=None, description="Timestamp when content extraction was completed"
+    )
     created_at: datetime | None = Field(
         default=None,
         sa_column=Column(
@@ -109,6 +123,25 @@ class Quiz(SQLModel, table=True):
     def modules_dict(self, value: dict[int, str]) -> None:
         """Set selected_modules from a dictionary."""
         self.selected_modules = json.dumps(value)
+
+    @property
+    def content_dict(self) -> dict[str, Any]:
+        """Get extracted_content as a dictionary."""
+        if not self.extracted_content:
+            return {}
+
+        try:
+            result = json.loads(self.extracted_content)
+            if isinstance(result, dict):
+                return result
+            return {}
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    @content_dict.setter
+    def content_dict(self, value: dict[str, Any]) -> None:
+        """Set extracted_content from a dictionary."""
+        self.extracted_content = json.dumps(value) if value else None
 
 
 class QuizCreate(SQLModel):

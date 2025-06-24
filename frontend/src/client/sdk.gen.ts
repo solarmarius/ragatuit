@@ -4,20 +4,26 @@ import type { CancelablePromise } from "./core/CancelablePromise"
 import { OpenAPI } from "./core/OpenAPI"
 import { request as __request } from "./core/request"
 import type {
-  AuthAuthCanvasResponse,
   AuthLoginCanvasResponse,
+  AuthAuthCanvasResponse,
   AuthLogoutCanvasResponse,
   AuthRefreshCanvasTokenResponse,
+  CanvasGetCoursesResponse,
   CanvasGetCourseModulesData,
   CanvasGetCourseModulesResponse,
-  CanvasGetCoursesResponse,
+  CanvasGetModuleItemsData,
+  CanvasGetModuleItemsResponse,
+  CanvasGetPageContentData,
+  CanvasGetPageContentResponse,
+  QuizGetUserQuizzesEndpointResponse,
   QuizCreateNewQuizData,
   QuizCreateNewQuizResponse,
   QuizGetQuizData,
   QuizGetQuizResponse,
-  QuizGetUserQuizzesEndpointResponse,
-  UsersDeleteUserMeResponse,
+  QuizTriggerContentExtractionData,
+  QuizTriggerContentExtractionResponse,
   UsersReadUserMeResponse,
+  UsersDeleteUserMeResponse,
   UsersUpdateUserMeData,
   UsersUpdateUserMeResponse,
   UtilsHealthCheckResponse,
@@ -271,6 +277,116 @@ export class CanvasService {
       },
     })
   }
+
+  /**
+   * Get Module Items
+   * Fetch items within a specific Canvas module.
+   *
+   * Returns a list of module items (pages, assignments, files, etc.) for content extraction.
+   * This endpoint fetches items to allow content processing for quiz generation.
+   *
+   * **Parameters:**
+   * course_id (int): The Canvas course ID
+   * module_id (int): The Canvas module ID to fetch items from
+   *
+   * **Returns:**
+   * List[dict]: List of module items with type, title, and Canvas metadata
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Raises:**
+   * HTTPException: 401 if Canvas token is invalid or expired
+   * HTTPException: 403 if user doesn't have access to the course/module
+   * HTTPException: 503 if unable to connect to Canvas
+   * HTTPException: 500 if Canvas API returns unexpected data
+   *
+   * **Example Response:**
+   * [
+   * {
+   * "id": 123456,
+   * "title": "Introduction to AI",
+   * "type": "Page",
+   * "html_url": "https://canvas.../pages/intro",
+   * "page_url": "intro",
+   * "url": "https://canvas.../api/v1/courses/123/pages/intro"
+   * }
+   * ]
+   * @param data The data for the request.
+   * @param data.courseId
+   * @param data.moduleId
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static getModuleItems(
+    data: CanvasGetModuleItemsData,
+  ): CancelablePromise<CanvasGetModuleItemsResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/canvas/courses/{course_id}/modules/{module_id}/items",
+      path: {
+        course_id: data.courseId,
+        module_id: data.moduleId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get Page Content
+   * Fetch content of a specific Canvas page.
+   *
+   * Returns the full HTML content of a Canvas page for content extraction and processing.
+   * This endpoint is used to get the actual page content for quiz question generation.
+   *
+   * **Parameters:**
+   * course_id (int): The Canvas course ID
+   * page_url (str): The Canvas page URL slug (e.g., "introduction-to-ai")
+   *
+   * **Returns:**
+   * dict: Page content with title, body, and metadata
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Raises:**
+   * HTTPException: 401 if Canvas token is invalid or expired
+   * HTTPException: 403 if user doesn't have access to the course/page
+   * HTTPException: 404 if page not found
+   * HTTPException: 503 if unable to connect to Canvas
+   * HTTPException: 500 if Canvas API returns unexpected data
+   *
+   * **Example Response:**
+   * {
+   * "title": "Introduction to AI",
+   * "body": "<h1>Introduction</h1><p>Artificial Intelligence is...</p>",
+   * "url": "introduction-to-ai",
+   * "created_at": "2023-01-01T12:00:00Z",
+   * "updated_at": "2023-01-02T12:00:00Z"
+   * }
+   * @param data The data for the request.
+   * @param data.courseId
+   * @param data.pageUrl
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static getPageContent(
+    data: CanvasGetPageContentData,
+  ): CancelablePromise<CanvasGetPageContentResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/canvas/courses/{course_id}/pages/{page_url}",
+      path: {
+        course_id: data.courseId,
+        page_url: data.pageUrl,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
 }
 
 export class QuizService {
@@ -423,6 +539,45 @@ export class QuizService {
     return __request(OpenAPI, {
       method: "GET",
       url: "/api/v1/quiz/{quiz_id}",
+      path: {
+        quiz_id: data.quizId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Trigger Content Extraction
+   * Manually trigger content extraction for a quiz.
+   *
+   * This endpoint allows users to retry content extraction if it failed
+   * or trigger extraction manually. It can be called multiple times.
+   *
+   * **Parameters:**
+   * quiz_id (UUID): The UUID of the quiz to extract content for
+   *
+   * **Returns:**
+   * dict: Status message indicating extraction has been triggered
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Raises:**
+   * HTTPException: 404 if quiz not found or user doesn't own it
+   * HTTPException: 500 if unable to trigger extraction
+   * @param data The data for the request.
+   * @param data.quizId
+   * @returns string Successful Response
+   * @throws ApiError
+   */
+  public static triggerContentExtraction(
+    data: QuizTriggerContentExtractionData,
+  ): CancelablePromise<QuizTriggerContentExtractionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/quiz/{quiz_id}/extract-content",
       path: {
         quiz_id: data.quizId,
       },
