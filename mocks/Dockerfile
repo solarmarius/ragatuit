@@ -6,7 +6,7 @@ WORKDIR /app
 RUN pip install fastapi uvicorn python-multipart
 
 # Copy the mock server
-COPY oauth_mock_server.py .
+COPY . .
 
 # Expose port
 EXPOSE 8001

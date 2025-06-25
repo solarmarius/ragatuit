@@ -4,6 +4,7 @@ from typing import Optional
 
 from fastapi import FastAPI, Form, Header, HTTPException, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
+from mock_bodys import spatial_filtering_body, what_is_an_image_body
 from pydantic import BaseModel
 
 app = FastAPI(title="Mock Canvas Server", version="1.0.0")
@@ -22,14 +23,14 @@ mock_users = {
 mock_courses = [
     {
         "id": 37823,
-        "name": "AUT-2600 Ølbrygging",
+        "name": "FYS-2010 Image Analysis",
         "account_id": 27925,
         "uuid": "hfv2nToY5ae1MbmNWTfNhTpzVbwq9ENcT00yTEiK",
         "start_at": None,
         "grading_standard_id": None,
         "is_public": False,
         "created_at": "2025-03-06T16:18:18Z",
-        "course_code": "AUT-2600",
+        "course_code": "FYS-2010",
         "default_view": "wiki",
         "root_account_id": 1,
         "enrollment_term_id": 3,
@@ -117,7 +118,7 @@ mock_courses = [
 mock_modules = [
     {
         "id": 173467,
-        "name": "Administrativ informasjon",
+        "name": "Admin infomation",
         "position": 1,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -130,7 +131,7 @@ mock_modules = [
     },
     {
         "id": 173574,
-        "name": "Mesking og vørterbehandling",
+        "name": "Image Fundamentals",
         "position": 2,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -143,7 +144,7 @@ mock_modules = [
     },
     {
         "id": 173468,
-        "name": "Humle og bitterhet, smak og aroma",
+        "name": "Spatial Filtering",
         "position": 3,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -156,7 +157,7 @@ mock_modules = [
     },
     {
         "id": 173469,
-        "name": "Stivelse, enzymer, sukkertyper og fermenterbarhet",
+        "name": "Convolution",
         "position": 4,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -169,7 +170,7 @@ mock_modules = [
     },
     {
         "id": 173579,
-        "name": "Gjær og pitching av gjær, oksygenering",
+        "name": "Fourier Transforms",
         "position": 5,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -182,7 +183,7 @@ mock_modules = [
     },
     {
         "id": 173577,
-        "name": "Fermentering (de ulike fasene)",
+        "name": "Computational Tomography",
         "position": 6,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -193,59 +194,140 @@ mock_modules = [
         "items_count": 3,
         "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173577/items",
     },
-    {
-        "id": 173682,
-        "name": "Vask og desinfisering",
-        "position": 7,
-        "unlock_at": None,
-        "require_sequential_progress": False,
-        "requirement_type": "all",
-        "publish_final_grade": False,
-        "prerequisite_module_ids": [],
-        "published": False,
-        "items_count": 5,
-        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173682/items",
-    },
-    {
-        "id": 173685,
-        "name": "Vann og vannbehandling",
-        "position": 8,
-        "unlock_at": None,
-        "require_sequential_progress": False,
-        "requirement_type": "all",
-        "publish_final_grade": False,
-        "prerequisite_module_ids": [],
-        "published": False,
-        "items_count": 5,
-        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173685/items",
-    },
-    {
-        "id": 173688,
-        "name": "Tapping og karbonisering",
-        "position": 9,
-        "unlock_at": None,
-        "require_sequential_progress": False,
-        "requirement_type": "all",
-        "publish_final_grade": False,
-        "prerequisite_module_ids": [],
-        "published": False,
-        "items_count": 5,
-        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173688/items",
-    },
-    {
-        "id": 173690,
-        "name": "Smak, lukt, farge, klarhet",
-        "position": 10,
-        "unlock_at": None,
-        "require_sequential_progress": False,
-        "requirement_type": "all",
-        "publish_final_grade": False,
-        "prerequisite_module_ids": [],
-        "published": False,
-        "items_count": 6,
-        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173690/items",
-    },
 ]
+
+mock_items = {
+    173574: [
+        {
+            "id": 1188038,
+            "title": "what-is-an-image",
+            "position": 8,
+            "indent": 0,
+            "quiz_lti": False,
+            "type": "Page",
+            "module_id": 173690,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1188038",
+            "page_url": "what-is-an-image",
+            "publish_at": None,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/pages/what-is-an-image",
+            "published": True,
+            "unpublishable": True,
+        },
+        {
+            "id": 1188039,
+            "title": "Week8_color.pdf",
+            "position": 9,
+            "indent": 0,
+            "quiz_lti": False,
+            "type": "File",
+            "module_id": 173690,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1188039",
+            "content_id": 3612012,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/files/3612012",
+            "published": True,
+            "unpublishable": False,
+        },
+    ],
+    173468: [
+        {
+            "id": 1188040,
+            "title": "spatial-filtering",
+            "position": 10,
+            "indent": 0,
+            "quiz_lti": False,
+            "type": "Page",
+            "module_id": 173690,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1188040",
+            "page_url": "spatial-filtering",
+            "publish_at": None,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/pages/spatial-filtering",
+            "published": True,
+            "unpublishable": True,
+        }
+    ],
+}
+
+mock_pages = {
+    "what-is-an-image": {
+        "title": "what-is-an-image",
+        "created_at": "2025-06-25T07:35:02Z",
+        "url": "what-is-an-image",
+        "editing_roles": "teachers",
+        "page_id": 423573,
+        "last_edited_by": {
+            "id": 71202,
+            "anonymous_id": "1ixu",
+            "display_name": "Marius Rungmanee Solaas",
+            "avatar_image_url": "https://uit.instructure.com/images/thumbnails/1711458/KP9GqxzKd0VQzE400AHhImiJtv8fzGV1cR5gfYW2",
+            "html_url": "https://uit.instructure.com/courses/37823/users/71202",
+            "pronouns": None,
+        },
+        "published": True,
+        "hide_from_students": False,
+        "front_page": False,
+        "html_url": "https://uit.instructure.com/courses/37823/pages/what-is-an-image",
+        "todo_date": None,
+        "publish_at": None,
+        "updated_at": "2025-06-25T07:35:39Z",
+        "locked_for_user": False,
+        "body": what_is_an_image_body,
+    },
+    "spatial-filtering": {
+        "title": "spatial-filtering",
+        "created_at": "2025-06-25T07:40:43Z",
+        "url": "spatial-filtering",
+        "editing_roles": "teachers",
+        "page_id": 423574,
+        "last_edited_by": {
+            "id": 71202,
+            "anonymous_id": "1ixu",
+            "display_name": "Marius Rungmanee Solaas",
+            "avatar_image_url": "https://uit.instructure.com/images/thumbnails/1711458/KP9GqxzKd0VQzE400AHhImiJtv8fzGV1cR5gfYW2",
+            "html_url": "https://uit.instructure.com/courses/37823/users/71202",
+            "pronouns": None,
+        },
+        "published": True,
+        "hide_from_students": False,
+        "front_page": False,
+        "html_url": "https://uit.instructure.com/courses/37823/pages/spatial-filtering",
+        "todo_date": None,
+        "publish_at": None,
+        "updated_at": "2025-06-25T07:40:55Z",
+        "locked_for_user": False,
+        "body": spatial_filtering_body,
+    },
+}
+
+mock_files = {
+    3612012: {
+        "id": 3612012,
+        "folder_id": 708060,
+        "display_name": "Week8_color.pdf",
+        "filename": "Week8_color.pdf",
+        "uuid": "mBC1UvEdpKW1icxT4SEcTnMza6Iqk9NqVeXmm0nz",
+        "upload_status": "success",
+        "content-type": "application/pdf",
+        "url": "https://uit.instructure.com/files/3612012/download?download_frd=1&verifier=mBC1UvEdpKW1icxT4SEcTnMza6Iqk9NqVeXmm0nz",
+        "size": 4733671,
+        "created_at": "2025-06-25T07:37:50Z",
+        "updated_at": "2025-06-25T07:37:50Z",
+        "unlock_at": None,
+        "locked": False,
+        "hidden": False,
+        "lock_at": None,
+        "hidden_for_user": False,
+        "thumbnail_url": None,
+        "modified_at": "2025-06-25T07:37:50Z",
+        "mime_class": "pdf",
+        "media_entry_id": None,
+        "category": "uncategorized",
+        "locked_for_user": False,
+        "visibility_level": "inherit",
+        "canvadoc_session_url": "/api/v1/canvadoc_session?blob=%7B%22user_id%22:107380000000071202,%22attachment_id%22:3612012,%22type%22:%22canvadoc%22%7D&hmac=17da101766a54e3ced85255631181dba7ef5b02d",
+        "crocodoc_session_url": None,
+    }
+}
+
 
 # Store authorization codes and tokens
 auth_codes = {}
@@ -310,7 +392,7 @@ async def authorize(
             </div>
 
             <p>This application is requesting access to your Canvas account.</p>
-            <p><strong>Mock User:</strong> John Teacher (john.teacher@example.com)</p>
+            <p><strong>Mock User:</strong> Marius Solaas (mso270@uit.com)</p>
 
             <div>
                 <a href="/login/oauth2/authorize?client_id={client_id}&redirect_uri={redirect_uri}&response_type={response_type}&scope={scope or ''}&state={state or ''}&action=authorize" class="button">Authorize</a>
@@ -607,6 +689,72 @@ async def get_course_modules(course_id: int, authorization: str = Header(None)):
         )
 
     return mock_modules
+
+
+@app.get("/api/v1/courses/{course_id}/modules/{module_id}/items")
+async def get_module_items(
+    course_id: int, module_id: int, authorization: str = Header(None)
+):
+    """Mock Canvas module items endpoint"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+
+    validate_token(authorization)
+
+    # Only return items for course ID 37823, otherwise return unauthorized
+    if course_id != 37823:
+        raise HTTPException(
+            status_code=403, detail="Unauthorized access to course module items"
+        )
+
+    # Return items for the specified module_id from the mock_items dictionary
+    if module_id in mock_items:
+        return mock_items[module_id]
+    else:
+        # If no items found for this module, return empty list (not an error)
+        return []
+
+
+@app.get("/api/v1/courses/{course_id}/pages/{page_url}")
+async def get_page(course_id: int, page_url: str, authorization: str = Header(None)):
+    """Mock Canvas page endpoint"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+
+    validate_token(authorization)
+
+    # Only return pages for course ID 37823, otherwise return unauthorized
+    if course_id != 37823:
+        raise HTTPException(
+            status_code=403, detail="Unauthorized access to course pages"
+        )
+
+    # Return items for the specified module_id from the mock_items dictionary
+    if page_url in mock_pages:
+        return mock_pages[page_url]
+    else:
+        raise HTTPException(status_code=404, detail="Page not found")
+
+
+@app.get("/api/v1/courses/{course_id}/files/{file_id}")
+async def get_file(course_id: int, file_id: int, authorization: str = Header(None)):
+    """Mock Canvas file endpoint"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+
+    validate_token(authorization)
+
+    # Only return files for course ID 37823, otherwise return unauthorized
+    if course_id != 37823:
+        raise HTTPException(
+            status_code=403, detail="Unauthorized access to course files"
+        )
+
+    # Check if the requested file_id exists in mock_files
+    if file_id in mock_files:
+        return mock_files[file_id]
+    else:
+        raise HTTPException(status_code=404, detail="File not found")
 
 
 @app.get("/api/v1/users/{user_id}/profile")

@@ -61,6 +61,23 @@ class Settings(BaseSettings):
     CANVAS_REDIRECT_URI: HttpUrl
     CANVAS_BASE_URL: HttpUrl
 
+    # Content extraction limits
+    MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB per file
+    MAX_TOTAL_CONTENT_SIZE: int = 50 * 1024 * 1024  # 50MB total per quiz
+    MAX_PAGES_PER_MODULE: int = 100  # Maximum pages per module
+    MAX_CONTENT_LENGTH: int = 500_000  # Maximum content length per page
+    MIN_CONTENT_LENGTH: int = 50  # Minimum content length
+
+    # API rate limiting
+    CANVAS_API_RATE_LIMIT: int = 10  # Requests per second
+    CANVAS_API_TIMEOUT: float = 30.0  # Request timeout in seconds
+
+    # Retry configuration
+    MAX_RETRIES: int = 3
+    INITIAL_RETRY_DELAY: float = 1.0
+    MAX_RETRY_DELAY: float = 30.0
+    RETRY_BACKOFF_FACTOR: float = 2.0
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:

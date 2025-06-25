@@ -245,3 +245,29 @@ def get_user_quizzes(session: Session, user_id: UUID) -> list[Quiz]:
         select(Quiz).where(Quiz.owner_id == user_id).order_by(desc(Quiz.created_at))
     )
     return list(session.exec(statement).all())
+
+
+def delete_quiz(session: Session, quiz_id: UUID, user_id: UUID) -> bool:
+    """
+    Delete a quiz by its UUID, with ownership verification.
+
+    **Parameters:**
+        session (Session): Database session for the transaction
+        quiz_id (UUID): Quiz UUID to delete
+        user_id (UUID): User UUID to verify ownership
+
+    **Returns:**
+        bool: True if quiz was deleted, False if quiz not found or not owned by user
+
+    **Security:**
+        - Verifies ownership before deletion to prevent unauthorized access
+        - Only the quiz owner can delete their own quizzes
+        - Returns False for both non-existent quizzes and unauthorized access
+    """
+    quiz = session.get(Quiz, quiz_id)
+    if not quiz or quiz.owner_id != user_id:
+        return False
+
+    session.delete(quiz)
+    session.commit()
+    return True

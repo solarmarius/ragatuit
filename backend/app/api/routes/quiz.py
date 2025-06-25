@@ -1,21 +1,27 @@
+from datetime import datetime, timezone
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, BackgroundTasks, HTTPException
+from sqlmodel import Session, select
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CanvasToken, CurrentUser, SessionDep
+from app.core.db import engine
 from app.core.logging_config import get_logger
-from app.crud import create_quiz, get_quiz_by_id, get_user_quizzes
-from app.models import Quiz, QuizCreate
+from app.crud import create_quiz, delete_quiz, get_quiz_by_id, get_user_quizzes
+from app.models import Message, Quiz, QuizCreate
+from app.services.content_extraction import ContentExtractionService
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
 logger = get_logger("quiz")
 
 
 @router.post("/", response_model=Quiz)
-def create_new_quiz(
+async def create_new_quiz(
     quiz_data: QuizCreate,
     current_user: CurrentUser,
     session: SessionDep,
+    canvas_token: CanvasToken,
+    background_tasks: BackgroundTasks,
 ) -> Quiz:
     """
     Create a new quiz with the specified settings.
@@ -67,6 +73,15 @@ def create_new_quiz(
 
     try:
         quiz = create_quiz(session, quiz_data, current_user.id)
+
+        # Trigger content extraction in the background
+        background_tasks.add_task(
+            extract_content_for_quiz,
+            quiz.id,
+            quiz_data.canvas_course_id,
+            list(quiz_data.selected_modules.keys()),
+            canvas_token,
+        )
 
         logger.info(
             "quiz_creation_completed",
@@ -251,4 +266,312 @@ def get_user_quizzes_endpoint(
         )
         raise HTTPException(
             status_code=500, detail="Failed to retrieve quizzes. Please try again."
+        )
+
+
+async def extract_content_for_quiz(
+    quiz_id: UUID, course_id: int, module_ids: list[int], canvas_token: str
+) -> None:
+    """
+    Background task to extract content from Canvas modules for a quiz.
+
+    This function runs asynchronously after quiz creation to fetch and process
+    content from the selected Canvas modules.
+    """
+    logger.info(
+        "content_extraction_started",
+        quiz_id=str(quiz_id),
+        course_id=course_id,
+        module_count=len(module_ids),
+    )
+
+    # Create a new database session for the background task
+    with Session(engine) as session:
+        try:
+            # Use SELECT FOR UPDATE to prevent race conditions
+            stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
+            quiz = session.exec(stmt).first()
+
+            if not quiz:
+                logger.error(
+                    "content_extraction_quiz_not_found",
+                    quiz_id=str(quiz_id),
+                )
+                return
+
+            # Check if extraction is already in progress to prevent duplicate work
+            if quiz.content_extraction_status == "processing":
+                logger.warning(
+                    "content_extraction_already_in_progress",
+                    quiz_id=str(quiz_id),
+                    current_status=quiz.content_extraction_status,
+                )
+                return
+
+            # Atomically update status to processing
+            quiz.content_extraction_status = "processing"
+            session.add(quiz)
+            session.commit()
+
+            # Initialize content extraction service
+            extraction_service = ContentExtractionService(canvas_token, course_id)
+
+            # Extract content from all selected modules
+            extracted_content = await extraction_service.extract_content_for_modules(
+                module_ids
+            )
+
+            # Get content summary for logging
+            content_summary = extraction_service.get_content_summary(extracted_content)
+
+            # Update quiz with extracted content using fresh lock
+            stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
+            quiz = session.exec(stmt).first()
+
+            if quiz:
+                quiz.content_dict = extracted_content
+                quiz.content_extraction_status = "completed"
+                quiz.content_extracted_at = datetime.now(timezone.utc)
+                session.add(quiz)
+                session.commit()
+
+            logger.info(
+                "content_extraction_completed",
+                quiz_id=str(quiz_id),
+                course_id=course_id,
+                modules_processed=content_summary["modules_processed"],
+                total_pages=content_summary["total_pages"],
+                total_word_count=content_summary["total_word_count"],
+            )
+
+        except Exception as e:
+            logger.error(
+                "content_extraction_failed",
+                quiz_id=str(quiz_id),
+                course_id=course_id,
+                error=str(e),
+                error_type=type(e).__name__,
+                exc_info=True,
+            )
+
+            # Update quiz status to failed with locking
+            try:
+                stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
+                quiz = session.exec(stmt).first()
+                if quiz:
+                    quiz.content_extraction_status = "failed"
+                    session.add(quiz)
+                    session.commit()
+            except Exception as update_error:
+                logger.error(
+                    "content_extraction_status_update_failed",
+                    quiz_id=str(quiz_id),
+                    error=str(update_error),
+                )
+
+
+@router.post("/{quiz_id}/extract-content")
+async def trigger_content_extraction(
+    quiz_id: UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+    canvas_token: CanvasToken,
+    background_tasks: BackgroundTasks,
+) -> dict[str, str]:
+    """
+    Manually trigger content extraction for a quiz.
+
+    This endpoint allows users to retry content extraction if it failed
+    or trigger extraction manually. It can be called multiple times.
+
+    **Parameters:**
+        quiz_id (UUID): The UUID of the quiz to extract content for
+
+    **Returns:**
+        dict: Status message indicating extraction has been triggered
+
+    **Authentication:**
+        Requires valid JWT token in Authorization header
+
+    **Raises:**
+        HTTPException: 404 if quiz not found or user doesn't own it
+        HTTPException: 500 if unable to trigger extraction
+    """
+    logger.info(
+        "manual_content_extraction_triggered",
+        user_id=str(current_user.id),
+        quiz_id=str(quiz_id),
+    )
+
+    try:
+        # Get the quiz and verify ownership with locking
+        stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
+        quiz = session.exec(stmt).first()
+
+        if not quiz:
+            logger.warning(
+                "manual_extraction_quiz_not_found",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+            )
+            raise HTTPException(status_code=404, detail="Quiz not found")
+
+        if quiz.owner_id != current_user.id:
+            logger.warning(
+                "manual_extraction_access_denied",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+                quiz_owner_id=str(quiz.owner_id),
+            )
+            raise HTTPException(status_code=404, detail="Quiz not found")
+
+        # Check if extraction is already in progress
+        if quiz.content_extraction_status == "processing":
+            logger.warning(
+                "manual_extraction_already_in_progress",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+                current_status=quiz.content_extraction_status,
+            )
+            raise HTTPException(
+                status_code=409, detail="Content extraction is already in progress"
+            )
+
+        # Reset extraction status to pending
+        quiz.content_extraction_status = "pending"
+        quiz.extracted_content = None
+        quiz.content_extracted_at = None
+        session.add(quiz)
+        session.commit()
+
+        # Get selected modules from the quiz
+        selected_modules = quiz.modules_dict
+        module_ids = list(selected_modules.keys())
+
+        # Trigger content extraction in the background
+        background_tasks.add_task(
+            extract_content_for_quiz,
+            quiz_id,
+            quiz.canvas_course_id,
+            module_ids,
+            canvas_token,
+        )
+
+        logger.info(
+            "manual_content_extraction_started",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz_id),
+            module_count=len(module_ids),
+        )
+
+        return {"message": "Content extraction started"}
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(
+            "manual_content_extraction_failed",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz_id),
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to trigger content extraction"
+        )
+
+
+@router.delete("/{quiz_id}", response_model=Message)
+def delete_quiz_endpoint(
+    quiz_id: UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Message:
+    """
+    Delete a quiz by its ID.
+
+    **⚠️ DESTRUCTIVE OPERATION ⚠️**
+
+    Permanently removes a quiz and all its associated data from the system.
+    This action cannot be undone. Only the quiz owner can delete their own quizzes.
+
+    **Parameters:**
+        quiz_id (UUID): The UUID of the quiz to delete
+
+    **Returns:**
+        Message: Confirmation message that the quiz was deleted
+
+    **Authentication:**
+        Requires valid JWT token in Authorization header
+
+    **Raises:**
+        HTTPException: 404 if quiz not found or user doesn't own it
+        HTTPException: 500 if database operation fails
+
+    **Usage:**
+        DELETE /api/v1/quiz/{quiz_id}
+        Authorization: Bearer <jwt_token>
+
+    **Example Response:**
+        ```json
+        {
+            "message": "Quiz deleted successfully"
+        }
+        ```
+
+    **Data Removed:**
+    - Quiz record and all settings
+    - Extracted content data
+    - Quiz metadata and timestamps
+    - Progress tracking information
+
+    **Security:**
+    - Only quiz owners can delete their own quizzes
+    - Ownership verification prevents unauthorized deletions
+    - Comprehensive audit logging for deletion events
+
+    **Note:**
+    This operation is permanent. The quiz cannot be recovered after deletion.
+    """
+    logger.info(
+        "quiz_deletion_initiated",
+        user_id=str(current_user.id),
+        quiz_id=str(quiz_id),
+    )
+
+    try:
+        success = delete_quiz(session, quiz_id, current_user.id)
+
+        if not success:
+            logger.warning(
+                "quiz_deletion_failed_not_found_or_unauthorized",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+            )
+            raise HTTPException(status_code=404, detail="Quiz not found")
+
+        logger.info(
+            "quiz_deletion_completed",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz_id),
+        )
+
+        return Message(message="Quiz deleted successfully")
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(
+            "quiz_deletion_failed",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz_id),
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to delete quiz. Please try again."
         )

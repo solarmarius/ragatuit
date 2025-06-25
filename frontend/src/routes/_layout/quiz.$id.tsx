@@ -1,26 +1,32 @@
 import {
   Badge,
   Box,
+  Button,
   Card,
   Container,
   HStack,
   Skeleton,
   Text,
   VStack,
-} from "@chakra-ui/react"
-import { useQuery } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
+} from "@chakra-ui/react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
 
-import { QuizService } from "@/client"
-import useCustomToast from "@/hooks/useCustomToast"
+import { QuizService } from "@/client";
+import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirmation";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { StatusDescription } from "@/components/ui/status-description";
+import { StatusLight } from "@/components/ui/status-light";
+import useCustomToast from "@/hooks/useCustomToast";
 
 export const Route = createFileRoute("/_layout/quiz/$id")({
   component: QuizDetail,
-})
+});
 
 function QuizDetail() {
-  const { id } = Route.useParams()
-  const { showErrorToast } = useCustomToast()
+  const { id } = Route.useParams();
+  const { showErrorToast, showSuccessToast } = useCustomToast();
+  const queryClient = useQueryClient();
 
   const {
     data: quiz,
@@ -30,17 +36,52 @@ function QuizDetail() {
     queryKey: ["quiz", id],
     queryFn: async () => {
       try {
-        const response = await QuizService.getQuiz({ quizId: id })
-        return response
+        const response = await QuizService.getQuiz({ quizId: id });
+        return response;
       } catch (err) {
-        showErrorToast("Failed to load quiz details")
-        throw err
+        showErrorToast("Failed to load quiz details");
+        throw err;
       }
     },
-  })
+    refetchInterval: (query) => {
+      // Poll every 5 seconds if any status is pending or processing
+      const data = query?.state?.data;
+      if (data) {
+        const extractionStatus = data.content_extraction_status || "pending";
+        const generationStatus = data.llm_generation_status || "pending";
+
+        if (
+          extractionStatus === "pending" ||
+          extractionStatus === "processing" ||
+          generationStatus === "pending" ||
+          generationStatus === "processing"
+        ) {
+          return 5000; // 5 seconds
+        }
+      }
+      return false; // Stop polling when both are completed or failed
+    },
+    refetchIntervalInBackground: false, // Only poll when tab is active
+  });
+
+  // Retry content extraction mutation
+  const retryExtractionMutation = useMutation({
+    mutationFn: async () => {
+      return await QuizService.triggerContentExtraction({ quizId: id });
+    },
+    onSuccess: () => {
+      showSuccessToast("Content extraction restarted");
+      queryClient.invalidateQueries({ queryKey: ["quiz", id] });
+    },
+    onError: (error: any) => {
+      const message =
+        error?.body?.detail || "Failed to restart content extraction";
+      showErrorToast(message);
+    },
+  });
 
   if (isLoading) {
-    return <QuizDetailSkeleton />
+    return <QuizDetailSkeleton />;
   }
 
   if (error || !quiz) {
@@ -60,21 +101,30 @@ function QuizDetail() {
           </Card.Body>
         </Card.Root>
       </Container>
-    )
+    );
   }
 
   // Parse selected modules from JSON string
-  const selectedModules = JSON.parse(quiz.selected_modules || "{}")
-  const moduleNames = Object.values(selectedModules) as string[]
+  const selectedModules = JSON.parse(quiz.selected_modules || "{}");
+  const moduleNames = Object.values(selectedModules) as string[];
 
   return (
     <Container maxW="4xl" py={8}>
       <VStack gap={6} align="stretch">
         {/* Header */}
         <Box>
-          <Text fontSize="3xl" fontWeight="bold">
-            {quiz.title}
-          </Text>
+          <HStack gap={3} align="center" justify="space-between">
+            <HStack gap={3} align="center">
+              <Text fontSize="3xl" fontWeight="bold">
+                {quiz.title}
+              </Text>
+              <StatusLight
+                extractionStatus={quiz.content_extraction_status || "pending"}
+                generationStatus={quiz.llm_generation_status || "pending"}
+              />
+            </HStack>
+            <DeleteQuizConfirmation quizId={id} quizTitle={quiz.title} />
+          </HStack>
           <Text color="gray.600" fontSize="lg">
             Quiz Details
           </Text>
@@ -213,23 +263,67 @@ function QuizDetail() {
           </Card.Body>
         </Card.Root>
 
-        {/* Placeholder for Future Features */}
+        {/* Quiz Generation Status */}
         <Card.Root>
+          <Card.Header>
+            <Text fontSize="xl" fontWeight="semibold">
+              Quiz Generation Status
+            </Text>
+          </Card.Header>
           <Card.Body>
-            <VStack gap={3}>
-              <Text fontSize="lg" fontWeight="semibold" color="gray.600">
-                Coming Soon
-              </Text>
-              <Text color="gray.500" textAlign="center">
-                Question generation, review, and export features will be
-                available here.
-              </Text>
+            <VStack gap={4} align="stretch">
+              {/* Content Extraction Status */}
+              <Box>
+                <HStack justify="space-between" mb={2}>
+                  <Text fontWeight="medium" color="gray.700">
+                    Content Extraction
+                  </Text>
+                  <StatusBadge
+                    status={quiz.content_extraction_status || "pending"}
+                  />
+                </HStack>
+                <StatusDescription
+                  status={quiz.content_extraction_status || "pending"}
+                  type="extraction"
+                  timestamp={quiz.content_extracted_at || null}
+                />
+
+                {/* Retry button for failed content extraction */}
+                {quiz.content_extraction_status === "failed" && (
+                  <Button
+                    size="sm"
+                    colorScheme="blue"
+                    variant="outline"
+                    loading={retryExtractionMutation.isPending}
+                    onClick={() => retryExtractionMutation.mutate()}
+                    mt={2}
+                  >
+                    Retry Content Extraction
+                  </Button>
+                )}
+              </Box>
+
+              {/* LLM Generation Status */}
+              <Box>
+                <HStack justify="space-between" mb={2}>
+                  <Text fontWeight="medium" color="gray.700">
+                    Question Generation
+                  </Text>
+                  <StatusBadge
+                    status={quiz.llm_generation_status || "pending"}
+                  />
+                </HStack>
+                <StatusDescription
+                  status={quiz.llm_generation_status || "pending"}
+                  type="generation"
+                />
+              </Box>
             </VStack>
           </Card.Body>
         </Card.Root>
       </VStack>
     </Container>
-  )
+  );
 }
 
 function QuizDetailSkeleton() {
@@ -259,5 +353,5 @@ function QuizDetailSkeleton() {
         ))}
       </VStack>
     </Container>
-  )
+  );
 }

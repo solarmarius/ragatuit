@@ -1,3 +1,5 @@
+from typing import Any
+
 import httpx
 from fastapi import APIRouter, HTTPException
 
@@ -351,8 +353,569 @@ async def get_course_modules(
         raise HTTPException(status_code=500, detail="Unexpected error fetching modules")
 
 
-# TODO: Add these endpoints in future features:
-# @router.get("/courses/{course_id}/modules/{module_id}/items")
-# async def get_module_items(course_id: int, module_id: int, current_user: CurrentUser):
-#     """Fetch items/pages within a specific module"""
-#     pass
+@router.get("/courses/{course_id}/modules/{module_id}/items")
+async def get_module_items(
+    course_id: int, module_id: int, current_user: CurrentUser, canvas_token: CanvasToken
+) -> list[dict[str, Any]]:
+    """
+    Fetch items within a specific Canvas module.
+
+    Returns a list of module items (pages, assignments, files, etc.) for content extraction.
+    This endpoint fetches items to allow content processing for quiz generation.
+
+    **Parameters:**
+        course_id (int): The Canvas course ID
+        module_id (int): The Canvas module ID to fetch items from
+
+    **Returns:**
+        List[dict]: List of module items with type, title, and Canvas metadata
+
+    **Authentication:**
+        Requires valid JWT token in Authorization header
+
+    **Raises:**
+        HTTPException: 401 if Canvas token is invalid or expired
+        HTTPException: 403 if user doesn't have access to the course/module
+        HTTPException: 503 if unable to connect to Canvas
+        HTTPException: 500 if Canvas API returns unexpected data
+
+    **Example Response:**
+        [
+            {
+                "id": 123456,
+                "title": "Introduction to AI",
+                "type": "Page",
+                "html_url": "https://canvas.../pages/intro",
+                "page_url": "intro",
+                "url": "https://canvas.../api/v1/courses/123/pages/intro"
+            }
+        ]
+    """
+    # Validate parameters
+    if course_id <= 0 or module_id <= 0:
+        logger.warning(
+            "module_items_fetch_invalid_parameters",
+            user_id=str(current_user.id),
+            canvas_id=current_user.canvas_id,
+            course_id=course_id,
+            module_id=module_id,
+        )
+        raise HTTPException(
+            status_code=400, detail="Course ID and Module ID must be positive integers"
+        )
+
+    logger.info(
+        "module_items_fetch_initiated",
+        user_id=str(current_user.id),
+        canvas_id=current_user.canvas_id,
+        course_id=course_id,
+        module_id=module_id,
+    )
+
+    try:
+        # Call Canvas API to get module items
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    f"http://canvas-mock:8001/api/v1/courses/{course_id}/modules/{module_id}/items",
+                    headers={
+                        "Authorization": f"Bearer {canvas_token}",
+                        "Accept": "application/json",
+                    },
+                )
+                response.raise_for_status()
+                items_data = response.json()
+
+            except httpx.HTTPStatusError as e:
+                logger.error(
+                    "module_items_fetch_failed_canvas_error",
+                    user_id=str(current_user.id),
+                    canvas_id=current_user.canvas_id,
+                    course_id=course_id,
+                    module_id=module_id,
+                    status_code=e.response.status_code,
+                    response_text=e.response.text,
+                )
+
+                if e.response.status_code == 401:
+                    raise HTTPException(
+                        status_code=401,
+                        detail="Canvas access token invalid. Please re-login.",
+                    )
+                elif e.response.status_code == 403:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="You don't have access to this course or module.",
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Canvas service is temporarily unavailable. Please try again later.",
+                    )
+            except httpx.RequestError as e:
+                logger.error(
+                    "module_items_fetch_failed_network_error",
+                    user_id=str(current_user.id),
+                    canvas_id=current_user.canvas_id,
+                    course_id=course_id,
+                    module_id=module_id,
+                    error=str(e),
+                )
+                raise HTTPException(
+                    status_code=503, detail="Failed to connect to Canvas API"
+                )
+
+        # Process and validate module items
+        processed_items = []
+        for item in items_data:
+            try:
+                # Validate item data structure
+                if not isinstance(item, dict):
+                    logger.warning(
+                        "module_items_parse_error_invalid_item_type",
+                        user_id=str(current_user.id),
+                        course_id=course_id,
+                        module_id=module_id,
+                        item_type=type(item).__name__,
+                    )
+                    continue
+
+                # Extract required fields
+                item_id = item.get("id")
+                item_title = item.get("title", "Untitled")
+                item_type = item.get("type")
+
+                if item_id is not None and item_type is not None:
+                    # Convert item ID to int if needed
+                    try:
+                        item_id = int(item_id)
+                    except (ValueError, TypeError):
+                        logger.warning(
+                            "module_items_parse_error_invalid_id",
+                            user_id=str(current_user.id),
+                            course_id=course_id,
+                            module_id=module_id,
+                            item_id=item_id,
+                            item_title=item_title,
+                        )
+                        continue
+
+                    # Create processed item with essential fields
+                    processed_item = {
+                        "id": item_id,
+                        "title": str(item_title).strip(),
+                        "type": str(item_type).strip(),
+                        "html_url": item.get("html_url"),
+                        "page_url": item.get("page_url"),
+                        "url": item.get("url"),
+                    }
+                    processed_items.append(processed_item)
+
+            except (KeyError, TypeError) as e:
+                logger.warning(
+                    "module_items_parse_error_skipping_item",
+                    user_id=str(current_user.id),
+                    course_id=course_id,
+                    module_id=module_id,
+                    item_id=item.get("id", "unknown"),
+                    error=str(e),
+                )
+                continue
+
+        logger.info(
+            "module_items_fetch_completed",
+            user_id=str(current_user.id),
+            canvas_id=current_user.canvas_id,
+            course_id=course_id,
+            module_id=module_id,
+            items_count=len(processed_items),
+        )
+
+        return processed_items
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(
+            "module_items_fetch_unexpected_error",
+            user_id=str(current_user.id),
+            canvas_id=current_user.canvas_id,
+            course_id=course_id,
+            module_id=module_id,
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500, detail="Unexpected error fetching module items"
+        )
+
+
+@router.get("/courses/{course_id}/pages/{page_url}")
+async def get_page_content(
+    course_id: int, page_url: str, current_user: CurrentUser, canvas_token: CanvasToken
+) -> dict[str, Any]:
+    """
+    Fetch content of a specific Canvas page.
+
+    Returns the full HTML content of a Canvas page for content extraction and processing.
+    This endpoint is used to get the actual page content for quiz question generation.
+
+    **Parameters:**
+        course_id (int): The Canvas course ID
+        page_url (str): The Canvas page URL slug (e.g., "introduction-to-ai")
+
+    **Returns:**
+        dict: Page content with title, body, and metadata
+
+    **Authentication:**
+        Requires valid JWT token in Authorization header
+
+    **Raises:**
+        HTTPException: 401 if Canvas token is invalid or expired
+        HTTPException: 403 if user doesn't have access to the course/page
+        HTTPException: 404 if page not found
+        HTTPException: 503 if unable to connect to Canvas
+        HTTPException: 500 if Canvas API returns unexpected data
+
+    **Example Response:**
+        {
+            "title": "Introduction to AI",
+            "body": "<h1>Introduction</h1><p>Artificial Intelligence is...</p>",
+            "url": "introduction-to-ai",
+            "created_at": "2023-01-01T12:00:00Z",
+            "updated_at": "2023-01-02T12:00:00Z"
+        }
+    """
+    # Validate parameters
+    if course_id <= 0:
+        logger.warning(
+            "page_content_fetch_invalid_course_id",
+            user_id=str(current_user.id),
+            canvas_id=current_user.canvas_id,
+            course_id=course_id,
+            page_url=page_url,
+        )
+        raise HTTPException(
+            status_code=400, detail="Course ID must be a positive integer"
+        )
+
+    if not page_url or not page_url.strip():
+        logger.warning(
+            "page_content_fetch_invalid_page_url",
+            user_id=str(current_user.id),
+            canvas_id=current_user.canvas_id,
+            course_id=course_id,
+            page_url=page_url,
+        )
+        raise HTTPException(status_code=400, detail="Page URL cannot be empty")
+
+    logger.info(
+        "page_content_fetch_initiated",
+        user_id=str(current_user.id),
+        canvas_id=current_user.canvas_id,
+        course_id=course_id,
+        page_url=page_url,
+    )
+
+    try:
+        # Call Canvas API to get page content
+        async with httpx.AsyncClient() as client:
+            try:
+                # URL encode the page_url to handle special characters
+                from urllib.parse import quote
+
+                encoded_page_url = quote(page_url.strip(), safe="")
+
+                response = await client.get(
+                    f"http://canvas-mock:8001/api/v1/courses/{course_id}/pages/{encoded_page_url}",
+                    headers={
+                        "Authorization": f"Bearer {canvas_token}",
+                        "Accept": "application/json",
+                    },
+                )
+                response.raise_for_status()
+                page_data = response.json()
+
+            except httpx.HTTPStatusError as e:
+                logger.error(
+                    "page_content_fetch_failed_canvas_error",
+                    user_id=str(current_user.id),
+                    canvas_id=current_user.canvas_id,
+                    course_id=course_id,
+                    page_url=page_url,
+                    status_code=e.response.status_code,
+                    response_text=e.response.text,
+                )
+
+                if e.response.status_code == 401:
+                    raise HTTPException(
+                        status_code=401,
+                        detail="Canvas access token invalid. Please re-login.",
+                    )
+                elif e.response.status_code == 403:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="You don't have access to this course or page.",
+                    )
+                elif e.response.status_code == 404:
+                    raise HTTPException(
+                        status_code=404,
+                        detail="Page not found in this course.",
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Canvas service is temporarily unavailable. Please try again later.",
+                    )
+            except httpx.RequestError as e:
+                logger.error(
+                    "page_content_fetch_failed_network_error",
+                    user_id=str(current_user.id),
+                    canvas_id=current_user.canvas_id,
+                    course_id=course_id,
+                    page_url=page_url,
+                    error=str(e),
+                )
+                raise HTTPException(
+                    status_code=503, detail="Failed to connect to Canvas API"
+                )
+
+        # Validate and process page data
+        if not isinstance(page_data, dict):
+            logger.error(
+                "page_content_parse_error_invalid_response_type",
+                user_id=str(current_user.id),
+                course_id=course_id,
+                page_url=page_url,
+                response_type=type(page_data).__name__,
+            )
+            raise HTTPException(
+                status_code=500, detail="Invalid response format from Canvas"
+            )
+
+        # Extract and validate essential fields
+        processed_page = {
+            "title": page_data.get("title", "Untitled Page"),
+            "body": page_data.get("body", ""),
+            "url": page_data.get("url", page_url),
+            "created_at": page_data.get("created_at"),
+            "updated_at": page_data.get("updated_at"),
+        }
+
+        # Ensure body is a string
+        body_content = processed_page.get("body")
+        if body_content is None:
+            processed_page["body"] = ""
+        else:
+            processed_page["body"] = str(body_content)
+
+        # Ensure title is a string
+        processed_page["title"] = str(processed_page["title"]).strip()
+
+        logger.info(
+            "page_content_fetch_completed",
+            user_id=str(current_user.id),
+            canvas_id=current_user.canvas_id,
+            course_id=course_id,
+            page_url=page_url,
+            content_length=len(processed_page["body"]),
+            page_title=processed_page["title"],
+        )
+
+        return processed_page
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(
+            "page_content_fetch_unexpected_error",
+            user_id=str(current_user.id),
+            canvas_id=current_user.canvas_id,
+            course_id=course_id,
+            page_url=page_url,
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500, detail="Unexpected error fetching page content"
+        )
+
+
+@router.get("/courses/{course_id}/files/{file_id}")
+async def get_file_info(
+    course_id: int, file_id: int, current_user: CurrentUser, canvas_token: CanvasToken
+) -> dict[str, Any]:
+    """
+    Fetch metadata and download URL for a specific Canvas file.
+
+    Returns file information including the download URL needed to retrieve file content.
+    This endpoint is used to get file metadata before downloading for content extraction.
+
+    **Parameters:**
+        course_id (int): The Canvas course ID
+        file_id (int): The Canvas file ID
+
+    **Returns:**
+        dict: File metadata including download URL, size, content-type, etc.
+
+    **Authentication:**
+        Requires valid JWT token in Authorization header
+
+    **Raises:**
+        HTTPException: 401 if Canvas token is invalid or expired
+        HTTPException: 403 if user doesn't have access to the file
+        HTTPException: 404 if file not found
+        HTTPException: 503 if unable to connect to Canvas
+        HTTPException: 500 if Canvas API returns unexpected data
+
+    **Example Response:**
+        {
+            "id": 3611093,
+            "display_name": "linear_algebra_in_4_pages.pdf",
+            "filename": "linear_algebra_in_4_pages.pdf",
+            "content-type": "application/pdf",
+            "url": "https://canvas.../files/3611093/download?download_frd=1&verifier=...",
+            "size": 258646,
+            "created_at": "2025-06-25T06:24:29Z",
+            "updated_at": "2025-06-25T06:24:29Z"
+        }
+    """
+    # Validate parameters
+    if course_id <= 0 or file_id <= 0:
+        logger.warning(
+            "file_info_fetch_invalid_parameters",
+            user_id=str(current_user.id),
+            canvas_id=current_user.canvas_id,
+            course_id=course_id,
+            file_id=file_id,
+        )
+        raise HTTPException(
+            status_code=400, detail="Course ID and File ID must be positive integers"
+        )
+
+    logger.info(
+        "file_info_fetch_initiated",
+        user_id=str(current_user.id),
+        canvas_id=current_user.canvas_id,
+        course_id=course_id,
+        file_id=file_id,
+    )
+
+    try:
+        # Call Canvas API to get file info
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    f"http://canvas-mock:8001/api/v1/courses/{course_id}/files/{file_id}",
+                    headers={
+                        "Authorization": f"Bearer {canvas_token}",
+                        "Accept": "application/json",
+                    },
+                )
+                response.raise_for_status()
+                file_data = response.json()
+
+            except httpx.HTTPStatusError as e:
+                logger.error(
+                    "file_info_fetch_failed_canvas_error",
+                    user_id=str(current_user.id),
+                    canvas_id=current_user.canvas_id,
+                    course_id=course_id,
+                    file_id=file_id,
+                    status_code=e.response.status_code,
+                    response_text=e.response.text,
+                )
+
+                if e.response.status_code == 401:
+                    raise HTTPException(
+                        status_code=401,
+                        detail="Canvas access token invalid. Please re-login.",
+                    )
+                elif e.response.status_code == 403:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="You don't have access to this file.",
+                    )
+                elif e.response.status_code == 404:
+                    raise HTTPException(
+                        status_code=404,
+                        detail="File not found in this course.",
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Canvas service is temporarily unavailable. Please try again later.",
+                    )
+            except httpx.RequestError as e:
+                logger.error(
+                    "file_info_fetch_failed_network_error",
+                    user_id=str(current_user.id),
+                    canvas_id=current_user.canvas_id,
+                    course_id=course_id,
+                    file_id=file_id,
+                    error=str(e),
+                )
+                raise HTTPException(
+                    status_code=503, detail="Failed to connect to Canvas API"
+                )
+
+        # Validate and process file data
+        if not isinstance(file_data, dict):
+            logger.error(
+                "file_info_parse_error_invalid_response_type",
+                user_id=str(current_user.id),
+                course_id=course_id,
+                file_id=file_id,
+                response_type=type(file_data).__name__,
+            )
+            raise HTTPException(
+                status_code=500, detail="Invalid response format from Canvas"
+            )
+
+        # Extract essential file information
+        processed_file = {
+            "id": file_data.get("id"),
+            "display_name": file_data.get("display_name", ""),
+            "filename": file_data.get("filename", ""),
+            "content-type": file_data.get("content-type", ""),
+            "url": file_data.get("url", ""),  # Download URL with verifier
+            "size": file_data.get("size", 0),
+            "created_at": file_data.get("created_at"),
+            "updated_at": file_data.get("updated_at"),
+            "mime_class": file_data.get("mime_class", ""),
+        }
+
+        logger.info(
+            "file_info_fetch_completed",
+            user_id=str(current_user.id),
+            canvas_id=current_user.canvas_id,
+            course_id=course_id,
+            file_id=file_id,
+            file_name=processed_file["display_name"],
+            file_size=processed_file["size"],
+            content_type=processed_file["content-type"],
+        )
+
+        return processed_file
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(
+            "file_info_fetch_unexpected_error",
+            user_id=str(current_user.id),
+            canvas_id=current_user.canvas_id,
+            course_id=course_id,
+            file_id=file_id,
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500, detail="Unexpected error fetching file info"
+        )
