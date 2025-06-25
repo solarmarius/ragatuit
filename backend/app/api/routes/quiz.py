@@ -7,8 +7,8 @@ from sqlmodel import Session, select
 from app.api.deps import CanvasToken, CurrentUser, SessionDep
 from app.core.db import engine
 from app.core.logging_config import get_logger
-from app.crud import create_quiz, get_quiz_by_id, get_user_quizzes
-from app.models import Quiz, QuizCreate
+from app.crud import create_quiz, delete_quiz, get_quiz_by_id, get_user_quizzes
+from app.models import Message, Quiz, QuizCreate
 from app.services.content_extraction import ContentExtractionService
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
@@ -480,4 +480,98 @@ async def trigger_content_extraction(
         )
         raise HTTPException(
             status_code=500, detail="Failed to trigger content extraction"
+        )
+
+
+@router.delete("/{quiz_id}", response_model=Message)
+def delete_quiz_endpoint(
+    quiz_id: UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> Message:
+    """
+    Delete a quiz by its ID.
+
+    **⚠️ DESTRUCTIVE OPERATION ⚠️**
+
+    Permanently removes a quiz and all its associated data from the system.
+    This action cannot be undone. Only the quiz owner can delete their own quizzes.
+
+    **Parameters:**
+        quiz_id (UUID): The UUID of the quiz to delete
+
+    **Returns:**
+        Message: Confirmation message that the quiz was deleted
+
+    **Authentication:**
+        Requires valid JWT token in Authorization header
+
+    **Raises:**
+        HTTPException: 404 if quiz not found or user doesn't own it
+        HTTPException: 500 if database operation fails
+
+    **Usage:**
+        DELETE /api/v1/quiz/{quiz_id}
+        Authorization: Bearer <jwt_token>
+
+    **Example Response:**
+        ```json
+        {
+            "message": "Quiz deleted successfully"
+        }
+        ```
+
+    **Data Removed:**
+    - Quiz record and all settings
+    - Extracted content data
+    - Quiz metadata and timestamps
+    - Progress tracking information
+
+    **Security:**
+    - Only quiz owners can delete their own quizzes
+    - Ownership verification prevents unauthorized deletions
+    - Comprehensive audit logging for deletion events
+
+    **Note:**
+    This operation is permanent. The quiz cannot be recovered after deletion.
+    """
+    logger.info(
+        "quiz_deletion_initiated",
+        user_id=str(current_user.id),
+        quiz_id=str(quiz_id),
+    )
+
+    try:
+        success = delete_quiz(session, quiz_id, current_user.id)
+
+        if not success:
+            logger.warning(
+                "quiz_deletion_failed_not_found_or_unauthorized",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+            )
+            raise HTTPException(status_code=404, detail="Quiz not found")
+
+        logger.info(
+            "quiz_deletion_completed",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz_id),
+        )
+
+        return Message(message="Quiz deleted successfully")
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(
+            "quiz_deletion_failed",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz_id),
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to delete quiz. Please try again."
         )

@@ -13,6 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { QuizService } from "@/client";
+import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirmation";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { StatusDescription } from "@/components/ui/status-description";
 import { StatusLight } from "@/components/ui/status-light";
@@ -112,14 +113,17 @@ function QuizDetail() {
       <VStack gap={6} align="stretch">
         {/* Header */}
         <Box>
-          <HStack gap={3} align="center">
-            <Text fontSize="3xl" fontWeight="bold">
-              {quiz.title}
-            </Text>
-            <StatusLight
-              extractionStatus={quiz.content_extraction_status || "pending"}
-              generationStatus={quiz.llm_generation_status || "pending"}
-            />
+          <HStack gap={3} align="center" justify="space-between">
+            <HStack gap={3} align="center">
+              <Text fontSize="3xl" fontWeight="bold">
+                {quiz.title}
+              </Text>
+              <StatusLight
+                extractionStatus={quiz.content_extraction_status || "pending"}
+                generationStatus={quiz.llm_generation_status || "pending"}
+              />
+            </HStack>
+            <DeleteQuizConfirmation quizId={id} quizTitle={quiz.title} />
           </HStack>
           <Text color="gray.600" fontSize="lg">
             Quiz Details

@@ -22,6 +22,8 @@ import type {
   QuizCreateNewQuizResponse,
   QuizGetQuizData,
   QuizGetQuizResponse,
+  QuizDeleteQuizEndpointData,
+  QuizDeleteQuizEndpointResponse,
   QuizTriggerContentExtractionData,
   QuizTriggerContentExtractionResponse,
   UsersReadUserMeResponse,
@@ -597,6 +599,72 @@ export class QuizService {
   ): CancelablePromise<QuizGetQuizResponse> {
     return __request(OpenAPI, {
       method: "GET",
+      url: "/api/v1/quiz/{quiz_id}",
+      path: {
+        quiz_id: data.quizId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Delete Quiz Endpoint
+   * Delete a quiz by its ID.
+   *
+   * **⚠️ DESTRUCTIVE OPERATION ⚠️**
+   *
+   * Permanently removes a quiz and all its associated data from the system.
+   * This action cannot be undone. Only the quiz owner can delete their own quizzes.
+   *
+   * **Parameters:**
+   * quiz_id (UUID): The UUID of the quiz to delete
+   *
+   * **Returns:**
+   * Message: Confirmation message that the quiz was deleted
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Raises:**
+   * HTTPException: 404 if quiz not found or user doesn't own it
+   * HTTPException: 500 if database operation fails
+   *
+   * **Usage:**
+   * DELETE /api/v1/quiz/{quiz_id}
+   * Authorization: Bearer <jwt_token>
+   *
+   * **Example Response:**
+   * ```json
+   * {
+   * "message": "Quiz deleted successfully"
+   * }
+   * ```
+   *
+   * **Data Removed:**
+   * - Quiz record and all settings
+   * - Extracted content data
+   * - Quiz metadata and timestamps
+   * - Progress tracking information
+   *
+   * **Security:**
+   * - Only quiz owners can delete their own quizzes
+   * - Ownership verification prevents unauthorized deletions
+   * - Comprehensive audit logging for deletion events
+   *
+   * **Note:**
+   * This operation is permanent. The quiz cannot be recovered after deletion.
+   * @param data The data for the request.
+   * @param data.quizId
+   * @returns Message Successful Response
+   * @throws ApiError
+   */
+  public static deleteQuizEndpoint(
+    data: QuizDeleteQuizEndpointData,
+  ): CancelablePromise<QuizDeleteQuizEndpointResponse> {
+    return __request(OpenAPI, {
+      method: "DELETE",
       url: "/api/v1/quiz/{quiz_id}",
       path: {
         quiz_id: data.quizId,

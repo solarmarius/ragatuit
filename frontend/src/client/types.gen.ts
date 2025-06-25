@@ -140,6 +140,12 @@ export type QuizGetQuizData = {
 
 export type QuizGetQuizResponse = Quiz
 
+export type QuizDeleteQuizEndpointData = {
+  quizId: string
+}
+
+export type QuizDeleteQuizEndpointResponse = Message
+
 export type QuizTriggerContentExtractionData = {
   quizId: string
 }

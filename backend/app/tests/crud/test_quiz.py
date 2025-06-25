@@ -313,3 +313,161 @@ def test_quiz_llm_models(db: Session, user_id: uuid.UUID) -> None:
         )
         quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
         assert quiz.llm_model == model
+
+
+def test_delete_quiz_success(db: Session, user_id: uuid.UUID) -> None:
+    """Test successful quiz deletion by owner."""
+    # Create a quiz first
+    quiz_in = QuizCreate(
+        canvas_course_id=12345,
+        canvas_course_name="Test Course",
+        selected_modules={173467: "Module 1"},
+        title="Quiz to Delete",
+    )
+    created_quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz_id = created_quiz.id
+
+    # Verify quiz exists
+    assert crud.get_quiz_by_id(session=db, quiz_id=quiz_id) is not None
+
+    # Delete the quiz
+    result = crud.delete_quiz(session=db, quiz_id=quiz_id, user_id=user_id)
+
+    # Verify deletion was successful
+    assert result is True
+    assert crud.get_quiz_by_id(session=db, quiz_id=quiz_id) is None
+
+
+def test_delete_quiz_not_found(db: Session, user_id: uuid.UUID) -> None:
+    """Test deleting a non-existent quiz."""
+    non_existent_id = uuid.uuid4()
+
+    # Try to delete non-existent quiz
+    result = crud.delete_quiz(session=db, quiz_id=non_existent_id, user_id=user_id)
+
+    # Should return False
+    assert result is False
+
+
+def test_delete_quiz_unauthorized(db: Session, user_id: uuid.UUID) -> None:
+    """Test deleting a quiz by a user who doesn't own it."""
+    # Create a second user
+    second_user_in = UserCreate(
+        canvas_id=67890,
+        name="Second User",
+        access_token="second_access_token",
+        refresh_token="second_refresh_token",
+    )
+    second_user = crud.create_user(session=db, user_create=second_user_in)
+
+    # Create a quiz owned by the first user
+    quiz_in = QuizCreate(
+        canvas_course_id=12345,
+        canvas_course_name="First User's Course",
+        selected_modules={173467: "Module 1"},
+        title="First User's Quiz",
+    )
+    first_user_quiz = crud.create_quiz(
+        session=db, quiz_create=quiz_in, owner_id=user_id
+    )
+
+    # Try to delete the first user's quiz as the second user
+    result = crud.delete_quiz(
+        session=db, quiz_id=first_user_quiz.id, user_id=second_user.id
+    )
+
+    # Should return False (unauthorized)
+    assert result is False
+    # Quiz should still exist
+    assert crud.get_quiz_by_id(session=db, quiz_id=first_user_quiz.id) is not None
+
+
+def test_delete_quiz_with_extracted_content(db: Session, user_id: uuid.UUID) -> None:
+    """Test deleting a quiz that has extracted content."""
+    # Create a quiz
+    quiz_in = QuizCreate(
+        canvas_course_id=12345,
+        canvas_course_name="Test Course",
+        selected_modules={173467: "Module 1"},
+        title="Quiz with Content",
+    )
+    created_quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+
+    # Add some extracted content
+    created_quiz.extracted_content = json.dumps(
+        {
+            "modules": {
+                "173467": {"pages": [{"title": "Test Page", "content": "Test content"}]}
+            }
+        }
+    )
+    created_quiz.content_extraction_status = "completed"
+    db.add(created_quiz)
+    db.commit()
+
+    # Verify content exists
+    quiz = crud.get_quiz_by_id(session=db, quiz_id=created_quiz.id)
+    assert quiz is not None
+    assert quiz.extracted_content is not None
+    assert quiz.content_extraction_status == "completed"
+
+    # Delete the quiz
+    result = crud.delete_quiz(session=db, quiz_id=created_quiz.id, user_id=user_id)
+
+    # Verify deletion was successful (including content)
+    assert result is True
+    assert crud.get_quiz_by_id(session=db, quiz_id=created_quiz.id) is None
+
+
+def test_delete_quiz_multiple_users_isolation(db: Session, user_id: uuid.UUID) -> None:
+    """Test that deleting a quiz doesn't affect other users' quizzes."""
+    # Create a second user
+    second_user_in = UserCreate(
+        canvas_id=67890,
+        name="Second User",
+        access_token="second_access_token",
+        refresh_token="second_refresh_token",
+    )
+    second_user = crud.create_user(session=db, user_create=second_user_in)
+
+    # Create quizzes for both users
+    first_quiz_in = QuizCreate(
+        canvas_course_id=12345,
+        canvas_course_name="First User Course",
+        selected_modules={173467: "Module 1"},
+        title="First User Quiz",
+    )
+    first_quiz = crud.create_quiz(
+        session=db, quiz_create=first_quiz_in, owner_id=user_id
+    )
+
+    second_quiz_in = QuizCreate(
+        canvas_course_id=67890,
+        canvas_course_name="Second User Course",
+        selected_modules={173468: "Module 2"},
+        title="Second User Quiz",
+    )
+    second_quiz = crud.create_quiz(
+        session=db, quiz_create=second_quiz_in, owner_id=second_user.id
+    )
+
+    # Delete first user's quiz
+    result = crud.delete_quiz(session=db, quiz_id=first_quiz.id, user_id=user_id)
+
+    # Verify first user's quiz is deleted
+    assert result is True
+    assert crud.get_quiz_by_id(session=db, quiz_id=first_quiz.id) is None
+
+    # Verify second user's quiz is still there
+    remaining_quiz = crud.get_quiz_by_id(session=db, quiz_id=second_quiz.id)
+    assert remaining_quiz is not None
+    assert remaining_quiz.owner_id == second_user.id
+    assert remaining_quiz.title == "Second User Quiz"
+
+    # Verify user quiz lists are correct
+    first_user_quizzes = crud.get_user_quizzes(session=db, user_id=user_id)
+    second_user_quizzes = crud.get_user_quizzes(session=db, user_id=second_user.id)
+
+    assert len(first_user_quizzes) == 0
+    assert len(second_user_quizzes) == 1
+    assert second_user_quizzes[0].id == second_quiz.id
