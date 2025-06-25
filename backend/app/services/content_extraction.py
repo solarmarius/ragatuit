@@ -7,24 +7,14 @@ import httpx
 import pypdf
 from bs4 import BeautifulSoup, Comment
 
+from app.core.config import settings
 from app.core.logging_config import get_logger
 
 logger = get_logger("content_extraction")
 
 # Content extraction limits for security and performance
 MAX_PAGE_CONTENT_SIZE = 1024 * 1024  # 1MB per page
-MAX_TOTAL_CONTENT_SIZE = 50 * 1024 * 1024  # 50MB total per quiz
-MAX_PAGES_PER_MODULE = 100  # Maximum pages to process per module
-MIN_CONTENT_LENGTH = 50  # Minimum content length (configurable)
-MAX_CONTENT_LENGTH = 500_000  # Maximum content length per page
-MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB per file
 SUPPORTED_FILE_TYPES = ["application/pdf", "pdf"]  # Supported file content types
-
-# Retry configuration
-MAX_RETRIES = 3
-INITIAL_RETRY_DELAY = 1.0  # Start with 1 second
-MAX_RETRY_DELAY = 30.0  # Cap at 30 seconds
-RETRY_BACKOFF_FACTOR = 2.0  # Exponential backoff
 
 
 class ContentExtractionService:
@@ -41,6 +31,18 @@ class ContentExtractionService:
         self.canvas_base_url = "http://canvas-mock:8001/api/v1"
         self.total_content_size = 0  # Track total content size for limits
 
+        # Load configuration settings
+        self.max_file_size = settings.MAX_FILE_SIZE
+        self.max_total_content_size = settings.MAX_TOTAL_CONTENT_SIZE
+        self.max_pages_per_module = settings.MAX_PAGES_PER_MODULE
+        self.max_content_length = settings.MAX_CONTENT_LENGTH
+        self.min_content_length = settings.MIN_CONTENT_LENGTH
+        self.api_timeout = settings.CANVAS_API_TIMEOUT
+        self.max_retries = settings.MAX_RETRIES
+        self.initial_retry_delay = settings.INITIAL_RETRY_DELAY
+        self.max_retry_delay = settings.MAX_RETRY_DELAY
+        self.retry_backoff_factor = settings.RETRY_BACKOFF_FACTOR
+
     async def _make_request_with_retry(
         self, url: str, headers: dict[str, str], timeout: float = 30.0
     ) -> dict[str, Any]:
@@ -49,10 +51,15 @@ class ContentExtractionService:
 
         last_exception: Exception | None = None
 
-        for attempt in range(MAX_RETRIES):
+        # Use configured timeout or default
+        request_timeout = timeout or self.api_timeout
+
+        for attempt in range(self.max_retries):
             try:
                 async with httpx.AsyncClient() as client:
-                    response = await client.get(url, headers=headers, timeout=timeout)
+                    response = await client.get(
+                        url, headers=headers, timeout=request_timeout
+                    )
                     response.raise_for_status()
                     result = response.json()
 
@@ -85,7 +92,7 @@ class ContentExtractionService:
                     url=url,
                     status_code=e.response.status_code,
                     attempt=attempt + 1,
-                    max_retries=MAX_RETRIES,
+                    max_retries=self.max_retries,
                 )
 
             except (httpx.RequestError, httpx.TimeoutException) as e:
@@ -95,14 +102,14 @@ class ContentExtractionService:
                     url=url,
                     error=str(e),
                     attempt=attempt + 1,
-                    max_retries=MAX_RETRIES,
+                    max_retries=self.max_retries,
                 )
 
             # Calculate exponential backoff delay
-            if attempt < MAX_RETRIES - 1:  # Don't sleep on last attempt
+            if attempt < self.max_retries - 1:  # Don't sleep on last attempt
                 delay = min(
-                    INITIAL_RETRY_DELAY * (RETRY_BACKOFF_FACTOR**attempt),
-                    MAX_RETRY_DELAY,
+                    self.initial_retry_delay * (self.retry_backoff_factor**attempt),
+                    self.max_retry_delay,
                 )
                 logger.info(
                     "canvas_api_retry_delay",
@@ -116,7 +123,7 @@ class ContentExtractionService:
         logger.error(
             "canvas_api_all_retries_exhausted",
             url=url,
-            total_attempts=MAX_RETRIES,
+            total_attempts=self.max_retries,
             final_error=str(last_exception),
         )
 
@@ -165,15 +172,15 @@ class ContentExtractionService:
                 ]
 
                 # Limit content items per module for performance
-                if len(content_items) > MAX_PAGES_PER_MODULE:
+                if len(content_items) > self.max_pages_per_module:
                     logger.warning(
                         "content_extraction_items_limited",
                         course_id=self.course_id,
                         module_id=module_id,
                         total_items=len(content_items),
-                        limit=MAX_PAGES_PER_MODULE,
+                        limit=self.max_pages_per_module,
                     )
-                    content_items = content_items[:MAX_PAGES_PER_MODULE]
+                    content_items = content_items[: self.max_pages_per_module]
 
                 logger.info(
                     "content_extraction_items_found",
@@ -194,13 +201,13 @@ class ContentExtractionService:
                 for content_item in content_items:
                     try:
                         # Check total content size limit
-                        if self.total_content_size > MAX_TOTAL_CONTENT_SIZE:
+                        if self.total_content_size > self.max_total_content_size:
                             logger.warning(
                                 "content_extraction_size_limit_reached",
                                 course_id=self.course_id,
                                 module_id=module_id,
                                 total_size=self.total_content_size,
-                                limit=MAX_TOTAL_CONTENT_SIZE,
+                                limit=self.max_total_content_size,
                             )
                             break
 
@@ -316,27 +323,27 @@ class ContentExtractionService:
 
             # Validate content length after cleaning
             content_length = len(cleaned_content.strip())
-            if content_length < MIN_CONTENT_LENGTH:
+            if content_length < self.min_content_length:
                 logger.info(
                     "content_extraction_page_too_short",
                     course_id=self.course_id,
                     page_url=page_url,
                     content_length=content_length,
-                    min_length=MIN_CONTENT_LENGTH,
+                    min_length=self.min_content_length,
                 )
                 return None
 
-            if content_length > MAX_CONTENT_LENGTH:
+            if content_length > self.max_content_length:
                 logger.warning(
                     "content_extraction_page_content_too_long",
                     course_id=self.course_id,
                     page_url=page_url,
                     content_length=content_length,
-                    max_length=MAX_CONTENT_LENGTH,
+                    max_length=self.max_content_length,
                 )
                 # Truncate content instead of discarding
                 cleaned_content = (
-                    cleaned_content[:MAX_CONTENT_LENGTH] + "... [truncated]"
+                    cleaned_content[: self.max_content_length] + "... [truncated]"
                 )
 
             return {
@@ -422,13 +429,13 @@ class ContentExtractionService:
 
             # Check file size
             file_size = file_info.get("size", 0)
-            if file_size > MAX_FILE_SIZE:
+            if file_size > self.max_file_size:
                 logger.warning(
                     "file_extraction_size_limit",
                     course_id=self.course_id,
                     file_id=file_id,
                     file_size=file_size,
-                    limit=MAX_FILE_SIZE,
+                    limit=self.max_file_size,
                 )
                 return None
 
@@ -444,17 +451,17 @@ class ContentExtractionService:
 
             text_content = await self._download_and_extract_pdf(file_id, download_url)
 
-            if text_content and len(text_content) >= MIN_CONTENT_LENGTH:
+            if text_content and len(text_content) >= self.min_content_length:
                 # Truncate if too long
-                if len(text_content) > MAX_CONTENT_LENGTH:
+                if len(text_content) > self.max_content_length:
                     logger.warning(
                         "file_extraction_content_truncated",
                         course_id=self.course_id,
                         file_id=file_id,
                         original_length=len(text_content),
-                        max_length=MAX_CONTENT_LENGTH,
+                        max_length=self.max_content_length,
                     )
-                    text_content = text_content[:MAX_CONTENT_LENGTH]
+                    text_content = text_content[: self.max_content_length]
 
                 return {
                     "title": file_info.get(
@@ -663,8 +670,8 @@ class ContentExtractionService:
             return ""
 
         # Limit text size to prevent ReDoS attacks
-        if len(text) > MAX_CONTENT_LENGTH:
-            text = text[:MAX_CONTENT_LENGTH]
+        if len(text) > self.max_content_length:
+            text = text[: self.max_content_length]
 
         # Replace multiple whitespace characters with single spaces (safe regex)
         text = re.sub(r"\s+", " ", text)
