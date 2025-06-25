@@ -56,19 +56,10 @@ export function QuestionStats({ quizId }: QuestionStatsProps) {
         <VStack gap={4} align="stretch">
           <HStack justify="space-between">
             <Text fontWeight="medium" color="gray.700">
-              Total Questions
-            </Text>
-            <Badge variant="outline" colorScheme="blue" size="lg">
-              {stats.total}
-            </Badge>
-          </HStack>
-
-          <HStack justify="space-between">
-            <Text fontWeight="medium" color="gray.700">
               Approved Questions
             </Text>
             <Badge variant="outline" colorScheme="green" size="lg">
-              {stats.approved}
+              {stats.total} of {stats.approved}
             </Badge>
           </HStack>
 
@@ -107,6 +98,14 @@ export function QuestionStats({ quizId }: QuestionStatsProps) {
                 textAlign="center"
               >
                 🎉 All questions have been reviewed and approved!
+              </Text>
+              <Text
+                fontSize="sm"
+                fontWeight="medium"
+                color="green.700"
+                textAlign="center"
+              >
+                TODO: Add post to Canvas button after all has been reviewed
               </Text>
             </Box>
           )}

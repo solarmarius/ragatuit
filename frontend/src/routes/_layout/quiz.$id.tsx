@@ -12,6 +12,7 @@ import {
 } from "@chakra-ui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 
 import { QuizService } from "@/client";
 import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirmation";
@@ -31,6 +32,7 @@ function QuizDetail() {
   const { id } = Route.useParams();
   const { showErrorToast, showSuccessToast } = useCustomToast();
   const queryClient = useQueryClient();
+  const [currentTab, setCurrentTab] = useState("info");
 
   const {
     data: quiz,
@@ -112,6 +114,15 @@ function QuizDetail() {
   const selectedModules = JSON.parse(quiz.selected_modules || "{}");
   const moduleNames = Object.values(selectedModules) as string[];
 
+  // Check if quiz is ready for approval
+  const isQuizReadyForApproval =
+    quiz.content_extraction_status === "completed" &&
+    quiz.llm_generation_status === "completed";
+
+  const handleApproveQuiz = () => {
+    setCurrentTab("questions");
+  };
+
   return (
     <Container maxW="6xl" py={8}>
       <VStack gap={6} align="stretch">
@@ -127,7 +138,18 @@ function QuizDetail() {
                 generationStatus={quiz.llm_generation_status || "pending"}
               />
             </HStack>
-            <DeleteQuizConfirmation quizId={id} quizTitle={quiz.title} />
+            <HStack gap={3}>
+              {isQuizReadyForApproval && (
+                <Button
+                  colorPalette="blue"
+                  size="sm"
+                  onClick={handleApproveQuiz}
+                >
+                  Review Quiz
+                </Button>
+              )}
+              <DeleteQuizConfirmation quizId={id} quizTitle={quiz.title} />
+            </HStack>
           </HStack>
           <Text color="gray.600" fontSize="lg">
             Quiz Details
@@ -135,7 +157,11 @@ function QuizDetail() {
         </Box>
 
         {/* Tabs */}
-        <Tabs.Root defaultValue="info" size="lg">
+        <Tabs.Root
+          value={currentTab}
+          onValueChange={(details) => setCurrentTab(details.value)}
+          size="lg"
+        >
           <Tabs.List>
             <Tabs.Trigger value="info">Quiz Information</Tabs.Trigger>
             <Tabs.Trigger value="questions">Questions</Tabs.Trigger>
@@ -169,7 +195,11 @@ function QuizDetail() {
                       {moduleNames.length > 0 ? (
                         <HStack wrap="wrap" gap={2}>
                           {moduleNames.map((moduleName, index) => (
-                            <Badge key={index} variant="outline" colorScheme="blue">
+                            <Badge
+                              key={index}
+                              variant="outline"
+                              colorScheme="blue"
+                            >
                               {moduleName}
                             </Badge>
                           ))}
@@ -245,13 +275,16 @@ function QuizDetail() {
                           Created
                         </Text>
                         <Text color="gray.600">
-                          {new Date(quiz.created_at).toLocaleDateString("en-GB", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {new Date(quiz.created_at).toLocaleDateString(
+                            "en-GB",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }
+                          )}
                         </Text>
                       </HStack>
                     )}
@@ -262,13 +295,16 @@ function QuizDetail() {
                           Last Updated
                         </Text>
                         <Text color="gray.600">
-                          {new Date(quiz.updated_at).toLocaleDateString("en-GB", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {new Date(quiz.updated_at).toLocaleDateString(
+                            "en-GB",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }
+                          )}
                         </Text>
                       </HStack>
                     )}
@@ -361,8 +397,9 @@ function QuizDetail() {
                         Questions Not Available Yet
                       </Text>
                       <Text color="gray.600">
-                        Questions will appear here once the generation process is complete.
-                        You can trigger generation from the "Quiz Information" tab.
+                        Questions will appear here once the generation process
+                        is complete. You can trigger generation from the "Quiz
+                        Information" tab.
                       </Text>
                     </VStack>
                   </Card.Body>
