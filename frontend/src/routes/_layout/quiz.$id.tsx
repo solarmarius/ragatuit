@@ -73,7 +73,8 @@ function QuizDetail() {
       queryClient.invalidateQueries({ queryKey: ["quiz", id] });
     },
     onError: (error: any) => {
-      const message = error?.body?.detail || "Failed to restart content extraction";
+      const message =
+        error?.body?.detail || "Failed to restart content extraction";
       showErrorToast(message);
     },
   });
@@ -289,7 +290,7 @@ function QuizDetail() {
                     size="sm"
                     colorScheme="blue"
                     variant="outline"
-                    isLoading={retryExtractionMutation.isPending}
+                    loading={retryExtractionMutation.isPending}
                     onClick={() => retryExtractionMutation.mutate()}
                     mt={2}
                   >
