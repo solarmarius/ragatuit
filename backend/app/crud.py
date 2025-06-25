@@ -2,10 +2,18 @@ import json
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlmodel import Session, desc, select
+from sqlmodel import Session, asc, desc, select
 
 from app.core.security import token_encryption
-from app.models import Quiz, QuizCreate, User, UserCreate
+from app.models import (
+    Question,
+    QuestionCreate,
+    QuestionUpdate,
+    Quiz,
+    QuizCreate,
+    User,
+    UserCreate,
+)
 
 
 def create_user(session: Session, user_create: UserCreate) -> User:
@@ -271,3 +279,229 @@ def delete_quiz(session: Session, quiz_id: UUID, user_id: UUID) -> bool:
     session.delete(quiz)
     session.commit()
     return True
+
+
+def get_content_from_quiz(session: Session, quiz_id: UUID) -> str | None:
+    """
+    Retrieve the extracted content from a quiz by its UUID.
+
+    **Parameters:**
+        session (Session): Database session for the query
+        quiz_id (UUID): Quiz UUID to get extracted content from
+
+    **Returns:**
+        str | None: The extracted content as a JSON string if found and available,
+                   None if quiz not found or no content extracted yet
+
+    **Usage:**
+    - Content processing: Access extracted Canvas module content for LLM generation
+    - Status checking: Verify if content extraction has completed
+    - Content display: Show extracted content to users for review
+
+    **Example:**
+        >>> content = get_content_from_quiz(session, quiz_uuid)
+        >>> if content:
+        ...     content_dict = json.loads(content)
+        ...     print(f"Found {len(content_dict)} extracted items")
+        ... else:
+        ...     print("No content extracted yet")
+
+    **Note:**
+    Returns the raw JSON string stored in the database. Use json.loads()
+    to parse into a dictionary, or use the quiz.content_dict property.
+    """
+    quiz = session.get(Quiz, quiz_id)
+    if not quiz:
+        return None
+    return quiz.extracted_content
+
+
+# Question CRUD operations
+
+
+def create_question(session: Session, question_create: QuestionCreate) -> Question:
+    """
+    Create a new question for a quiz.
+
+    **Parameters:**
+        session (Session): Database session for the transaction
+        question_create (QuestionCreate): Question data including text, options, and correct answer
+
+    **Returns:**
+        Question: The newly created question object with generated UUID and timestamps
+    """
+    question_data = question_create.model_dump()
+    current_time = datetime.now(timezone.utc)
+    question_data["updated_at"] = current_time
+
+    db_question = Question.model_validate(question_data)
+    session.add(db_question)
+    session.commit()
+    session.refresh(db_question)
+    return db_question
+
+
+def get_question_by_id(session: Session, question_id: UUID) -> Question | None:
+    """
+    Retrieve a question by its UUID.
+
+    **Parameters:**
+        session (Session): Database session for the query
+        question_id (UUID): Question UUID to look up
+
+    **Returns:**
+        Question | None: Question object if found, None if not found
+    """
+    return session.get(Question, question_id)
+
+
+def get_questions_by_quiz_id(session: Session, quiz_id: UUID) -> list[Question]:
+    """
+    Retrieve all questions for a specific quiz.
+
+    **Parameters:**
+        session (Session): Database session for the query
+        quiz_id (UUID): Quiz UUID to get questions for
+
+    **Returns:**
+        list[Question]: List of question objects for the quiz, ordered by creation date
+    """
+    statement = (
+        select(Question)
+        .where(Question.quiz_id == quiz_id)
+        .order_by(asc(Question.created_at))
+    )
+    return list(session.exec(statement).all())
+
+
+def update_question(
+    session: Session, question_id: UUID, question_update: QuestionUpdate
+) -> Question | None:
+    """
+    Update a question with new data.
+
+    **Parameters:**
+        session (Session): Database session for the transaction
+        question_id (UUID): Question UUID to update
+        question_update (QuestionUpdate): New question data (only provided fields will be updated)
+
+    **Returns:**
+        Question | None: Updated question object if found, None if not found
+    """
+    question = session.get(Question, question_id)
+    if not question:
+        return None
+
+    # Update only provided fields
+    update_data = question_update.model_dump(exclude_unset=True)
+    if update_data:
+        for field, value in update_data.items():
+            setattr(question, field, value)
+
+        question.updated_at = datetime.now(timezone.utc)
+        session.add(question)
+        session.commit()
+        session.refresh(question)
+
+    return question
+
+
+def approve_question(session: Session, question_id: UUID) -> Question | None:
+    """
+    Approve a question by setting is_approved to True and recording approval timestamp.
+
+    **Parameters:**
+        session (Session): Database session for the transaction
+        question_id (UUID): Question UUID to approve
+
+    **Returns:**
+        Question | None: Approved question object if found, None if not found
+    """
+    question = session.get(Question, question_id)
+    if not question:
+        return None
+
+    question.is_approved = True
+    question.approved_at = datetime.now(timezone.utc)
+    question.updated_at = datetime.now(timezone.utc)
+
+    session.add(question)
+    session.commit()
+    session.refresh(question)
+    return question
+
+
+def delete_question(session: Session, question_id: UUID, quiz_owner_id: UUID) -> bool:
+    """
+    Delete a question by its UUID, with quiz ownership verification.
+
+    **Parameters:**
+        session (Session): Database session for the transaction
+        question_id (UUID): Question UUID to delete
+        quiz_owner_id (UUID): User UUID to verify quiz ownership
+
+    **Returns:**
+        bool: True if question was deleted, False if question not found or not authorized
+
+    **Security:**
+        - Verifies quiz ownership before deletion to prevent unauthorized access
+        - Only the quiz owner can delete questions from their quizzes
+    """
+    question = session.get(Question, question_id)
+    if not question:
+        return False
+
+    # Get the quiz to verify ownership
+    quiz = session.get(Quiz, question.quiz_id)
+    if not quiz or quiz.owner_id != quiz_owner_id:
+        return False
+
+    session.delete(question)
+    session.commit()
+    return True
+
+
+def get_approved_questions_by_quiz_id(
+    session: Session, quiz_id: UUID
+) -> list[Question]:
+    """
+    Retrieve all approved questions for a specific quiz.
+
+    **Parameters:**
+        session (Session): Database session for the query
+        quiz_id (UUID): Quiz UUID to get approved questions for
+
+    **Returns:**
+        list[Question]: List of approved question objects for the quiz
+    """
+    statement = (
+        select(Question)
+        .where(Question.quiz_id == quiz_id, Question.is_approved)
+        .order_by(asc(Question.created_at))
+    )
+    return list(session.exec(statement).all())
+
+
+def get_question_counts_by_quiz_id(session: Session, quiz_id: UUID) -> dict[str, int]:
+    """
+    Get question counts (total and approved) for a quiz.
+
+    **Parameters:**
+        session (Session): Database session for the query
+        quiz_id (UUID): Quiz UUID to get counts for
+
+    **Returns:**
+        dict: Dictionary with 'total' and 'approved' question counts
+    """
+    total_statement = select(Question).where(Question.quiz_id == quiz_id)
+    total_count = len(list(session.exec(total_statement).all()))
+
+    approved_statement = select(Question).where(
+        Question.quiz_id == quiz_id, Question.is_approved
+    )
+    approved_count = len(list(session.exec(approved_statement).all()))
+
+    return {
+        "total": total_count,
+        "approved": approved_count,
+    }
