@@ -44,7 +44,7 @@ async def create_new_quiz(
             - title: Quiz title
             - question_count: Number of questions to generate (1-200, default 100)
             - llm_model: LLM model to use (default "o3")
-            - llm_temperature: LLM temperature setting (0.0-2.0, default 0.3)
+            - llm_temperature: LLM temperature setting (0.0-2.0, default 1)
 
     **Returns:**
         Quiz: The created quiz object with generated UUID and timestamps
@@ -65,7 +65,7 @@ async def create_new_quiz(
             "title": "AI Fundamentals Quiz",
             "question_count": 50,
             "llm_model": "gpt-4o",
-            "llm_temperature": 0.3
+            "llm_temperature": 1
         }
         ```
     """
@@ -150,7 +150,7 @@ def get_quiz(
             "title": "AI Fundamentals Quiz",
             "question_count": 50,
             "llm_model": "gpt-4o",
-            "llm_temperature": 0.3,
+            "llm_temperature": 1,
             "created_at": "2023-01-01T12:00:00Z",
             "updated_at": "2023-01-01T12:00:00Z"
         }
@@ -240,7 +240,7 @@ def get_user_quizzes_endpoint(
                 "title": "AI Fundamentals Quiz",
                 "question_count": 50,
                 "llm_model": "gpt-4o",
-                "llm_temperature": 0.3,
+                "llm_temperature": 1,
                 "created_at": "2023-01-01T12:00:00Z",
                 "updated_at": "2023-01-01T12:00:00Z"
             }

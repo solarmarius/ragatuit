@@ -63,7 +63,7 @@ class Quiz(SQLModel, table=True):
     title: str = Field(min_length=1)
     question_count: int = Field(default=100, ge=1, le=200)
     llm_model: str = Field(default="o3")
-    llm_temperature: float = Field(default=0.3, ge=0.0, le=2.0)
+    llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
     content_extraction_status: str = Field(
         default="pending",
         description="Status of content extraction: pending, processing, completed, failed",
@@ -154,7 +154,7 @@ class QuizCreate(SQLModel):
     title: str = Field(min_length=1, max_length=255)
     question_count: int = Field(default=100, ge=1, le=200)
     llm_model: str = Field(default="o3")
-    llm_temperature: float = Field(default=0.3, ge=0.0, le=2.0)
+    llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
 
 
 class UserPublic(SQLModel):

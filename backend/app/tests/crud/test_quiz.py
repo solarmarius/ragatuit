@@ -15,7 +15,7 @@ def test_create_quiz(db: Session, user_id: uuid.UUID) -> None:
     title = "Test Quiz"
     question_count = 50
     llm_model = "gpt-4o"
-    llm_temperature = 0.5
+    llm_temperature = 1
 
     quiz_in = QuizCreate(
         canvas_course_id=canvas_course_id,
@@ -66,7 +66,7 @@ def test_create_quiz_with_defaults(db: Session, user_id: uuid.UUID) -> None:
     # Check default values
     assert quiz.question_count == 100  # Default
     assert quiz.llm_model == "o3"  # Default
-    assert quiz.llm_temperature == 0.3  # Default
+    assert quiz.llm_temperature == 1  # Default
 
 
 def test_get_quiz_by_id(db: Session, user_id: uuid.UUID) -> None:

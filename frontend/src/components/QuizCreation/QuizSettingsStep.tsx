@@ -28,7 +28,7 @@ interface QuizSettingsStepProps {
 const DEFAULT_SETTINGS: QuizSettings = {
   questionCount: 100,
   llmModel: "o3",
-  llmTemperature: 0.3,
+  llmTemperature: 1,
 };
 
 const SUPPORTED_MODELS = createListCollection({
@@ -126,7 +126,7 @@ export function QuizSettingsStep({
 
                   <Box>
                     <Text fontWeight="medium">Temperature:</Text>
-                    <Text color="gray.600">0.3</Text>
+                    <Text color="gray.600">1</Text>
                     <Text fontSize="sm" color="gray.500">
                       Balanced creativity and consistency for quiz questions
                     </Text>
