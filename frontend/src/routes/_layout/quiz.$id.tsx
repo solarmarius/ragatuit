@@ -398,8 +398,7 @@ function QuizDetail() {
                       </Text>
                       <Text color="gray.600">
                         Questions will appear here once the generation process
-                        is complete. You can trigger generation from the "Quiz
-                        Information" tab.
+                        is complete.
                       </Text>
                     </VStack>
                   </Card.Body>

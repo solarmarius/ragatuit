@@ -1,6 +1,6 @@
 import json
 import uuid
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID
 
 import pytest
@@ -126,7 +126,8 @@ def test_chunk_content_handles_invalid_data() -> None:
 
 
 @patch("app.services.mcq_generation.get_content_from_quiz")
-def test_content_preparation_success(
+@pytest.mark.asyncio
+async def test_content_preparation_success(
     mock_get_content: MagicMock,
     sample_quiz_id: UUID,
     sample_content_dict: dict[str, list[dict[str, str]]],
@@ -151,7 +152,7 @@ def test_content_preparation_success(
         mock_session = MagicMock()
         mock_session_class.return_value.__enter__.return_value = mock_session
 
-        result_state = service.content_preparation(state)
+        result_state = await service.content_preparation(state)
 
         assert result_state["error_message"] is None
         assert len(result_state["content_chunks"]) > 0
@@ -161,7 +162,8 @@ def test_content_preparation_success(
 
 
 @patch("app.services.mcq_generation.get_content_from_quiz")
-def test_content_preparation_no_content(
+@pytest.mark.asyncio
+async def test_content_preparation_no_content(
     mock_get_content: MagicMock, sample_quiz_id: UUID
 ) -> None:
     """Test content preparation when no content is found."""
@@ -184,14 +186,15 @@ def test_content_preparation_no_content(
         mock_session = MagicMock()
         mock_session_class.return_value.__enter__.return_value = mock_session
 
-        result_state = service.content_preparation(state)
+        result_state = await service.content_preparation(state)
 
         assert result_state["error_message"] is not None
         assert "No extracted content found" in result_state["error_message"]
 
 
 @patch("app.services.mcq_generation.ChatOpenAI")
-def test_generate_question_success(
+@pytest.mark.asyncio
+async def test_generate_question_success(
     mock_chat_openai: MagicMock,
     sample_quiz_id: UUID,
     sample_generated_question: dict[str, str],
@@ -207,8 +210,8 @@ def test_generate_question_success(
     mock_chat_openai.return_value = mock_llm_instance
 
     # Create chain mock
-    mock_chain = MagicMock()
-    mock_chain.invoke.return_value = mock_response
+    mock_chain = AsyncMock()
+    mock_chain.ainvoke.return_value = mock_response
 
     state: MCQGenerationState = {
         "quiz_id": sample_quiz_id,
@@ -227,7 +230,7 @@ def test_generate_question_success(
         mock_prompt.return_value = mock_prompt_instance
         mock_prompt_instance.__or__ = MagicMock(return_value=mock_chain)
 
-        result_state = service.generate_question(state)
+        result_state = await service.generate_question(state)
 
         assert result_state["error_message"] is None
         assert result_state["questions_generated"] == 1
@@ -242,7 +245,8 @@ def test_generate_question_success(
         assert generated_question["quiz_id"] == sample_quiz_id
 
 
-def test_generate_question_invalid_json(sample_quiz_id: UUID) -> None:
+@pytest.mark.asyncio
+async def test_generate_question_invalid_json(sample_quiz_id: UUID) -> None:
     """Test question generation with invalid JSON response."""
     service = MCQGenerationService()
 
@@ -252,7 +256,7 @@ def test_generate_question_invalid_json(sample_quiz_id: UUID) -> None:
         mock_response.content = "Invalid JSON response"
 
         mock_chain = MagicMock()
-        mock_chain.invoke.return_value = mock_response
+        mock_chain.ainvoke.return_value = mock_response
 
         with patch.object(service, "_create_mcq_prompt") as mock_prompt:
             mock_prompt_instance = MagicMock()
@@ -271,14 +275,15 @@ def test_generate_question_invalid_json(sample_quiz_id: UUID) -> None:
                 "error_message": None,
             }
 
-            result_state = service.generate_question(state)
+            result_state = await service.generate_question(state)
 
             # Should move to next chunk despite error (non-critical error)
             assert result_state["current_chunk_index"] == 1
             assert result_state["questions_generated"] == 0
 
 
-def test_generate_question_missing_fields(sample_quiz_id: UUID) -> None:
+@pytest.mark.asyncio
+async def test_generate_question_missing_fields(sample_quiz_id: UUID) -> None:
     """Test question generation with missing required fields."""
     service = MCQGenerationService()
 
@@ -289,7 +294,7 @@ def test_generate_question_missing_fields(sample_quiz_id: UUID) -> None:
         mock_response.content = json.dumps(incomplete_question)
 
         mock_chain = MagicMock()
-        mock_chain.invoke.return_value = mock_response
+        mock_chain.ainvoke.return_value = mock_response
 
         with patch.object(service, "_create_mcq_prompt") as mock_prompt:
             mock_prompt_instance = MagicMock()
@@ -308,7 +313,7 @@ def test_generate_question_missing_fields(sample_quiz_id: UUID) -> None:
                 "error_message": None,
             }
 
-            result_state = service.generate_question(state)
+            result_state = await service.generate_question(state)
 
             # Should move to next chunk despite validation error
             assert result_state["current_chunk_index"] == 1
@@ -395,7 +400,8 @@ def test_should_continue_generation_continue(sample_quiz_id: UUID) -> None:
     assert result == "generate_question"
 
 
-def test_save_questions_to_database_success(
+@pytest.mark.asyncio
+async def test_save_questions_to_database_success(
     sample_quiz_id: UUID, sample_generated_question: dict[str, str]
 ) -> None:
     """Test successful saving of questions to database."""
@@ -420,14 +426,15 @@ def test_save_questions_to_database_success(
         mock_session = MagicMock()
         mock_session_class.return_value.__enter__.return_value = mock_session
 
-        result_state = service.save_questions_to_database(state)
+        result_state = await service.save_questions_to_database(state)
 
         assert result_state["error_message"] is None
         mock_session.add.assert_called()
         mock_session.commit.assert_called()
 
 
-def test_save_questions_to_database_failure(
+@pytest.mark.asyncio
+async def test_save_questions_to_database_failure(
     sample_quiz_id: UUID, sample_generated_question: dict[str, str]
 ) -> None:
     """Test handling of database errors when saving questions."""
@@ -453,7 +460,7 @@ def test_save_questions_to_database_failure(
         mock_session.commit.side_effect = Exception("Database error")
         mock_session_class.return_value.__enter__.return_value = mock_session
 
-        result_state = service.save_questions_to_database(state)
+        result_state = await service.save_questions_to_database(state)
 
         assert result_state["error_message"] is not None
         assert "Failed to save questions" in result_state["error_message"]
@@ -496,9 +503,9 @@ async def test_generate_mcqs_for_quiz_success(
         "error_message": None,
     }
 
-    # Use regular MagicMock for non-async mock
-    mock_app = MagicMock()
-    mock_app.invoke.return_value = final_state
+    # Use AsyncMock for async mock
+    mock_app = AsyncMock()
+    mock_app.ainvoke.return_value = final_state
 
     with patch.object(service, "build_workflow") as mock_build:
         mock_workflow = MagicMock()

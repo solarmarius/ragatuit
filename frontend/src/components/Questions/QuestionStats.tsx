@@ -59,7 +59,7 @@ export function QuestionStats({ quizId }: QuestionStatsProps) {
               Approved Questions
             </Text>
             <Badge variant="outline" colorScheme="green" size="lg">
-              {stats.total} of {stats.approved}
+              {stats.approved} of {stats.total}
             </Badge>
           </HStack>
 

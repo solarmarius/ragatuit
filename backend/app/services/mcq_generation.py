@@ -125,7 +125,9 @@ Generate exactly ONE question based on this content."""
 
         return chunks
 
-    def content_preparation(self, state: MCQGenerationState) -> MCQGenerationState:
+    async def content_preparation(
+        self, state: MCQGenerationState
+    ) -> MCQGenerationState:
         """Prepare content chunks for question generation."""
         logger.info(
             "content_preparation_started",
@@ -173,7 +175,7 @@ Generate exactly ONE question based on this content."""
             state["error_message"] = f"Content preparation failed: {str(e)}"
             return state
 
-    def generate_question(self, state: MCQGenerationState) -> MCQGenerationState:
+    async def generate_question(self, state: MCQGenerationState) -> MCQGenerationState:
         """Generate a single MCQ question from current content chunk."""
         quiz_id = state["quiz_id"]
         current_chunk = state["current_chunk_index"]
@@ -204,7 +206,7 @@ Generate exactly ONE question based on this content."""
             # Generate question from current chunk
             content_chunk = state["content_chunks"][current_chunk]
 
-            result = chain.invoke(
+            result = await chain.ainvoke(
                 {
                     "content": content_chunk,
                 }
@@ -331,7 +333,7 @@ Generate exactly ONE question based on this content."""
         # Continue generating
         return "generate_question"
 
-    def save_questions_to_database(
+    async def save_questions_to_database(
         self, state: MCQGenerationState
     ) -> MCQGenerationState:
         """Save generated questions to the database."""
@@ -462,8 +464,8 @@ Generate exactly ONE question based on this content."""
                 "error_message": None,
             }
 
-            # Run the workflow
-            final_state = app.invoke(initial_state)
+            # Run the workflow asynchronously
+            final_state = await app.ainvoke(initial_state)
 
             # Prepare results
             results = {
