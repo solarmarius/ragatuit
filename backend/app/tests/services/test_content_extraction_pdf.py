@@ -121,11 +121,10 @@ startxref
         mock_pdf_content: bytes,
     ) -> None:
         """Test successful PDF file content extraction"""
-        with patch.object(
-            service, "_fetch_file_info"
-        ) as mock_fetch_file_info, patch.object(
-            service, "_download_and_extract_pdf"
-        ) as mock_download_extract:
+        with (
+            patch.object(service, "_fetch_file_info") as mock_fetch_file_info,
+            patch.object(service, "_download_and_extract_pdf") as mock_download_extract,
+        ):
             mock_fetch_file_info.return_value = mock_file_info
             mock_download_extract.return_value = "This is extracted PDF text content with sufficient length to meet the minimum requirements for content validation."
 
@@ -209,11 +208,10 @@ startxref
         mock_file_info: dict[str, Any],
     ) -> None:
         """Test file extraction with content too short (below MIN_CONTENT_LENGTH)"""
-        with patch.object(
-            service, "_fetch_file_info"
-        ) as mock_fetch_file_info, patch.object(
-            service, "_download_and_extract_pdf"
-        ) as mock_download_extract:
+        with (
+            patch.object(service, "_fetch_file_info") as mock_fetch_file_info,
+            patch.object(service, "_download_and_extract_pdf") as mock_download_extract,
+        ):
             mock_fetch_file_info.return_value = mock_file_info
             mock_download_extract.return_value = "Short"  # Less than 50 chars
 
@@ -230,11 +228,10 @@ startxref
         """Test file extraction with content exceeding MAX_CONTENT_LENGTH"""
         long_content = "A" * 500_001  # Exceeds 500,000 char limit
 
-        with patch.object(
-            service, "_fetch_file_info"
-        ) as mock_fetch_file_info, patch.object(
-            service, "_download_and_extract_pdf"
-        ) as mock_download_extract:
+        with (
+            patch.object(service, "_fetch_file_info") as mock_fetch_file_info,
+            patch.object(service, "_download_and_extract_pdf") as mock_download_extract,
+        ):
             mock_fetch_file_info.return_value = mock_file_info
             mock_download_extract.return_value = long_content
 
@@ -275,11 +272,10 @@ startxref
         self, service: ContentExtractionService, mock_pdf_content: bytes
     ) -> None:
         """Test successful PDF download and text extraction"""
-        with patch(
-            "app.services.content_extraction.httpx.AsyncClient"
-        ) as mock_httpx, patch(
-            "app.services.content_extraction.pypdf.PdfReader"
-        ) as mock_pdf_reader:
+        with (
+            patch("app.services.content_extraction.httpx.AsyncClient") as mock_httpx,
+            patch("app.services.content_extraction.pypdf.PdfReader") as mock_pdf_reader,
+        ):
             # Mock HTTP response
             mock_response = MagicMock()
             mock_response.content = mock_pdf_content
@@ -379,11 +375,10 @@ startxref
         self, service: ContentExtractionService, mock_pdf_content: bytes
     ) -> None:
         """Test PDF extraction with page extraction errors"""
-        with patch(
-            "app.services.content_extraction.httpx.AsyncClient"
-        ) as mock_httpx, patch(
-            "app.services.content_extraction.pypdf.PdfReader"
-        ) as mock_pdf_reader:
+        with (
+            patch("app.services.content_extraction.httpx.AsyncClient") as mock_httpx,
+            patch("app.services.content_extraction.pypdf.PdfReader") as mock_pdf_reader,
+        ):
             # Mock HTTP response
             mock_response = MagicMock()
             mock_response.content = mock_pdf_content
@@ -413,11 +408,10 @@ startxref
         self, service: ContentExtractionService, mock_pdf_content: bytes
     ) -> None:
         """Test that PDF buffer is properly cleaned up even when errors occur"""
-        with patch(
-            "app.services.content_extraction.httpx.AsyncClient"
-        ) as mock_httpx, patch(
-            "app.services.content_extraction.io.BytesIO"
-        ) as mock_bytesio:
+        with (
+            patch("app.services.content_extraction.httpx.AsyncClient") as mock_httpx,
+            patch("app.services.content_extraction.io.BytesIO") as mock_bytesio,
+        ):
             # Mock HTTP response
             mock_response = MagicMock()
             mock_response.content = mock_pdf_content
@@ -481,13 +475,11 @@ startxref
             "content_type": "application/pdf",
         }
 
-        with patch.object(
-            service, "_fetch_module_items"
-        ) as mock_fetch_items, patch.object(
-            service, "_extract_page_content"
-        ) as mock_extract_page, patch.object(
-            service, "_extract_file_content"
-        ) as mock_extract_file:
+        with (
+            patch.object(service, "_fetch_module_items") as mock_fetch_items,
+            patch.object(service, "_extract_page_content") as mock_extract_page,
+            patch.object(service, "_extract_file_content") as mock_extract_file,
+        ):
             mock_fetch_items.return_value = mock_module_items
             mock_extract_page.return_value = mock_page_content
             mock_extract_file.return_value = mock_file_content
