@@ -328,6 +328,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
                       colorScheme="blue"
                       variant="outline"
                       onClick={() => startEditing(question)}
+                      disabled={question.is_approved}
                     >
                       <MdEdit />
                     </IconButton>
