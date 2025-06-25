@@ -6,33 +6,33 @@ import {
   Container,
   HStack,
   Skeleton,
+  Tabs,
   Text,
   VStack,
-  Tabs,
-} from "@chakra-ui/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+} from "@chakra-ui/react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { createFileRoute } from "@tanstack/react-router"
+import { useState } from "react"
 
-import { QuizService } from "@/client";
-import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirmation";
-import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenerationTrigger";
-import { QuestionReview } from "@/components/Questions/QuestionReview";
-import { QuestionStats } from "@/components/Questions/QuestionStats";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { StatusDescription } from "@/components/ui/status-description";
-import { StatusLight } from "@/components/ui/status-light";
-import useCustomToast from "@/hooks/useCustomToast";
+import { QuizService } from "@/client"
+import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenerationTrigger"
+import { QuestionReview } from "@/components/Questions/QuestionReview"
+import { QuestionStats } from "@/components/Questions/QuestionStats"
+import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirmation"
+import { StatusBadge } from "@/components/ui/status-badge"
+import { StatusDescription } from "@/components/ui/status-description"
+import { StatusLight } from "@/components/ui/status-light"
+import useCustomToast from "@/hooks/useCustomToast"
 
 export const Route = createFileRoute("/_layout/quiz/$id")({
   component: QuizDetail,
-});
+})
 
 function QuizDetail() {
-  const { id } = Route.useParams();
-  const { showErrorToast, showSuccessToast } = useCustomToast();
-  const queryClient = useQueryClient();
-  const [currentTab, setCurrentTab] = useState("info");
+  const { id } = Route.useParams()
+  const { showErrorToast, showSuccessToast } = useCustomToast()
+  const queryClient = useQueryClient()
+  const [currentTab, setCurrentTab] = useState("info")
 
   const {
     data: quiz,
@@ -42,19 +42,19 @@ function QuizDetail() {
     queryKey: ["quiz", id],
     queryFn: async () => {
       try {
-        const response = await QuizService.getQuiz({ quizId: id });
-        return response;
+        const response = await QuizService.getQuiz({ quizId: id })
+        return response
       } catch (err) {
-        showErrorToast("Failed to load quiz details");
-        throw err;
+        showErrorToast("Failed to load quiz details")
+        throw err
       }
     },
     refetchInterval: (query) => {
       // Poll every 5 seconds if any status is pending or processing
-      const data = query?.state?.data;
+      const data = query?.state?.data
       if (data) {
-        const extractionStatus = data.content_extraction_status || "pending";
-        const generationStatus = data.llm_generation_status || "pending";
+        const extractionStatus = data.content_extraction_status || "pending"
+        const generationStatus = data.llm_generation_status || "pending"
 
         if (
           extractionStatus === "pending" ||
@@ -62,32 +62,32 @@ function QuizDetail() {
           generationStatus === "pending" ||
           generationStatus === "processing"
         ) {
-          return 5000; // 5 seconds
+          return 5000 // 5 seconds
         }
       }
-      return false; // Stop polling when both are completed or failed
+      return false // Stop polling when both are completed or failed
     },
     refetchIntervalInBackground: false, // Only poll when tab is active
-  });
+  })
 
   // Retry content extraction mutation
   const retryExtractionMutation = useMutation({
     mutationFn: async () => {
-      return await QuizService.triggerContentExtraction({ quizId: id });
+      return await QuizService.triggerContentExtraction({ quizId: id })
     },
     onSuccess: () => {
-      showSuccessToast("Content extraction restarted");
-      queryClient.invalidateQueries({ queryKey: ["quiz", id] });
+      showSuccessToast("Content extraction restarted")
+      queryClient.invalidateQueries({ queryKey: ["quiz", id] })
     },
     onError: (error: any) => {
       const message =
-        error?.body?.detail || "Failed to restart content extraction";
-      showErrorToast(message);
+        error?.body?.detail || "Failed to restart content extraction"
+      showErrorToast(message)
     },
-  });
+  })
 
   if (isLoading) {
-    return <QuizDetailSkeleton />;
+    return <QuizDetailSkeleton />
   }
 
   if (error || !quiz) {
@@ -107,21 +107,21 @@ function QuizDetail() {
           </Card.Body>
         </Card.Root>
       </Container>
-    );
+    )
   }
 
   // Parse selected modules from JSON string
-  const selectedModules = JSON.parse(quiz.selected_modules || "{}");
-  const moduleNames = Object.values(selectedModules) as string[];
+  const selectedModules = JSON.parse(quiz.selected_modules || "{}")
+  const moduleNames = Object.values(selectedModules) as string[]
 
   // Check if quiz is ready for approval
   const isQuizReadyForApproval =
     quiz.content_extraction_status === "completed" &&
-    quiz.llm_generation_status === "completed";
+    quiz.llm_generation_status === "completed"
 
   const handleApproveQuiz = () => {
-    setCurrentTab("questions");
-  };
+    setCurrentTab("questions")
+  }
 
   return (
     <Container maxW="6xl" py={8}>
@@ -283,7 +283,7 @@ function QuizDetail() {
                               day: "numeric",
                               hour: "2-digit",
                               minute: "2-digit",
-                            }
+                            },
                           )}
                         </Text>
                       </HStack>
@@ -303,7 +303,7 @@ function QuizDetail() {
                               day: "numeric",
                               hour: "2-digit",
                               minute: "2-digit",
-                            }
+                            },
                           )}
                         </Text>
                       </HStack>
@@ -409,7 +409,7 @@ function QuizDetail() {
         </Tabs.Root>
       </VStack>
     </Container>
-  );
+  )
 }
 
 function QuizDetailSkeleton() {
@@ -439,5 +439,5 @@ function QuizDetailSkeleton() {
         ))}
       </VStack>
     </Container>
-  );
+  )
 }

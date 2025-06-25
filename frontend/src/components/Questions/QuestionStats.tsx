@@ -7,13 +7,13 @@ import {
   Skeleton,
   Text,
   VStack,
-} from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
+} from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
 
-import { QuizService } from "@/client";
+import { QuizService } from "@/client"
 
 interface QuestionStatsProps {
-  quizId: string;
+  quizId: string
 }
 
 export function QuestionStats({ quizId }: QuestionStatsProps) {
@@ -24,12 +24,12 @@ export function QuestionStats({ quizId }: QuestionStatsProps) {
   } = useQuery({
     queryKey: ["quiz", quizId, "questions", "stats"],
     queryFn: async () => {
-      return await QuizService.getQuizQuestionStats({ quizId });
+      return await QuizService.getQuizQuestionStats({ quizId })
     },
-  });
+  })
 
   if (isLoading) {
-    return <QuestionStatsSkeleton />;
+    return <QuestionStatsSkeleton />
   }
 
   if (error || !stats) {
@@ -39,11 +39,11 @@ export function QuestionStats({ quizId }: QuestionStatsProps) {
           <Text color="red.500">Failed to load question statistics</Text>
         </Card.Body>
       </Card.Root>
-    );
+    )
   }
 
   const progressPercentage =
-    stats.total > 0 ? (stats.approved / stats.total) * 100 : 0;
+    stats.total > 0 ? (stats.approved / stats.total) * 100 : 0
 
   return (
     <Card.Root>
@@ -127,7 +127,7 @@ export function QuestionStats({ quizId }: QuestionStatsProps) {
         </VStack>
       </Card.Body>
     </Card.Root>
-  );
+  )
 }
 
 function QuestionStatsSkeleton() {
@@ -156,5 +156,5 @@ function QuestionStatsSkeleton() {
         </VStack>
       </Card.Body>
     </Card.Root>
-  );
+  )
 }

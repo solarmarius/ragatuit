@@ -20,7 +20,9 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     await page.goto(`/quiz/${mockQuizId}`)
   })
 
-  test("should display content extraction status with pending extraction", async ({ page }) => {
+  test("should display content extraction status with pending extraction", async ({
+    page,
+  }) => {
     const mockQuiz = {
       id: mockQuizId,
       title: "Content Extraction Test Quiz",
@@ -58,7 +60,9 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     await expect(statusLight).toBeVisible()
   })
 
-  test("should display content extraction status with processing extraction", async ({ page }) => {
+  test("should display content extraction status with processing extraction", async ({
+    page,
+  }) => {
     const mockQuiz = {
       id: mockQuizId,
       title: "Processing Quiz",
@@ -93,7 +97,9 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     await expect(statusLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
   })
 
-  test("should display content extraction status with completed extraction", async ({ page }) => {
+  test("should display content extraction status with completed extraction", async ({
+    page,
+  }) => {
     const mockQuiz = {
       id: mockQuizId,
       title: "Completed Extraction Quiz",
@@ -105,7 +111,8 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       llm_temperature: 0.3,
       content_extraction_status: "completed",
       llm_generation_status: "completed",
-      extracted_content: '{"module_173467": [{"title": "Test Page", "content": "Test content"}]}',
+      extracted_content:
+        '{"module_173467": [{"title": "Test Page", "content": "Test content"}]}',
       content_extracted_at: "2024-01-16T15:30:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
@@ -123,12 +130,16 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     await page.reload()
 
     // Check that status light shows completed state
-    const statusLight = page.locator('[title="Questions generated successfully"]')
+    const statusLight = page.locator(
+      '[title="Questions generated successfully"]',
+    )
     await expect(statusLight).toBeVisible()
     await expect(statusLight).toHaveCSS("background-color", "rgb(34, 197, 94)") // green.500
   })
 
-  test("should display content extraction status with failed extraction", async ({ page }) => {
+  test("should display content extraction status with failed extraction", async ({
+    page,
+  }) => {
     const mockQuiz = {
       id: mockQuizId,
       title: "Failed Extraction Quiz",
@@ -196,7 +207,8 @@ test.describe("Quiz Detail Content Extraction Features", () => {
         llm_temperature: 0.3,
         content_extraction_status: "completed",
         llm_generation_status: "completed",
-        extracted_content: '{"module_173467": [{"title": "Test Page", "content": "Test content"}]}',
+        extracted_content:
+          '{"module_173467": [{"title": "Test Page", "content": "Test content"}]}',
         content_extracted_at: "2024-01-16T15:30:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
@@ -205,7 +217,10 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     ]
 
     await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
-      const response = callCount < responses.length ? responses[callCount] : responses[responses.length - 1]
+      const response =
+        callCount < responses.length
+          ? responses[callCount]
+          : responses[responses.length - 1]
       callCount++
 
       await route.fulfill({
@@ -218,18 +233,26 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     await page.reload()
 
     // Initially should show processing (orange) - wait for page to load first
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState("networkidle")
     const processingLight = page.locator('[title="Generating questions..."]')
     await expect(processingLight).toBeVisible()
-    await expect(processingLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
+    await expect(processingLight).toHaveCSS(
+      "background-color",
+      "rgb(249, 115, 22)",
+    ) // orange.500
 
     // Wait for polling to occur and status to change to completed (green)
     // The refetchInterval is set to 5 seconds, so we wait a bit longer
     await page.waitForTimeout(6000)
 
-    const completedLight = page.locator('[title="Questions generated successfully"]')
+    const completedLight = page.locator(
+      '[title="Questions generated successfully"]',
+    )
     await expect(completedLight).toBeVisible()
-    await expect(completedLight).toHaveCSS("background-color", "rgb(34, 197, 94)") // green.500
+    await expect(completedLight).toHaveCSS(
+      "background-color",
+      "rgb(34, 197, 94)",
+    ) // green.500
 
     // Verify that multiple API calls were made
     expect(callCount).toBeGreaterThan(1)
@@ -248,7 +271,8 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       llm_temperature: 0.3,
       content_extraction_status: "completed",
       llm_generation_status: "completed",
-      extracted_content: '{"module_173467": [{"title": "Test Page", "content": "Test content"}]}',
+      extracted_content:
+        '{"module_173467": [{"title": "Test Page", "content": "Test content"}]}',
       content_extracted_at: "2024-01-16T15:30:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
@@ -267,7 +291,9 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     await page.reload()
 
     // Check that status light shows completed state
-    const statusLight = page.locator('[title="Questions generated successfully"]')
+    const statusLight = page.locator(
+      '[title="Questions generated successfully"]',
+    )
     await expect(statusLight).toBeVisible()
 
     // Wait to ensure no additional polling occurs
@@ -321,7 +347,9 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     expect(callCount).toBeLessThanOrEqual(2)
   })
 
-  test("should handle missing content extraction fields gracefully", async ({ page }) => {
+  test("should handle missing content extraction fields gracefully", async ({
+    page,
+  }) => {
     const mockQuiz = {
       id: mockQuizId,
       title: "Legacy Quiz Without Content Fields",
@@ -353,12 +381,16 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     await expect(statusLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
 
     // Page should still display all other information correctly
-    await expect(page.getByText("Legacy Quiz Without Content Fields")).toBeVisible()
+    await expect(
+      page.getByText("Legacy Quiz Without Content Fields"),
+    ).toBeVisible()
     await expect(page.getByText("Test Course")).toBeVisible()
     await expect(page.getByText("Module 1")).toBeVisible()
   })
 
-  test("should position status light correctly next to quiz title", async ({ page }) => {
+  test("should position status light correctly next to quiz title", async ({
+    page,
+  }) => {
     const mockQuiz = {
       id: mockQuizId,
       title: "Status Light Position Test",
@@ -386,14 +418,18 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     await page.reload()
 
     // Check that the title and status light are in the same horizontal container
-    const titleContainer = page.locator('text="Status Light Position Test"').locator('..')
+    const titleContainer = page
+      .locator('text="Status Light Position Test"')
+      .locator("..")
     const statusLight = page.locator('[title="Waiting to generate questions"]')
 
     await expect(titleContainer).toContainText("Status Light Position Test")
     await expect(statusLight).toBeVisible()
 
     // Verify they are aligned in the same row (same parent container)
-    const titleBounds = await page.getByText("Status Light Position Test").boundingBox()
+    const titleBounds = await page
+      .getByText("Status Light Position Test")
+      .boundingBox()
     const lightBounds = await statusLight.boundingBox()
 
     expect(titleBounds).not.toBeNull()
@@ -404,7 +440,9 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     expect(verticalDiff).toBeLessThan(20)
   })
 
-  test("should handle different status combinations correctly", async ({ page }) => {
+  test("should handle different status combinations correctly", async ({
+    page,
+  }) => {
     const testCases = [
       {
         extraction: "pending",
@@ -479,7 +517,10 @@ test.describe("Quiz Detail Content Extraction Features", () => {
 
       const statusLight = page.locator(`[title="${testCase.expectedTitle}"]`)
       await expect(statusLight).toBeVisible()
-      await expect(statusLight).toHaveCSS("background-color", testCase.expectedColor)
+      await expect(statusLight).toHaveCSS(
+        "background-color",
+        testCase.expectedColor,
+      )
     }
   })
 })

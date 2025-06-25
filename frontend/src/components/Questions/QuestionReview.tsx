@@ -1,6 +1,7 @@
 import {
   Badge,
   Box,
+  Button,
   Card,
   Fieldset,
   HStack,
@@ -13,12 +14,12 @@ import {
 } from "@chakra-ui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { MdCheck, MdDelete, MdEdit, MdSave, MdCancel } from "react-icons/md";
+import { MdCancel, MdCheck, MdDelete, MdEdit, MdSave } from "react-icons/md";
 
 import {
-  QuestionsService,
   type QuestionPublic,
   type QuestionUpdate,
+  QuestionsService,
 } from "@/client";
 import { Field } from "@/components/ui/field";
 import { Radio, RadioGroup } from "@/components/ui/radio";
@@ -51,6 +52,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
     optionD: "",
     correctAnswer: "A",
   });
+  const [filterView, setFilterView] = useState<"pending" | "all">("pending");
 
   // Fetch questions
   const {
@@ -63,6 +65,19 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       return await QuestionsService.getQuizQuestions({ quizId });
     },
   });
+
+  // Filter questions based on current view
+  const filteredQuestions = questions
+    ? filterView === "pending"
+      ? questions.filter((q) => !q.is_approved)
+      : questions
+    : [];
+
+  // Calculate counts
+  const pendingCount = questions
+    ? questions.filter((q) => !q.is_approved).length
+    : 0;
+  const totalCount = questions ? questions.length : 0;
 
   // Approve question mutation
   const approveQuestionMutation = useMutation({
@@ -201,7 +216,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
     );
   }
 
-  if (questions.length === 0) {
+  if (!questions || questions.length === 0) {
     return (
       <Card.Root>
         <Card.Body>
@@ -231,7 +246,47 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
         </Text>
       </Box>
 
-      {questions.map((question, index) => (
+      {/* Filter Toggle Buttons */}
+      <HStack gap={3}>
+        <Button
+          variant={filterView === "pending" ? "solid" : "outline"}
+          colorPalette="blue"
+          size="sm"
+          onClick={() => setFilterView("pending")}
+        >
+          Pending Approval ({pendingCount})
+        </Button>
+        <Button
+          variant={filterView === "all" ? "solid" : "outline"}
+          colorPalette="blue"
+          size="sm"
+          onClick={() => setFilterView("all")}
+        >
+          All Questions ({totalCount})
+        </Button>
+      </HStack>
+
+      {/* Empty state for filtered view */}
+      {filteredQuestions.length === 0 && (
+        <Card.Root>
+          <Card.Body>
+            <VStack gap={4}>
+              <Text fontSize="xl" fontWeight="bold" color="gray.500">
+                {filterView === "pending"
+                  ? "No Pending Questions"
+                  : "No Questions Found"}
+              </Text>
+              <Text color="gray.600">
+                {filterView === "pending"
+                  ? 'All questions have been approved! Switch to "All Questions" to see them.'
+                  : "No questions match the current filter."}
+              </Text>
+            </VStack>
+          </Card.Body>
+        </Card.Root>
+      )}
+
+      {filteredQuestions.map((question, index) => (
         <Card.Root key={question.id}>
           <Card.Header>
             <HStack justify="space-between" align="center">
@@ -377,7 +432,10 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
                   <RadioGroup
                     value={editingData.correctAnswer}
                     onValueChange={(details) =>
-                      setEditingData({ ...editingData, correctAnswer: details.value })
+                      setEditingData({
+                        ...editingData,
+                        correctAnswer: details.value,
+                      })
                     }
                   >
                     <HStack gap={4}>
