@@ -71,10 +71,10 @@ Return your response as valid JSON with this exact structure:
     "option_b": "Second option",
     "option_c": "Third option",
     "option_d": "Fourth option",
-    "correct_answer": "A"
+    "correct_answer": "[LETTER]"
 }}
 
-The correct_answer must be exactly one of: A, B, C, or D
+The correct_answer must be exactly one of: A, B, C, or D. Try to vary the correct answer letter, do not always make it "A".
 
 Generate exactly ONE question based on this content."""
 
@@ -268,7 +268,26 @@ Generate exactly ONE question based on this content."""
                 exc_info=True,
             )
 
-            # Move to next chunk and continue
+            # Check if this is a critical error that should stop the entire workflow
+            error_str = str(e).lower()
+            if any(
+                critical_error in error_str
+                for critical_error in [
+                    "invalid_request_error",
+                    "authentication",
+                    "authorization",
+                    "model_not_found",
+                    "organization must be verified",
+                    "rate_limit_exceeded",
+                ]
+            ):
+                # Critical error - stop the workflow
+                state[
+                    "error_message"
+                ] = f"Critical error during question generation: {str(e)}"
+                return state
+
+            # Non-critical error - move to next chunk and continue
             state["current_chunk_index"] += 1
             return state
 
@@ -278,6 +297,15 @@ Generate exactly ONE question based on this content."""
         generated_count = state["questions_generated"]
         current_chunk = state["current_chunk_index"]
         total_chunks = len(state["content_chunks"])
+
+        # Stop immediately if there's a critical error
+        if state["error_message"] is not None:
+            logger.error(
+                "generation_stopped_due_to_error",
+                quiz_id=str(state["quiz_id"]),
+                error=state["error_message"],
+            )
+            return "save_questions"
 
         # Stop if we have enough questions
         if generated_count >= target_count:

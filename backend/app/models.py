@@ -62,7 +62,7 @@ class Quiz(SQLModel, table=True):
     selected_modules: str = Field(description="JSON array of selected Canvas modules")
     title: str = Field(min_length=1)
     question_count: int = Field(default=100, ge=1, le=200)
-    llm_model: str = Field(default="o3-pro")
+    llm_model: str = Field(default="o3")
     llm_temperature: float = Field(default=0.3, ge=0.0, le=2.0)
     content_extraction_status: str = Field(
         default="pending",
@@ -153,7 +153,7 @@ class QuizCreate(SQLModel):
     selected_modules: dict[int, str]
     title: str = Field(min_length=1, max_length=255)
     question_count: int = Field(default=100, ge=1, le=200)
-    llm_model: str = Field(default="o3-pro")
+    llm_model: str = Field(default="o3")
     llm_temperature: float = Field(default=0.3, ge=0.0, le=2.0)
 
 

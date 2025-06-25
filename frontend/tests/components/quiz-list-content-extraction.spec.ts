@@ -44,7 +44,7 @@ test.describe("Quiz List Content Extraction Status", () => {
         canvas_course_name: "Test Course 2",
         selected_modules: '{"173468": "Module 2"}',
         question_count: 25,
-        llm_model: "o3-pro",
+        llm_model: "o3",
         llm_temperature: 0.5,
         content_extraction_status: "processing",
         llm_generation_status: "pending",

@@ -37,7 +37,7 @@ async def create_new_quiz(
             - selected_modules: Dict mapping module IDs to names
             - title: Quiz title
             - question_count: Number of questions to generate (1-200, default 100)
-            - llm_model: LLM model to use (default "o3-pro")
+            - llm_model: LLM model to use (default "o3")
             - llm_temperature: LLM temperature setting (0.0-2.0, default 0.3)
 
     **Returns:**

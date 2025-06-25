@@ -8,12 +8,16 @@ import {
   Skeleton,
   Text,
   VStack,
+  Tabs,
 } from "@chakra-ui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { QuizService } from "@/client";
 import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirmation";
+import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenerationTrigger";
+import { QuestionReview } from "@/components/Questions/QuestionReview";
+import { QuestionStats } from "@/components/Questions/QuestionStats";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { StatusDescription } from "@/components/ui/status-description";
 import { StatusLight } from "@/components/ui/status-light";
@@ -109,7 +113,7 @@ function QuizDetail() {
   const moduleNames = Object.values(selectedModules) as string[];
 
   return (
-    <Container maxW="4xl" py={8}>
+    <Container maxW="6xl" py={8}>
       <VStack gap={6} align="stretch">
         {/* Header */}
         <Box>
@@ -130,197 +134,243 @@ function QuizDetail() {
           </Text>
         </Box>
 
-        {/* Quiz Information */}
-        <Card.Root>
-          <Card.Header>
-            <Text fontSize="xl" fontWeight="semibold">
-              Course Information
-            </Text>
-          </Card.Header>
-          <Card.Body>
-            <VStack gap={4} align="stretch">
-              <Box>
-                <Text fontWeight="medium" color="gray.700">
-                  Canvas Course
-                </Text>
-                <Text fontSize="lg">{quiz.canvas_course_name}</Text>
-                <Text fontSize="sm" color="gray.500">
-                  Course ID: {quiz.canvas_course_id}
-                </Text>
-              </Box>
+        {/* Tabs */}
+        <Tabs.Root defaultValue="info" size="lg">
+          <Tabs.List>
+            <Tabs.Trigger value="info">Quiz Information</Tabs.Trigger>
+            <Tabs.Trigger value="questions">Questions</Tabs.Trigger>
+          </Tabs.List>
 
-              <Box>
-                <Text fontWeight="medium" color="gray.700" mb={2}>
-                  Selected Modules
-                </Text>
-                {moduleNames.length > 0 ? (
-                  <HStack wrap="wrap" gap={2}>
-                    {moduleNames.map((moduleName, index) => (
-                      <Badge key={index} variant="outline" colorScheme="blue">
-                        {moduleName}
+          <Tabs.Content value="info">
+            <VStack gap={6} align="stretch" mt={6}>
+              {/* Quiz Information */}
+              <Card.Root>
+                <Card.Header>
+                  <Text fontSize="xl" fontWeight="semibold">
+                    Course Information
+                  </Text>
+                </Card.Header>
+                <Card.Body>
+                  <VStack gap={4} align="stretch">
+                    <Box>
+                      <Text fontWeight="medium" color="gray.700">
+                        Canvas Course
+                      </Text>
+                      <Text fontSize="lg">{quiz.canvas_course_name}</Text>
+                      <Text fontSize="sm" color="gray.500">
+                        Course ID: {quiz.canvas_course_id}
+                      </Text>
+                    </Box>
+
+                    <Box>
+                      <Text fontWeight="medium" color="gray.700" mb={2}>
+                        Selected Modules
+                      </Text>
+                      {moduleNames.length > 0 ? (
+                        <HStack wrap="wrap" gap={2}>
+                          {moduleNames.map((moduleName, index) => (
+                            <Badge key={index} variant="outline" colorScheme="blue">
+                              {moduleName}
+                            </Badge>
+                          ))}
+                        </HStack>
+                      ) : (
+                        <Text color="gray.500">No modules selected</Text>
+                      )}
+                    </Box>
+                  </VStack>
+                </Card.Body>
+              </Card.Root>
+
+              {/* Quiz Settings */}
+              <Card.Root>
+                <Card.Header>
+                  <Text fontSize="xl" fontWeight="semibold">
+                    Quiz Settings
+                  </Text>
+                </Card.Header>
+                <Card.Body>
+                  <VStack gap={4} align="stretch">
+                    <HStack justify="space-between">
+                      <Text fontWeight="medium" color="gray.700">
+                        Question Count
+                      </Text>
+                      <Badge variant="outline" colorScheme="purple">
+                        {quiz.question_count}
                       </Badge>
-                    ))}
-                  </HStack>
-                ) : (
-                  <Text color="gray.500">No modules selected</Text>
-                )}
-              </Box>
-            </VStack>
-          </Card.Body>
-        </Card.Root>
+                    </HStack>
 
-        {/* Quiz Settings */}
-        <Card.Root>
-          <Card.Header>
-            <Text fontSize="xl" fontWeight="semibold">
-              Quiz Settings
-            </Text>
-          </Card.Header>
-          <Card.Body>
-            <VStack gap={4} align="stretch">
-              <HStack justify="space-between">
-                <Text fontWeight="medium" color="gray.700">
-                  Question Count
-                </Text>
-                <Badge variant="outline" colorScheme="purple">
-                  {quiz.question_count}
-                </Badge>
-              </HStack>
+                    <HStack justify="space-between">
+                      <Text fontWeight="medium" color="gray.700">
+                        LLM Model
+                      </Text>
+                      <Badge variant="outline" colorScheme="purple">
+                        {quiz.llm_model}
+                      </Badge>
+                    </HStack>
 
-              <HStack justify="space-between">
-                <Text fontWeight="medium" color="gray.700">
-                  LLM Model
-                </Text>
-                <Badge variant="outline" colorScheme="purple">
-                  {quiz.llm_model}
-                </Badge>
-              </HStack>
+                    <HStack justify="space-between">
+                      <Text fontWeight="medium" color="gray.700">
+                        Temperature
+                      </Text>
+                      <Badge variant="outline" colorScheme="orange">
+                        {quiz.llm_temperature}
+                      </Badge>
+                    </HStack>
+                  </VStack>
+                </Card.Body>
+              </Card.Root>
 
-              <HStack justify="space-between">
-                <Text fontWeight="medium" color="gray.700">
-                  Temperature
-                </Text>
-                <Badge variant="outline" colorScheme="orange">
-                  {quiz.llm_temperature}
-                </Badge>
-              </HStack>
-            </VStack>
-          </Card.Body>
-        </Card.Root>
-
-        {/* Metadata */}
-        <Card.Root>
-          <Card.Header>
-            <Text fontSize="xl" fontWeight="semibold">
-              Quiz Metadata
-            </Text>
-          </Card.Header>
-          <Card.Body>
-            <VStack gap={4} align="stretch">
-              <HStack justify="space-between">
-                <Text fontWeight="medium" color="gray.700">
-                  Quiz ID
-                </Text>
-                <Text fontSize="sm" fontFamily="mono" color="gray.600">
-                  {quiz.id}
-                </Text>
-              </HStack>
-
-              {quiz.created_at && (
-                <HStack justify="space-between">
-                  <Text fontWeight="medium" color="gray.700">
-                    Created
+              {/* Metadata */}
+              <Card.Root>
+                <Card.Header>
+                  <Text fontSize="xl" fontWeight="semibold">
+                    Quiz Metadata
                   </Text>
-                  <Text color="gray.600">
-                    {new Date(quiz.created_at).toLocaleDateString("en-GB", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                </Card.Header>
+                <Card.Body>
+                  <VStack gap={4} align="stretch">
+                    <HStack justify="space-between">
+                      <Text fontWeight="medium" color="gray.700">
+                        Quiz ID
+                      </Text>
+                      <Text fontSize="sm" fontFamily="mono" color="gray.600">
+                        {quiz.id}
+                      </Text>
+                    </HStack>
+
+                    {quiz.created_at && (
+                      <HStack justify="space-between">
+                        <Text fontWeight="medium" color="gray.700">
+                          Created
+                        </Text>
+                        <Text color="gray.600">
+                          {new Date(quiz.created_at).toLocaleDateString("en-GB", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </Text>
+                      </HStack>
+                    )}
+
+                    {quiz.updated_at && (
+                      <HStack justify="space-between">
+                        <Text fontWeight="medium" color="gray.700">
+                          Last Updated
+                        </Text>
+                        <Text color="gray.600">
+                          {new Date(quiz.updated_at).toLocaleDateString("en-GB", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </Text>
+                      </HStack>
+                    )}
+                  </VStack>
+                </Card.Body>
+              </Card.Root>
+
+              {/* Quiz Generation Status */}
+              <Card.Root>
+                <Card.Header>
+                  <Text fontSize="xl" fontWeight="semibold">
+                    Quiz Generation Status
                   </Text>
-                </HStack>
+                </Card.Header>
+                <Card.Body>
+                  <VStack gap={4} align="stretch">
+                    {/* Content Extraction Status */}
+                    <Box>
+                      <HStack justify="space-between" mb={2}>
+                        <Text fontWeight="medium" color="gray.700">
+                          Content Extraction
+                        </Text>
+                        <StatusBadge
+                          status={quiz.content_extraction_status || "pending"}
+                        />
+                      </HStack>
+                      <StatusDescription
+                        status={quiz.content_extraction_status || "pending"}
+                        type="extraction"
+                        timestamp={quiz.content_extracted_at || null}
+                      />
+
+                      {/* Retry button for failed content extraction */}
+                      {quiz.content_extraction_status === "failed" && (
+                        <Button
+                          size="sm"
+                          colorScheme="blue"
+                          variant="outline"
+                          loading={retryExtractionMutation.isPending}
+                          onClick={() => retryExtractionMutation.mutate()}
+                          mt={2}
+                        >
+                          Retry Content Extraction
+                        </Button>
+                      )}
+                    </Box>
+
+                    {/* LLM Generation Status */}
+                    <Box>
+                      <HStack justify="space-between" mb={2}>
+                        <Text fontWeight="medium" color="gray.700">
+                          Question Generation
+                        </Text>
+                        <StatusBadge
+                          status={quiz.llm_generation_status || "pending"}
+                        />
+                      </HStack>
+                      <StatusDescription
+                        status={quiz.llm_generation_status || "pending"}
+                        type="generation"
+                      />
+                    </Box>
+                  </VStack>
+                </Card.Body>
+              </Card.Root>
+
+              {/* Question Generation Trigger */}
+              <QuestionGenerationTrigger quiz={quiz} />
+            </VStack>
+          </Tabs.Content>
+
+          <Tabs.Content value="questions">
+            <VStack gap={6} align="stretch" mt={6}>
+              {/* Question Statistics */}
+              {quiz.llm_generation_status === "completed" && (
+                <QuestionStats quizId={id} />
               )}
 
-              {quiz.updated_at && (
-                <HStack justify="space-between">
-                  <Text fontWeight="medium" color="gray.700">
-                    Last Updated
-                  </Text>
-                  <Text color="gray.600">
-                    {new Date(quiz.updated_at).toLocaleDateString("en-GB", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Text>
-                </HStack>
+              {/* Question Review */}
+              {quiz.llm_generation_status === "completed" && (
+                <QuestionReview quizId={id} />
+              )}
+
+              {/* Message when questions aren't ready */}
+              {quiz.llm_generation_status !== "completed" && (
+                <Card.Root>
+                  <Card.Body>
+                    <VStack gap={4} textAlign="center">
+                      <Text fontSize="xl" fontWeight="bold" color="gray.500">
+                        Questions Not Available Yet
+                      </Text>
+                      <Text color="gray.600">
+                        Questions will appear here once the generation process is complete.
+                        You can trigger generation from the "Quiz Information" tab.
+                      </Text>
+                    </VStack>
+                  </Card.Body>
+                </Card.Root>
               )}
             </VStack>
-          </Card.Body>
-        </Card.Root>
-
-        {/* Quiz Generation Status */}
-        <Card.Root>
-          <Card.Header>
-            <Text fontSize="xl" fontWeight="semibold">
-              Quiz Generation Status
-            </Text>
-          </Card.Header>
-          <Card.Body>
-            <VStack gap={4} align="stretch">
-              {/* Content Extraction Status */}
-              <Box>
-                <HStack justify="space-between" mb={2}>
-                  <Text fontWeight="medium" color="gray.700">
-                    Content Extraction
-                  </Text>
-                  <StatusBadge
-                    status={quiz.content_extraction_status || "pending"}
-                  />
-                </HStack>
-                <StatusDescription
-                  status={quiz.content_extraction_status || "pending"}
-                  type="extraction"
-                  timestamp={quiz.content_extracted_at || null}
-                />
-
-                {/* Retry button for failed content extraction */}
-                {quiz.content_extraction_status === "failed" && (
-                  <Button
-                    size="sm"
-                    colorScheme="blue"
-                    variant="outline"
-                    loading={retryExtractionMutation.isPending}
-                    onClick={() => retryExtractionMutation.mutate()}
-                    mt={2}
-                  >
-                    Retry Content Extraction
-                  </Button>
-                )}
-              </Box>
-
-              {/* LLM Generation Status */}
-              <Box>
-                <HStack justify="space-between" mb={2}>
-                  <Text fontWeight="medium" color="gray.700">
-                    Question Generation
-                  </Text>
-                  <StatusBadge
-                    status={quiz.llm_generation_status || "pending"}
-                  />
-                </HStack>
-                <StatusDescription
-                  status={quiz.llm_generation_status || "pending"}
-                  type="generation"
-                />
-              </Box>
-            </VStack>
-          </Card.Body>
-        </Card.Root>
+          </Tabs.Content>
+        </Tabs.Root>
       </VStack>
     </Container>
   );
