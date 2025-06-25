@@ -10,7 +10,7 @@ import {
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 
-import { QuestionsService } from "@/client";
+import { QuizService } from "@/client";
 
 interface QuestionStatsProps {
   quizId: string;
@@ -24,7 +24,7 @@ export function QuestionStats({ quizId }: QuestionStatsProps) {
   } = useQuery({
     queryKey: ["quiz", quizId, "questions", "stats"],
     queryFn: async () => {
-      return await QuestionsService.getQuizQuestionStats({ quizId });
+      return await QuizService.getQuizQuestionStats({ quizId });
     },
   });
 

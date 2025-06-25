@@ -188,14 +188,6 @@ export type QuestionsApproveQuizQuestionData = {
 
 export type QuestionsApproveQuizQuestionResponse = QuestionPublic
 
-export type QuestionsGetQuizQuestionStatsData = {
-  quizId: string
-}
-
-export type QuestionsGetQuizQuestionStatsResponse = {
-  [key: string]: number
-}
-
 export type QuizGetUserQuizzesEndpointResponse = Array<Quiz>
 
 export type QuizCreateNewQuizData = {
@@ -230,6 +222,14 @@ export type QuizTriggerQuestionGenerationData = {
 
 export type QuizTriggerQuestionGenerationResponse = {
   [key: string]: string
+}
+
+export type QuizGetQuizQuestionStatsData = {
+  quizId: string
+}
+
+export type QuizGetQuizQuestionStatsResponse = {
+  [key: string]: number
 }
 
 export type UsersReadUserMeResponse = UserPublic

@@ -364,12 +364,12 @@ def get_questions_by_quiz_id(session: Session, quiz_id: UUID) -> list[Question]:
         quiz_id (UUID): Quiz UUID to get questions for
 
     **Returns:**
-        list[Question]: List of question objects for the quiz, ordered by creation date
+        list[Question]: List of question objects for the quiz, ordered by creation date and ID for stability
     """
     statement = (
         select(Question)
         .where(Question.quiz_id == quiz_id)
-        .order_by(asc(Question.created_at))
+        .order_by(asc(Question.created_at), asc(Question.id))
     )
     return list(session.exec(statement).all())
 
@@ -476,7 +476,7 @@ def get_approved_questions_by_quiz_id(
     """
     statement = (
         select(Question)
-        .where(Question.quiz_id == quiz_id, Question.is_approved)
+        .where(Question.quiz_id == quiz_id, Question.is_approved == True)  # noqa: E712
         .order_by(asc(Question.created_at))
     )
     return list(session.exec(statement).all())
@@ -493,13 +493,11 @@ def get_question_counts_by_quiz_id(session: Session, quiz_id: UUID) -> dict[str,
     **Returns:**
         dict: Dictionary with 'total' and 'approved' question counts
     """
-    total_statement = select(Question).where(Question.quiz_id == quiz_id)
-    total_count = len(list(session.exec(total_statement).all()))
+    statement = select(Question).where(Question.quiz_id == quiz_id)
+    questions = list(session.exec(statement).all())
 
-    approved_statement = select(Question).where(
-        Question.quiz_id == quiz_id, Question.is_approved
-    )
-    approved_count = len(list(session.exec(approved_statement).all()))
+    total_count = len(questions)
+    approved_count = sum(1 for q in questions if q.is_approved)
 
     return {
         "total": total_count,

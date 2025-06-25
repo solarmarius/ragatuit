@@ -8,7 +8,6 @@ from app.crud import (
     approve_question,
     delete_question,
     get_question_by_id,
-    get_question_counts_by_quiz_id,
     get_questions_by_quiz_id,
     get_quiz_by_id,
     update_question,
@@ -504,85 +503,4 @@ def delete_quiz_question(
         )
         raise HTTPException(
             status_code=500, detail="Failed to delete question. Please try again."
-        )
-
-
-@router.get("/{quiz_id}/questions/stats")
-def get_quiz_question_stats(
-    quiz_id: UUID,
-    current_user: CurrentUser,
-    session: SessionDep,
-) -> dict[str, int]:
-    """
-    Get question statistics for a quiz.
-
-    Returns the total number of questions and approved questions for the quiz.
-
-    **Parameters:**
-        quiz_id (UUID): The UUID of the quiz to get stats for
-
-    **Returns:**
-        dict: Dictionary with 'total' and 'approved' question counts
-
-    **Authentication:**
-        Requires valid JWT token in Authorization header
-
-    **Raises:**
-        HTTPException: 404 if quiz not found or user doesn't own it
-        HTTPException: 500 if database operation fails
-    """
-    logger.info(
-        "question_stats_retrieval_initiated",
-        user_id=str(current_user.id),
-        quiz_id=str(quiz_id),
-    )
-
-    try:
-        # Verify quiz exists and user owns it
-        quiz = get_quiz_by_id(session, quiz_id)
-        if not quiz:
-            logger.warning(
-                "question_stats_quiz_not_found",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-            )
-            raise HTTPException(status_code=404, detail="Quiz not found")
-
-        if quiz.owner_id != current_user.id:
-            logger.warning(
-                "question_stats_access_denied",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-                quiz_owner_id=str(quiz.owner_id),
-            )
-            raise HTTPException(status_code=404, detail="Quiz not found")
-
-        # Get question counts
-        stats = get_question_counts_by_quiz_id(session, quiz_id)
-
-        logger.info(
-            "question_stats_retrieval_completed",
-            user_id=str(current_user.id),
-            quiz_id=str(quiz_id),
-            total_questions=stats["total"],
-            approved_questions=stats["approved"],
-        )
-
-        return stats
-
-    except HTTPException:
-        # Re-raise HTTP exceptions as-is
-        raise
-    except Exception as e:
-        logger.error(
-            "question_stats_retrieval_failed",
-            user_id=str(current_user.id),
-            quiz_id=str(quiz_id),
-            error=str(e),
-            error_type=type(e).__name__,
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to retrieve question stats. Please try again.",
         )
