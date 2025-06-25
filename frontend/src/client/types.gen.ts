@@ -117,6 +117,15 @@ export type CanvasGetPageContentResponse = {
   [key: string]: unknown
 }
 
+export type CanvasGetFileInfoData = {
+  courseId: number
+  fileId: number
+}
+
+export type CanvasGetFileInfoResponse = {
+  [key: string]: unknown
+}
+
 export type QuizGetUserQuizzesEndpointResponse = Array<Quiz>
 
 export type QuizCreateNewQuizData = {

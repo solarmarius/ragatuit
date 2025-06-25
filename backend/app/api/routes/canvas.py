@@ -743,3 +743,179 @@ async def get_page_content(
         raise HTTPException(
             status_code=500, detail="Unexpected error fetching page content"
         )
+
+
+@router.get("/courses/{course_id}/files/{file_id}")
+async def get_file_info(
+    course_id: int, file_id: int, current_user: CurrentUser, canvas_token: CanvasToken
+) -> dict[str, Any]:
+    """
+    Fetch metadata and download URL for a specific Canvas file.
+
+    Returns file information including the download URL needed to retrieve file content.
+    This endpoint is used to get file metadata before downloading for content extraction.
+
+    **Parameters:**
+        course_id (int): The Canvas course ID
+        file_id (int): The Canvas file ID
+
+    **Returns:**
+        dict: File metadata including download URL, size, content-type, etc.
+
+    **Authentication:**
+        Requires valid JWT token in Authorization header
+
+    **Raises:**
+        HTTPException: 401 if Canvas token is invalid or expired
+        HTTPException: 403 if user doesn't have access to the file
+        HTTPException: 404 if file not found
+        HTTPException: 503 if unable to connect to Canvas
+        HTTPException: 500 if Canvas API returns unexpected data
+
+    **Example Response:**
+        {
+            "id": 3611093,
+            "display_name": "linear_algebra_in_4_pages.pdf",
+            "filename": "linear_algebra_in_4_pages.pdf",
+            "content-type": "application/pdf",
+            "url": "https://canvas.../files/3611093/download?download_frd=1&verifier=...",
+            "size": 258646,
+            "created_at": "2025-06-25T06:24:29Z",
+            "updated_at": "2025-06-25T06:24:29Z"
+        }
+    """
+    # Validate parameters
+    if course_id <= 0 or file_id <= 0:
+        logger.warning(
+            "file_info_fetch_invalid_parameters",
+            user_id=str(current_user.id),
+            canvas_id=current_user.canvas_id,
+            course_id=course_id,
+            file_id=file_id,
+        )
+        raise HTTPException(
+            status_code=400, detail="Course ID and File ID must be positive integers"
+        )
+
+    logger.info(
+        "file_info_fetch_initiated",
+        user_id=str(current_user.id),
+        canvas_id=current_user.canvas_id,
+        course_id=course_id,
+        file_id=file_id,
+    )
+
+    try:
+        # Call Canvas API to get file info
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(
+                    f"http://canvas-mock:8001/api/v1/courses/{course_id}/files/{file_id}",
+                    headers={
+                        "Authorization": f"Bearer {canvas_token}",
+                        "Accept": "application/json",
+                    },
+                )
+                response.raise_for_status()
+                file_data = response.json()
+
+            except httpx.HTTPStatusError as e:
+                logger.error(
+                    "file_info_fetch_failed_canvas_error",
+                    user_id=str(current_user.id),
+                    canvas_id=current_user.canvas_id,
+                    course_id=course_id,
+                    file_id=file_id,
+                    status_code=e.response.status_code,
+                    response_text=e.response.text,
+                )
+
+                if e.response.status_code == 401:
+                    raise HTTPException(
+                        status_code=401,
+                        detail="Canvas access token invalid. Please re-login.",
+                    )
+                elif e.response.status_code == 403:
+                    raise HTTPException(
+                        status_code=403,
+                        detail="You don't have access to this file.",
+                    )
+                elif e.response.status_code == 404:
+                    raise HTTPException(
+                        status_code=404,
+                        detail="File not found in this course.",
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Canvas service is temporarily unavailable. Please try again later.",
+                    )
+            except httpx.RequestError as e:
+                logger.error(
+                    "file_info_fetch_failed_network_error",
+                    user_id=str(current_user.id),
+                    canvas_id=current_user.canvas_id,
+                    course_id=course_id,
+                    file_id=file_id,
+                    error=str(e),
+                )
+                raise HTTPException(
+                    status_code=503, detail="Failed to connect to Canvas API"
+                )
+
+        # Validate and process file data
+        if not isinstance(file_data, dict):
+            logger.error(
+                "file_info_parse_error_invalid_response_type",
+                user_id=str(current_user.id),
+                course_id=course_id,
+                file_id=file_id,
+                response_type=type(file_data).__name__,
+            )
+            raise HTTPException(
+                status_code=500, detail="Invalid response format from Canvas"
+            )
+
+        # Extract essential file information
+        processed_file = {
+            "id": file_data.get("id"),
+            "display_name": file_data.get("display_name", ""),
+            "filename": file_data.get("filename", ""),
+            "content-type": file_data.get("content-type", ""),
+            "url": file_data.get("url", ""),  # Download URL with verifier
+            "size": file_data.get("size", 0),
+            "created_at": file_data.get("created_at"),
+            "updated_at": file_data.get("updated_at"),
+            "mime_class": file_data.get("mime_class", ""),
+        }
+
+        logger.info(
+            "file_info_fetch_completed",
+            user_id=str(current_user.id),
+            canvas_id=current_user.canvas_id,
+            course_id=course_id,
+            file_id=file_id,
+            file_name=processed_file["display_name"],
+            file_size=processed_file["size"],
+            content_type=processed_file["content-type"],
+        )
+
+        return processed_file
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(
+            "file_info_fetch_unexpected_error",
+            user_id=str(current_user.id),
+            canvas_id=current_user.canvas_id,
+            course_id=course_id,
+            file_id=file_id,
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500, detail="Unexpected error fetching file info"
+        )

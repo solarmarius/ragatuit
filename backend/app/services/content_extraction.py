@@ -1,8 +1,10 @@
+import io
 import re
 from datetime import datetime
 from typing import Any
 
 import httpx
+import pypdf
 from bs4 import BeautifulSoup, Comment
 
 from app.core.logging_config import get_logger
@@ -15,6 +17,8 @@ MAX_TOTAL_CONTENT_SIZE = 50 * 1024 * 1024  # 50MB total per quiz
 MAX_PAGES_PER_MODULE = 100  # Maximum pages to process per module
 MIN_CONTENT_LENGTH = 50  # Minimum content length (configurable)
 MAX_CONTENT_LENGTH = 500_000  # Maximum content length per page
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB per file
+SUPPORTED_FILE_TYPES = ["application/pdf", "pdf"]  # Supported file content types
 
 # Retry configuration
 MAX_RETRIES = 3
@@ -139,7 +143,7 @@ class ContentExtractionService:
                 ]
             }
         """
-        extracted_content = {}
+        extracted_content: dict[str, list[dict[str, str]]] = {}
 
         for module_id in module_ids:
             logger.info(
@@ -152,35 +156,42 @@ class ContentExtractionService:
                 # Get module items
                 module_items = await self._fetch_module_items(module_id)
 
-                # Filter for Page type items only and apply limits
-                page_items = [
+                # Filter for Page and File type items and apply limits
+                content_items = [
                     item
                     for item in module_items
-                    if item.get("type") == "Page" and item.get("page_url")
+                    if (item.get("type") == "Page" and item.get("page_url"))
+                    or (item.get("type") == "File" and item.get("content_id"))
                 ]
 
-                # Limit pages per module for performance
-                if len(page_items) > MAX_PAGES_PER_MODULE:
+                # Limit content items per module for performance
+                if len(content_items) > MAX_PAGES_PER_MODULE:
                     logger.warning(
-                        "content_extraction_pages_limited",
+                        "content_extraction_items_limited",
                         course_id=self.course_id,
                         module_id=module_id,
-                        total_pages=len(page_items),
+                        total_items=len(content_items),
                         limit=MAX_PAGES_PER_MODULE,
                     )
-                    page_items = page_items[:MAX_PAGES_PER_MODULE]
+                    content_items = content_items[:MAX_PAGES_PER_MODULE]
 
                 logger.info(
-                    "content_extraction_pages_found",
+                    "content_extraction_items_found",
                     course_id=self.course_id,
                     module_id=module_id,
                     total_items=len(module_items),
-                    page_items=len(page_items),
+                    content_items=len(content_items),
+                    page_items=len(
+                        [i for i in content_items if i.get("type") == "Page"]
+                    ),
+                    file_items=len(
+                        [i for i in content_items if i.get("type") == "File"]
+                    ),
                 )
 
-                # Extract content from each page
+                # Extract content from each item (page or file)
                 module_content = []
-                for page_item in page_items:
+                for content_item in content_items:
                     try:
                         # Check total content size limit
                         if self.total_content_size > MAX_TOTAL_CONTENT_SIZE:
@@ -193,20 +204,31 @@ class ContentExtractionService:
                             )
                             break
 
-                        page_content = await self._extract_page_content(page_item)
-                        if page_content:
-                            content_size = len(page_content.get("content", ""))
+                        # Extract content based on item type
+                        item_content: dict[str, str] | None = None
+                        if content_item.get("type") == "Page":
+                            item_content = await self._extract_page_content(
+                                content_item
+                            )
+                        elif content_item.get("type") == "File":
+                            item_content = await self._extract_file_content(
+                                content_item
+                            )
+
+                        if item_content:
+                            content_size = len(item_content.get("content", ""))
                             self.total_content_size += content_size
-                            module_content.append(page_content)
+                            module_content.append(item_content)
                     except Exception as e:
                         logger.warning(
-                            "content_extraction_page_failed",
+                            "content_extraction_item_failed",
                             course_id=self.course_id,
                             module_id=module_id,
-                            page_url=page_item.get("page_url"),
+                            item_type=content_item.get("type"),
+                            item_title=content_item.get("title"),
                             error=str(e),
                         )
-                        # Continue with other pages even if one fails
+                        # Continue with other items even if one fails
                         continue
 
                 extracted_content[f"module_{module_id}"] = module_content
@@ -320,6 +342,7 @@ class ContentExtractionService:
             return {
                 "title": page_data.get("title", "Untitled Page"),
                 "content": cleaned_content,
+                "type": "page",
             }
 
         except Exception as e:
@@ -355,6 +378,222 @@ class ContentExtractionService:
                 error=str(e),
             )
             return {}
+
+    async def _extract_file_content(
+        self, file_item: dict[str, Any]
+    ) -> dict[str, str] | None:
+        """
+        Extract text content from a Canvas file item.
+
+        Currently supports PDF files only.
+        Returns None if file is not supported or extraction fails.
+        """
+        try:
+            file_id = file_item.get("content_id")
+            if not file_id:
+                logger.warning(
+                    "file_extraction_no_content_id",
+                    course_id=self.course_id,
+                    file_title=file_item.get("title"),
+                )
+                return None
+
+            # Get file metadata from Canvas API endpoint
+            file_info = await self._fetch_file_info(file_id)
+            if not file_info:
+                return None
+
+            # Check if file is supported (PDF only for now)
+            content_type = file_info.get("content-type", "")
+            mime_class = file_info.get("mime_class", "")
+
+            if (
+                content_type not in SUPPORTED_FILE_TYPES
+                and mime_class not in SUPPORTED_FILE_TYPES
+            ):
+                logger.info(
+                    "file_extraction_unsupported_type",
+                    course_id=self.course_id,
+                    file_id=file_id,
+                    content_type=content_type,
+                    mime_class=mime_class,
+                )
+                return None
+
+            # Check file size
+            file_size = file_info.get("size", 0)
+            if file_size > MAX_FILE_SIZE:
+                logger.warning(
+                    "file_extraction_size_limit",
+                    course_id=self.course_id,
+                    file_id=file_id,
+                    file_size=file_size,
+                    limit=MAX_FILE_SIZE,
+                )
+                return None
+
+            # Download and extract PDF content
+            download_url = file_info.get("url")
+            if not download_url:
+                logger.error(
+                    "file_extraction_no_download_url",
+                    course_id=self.course_id,
+                    file_id=file_id,
+                )
+                return None
+
+            text_content = await self._download_and_extract_pdf(file_id, download_url)
+
+            if text_content and len(text_content) >= MIN_CONTENT_LENGTH:
+                # Truncate if too long
+                if len(text_content) > MAX_CONTENT_LENGTH:
+                    logger.warning(
+                        "file_extraction_content_truncated",
+                        course_id=self.course_id,
+                        file_id=file_id,
+                        original_length=len(text_content),
+                        max_length=MAX_CONTENT_LENGTH,
+                    )
+                    text_content = text_content[:MAX_CONTENT_LENGTH]
+
+                return {
+                    "title": file_info.get(
+                        "display_name", file_item.get("title", "Untitled")
+                    ),
+                    "content": text_content,
+                    "type": "file",
+                    "content_type": content_type,
+                }
+
+            return None
+
+        except Exception as e:
+            logger.error(
+                "file_extraction_failed",
+                course_id=self.course_id,
+                file_id=file_item.get("content_id"),
+                error=str(e),
+                exc_info=True,
+            )
+            return None
+
+    async def _fetch_file_info(self, file_id: int) -> dict[str, Any]:
+        """
+        Fetch metadata for a Canvas file using the Canvas API.
+
+        This calls the same Canvas API endpoint that our canvas.py router uses,
+        ensuring consistent behavior and avoiding code duplication.
+        """
+        url = f"{self.canvas_base_url}/courses/{self.course_id}/files/{file_id}"
+        headers = {
+            "Authorization": f"Bearer {self.canvas_token}",
+            "Accept": "application/json",
+        }
+
+        try:
+            result = await self._make_request_with_retry(url, headers)
+            return result if isinstance(result, dict) else {}
+        except Exception as e:
+            logger.error(
+                "fetch_file_info_failed",
+                course_id=self.course_id,
+                file_id=file_id,
+                error=str(e),
+            )
+            return {}
+
+    async def _download_and_extract_pdf(
+        self, file_id: int, download_url: str
+    ) -> str | None:
+        """
+        Download PDF file and extract text content.
+
+        Uses in-memory processing with proper cleanup to avoid memory leaks.
+        Returns extracted text or None if extraction fails.
+        """
+        pdf_buffer = None
+        try:
+            # Download PDF to memory buffer
+            pdf_buffer = io.BytesIO()
+
+            async with httpx.AsyncClient() as client:
+                # Canvas file URLs may redirect, so follow redirects
+                response = await client.get(
+                    download_url,
+                    follow_redirects=True,
+                    timeout=60.0,  # 60 second timeout for file downloads
+                )
+                response.raise_for_status()
+
+                # Write content to buffer
+                pdf_buffer.write(response.content)
+
+            # Reset buffer position for reading
+            pdf_buffer.seek(0)
+
+            # Extract text from PDF
+            try:
+                reader = pypdf.PdfReader(pdf_buffer)
+                text_parts = []
+
+                for page_num, page in enumerate(reader.pages):
+                    try:
+                        page_text = page.extract_text()
+                        if page_text:
+                            text_parts.append(page_text)
+                    except Exception as e:
+                        logger.warning(
+                            "pdf_page_extraction_failed",
+                            course_id=self.course_id,
+                            file_id=file_id,
+                            page_num=page_num,
+                            error=str(e),
+                        )
+                        # Continue with other pages
+                        continue
+
+                # Join all page texts with newlines
+                full_text = "\n\n".join(text_parts)
+
+                # Clean up excessive whitespace
+                full_text = re.sub(r"\n{3,}", "\n\n", full_text)
+                full_text = re.sub(r" {2,}", " ", full_text)
+
+                return full_text.strip()
+
+            except Exception as e:
+                logger.error(
+                    "pdf_extraction_failed",
+                    course_id=self.course_id,
+                    file_id=file_id,
+                    error=str(e),
+                    exc_info=True,
+                )
+                return None
+
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                "pdf_download_http_error",
+                course_id=self.course_id,
+                file_id=file_id,
+                status_code=e.response.status_code,
+                error=str(e),
+            )
+            return None
+        except Exception as e:
+            logger.error(
+                "pdf_download_failed",
+                course_id=self.course_id,
+                file_id=file_id,
+                error=str(e),
+                exc_info=True,
+            )
+            return None
+        finally:
+            # CRITICAL: Always clean up the buffer to free memory
+            if pdf_buffer:
+                pdf_buffer.close()
+                del pdf_buffer
 
     def _clean_html_content(self, html_content: str) -> str:
         """

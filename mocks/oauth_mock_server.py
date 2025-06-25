@@ -385,7 +385,49 @@ mock_items = [
         "published": True,
         "unpublishable": True,
     },
+    {
+        "id": 1187794,
+        "title": "linear_algebra_in_4_pages.pdf",
+        "position": 7,
+        "indent": 0,
+        "quiz_lti": False,
+        "type": "File",
+        "module_id": 173690,
+        "html_url": "https://uit.instructure.com/courses/37823/modules/items/1187794",
+        "content_id": 3611093,
+        "url": "https://uit.instructure.com/api/v1/courses/37823/files/3611093",
+        "published": True,
+        "unpublishable": False,
+    },
 ]
+
+mock_file = {
+    "id": 3611093,
+    "folder_id": 708060,
+    "display_name": "linear_algebra_in_4_pages.pdf",
+    "filename": "linear_algebra_in_4_pages.pdf",
+    "uuid": "DbkzelfegXe2xwtsWlcwJyUg074Kwk3rSxKyC32x",
+    "upload_status": "success",
+    "content-type": "application/pdf",
+    "url": "https://uit.instructure.com/files/3611093/download?download_frd=1&verifier=DbkzelfegXe2xwtsWlcwJyUg074Kwk3rSxKyC32x",
+    "size": 258646,
+    "created_at": "2025-06-25T06:24:29Z",
+    "updated_at": "2025-06-25T06:24:29Z",
+    "unlock_at": None,
+    "locked": False,
+    "hidden": False,
+    "lock_at": None,
+    "hidden_for_user": False,
+    "thumbnail_url": None,
+    "modified_at": "2025-06-25T06:24:29Z",
+    "mime_class": "pdf",
+    "media_entry_id": None,
+    "category": "uncategorized",
+    "locked_for_user": False,
+    "visibility_level": "inherit",
+    "canvadoc_session_url": "/api/v1/canvadoc_session?blob=%7B%22user_id%22:107380000000071202,%22attachment_id%22:3611093,%22type%22:%22canvadoc%22%7D&hmac=e0c52c11271c535ad796f392b1d41934cb6448dc",
+    "crocodoc_session_url": None,
+}
 
 mock_page = {
     "title": "Testpage",
@@ -814,6 +856,27 @@ async def get_page(course_id: int, page_url: str, authorization: str = Header(No
     # For this mock, we'll return the mock_page regardless of the page_url
     # In a real implementation, you'd look up the specific page by URL
     return mock_page
+
+
+@app.get("/api/v1/courses/{course_id}/files/{file_id}")
+async def get_file(course_id: int, file_id: int, authorization: str = Header(None)):
+    """Mock Canvas file endpoint"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+
+    validate_token(authorization)
+
+    # Only return files for course ID 37823, otherwise return unauthorized
+    if course_id != 37823:
+        raise HTTPException(
+            status_code=403, detail="Unauthorized access to course files"
+        )
+
+    # Check if the requested file_id matches our mock file
+    if file_id != mock_file["id"]:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return mock_file
 
 
 @app.get("/api/v1/users/{user_id}/profile")

@@ -15,6 +15,8 @@ import type {
   CanvasGetModuleItemsResponse,
   CanvasGetPageContentData,
   CanvasGetPageContentResponse,
+  CanvasGetFileInfoData,
+  CanvasGetFileInfoResponse,
   QuizGetUserQuizzesEndpointResponse,
   QuizCreateNewQuizData,
   QuizCreateNewQuizResponse,
@@ -381,6 +383,63 @@ export class CanvasService {
       path: {
         course_id: data.courseId,
         page_url: data.pageUrl,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get File Info
+   * Fetch metadata and download URL for a specific Canvas file.
+   *
+   * Returns file information including the download URL needed to retrieve file content.
+   * This endpoint is used to get file metadata before downloading for content extraction.
+   *
+   * **Parameters:**
+   * course_id (int): The Canvas course ID
+   * file_id (int): The Canvas file ID
+   *
+   * **Returns:**
+   * dict: File metadata including download URL, size, content-type, etc.
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Raises:**
+   * HTTPException: 401 if Canvas token is invalid or expired
+   * HTTPException: 403 if user doesn't have access to the file
+   * HTTPException: 404 if file not found
+   * HTTPException: 503 if unable to connect to Canvas
+   * HTTPException: 500 if Canvas API returns unexpected data
+   *
+   * **Example Response:**
+   * {
+   * "id": 3611093,
+   * "display_name": "linear_algebra_in_4_pages.pdf",
+   * "filename": "linear_algebra_in_4_pages.pdf",
+   * "content-type": "application/pdf",
+   * "url": "https://canvas.../files/3611093/download?download_frd=1&verifier=...",
+   * "size": 258646,
+   * "created_at": "2025-06-25T06:24:29Z",
+   * "updated_at": "2025-06-25T06:24:29Z"
+   * }
+   * @param data The data for the request.
+   * @param data.courseId
+   * @param data.fileId
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static getFileInfo(
+    data: CanvasGetFileInfoData,
+  ): CancelablePromise<CanvasGetFileInfoResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/canvas/courses/{course_id}/files/{file_id}",
+      path: {
+        course_id: data.courseId,
+        file_id: data.fileId,
       },
       errors: {
         422: "Validation Error",
