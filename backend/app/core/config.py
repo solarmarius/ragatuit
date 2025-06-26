@@ -79,7 +79,7 @@ class Settings(BaseSettings):
     RETRY_BACKOFF_FACTOR: float = 2.0
 
     # LLM settings
-    OPENAI_SECRET_KEY: str
+    OPENAI_SECRET_KEY: str | None = None
     LLM_API_TIMEOUT: float = 120.0  # LLM request timeout in seconds (2 minutes)
 
     @computed_field  # type: ignore[prop-decorator]

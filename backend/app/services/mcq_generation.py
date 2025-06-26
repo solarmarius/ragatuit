@@ -42,6 +42,9 @@ class MCQGenerationService:
 
     def _get_llm(self, model: str, temperature: float) -> ChatOpenAI:
         """Get configured LLM instance with appropriate timeout."""
+        if not settings.OPENAI_SECRET_KEY:
+            raise ValueError("OPENAI_SECRET_KEY is required for LLM functionality")
+
         return ChatOpenAI(
             model=model,
             temperature=temperature,
