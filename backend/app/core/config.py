@@ -80,6 +80,7 @@ class Settings(BaseSettings):
 
     # LLM settings
     OPENAI_SECRET_KEY: str
+    LLM_API_TIMEOUT: float = 120.0  # LLM request timeout in seconds (2 minutes)
 
     @computed_field  # type: ignore[prop-decorator]
     @property

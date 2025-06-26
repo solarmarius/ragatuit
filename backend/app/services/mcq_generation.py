@@ -1,3 +1,4 @@
+import asyncio
 import json
 from datetime import datetime, timezone
 from typing import Any, TypedDict
@@ -40,11 +41,13 @@ class MCQGenerationService:
         self.workflow: StateGraph | None = None
 
     def _get_llm(self, model: str, temperature: float) -> ChatOpenAI:
-        """Get configured LLM instance."""
+        """Get configured LLM instance with appropriate timeout."""
         return ChatOpenAI(
             model=model,
             temperature=temperature,
             api_key=SecretStr(settings.OPENAI_SECRET_KEY),
+            timeout=settings.LLM_API_TIMEOUT,
+            max_retries=0,  # We'll handle retries ourselves
         )
 
     def _create_mcq_prompt(self) -> ChatPromptTemplate:
@@ -206,24 +209,87 @@ Generate exactly ONE question based on this content."""
             # Generate question from current chunk
             content_chunk = state["content_chunks"][current_chunk]
 
-            result = await chain.ainvoke(
-                {
-                    "content": content_chunk,
-                }
-            )
+            # Generate question with retry logic
+            result = None
+            last_exception = None
+
+            for attempt in range(settings.MAX_RETRIES + 1):
+                try:
+                    result = await chain.ainvoke({"content": content_chunk})
+                    break  # Success, exit retry loop
+                except Exception as e:
+                    last_exception = e
+                    error_str = str(e).lower()
+
+                    # Check if retryable (rate limits, timeouts, server errors)
+                    retryable = any(
+                        err in error_str
+                        for err in [
+                            "timeout",
+                            "rate_limit",
+                            "rate limit",
+                            "502",
+                            "503",
+                            "504",
+                        ]
+                    )
+
+                    if attempt == settings.MAX_RETRIES or not retryable:
+                        break  # Final attempt or non-retryable error
+
+                    # Wait with exponential backoff
+                    delay = settings.INITIAL_RETRY_DELAY * (
+                        settings.RETRY_BACKOFF_FACTOR**attempt
+                    )
+                    delay = min(delay, settings.MAX_RETRY_DELAY)
+                    await asyncio.sleep(delay)
+
+            if result is None:
+                if last_exception:
+                    raise last_exception
+                else:
+                    raise ValueError("Failed to get response from LLM after retries")
 
             # Parse JSON response
             result_text = result.content if hasattr(result, "content") else str(result)
 
-            # Clean up JSON response (remove markdown formatting if present)
+            # Clean up JSON response with robust parsing
             json_text = str(result_text).strip()
-            if json_text.startswith("```json"):
-                json_text = json_text[7:]
+
+            # Remove markdown code block formatting
+            if json_text.startswith("```"):
+                # Handle various markdown patterns: ```json, ```JSON, ```
+                lines = json_text.split("\n")
+                if len(lines) > 1:
+                    json_text = "\n".join(lines[1:])  # Skip first line
+
             if json_text.endswith("```"):
                 json_text = json_text[:-3]
-            json_text = json_text.strip()
 
-            question_data = json.loads(json_text)
+            # Remove any remaining backticks and extra whitespace
+            json_text = json_text.replace("`", "").strip()
+
+            # Try to find JSON object if surrounded by other text
+            start_idx = json_text.find("{")
+            end_idx = json_text.rfind("}")
+            if start_idx != -1 and end_idx != -1 and start_idx < end_idx:
+                json_text = json_text[start_idx : end_idx + 1]
+
+            try:
+                question_data = json.loads(json_text)
+            except json.JSONDecodeError as json_error:
+                logger.warning(
+                    "json_parsing_failed",
+                    quiz_id=str(quiz_id),
+                    chunk_index=current_chunk,
+                    response_length=len(result_text),
+                    cleaned_json_length=len(json_text),
+                    error=str(json_error),
+                    response_starts_with=str(result_text)[:50] + "..."
+                    if len(str(result_text)) > 50
+                    else str(result_text),
+                )
+                raise ValueError(f"Failed to parse LLM response as JSON: {json_error}")
 
             # Validate the question data structure
             required_fields = [
@@ -256,7 +322,8 @@ Generate exactly ONE question based on this content."""
                 quiz_id=str(quiz_id),
                 chunk_index=current_chunk,
                 questions_generated=state["questions_generated"],
-                question_text=question_data["question_text"][:100] + "...",
+                question_length=len(question_data["question_text"]),
+                correct_answer=question_data["correct_answer"],
             )
 
             return state
@@ -272,17 +339,35 @@ Generate exactly ONE question based on this content."""
 
             # Check if this is a critical error that should stop the entire workflow
             error_str = str(e).lower()
-            if any(
-                critical_error in error_str
-                for critical_error in [
-                    "invalid_request_error",
-                    "authentication",
-                    "authorization",
-                    "model_not_found",
-                    "organization must be verified",
-                    "rate_limit_exceeded",
-                ]
-            ):
+            error_type = type(e).__name__.lower()
+
+            # Critical errors that should stop the workflow immediately
+            critical_patterns = [
+                # Authentication/Authorization issues
+                "invalid_api_key",
+                "invalidapikeyerror",
+                "authentication",
+                "authorization",
+                "insufficient_quota",
+                "billing",
+                "organization must be verified",
+                "account_deactivated",
+                # Model/Request issues
+                "model_not_found",
+                "invalid_model",
+                "unsupported_model",
+                "invalid_request_error",
+                "context_length_exceeded",
+                "maximum_context_length",
+                "token_limit_exceeded",
+            ]
+
+            is_critical = any(
+                pattern in error_str or pattern in error_type
+                for pattern in critical_patterns
+            )
+
+            if is_critical:
                 # Critical error - stop the workflow
                 state[
                     "error_message"
@@ -349,31 +434,53 @@ Generate exactly ONE question based on this content."""
         try:
             with Session(engine) as session:
                 saved_count = 0
+                question_objects = []
 
+                # First, validate all questions before saving any
                 for question_data in questions:
-                    # Create QuestionCreate instance for validation
-                    question_create = QuestionCreate(**question_data)
+                    try:
+                        # Create QuestionCreate instance for validation
+                        question_create = QuestionCreate(**question_data)
 
-                    # Create Question instance
-                    question = Question(
-                        quiz_id=quiz_id,
-                        question_text=question_create.question_text,
-                        option_a=question_create.option_a,
-                        option_b=question_create.option_b,
-                        option_c=question_create.option_c,
-                        option_d=question_create.option_d,
-                        correct_answer=question_create.correct_answer,
-                        is_approved=False,
-                    )
-                    session.add(question)
-                    saved_count += 1
+                        # Create Question instance
+                        question = Question(
+                            quiz_id=quiz_id,
+                            question_text=question_create.question_text,
+                            option_a=question_create.option_a,
+                            option_b=question_create.option_b,
+                            option_c=question_create.option_c,
+                            option_d=question_create.option_d,
+                            correct_answer=question_create.correct_answer,
+                            is_approved=False,
+                        )
+                        question_objects.append(question)
+                    except Exception as validation_error:
+                        logger.warning(
+                            "question_validation_failed",
+                            quiz_id=str(quiz_id),
+                            question_fields=list(question_data.keys())
+                            if isinstance(question_data, dict)
+                            else "invalid_format",
+                            error=str(validation_error),
+                        )
+                        continue  # Skip invalid questions but continue with others
 
-                session.commit()
+                # Add all valid questions in a single transaction
+                if question_objects:
+                    try:
+                        for question in question_objects:
+                            session.add(question)
+                        session.commit()
+                        saved_count = len(question_objects)
+                    except Exception as db_error:
+                        session.rollback()
+                        raise db_error
 
                 logger.info(
                     "saving_questions_completed",
                     quiz_id=str(quiz_id),
                     questions_saved=saved_count,
+                    questions_attempted=len(questions),
                 )
 
                 return state
