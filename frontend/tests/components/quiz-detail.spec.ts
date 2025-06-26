@@ -458,4 +458,214 @@ test.describe("Quiz Detail Component", () => {
     await expect(quizIdElement).toBeVisible()
     await expect(quizIdElement).toHaveCSS("font-family", /mono/)
   })
+
+  test("should display tabs with correct content", async ({ page }) => {
+    const mockQuiz = {
+      id: mockQuizId,
+      title: "Tab Test Quiz",
+      canvas_course_id: 12345,
+      canvas_course_name: "Test Course",
+      selected_modules: '{"173467": "Module 1"}',
+      question_count: 50,
+      llm_model: "gpt-4o",
+      llm_temperature: 0.5,
+      content_extraction_status: "completed",
+      llm_generation_status: "completed",
+      created_at: "2024-01-15T10:30:00Z",
+      updated_at: "2024-01-16T14:20:00Z",
+      owner_id: "user123",
+    }
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mockQuiz),
+      })
+    })
+
+    await page.reload()
+
+    // Check that tabs are present
+    await expect(page.getByRole("tab", { name: "Quiz Information" })).toBeVisible()
+    await expect(page.getByRole("tab", { name: "Questions" })).toBeVisible()
+
+    // Quiz Information tab should be active by default
+    await expect(page.getByRole("tab", { name: "Quiz Information" })).toHaveAttribute("aria-selected", "true")
+
+    // Info content should be visible
+    await expect(page.getByText("Course Information")).toBeVisible()
+    await expect(page.getByText("Quiz Settings")).toBeVisible()
+  })
+
+  test("should switch between tabs correctly", async ({ page }) => {
+    const mockQuiz = {
+      id: mockQuizId,
+      title: "Tab Navigation Quiz",
+      canvas_course_id: 12345,
+      canvas_course_name: "Test Course",
+      selected_modules: '{"173467": "Module 1"}',
+      question_count: 50,
+      llm_model: "gpt-4o",
+      llm_temperature: 0.5,
+      content_extraction_status: "completed",
+      llm_generation_status: "completed",
+      created_at: "2024-01-15T10:30:00Z",
+      updated_at: "2024-01-16T14:20:00Z",
+      owner_id: "user123",
+    }
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mockQuiz),
+      })
+    })
+
+    // Mock question stats API
+    await page.route(`**/api/v1/quiz/${mockQuizId}/questions/stats`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          total_questions: 50,
+          pending_questions: 30,
+          approved_questions: 20,
+        }),
+      })
+    })
+
+    await page.reload()
+
+    // Click on Questions tab
+    await page.getByRole("tab", { name: "Questions" }).click()
+
+    // Questions tab should now be active
+    await expect(page.getByRole("tab", { name: "Questions" })).toHaveAttribute("aria-selected", "true")
+    await expect(page.getByRole("tab", { name: "Quiz Information" })).toHaveAttribute("aria-selected", "false")
+
+    // Questions content should be visible (QuestionStats component)
+    await expect(page.getByText("Question Review Progress")).toBeVisible()
+  })
+
+  test("should show Review Quiz button when generation is complete", async ({ page }) => {
+    const mockQuiz = {
+      id: mockQuizId,
+      title: "Complete Generation Quiz",
+      canvas_course_id: 12345,
+      canvas_course_name: "Test Course",
+      selected_modules: '{"173467": "Module 1"}',
+      question_count: 50,
+      llm_model: "gpt-4o",
+      llm_temperature: 0.5,
+      content_extraction_status: "completed",
+      llm_generation_status: "completed",
+      created_at: "2024-01-15T10:30:00Z",
+      updated_at: "2024-01-16T14:20:00Z",
+      owner_id: "user123",
+    }
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mockQuiz),
+      })
+    })
+
+    await page.reload()
+
+    // Check that Review Quiz button is visible when generation is complete
+    const reviewButton = page.getByRole("button", { name: "Review Quiz" })
+    await expect(reviewButton).toBeVisible()
+
+    // Click Review Quiz button should navigate to Questions tab
+    await reviewButton.click()
+
+    // Questions tab should be active
+    await expect(page.getByRole("tab", { name: "Questions" })).toHaveAttribute("aria-selected", "true")
+  })
+
+  test("should not show Review Quiz button when generation is not complete", async ({ page }) => {
+    const mockQuiz = {
+      id: mockQuizId,
+      title: "Incomplete Generation Quiz",
+      canvas_course_id: 12345,
+      canvas_course_name: "Test Course",
+      selected_modules: '{"173467": "Module 1"}',
+      question_count: 50,
+      llm_model: "gpt-4o",
+      llm_temperature: 0.5,
+      content_extraction_status: "processing",
+      llm_generation_status: "pending",
+      created_at: "2024-01-15T10:30:00Z",
+      updated_at: "2024-01-16T14:20:00Z",
+      owner_id: "user123",
+    }
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mockQuiz),
+      })
+    })
+
+    await page.reload()
+
+    // Check that Review Quiz button is not visible when generation is not complete
+    await expect(page.getByRole("button", { name: "Review Quiz" })).not.toBeVisible()
+  })
+
+  test("should show Review Quiz button only when both statuses are completed", async ({ page }) => {
+    // Test case 1: Only content extraction is complete
+    const mockQuizPartial = {
+      id: mockQuizId,
+      title: "Partial Complete Quiz",
+      canvas_course_id: 12345,
+      canvas_course_name: "Test Course",
+      selected_modules: '{"173467": "Module 1"}',
+      question_count: 50,
+      llm_model: "gpt-4o",
+      llm_temperature: 0.5,
+      content_extraction_status: "completed",
+      llm_generation_status: "processing",
+      created_at: "2024-01-15T10:30:00Z",
+      updated_at: "2024-01-16T14:20:00Z",
+      owner_id: "user123",
+    }
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mockQuizPartial),
+      })
+    })
+
+    await page.reload()
+
+    // Review Quiz button should not be visible
+    await expect(page.getByRole("button", { name: "Review Quiz" })).not.toBeVisible()
+
+    // Test case 2: Both are complete
+    const mockQuizComplete = {
+      ...mockQuizPartial,
+      llm_generation_status: "completed",
+    }
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mockQuizComplete),
+      })
+    })
+
+    await page.reload()
+
+    // Review Quiz button should now be visible
+    await expect(page.getByRole("button", { name: "Review Quiz" })).toBeVisible()
+  })
 })
