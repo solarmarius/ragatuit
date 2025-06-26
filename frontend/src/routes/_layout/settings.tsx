@@ -1,16 +1,11 @@
-import { Container, Heading, Tabs } from "@chakra-ui/react"
+import { Box, Container, Tabs, Text, VStack } from "@chakra-ui/react"
 import { createFileRoute } from "@tanstack/react-router"
+import { useState } from "react"
 
 import Appearance from "@/components/UserSettings/Appearance"
 import DeleteAccount from "@/components/UserSettings/DeleteAccount"
 import UserInformation from "@/components/UserSettings/UserInformation"
 import useAuth from "@/hooks/useCanvasAuth"
-
-const tabsConfig = [
-  { value: "my-profile", title: "My profile", component: UserInformation },
-  { value: "appearance", title: "Appearance", component: Appearance },
-  { value: "danger-zone", title: "Danger zone", component: DeleteAccount },
-]
 
 export const Route = createFileRoute("/_layout/settings")({
   component: UserSettings,
@@ -18,31 +13,56 @@ export const Route = createFileRoute("/_layout/settings")({
 
 function UserSettings() {
   const { user: currentUser } = useAuth()
+  const [currentTab, setCurrentTab] = useState("my-profile")
 
   if (!currentUser) {
     return null
   }
 
   return (
-    <Container maxW="full">
-      <Heading size="lg" textAlign={{ base: "center", md: "left" }} py={12}>
-        User Settings
-      </Heading>
+    <Container maxW="6xl" py={8}>
+      <VStack gap={6} align="stretch">
+        {/* Header */}
+        <Box>
+          <Text fontSize="3xl" fontWeight="bold">
+            User Settings
+          </Text>
+          <Text color="gray.600">
+            Manage your account settings and preferences
+          </Text>
+        </Box>
 
-      <Tabs.Root defaultValue="my-profile" variant="subtle">
-        <Tabs.List>
-          {tabsConfig.map((tab) => (
-            <Tabs.Trigger key={tab.value} value={tab.value}>
-              {tab.title}
-            </Tabs.Trigger>
-          ))}
-        </Tabs.List>
-        {tabsConfig.map((tab) => (
-          <Tabs.Content key={tab.value} value={tab.value}>
-            <tab.component />
+        {/* Settings Tabs */}
+        <Tabs.Root
+          value={currentTab}
+          onValueChange={(details) => setCurrentTab(details.value)}
+          size="lg"
+        >
+          <Tabs.List>
+            <Tabs.Trigger value="my-profile">My profile</Tabs.Trigger>
+            <Tabs.Trigger value="appearance">Appearance</Tabs.Trigger>
+            <Tabs.Trigger value="danger-zone">Danger zone</Tabs.Trigger>
+          </Tabs.List>
+
+          <Tabs.Content value="my-profile">
+            <Box mt={6}>
+              <UserInformation />
+            </Box>
           </Tabs.Content>
-        ))}
-      </Tabs.Root>
+
+          <Tabs.Content value="appearance">
+            <Box mt={6}>
+              <Appearance />
+            </Box>
+          </Tabs.Content>
+
+          <Tabs.Content value="danger-zone">
+            <Box mt={6}>
+              <DeleteAccount />
+            </Box>
+          </Tabs.Content>
+        </Tabs.Root>
+      </VStack>
     </Container>
   )
 }

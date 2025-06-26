@@ -2,7 +2,6 @@ import {
   Alert,
   Box,
   Button,
-  Container,
   Flex,
   Heading,
   Input,
@@ -72,73 +71,78 @@ const UserInformation = () => {
 
   return (
     <>
-      <Container maxW="full">
-        <Heading size="sm" py={4}>
-          User Information
-        </Heading>
-        <Box
-          w={{ sm: "full", md: "sm" }}
-          as="form"
-          onSubmit={handleSubmit(onSubmit)}
-        >
-          <Field label="Name">
-            {editMode ? (
-              <Input
-                {...register("name", { maxLength: 30 })}
-                type="text"
-                size="md"
-              />
-            ) : (
-              <Text
-                fontSize="md"
-                py={2}
-                color={!currentUser?.name ? "gray" : "inherit"}
-                truncate
-                maxW="sm"
-              >
-                {currentUser?.name || "N/A"}
-              </Text>
-            )}
-          </Field>
-          <Flex mt={4} gap={3}>
-            <Button
-              variant="solid"
-              onClick={toggleEditMode}
-              type={editMode ? "button" : "submit"}
-              loading={editMode ? isSubmitting : false}
-              disabled={editMode ? !isDirty || !getValues("name") : false}
+      <Heading size="xl" pb={4}>
+        User Information
+      </Heading>
+      <Box
+        w={{ sm: "full", md: "sm" }}
+        as="form"
+        onSubmit={handleSubmit(onSubmit)}
+      >
+        <Field label="Name">
+          {editMode ? (
+            <Input
+              {...register("name", { maxLength: 30 })}
+              type="text"
+              size="md"
+            />
+          ) : (
+            <Text
+              fontSize="md"
+              py={2}
+              color={!currentUser?.name ? "gray" : "inherit"}
+              truncate
+              maxW="sm"
             >
-              {editMode ? "Save" : "Edit"}
+              {currentUser?.name || "N/A"}
+            </Text>
+          )}
+        </Field>
+        <Flex mt={4} gap={3}>
+          <Button
+            variant="solid"
+            onClick={toggleEditMode}
+            type={editMode ? "button" : "submit"}
+            loading={editMode ? isSubmitting : false}
+            disabled={editMode ? !isDirty || !getValues("name") : false}
+            colorPalette="blue"
+          >
+            {editMode ? "Save" : "Edit"}
+          </Button>
+          {editMode && (
+            <Button
+              variant="subtle"
+              colorPalette="gray"
+              onClick={onCancel}
+              disabled={isSubmitting}
+            >
+              Cancel
             </Button>
-            {editMode && (
-              <Button
-                variant="subtle"
-                colorPalette="gray"
-                onClick={onCancel}
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-            )}
-          </Flex>
-        </Box>
+          )}
+        </Flex>
+      </Box>
 
-        <Alert.Root status="info" variant="subtle" mt={6} colorPalette="teal">
-          <Alert.Content>
-            <Alert.Description>
-              Review our{" "}
-              <Link
-                href="/privacy-policy"
-                color="blue.500"
-                textDecoration="underline"
-              >
-                Privacy Policy
-              </Link>{" "}
-              to understand how we handle your data.
-            </Alert.Description>
-          </Alert.Content>
-        </Alert.Root>
-      </Container>
+      <Alert.Root
+        status="info"
+        variant="subtle"
+        mt={6}
+        colorPalette="orange"
+        w="50%"
+      >
+        <Alert.Content>
+          <Alert.Description>
+            Review our{" "}
+            <Link
+              href="/privacy-policy"
+              color="blue.500"
+              textDecoration="underline"
+            >
+              Privacy Policy
+            </Link>{" "}
+            to understand how we handle your data.
+          </Alert.Description>
+        </Alert.Content>
+      </Alert.Root>
     </>
   )
 }

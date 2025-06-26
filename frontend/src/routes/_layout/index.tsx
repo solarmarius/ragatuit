@@ -1,8 +1,22 @@
-import { Box, Button, Container, Text, VStack } from "@chakra-ui/react"
-import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import {
+  Box,
+  Container,
+  HStack,
+  SimpleGrid,
+  Text,
+  VStack,
+} from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
+import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
 
+import { QuizService } from "@/client"
+import { HelpPanel } from "@/components/Dashboard/HelpPanel"
+import { QuizGenerationPanel } from "@/components/Dashboard/QuizGenerationPanel"
+import { QuizReviewPanel } from "@/components/Dashboard/QuizReviewPanel"
 import { OnboardingModal } from "@/components/Onboarding/OnboardingModal"
+import { Button } from "@/components/ui/button"
 import useAuth from "@/hooks/useCanvasAuth"
+import useCustomToast from "@/hooks/useCustomToast"
 import { useOnboarding } from "@/hooks/useOnboarding"
 
 export const Route = createFileRoute("/_layout/")({
@@ -10,8 +24,8 @@ export const Route = createFileRoute("/_layout/")({
 })
 
 function Dashboard() {
-  const navigate = useNavigate()
   const { user: currentUser } = useAuth()
+  const { showErrorToast } = useCustomToast()
   const {
     currentStep,
     isOpen,
@@ -21,26 +35,74 @@ function Dashboard() {
     skipOnboarding,
   } = useOnboarding()
 
-  const handleCreateQuiz = () => {
-    navigate({ to: "/create-quiz" })
+  const {
+    data: quizzes,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["user-quizzes"],
+    queryFn: async () => {
+      try {
+        const response = await QuizService.getUserQuizzesEndpoint()
+        return response
+      } catch (err) {
+        showErrorToast("Failed to load quizzes")
+        throw err
+      }
+    },
+  })
+
+  if (error) {
+    return (
+      <Container maxW="6xl" py={8}>
+        <VStack gap={6} align="stretch">
+          <Box>
+            <Text fontSize="3xl" fontWeight="bold" color="red.500">
+              Error Loading Dashboard
+            </Text>
+            <Text color="gray.600">
+              There was an error loading your dashboard. Please try refreshing
+              the page.
+            </Text>
+          </Box>
+        </VStack>
+      </Container>
+    )
   }
 
   return (
     <>
-      <Container maxW="full">
-        <VStack gap={6} align="stretch" pt={12} m={4}>
-          <Box>
-            <Text fontSize="2xl" truncate maxW="sm">
-              Hi, {currentUser?.name} 👋🏼
-            </Text>
-            <Text>Welcome back, nice to see you again!</Text>
-          </Box>
-
-          <Box>
-            <Button colorScheme="blue" size="lg" onClick={handleCreateQuiz}>
-              Create Quiz
+      <Container maxW="6xl" py={8} data-testid="dashboard-container">
+        <VStack gap={6} align="stretch">
+          {/* Header */}
+          <HStack justify="space-between" align="center">
+            <Box>
+              <Text fontSize="3xl" fontWeight="bold">
+                Hi, {currentUser?.name} 👋🏼
+              </Text>
+              <Text color="gray.600">
+                Welcome back! Here's an overview of your quizzes and helpful
+                resources.
+              </Text>
+            </Box>
+            <Button asChild>
+              <RouterLink to="/create-quiz">Create New Quiz</RouterLink>
             </Button>
-          </Box>
+          </HStack>
+
+          {/* Dashboard Panels */}
+          <SimpleGrid
+            columns={{ base: 1, md: 2, lg: 3 }}
+            gap={6}
+            data-testid="dashboard-grid"
+          >
+            <QuizReviewPanel quizzes={quizzes || []} isLoading={isLoading} />
+            <QuizGenerationPanel
+              quizzes={quizzes || []}
+              isLoading={isLoading}
+            />
+            <HelpPanel />
+          </SimpleGrid>
         </VStack>
       </Container>
 
