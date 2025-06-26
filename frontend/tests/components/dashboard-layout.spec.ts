@@ -4,8 +4,8 @@ import {
   createQuizListResponse,
   createUserResponse,
   emptyQuizList,
-  quizzesNeedingReview,
   quizzesBeingGenerated,
+  quizzesNeedingReview,
 } from "../fixtures/quiz-data"
 
 test.describe("Dashboard Layout", () => {
@@ -45,9 +45,7 @@ test.describe("Dashboard Layout", () => {
     await page.goto("/")
 
     // Check that all three panels are present
-    await expect(
-      page.getByText("Quizzes Needing Review").first(),
-    ).toBeVisible()
+    await expect(page.getByText("Quizzes Needing Review").first()).toBeVisible()
     await expect(
       page.getByText("Quizzes Being Generated").first(),
     ).toBeVisible()
@@ -70,7 +68,9 @@ test.describe("Dashboard Layout", () => {
     await expect(page.getByText("About Rag@UiT")).toBeVisible()
   })
 
-  test("should display loading states while fetching data", async ({ page }) => {
+  test("should display loading states while fetching data", async ({
+    page,
+  }) => {
     // Delay the API response to test loading state
     await page.route("**/api/v1/quiz/", async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -80,23 +80,25 @@ test.describe("Dashboard Layout", () => {
     await page.goto("/")
 
     // Check for skeleton loading elements (should be visible initially)
-    await expect(page.locator('.chakra-skeleton').first()).toBeVisible()
+    await expect(page.locator(".chakra-skeleton").first()).toBeVisible()
 
     // Wait for data to load
-    await expect(
-      page.getByText("Quizzes Needing Review").first(),
-    ).toBeVisible({ timeout: 2000 })
+    await expect(page.getByText("Quizzes Needing Review").first()).toBeVisible({
+      timeout: 2000,
+    })
   })
 
   test("should handle API error gracefully", async ({ page }) => {
     await page.route("**/api/v1/quiz/", async (route) => {
-      await route.abort('failed')
+      await route.abort("failed")
     })
 
     await page.goto("/")
 
     // Wait for error state to appear
-    await expect(page.getByText("Error Loading Dashboard")).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText("Error Loading Dashboard")).toBeVisible({
+      timeout: 10000,
+    })
     await expect(
       page.getByText(
         "There was an error loading your dashboard. Please try refreshing the page.",
@@ -127,9 +129,7 @@ test.describe("Dashboard Layout", () => {
     await page.goto("/")
 
     // All panels should still be visible but in different layout
-    await expect(
-      page.getByText("Quizzes Needing Review").first(),
-    ).toBeVisible()
+    await expect(page.getByText("Quizzes Needing Review").first()).toBeVisible()
     await expect(
       page.getByText("Quizzes Being Generated").first(),
     ).toBeVisible()
@@ -150,9 +150,7 @@ test.describe("Dashboard Layout", () => {
     await page.goto("/")
 
     // All panels should be stacked vertically
-    await expect(
-      page.getByText("Quizzes Needing Review").first(),
-    ).toBeVisible()
+    await expect(page.getByText("Quizzes Needing Review").first()).toBeVisible()
     await expect(
       page.getByText("Quizzes Being Generated").first(),
     ).toBeVisible()
@@ -197,10 +195,16 @@ test.describe("Dashboard Layout", () => {
     await page.goto("/")
 
     // Should show correct counts - use more specific selectors to avoid conflicts
-    const reviewPanelBadge = page.locator('text="Quizzes Needing Review"').locator("..").getByTestId("badge")
+    const reviewPanelBadge = page
+      .locator('text="Quizzes Needing Review"')
+      .locator("..")
+      .getByTestId("badge")
     await expect(reviewPanelBadge).toContainText("2")
 
-    const generationPanelBadge = page.locator('text="Quizzes Being Generated"').locator("..").getByTestId("badge")
+    const generationPanelBadge = page
+      .locator('text="Quizzes Being Generated"')
+      .locator("..")
+      .getByTestId("badge")
     await expect(generationPanelBadge).toContainText("3")
 
     // Both panels should have content

@@ -11,39 +11,39 @@ import {
   Text,
   Textarea,
   VStack,
-} from "@chakra-ui/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { MdCancel, MdCheck, MdDelete, MdEdit, MdSave } from "react-icons/md";
+} from "@chakra-ui/react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
+import { MdCancel, MdCheck, MdDelete, MdEdit, MdSave } from "react-icons/md"
 
 import {
   type QuestionPublic,
   type QuestionUpdate,
   QuestionsService,
-} from "@/client";
-import { Field } from "@/components/ui/field";
-import { Radio, RadioGroup } from "@/components/ui/radio";
-import useCustomToast from "@/hooks/useCustomToast";
+} from "@/client"
+import { Field } from "@/components/ui/field"
+import { Radio, RadioGroup } from "@/components/ui/radio"
+import useCustomToast from "@/hooks/useCustomToast"
 
 interface QuestionReviewProps {
-  quizId: string;
+  quizId: string
 }
 
 interface EditingQuestion {
-  questionText: string;
-  optionA: string;
-  optionB: string;
-  optionC: string;
-  optionD: string;
-  correctAnswer: string;
+  questionText: string
+  optionA: string
+  optionB: string
+  optionC: string
+  optionD: string
+  correctAnswer: string
 }
 
 export function QuestionReview({ quizId }: QuestionReviewProps) {
-  const { showErrorToast, showSuccessToast } = useCustomToast();
-  const queryClient = useQueryClient();
+  const { showErrorToast, showSuccessToast } = useCustomToast()
+  const queryClient = useQueryClient()
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(
-    null
-  );
+    null,
+  )
   const [editingData, setEditingData] = useState<EditingQuestion>({
     questionText: "",
     optionA: "",
@@ -51,8 +51,8 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
     optionC: "",
     optionD: "",
     correctAnswer: "A",
-  });
-  const [filterView, setFilterView] = useState<"pending" | "all">("pending");
+  })
+  const [filterView, setFilterView] = useState<"pending" | "all">("pending")
 
   // Fetch questions
   const {
@@ -62,22 +62,22 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
   } = useQuery({
     queryKey: ["quiz", quizId, "questions"],
     queryFn: async () => {
-      return await QuestionsService.getQuizQuestions({ quizId });
+      return await QuestionsService.getQuizQuestions({ quizId })
     },
-  });
+  })
 
   // Filter questions based on current view
   const filteredQuestions = questions
     ? filterView === "pending"
       ? questions.filter((q) => !q.is_approved)
       : questions
-    : [];
+    : []
 
   // Calculate counts
   const pendingCount = questions
     ? questions.filter((q) => !q.is_approved).length
-    : 0;
-  const totalCount = questions ? questions.length : 0;
+    : 0
+  const totalCount = questions ? questions.length : 0
 
   // Approve question mutation
   const approveQuestionMutation = useMutation({
@@ -85,22 +85,22 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       return await QuestionsService.approveQuizQuestion({
         quizId,
         questionId,
-      });
+      })
     },
     onSuccess: (_, _questionId) => {
-      showSuccessToast("Question approved");
+      showSuccessToast("Question approved")
       queryClient.invalidateQueries({
         queryKey: ["quiz", quizId, "questions"],
-      });
+      })
       queryClient.invalidateQueries({
         queryKey: ["quiz", quizId, "questions", "stats"],
-      });
+      })
     },
     onError: (error: any) => {
-      const message = error?.body?.detail || "Failed to approve question";
-      showErrorToast(message);
+      const message = error?.body?.detail || "Failed to approve question"
+      showErrorToast(message)
     },
-  });
+  })
 
   // Update question mutation
   const updateQuestionMutation = useMutation({
@@ -108,27 +108,27 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       questionId,
       data,
     }: {
-      questionId: string;
-      data: QuestionUpdate;
+      questionId: string
+      data: QuestionUpdate
     }) => {
       return await QuestionsService.updateQuizQuestion({
         quizId,
         questionId,
         requestBody: data,
-      });
+      })
     },
     onSuccess: () => {
-      showSuccessToast("Question updated");
-      setEditingQuestionId(null);
+      showSuccessToast("Question updated")
+      setEditingQuestionId(null)
       queryClient.invalidateQueries({
         queryKey: ["quiz", quizId, "questions"],
-      });
+      })
     },
     onError: (error: any) => {
-      const message = error?.body?.detail || "Failed to update question";
-      showErrorToast(message);
+      const message = error?.body?.detail || "Failed to update question"
+      showErrorToast(message)
     },
-  });
+  })
 
   // Delete question mutation
   const deleteQuestionMutation = useMutation({
@@ -136,25 +136,25 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       return await QuestionsService.deleteQuizQuestion({
         quizId,
         questionId,
-      });
+      })
     },
     onSuccess: () => {
-      showSuccessToast("Question deleted");
+      showSuccessToast("Question deleted")
       queryClient.invalidateQueries({
         queryKey: ["quiz", quizId, "questions"],
-      });
+      })
       queryClient.invalidateQueries({
         queryKey: ["quiz", quizId, "questions", "stats"],
-      });
+      })
     },
     onError: (error: any) => {
-      const message = error?.body?.detail || "Failed to delete question";
-      showErrorToast(message);
+      const message = error?.body?.detail || "Failed to delete question"
+      showErrorToast(message)
     },
-  });
+  })
 
   const startEditing = (question: QuestionPublic) => {
-    setEditingQuestionId(question.id);
+    setEditingQuestionId(question.id)
     setEditingData({
       questionText: question.question_text,
       optionA: question.option_a,
@@ -162,11 +162,11 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       optionC: question.option_c,
       optionD: question.option_d,
       correctAnswer: question.correct_answer,
-    });
-  };
+    })
+  }
 
   const cancelEditing = () => {
-    setEditingQuestionId(null);
+    setEditingQuestionId(null)
     setEditingData({
       questionText: "",
       optionA: "",
@@ -174,11 +174,11 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       optionC: "",
       optionD: "",
       correctAnswer: "A",
-    });
-  };
+    })
+  }
 
   const saveEditing = () => {
-    if (!editingQuestionId) return;
+    if (!editingQuestionId) return
 
     const updateData: QuestionUpdate = {
       question_text: editingData.questionText,
@@ -187,16 +187,16 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       option_c: editingData.optionC,
       option_d: editingData.optionD,
       correct_answer: editingData.correctAnswer,
-    };
+    }
 
     updateQuestionMutation.mutate({
       questionId: editingQuestionId,
       data: updateData,
-    });
-  };
+    })
+  }
 
   if (isLoading) {
-    return <QuestionReviewSkeleton />;
+    return <QuestionReviewSkeleton />
   }
 
   if (error || !questions) {
@@ -213,7 +213,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
           </VStack>
         </Card.Body>
       </Card.Root>
-    );
+    )
   }
 
   if (!questions || questions.length === 0) {
@@ -231,7 +231,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
           </VStack>
         </Card.Body>
       </Card.Root>
-    );
+    )
   }
 
   return (
@@ -515,7 +515,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
                         day: "numeric",
                         hour: "2-digit",
                         minute: "2-digit",
-                      }
+                      },
                     )}
                   </Text>
                 )}
@@ -525,7 +525,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
         </Card.Root>
       ))}
     </VStack>
-  );
+  )
 }
 
 function QuestionReviewSkeleton() {
@@ -561,5 +561,5 @@ function QuestionReviewSkeleton() {
         </Card.Root>
       ))}
     </VStack>
-  );
+  )
 }

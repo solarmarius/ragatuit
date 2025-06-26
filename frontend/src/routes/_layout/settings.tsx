@@ -1,4 +1,4 @@
-import { Box, Container, Text, Tabs, VStack } from "@chakra-ui/react"
+import { Box, Container, Tabs, Text, VStack } from "@chakra-ui/react"
 import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
 

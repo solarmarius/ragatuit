@@ -6,24 +6,24 @@ import {
   Skeleton,
   Text,
   VStack,
-} from "@chakra-ui/react";
-import { Link as RouterLink } from "@tanstack/react-router";
+} from "@chakra-ui/react"
+import { Link as RouterLink } from "@tanstack/react-router"
 
-import type { Quiz } from "@/client/types.gen";
-import { Button } from "@/components/ui/button";
-import { StatusLight } from "@/components/ui/status-light";
-import { getQuizzesNeedingReview } from "@/utils/quizFilters";
+import type { Quiz } from "@/client/types.gen"
+import { Button } from "@/components/ui/button"
+import { StatusLight } from "@/components/ui/status-light"
+import { getQuizzesNeedingReview } from "@/utils/quizFilters"
 
 interface QuizReviewPanelProps {
-  quizzes: Quiz[];
-  isLoading: boolean;
+  quizzes: Quiz[]
+  isLoading: boolean
 }
 
 export function QuizReviewPanel({ quizzes, isLoading }: QuizReviewPanelProps) {
-  const reviewQuizzes = getQuizzesNeedingReview(quizzes);
+  const reviewQuizzes = getQuizzesNeedingReview(quizzes)
 
   if (isLoading) {
-    return <QuizReviewPanelSkeleton />;
+    return <QuizReviewPanelSkeleton />
   }
 
   return (
@@ -144,7 +144,7 @@ export function QuizReviewPanel({ quizzes, isLoading }: QuizReviewPanelProps) {
         )}
       </Card.Body>
     </Card.Root>
-  );
+  )
 }
 
 function QuizReviewPanelSkeleton() {
@@ -190,5 +190,5 @@ function QuizReviewPanelSkeleton() {
         </VStack>
       </Card.Body>
     </Card.Root>
-  );
+  )
 }

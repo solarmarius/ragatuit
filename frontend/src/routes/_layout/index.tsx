@@ -6,15 +6,15 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react"
-import { createFileRoute, Link as RouterLink } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
+import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
 
 import { QuizService } from "@/client"
-import { Button } from "@/components/ui/button"
-import { OnboardingModal } from "@/components/Onboarding/OnboardingModal"
-import { QuizReviewPanel } from "@/components/Dashboard/QuizReviewPanel"
-import { QuizGenerationPanel } from "@/components/Dashboard/QuizGenerationPanel"
 import { HelpPanel } from "@/components/Dashboard/HelpPanel"
+import { QuizGenerationPanel } from "@/components/Dashboard/QuizGenerationPanel"
+import { QuizReviewPanel } from "@/components/Dashboard/QuizReviewPanel"
+import { OnboardingModal } from "@/components/Onboarding/OnboardingModal"
+import { Button } from "@/components/ui/button"
 import useAuth from "@/hooks/useCanvasAuth"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useOnboarding } from "@/hooks/useOnboarding"
@@ -61,7 +61,8 @@ function Dashboard() {
               Error Loading Dashboard
             </Text>
             <Text color="gray.600">
-              There was an error loading your dashboard. Please try refreshing the page.
+              There was an error loading your dashboard. Please try refreshing
+              the page.
             </Text>
           </Box>
         </VStack>
@@ -80,7 +81,8 @@ function Dashboard() {
                 Hi, {currentUser?.name} 👋🏼
               </Text>
               <Text color="gray.600">
-                Welcome back! Here's an overview of your quizzes and helpful resources.
+                Welcome back! Here's an overview of your quizzes and helpful
+                resources.
               </Text>
             </Box>
             <Button asChild>
@@ -89,9 +91,16 @@ function Dashboard() {
           </HStack>
 
           {/* Dashboard Panels */}
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={6} data-testid="dashboard-grid">
+          <SimpleGrid
+            columns={{ base: 1, md: 2, lg: 3 }}
+            gap={6}
+            data-testid="dashboard-grid"
+          >
             <QuizReviewPanel quizzes={quizzes || []} isLoading={isLoading} />
-            <QuizGenerationPanel quizzes={quizzes || []} isLoading={isLoading} />
+            <QuizGenerationPanel
+              quizzes={quizzes || []}
+              isLoading={isLoading}
+            />
             <HelpPanel />
           </SimpleGrid>
         </VStack>

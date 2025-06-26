@@ -7,31 +7,30 @@ import {
   Skeleton,
   Text,
   VStack,
-} from "@chakra-ui/react";
-import { Link as RouterLink } from "@tanstack/react-router";
+} from "@chakra-ui/react"
+import { Link as RouterLink } from "@tanstack/react-router"
 
-import type { Quiz } from "@/client/types.gen";
-import { Button } from "@/components/ui/button";
-import { StatusLight } from "@/components/ui/status-light";
+import type { Quiz } from "@/client/types.gen"
+import { Button } from "@/components/ui/button"
+import { StatusLight } from "@/components/ui/status-light"
 import {
-  getQuizzesBeingGenerated,
   getQuizProcessingPhase,
-  isQuizProcessing,
-} from "@/utils/quizFilters";
+  getQuizzesBeingGenerated,
+} from "@/utils/quizFilters"
 
 interface QuizGenerationPanelProps {
-  quizzes: Quiz[];
-  isLoading: boolean;
+  quizzes: Quiz[]
+  isLoading: boolean
 }
 
 export function QuizGenerationPanel({
   quizzes,
   isLoading,
 }: QuizGenerationPanelProps) {
-  const generatingQuizzes = getQuizzesBeingGenerated(quizzes);
+  const generatingQuizzes = getQuizzesBeingGenerated(quizzes)
 
   if (isLoading) {
-    return <QuizGenerationPanelSkeleton />;
+    return <QuizGenerationPanelSkeleton />
   }
 
   return (
@@ -65,25 +64,25 @@ export function QuizGenerationPanel({
         ) : (
           <VStack gap={4} align="stretch">
             {generatingQuizzes.slice(0, 4).map((quiz) => {
-              const processingPhase = getQuizProcessingPhase(quiz);
+              const processingPhase = getQuizProcessingPhase(quiz)
 
               // Calculate progress percentage
               const extractionStatus =
-                quiz.content_extraction_status || "pending";
-              const generationStatus = quiz.llm_generation_status || "pending";
+                quiz.content_extraction_status || "pending"
+              const generationStatus = quiz.llm_generation_status || "pending"
 
-              let progressPercentage = 0;
+              let progressPercentage = 0
               if (extractionStatus === "completed") {
-                progressPercentage = 50;
+                progressPercentage = 50
               }
               if (generationStatus === "completed") {
-                progressPercentage = 100;
+                progressPercentage = 100
               }
               if (extractionStatus === "processing") {
-                progressPercentage = 25;
+                progressPercentage = 25
               }
               if (generationStatus === "processing") {
-                progressPercentage = 75;
+                progressPercentage = 75
               }
 
               return (
@@ -174,7 +173,7 @@ export function QuizGenerationPanel({
                     </HStack>
                   </VStack>
                 </Box>
-              );
+              )
             })}
 
             {generatingQuizzes.length > 4 && (
@@ -191,7 +190,7 @@ export function QuizGenerationPanel({
         )}
       </Card.Body>
     </Card.Root>
-  );
+  )
 }
 
 function QuizGenerationPanelSkeleton() {
@@ -245,5 +244,5 @@ function QuizGenerationPanelSkeleton() {
         </VStack>
       </Card.Body>
     </Card.Root>
-  );
+  )
 }

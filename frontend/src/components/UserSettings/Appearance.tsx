@@ -1,10 +1,10 @@
-import { Heading, Stack } from "@chakra-ui/react";
-import { useTheme } from "next-themes";
+import { Heading, Stack } from "@chakra-ui/react"
+import { useTheme } from "next-themes"
 
-import { Radio, RadioGroup } from "@/components/ui/radio";
+import { Radio, RadioGroup } from "@/components/ui/radio"
 
 const Appearance = () => {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme()
 
   return (
     <>
@@ -24,6 +24,6 @@ const Appearance = () => {
         </Stack>
       </RadioGroup>
     </>
-  );
-};
-export default Appearance;
+  )
+}
+export default Appearance

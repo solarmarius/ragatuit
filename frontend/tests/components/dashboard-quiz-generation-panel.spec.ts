@@ -2,13 +2,13 @@ import { expect, test } from "@playwright/test"
 import {
   createQuizListResponse,
   createUserResponse,
-  quizzesBeingGenerated,
   emptyQuizList,
-  quizzesNeedingReview,
   quizPendingExtraction,
-  quizProcessingExtraction,
   quizPendingGeneration,
+  quizProcessingExtraction,
   quizProcessingGeneration,
+  quizzesBeingGenerated,
+  quizzesNeedingReview,
 } from "../fixtures/quiz-data"
 
 test.describe("QuizGenerationPanel Component", () => {
@@ -31,7 +31,9 @@ test.describe("QuizGenerationPanel Component", () => {
     await page.goto("/")
 
     // Check that the generation panel is visible and functional
-    const generationPanel = page.locator('text="Quizzes Being Generated"').locator("..")
+    const generationPanel = page
+      .locator('text="Quizzes Being Generated"')
+      .locator("..")
     await expect(generationPanel).toBeVisible()
 
     // Check that content eventually loads
@@ -54,7 +56,9 @@ test.describe("QuizGenerationPanel Component", () => {
       page.getByText("Start creating a quiz to see generation progress here"),
     ).toBeVisible()
     // Check for Create New Quiz button in the empty state
-    await expect(page.getByRole("link", { name: "Create New Quiz" }).first()).toBeVisible()
+    await expect(
+      page.getByRole("link", { name: "Create New Quiz" }).first(),
+    ).toBeVisible()
   })
 
   test("should display panel header with correct count", async ({ page }) => {
@@ -69,7 +73,9 @@ test.describe("QuizGenerationPanel Component", () => {
     await expect(page.getByText("Quizzes currently in progress")).toBeVisible()
 
     // Check badge count (should be 5 from mock data)
-    const generationPanel = page.locator('text="Quizzes Being Generated"').locator("..")
+    const generationPanel = page
+      .locator('text="Quizzes Being Generated"')
+      .locator("..")
     const badge = generationPanel.locator("text=/^\\d+$/")
     await expect(badge).toContainText("5")
   })
@@ -88,7 +94,9 @@ test.describe("QuizGenerationPanel Component", () => {
     await expect(page.getByText("Database Systems")).toBeVisible()
     await expect(page.getByText("30 questions")).toBeVisible()
     await expect(page.getByText("gpt-4o").first()).toBeVisible()
-    await expect(page.getByRole("link", { name: "View Details" }).first()).toBeVisible()
+    await expect(
+      page.getByRole("link", { name: "View Details" }).first(),
+    ).toBeVisible()
   })
 
   test("should display correct processing phases for different quiz states", async ({
@@ -109,7 +117,9 @@ test.describe("QuizGenerationPanel Component", () => {
 
     // Check different processing phase messages
     await expect(page.getByText("Waiting to extract content")).toBeVisible()
-    await expect(page.getByText("Extracting content from modules")).toBeVisible()
+    await expect(
+      page.getByText("Extracting content from modules"),
+    ).toBeVisible()
     await expect(page.getByText("Waiting to generate questions")).toBeVisible()
     await expect(page.getByText("Generating questions with AI")).toBeVisible()
   })
@@ -137,7 +147,9 @@ test.describe("QuizGenerationPanel Component", () => {
     await expect(page.getByText("75%").first()).toBeVisible()
 
     // Check that progress elements are present (Progress.Root elements)
-    const progressElements = page.locator('[data-part="root"][data-scope="progress"]')
+    const progressElements = page.locator(
+      '[data-part="root"][data-scope="progress"]',
+    )
     await expect(progressElements).toHaveCount(4)
   })
 
@@ -151,10 +163,14 @@ test.describe("QuizGenerationPanel Component", () => {
     await page.reload()
 
     // Status lights should be present for processing quizzes
-    const quizCards = page.locator('text="Database Design Principles"').locator("..")
+    const quizCards = page
+      .locator('text="Database Design Principles"')
+      .locator("..")
     // Just check that the quiz card contains some status indication
     await expect(quizCards).toBeVisible()
-    await expect(quizCards.getByText("Database Design Principles")).toBeVisible()
+    await expect(
+      quizCards.getByText("Database Design Principles"),
+    ).toBeVisible()
   })
 
   test("should limit display to 4 quizzes with overflow message", async ({
@@ -174,7 +190,9 @@ test.describe("QuizGenerationPanel Component", () => {
 
     // Should show overflow message for remaining quiz
     await expect(page.getByText("+1 more quizzes in progress")).toBeVisible()
-    await expect(page.getByRole("link", { name: "View All Quizzes" })).toBeVisible()
+    await expect(
+      page.getByRole("link", { name: "View All Quizzes" }),
+    ).toBeVisible()
   })
 
   test("should navigate to quiz detail when View Details button is clicked", async ({
@@ -187,7 +205,9 @@ test.describe("QuizGenerationPanel Component", () => {
     await page.reload()
 
     // Click View Details button on first quiz
-    const firstDetailsButton = page.getByRole("link", { name: "View Details" }).first()
+    const firstDetailsButton = page
+      .getByRole("link", { name: "View Details" })
+      .first()
 
     await firstDetailsButton.click()
 
@@ -203,7 +223,9 @@ test.describe("QuizGenerationPanel Component", () => {
     await page.reload()
 
     // Click Create New Quiz button from empty state
-    const createButton = page.getByRole("link", { name: "Create New Quiz" }).first()
+    const createButton = page
+      .getByRole("link", { name: "Create New Quiz" })
+      .first()
 
     await createButton.click()
 
@@ -271,7 +293,9 @@ test.describe("QuizGenerationPanel Component", () => {
     await expect(page.getByText("Database Design Principles")).toBeVisible()
 
     // View Details button should be clickable
-    const detailsButton = page.getByRole("link", { name: "View Details" }).first()
+    const detailsButton = page
+      .getByRole("link", { name: "View Details" })
+      .first()
     await expect(detailsButton).toBeVisible()
   })
 
@@ -316,7 +340,9 @@ test.describe("QuizGenerationPanel Component", () => {
     await page.reload()
 
     // Check that progress elements are present
-    const progressElements = page.locator('[data-part="root"][data-scope="progress"]')
+    const progressElements = page.locator(
+      '[data-part="root"][data-scope="progress"]',
+    )
     await expect(progressElements.first()).toBeVisible()
   })
 })

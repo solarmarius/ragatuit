@@ -487,11 +487,15 @@ test.describe("Quiz Detail Component", () => {
     await page.reload()
 
     // Check that tabs are present
-    await expect(page.getByRole("tab", { name: "Quiz Information" })).toBeVisible()
+    await expect(
+      page.getByRole("tab", { name: "Quiz Information" }),
+    ).toBeVisible()
     await expect(page.getByRole("tab", { name: "Questions" })).toBeVisible()
 
     // Quiz Information tab should be active by default
-    await expect(page.getByRole("tab", { name: "Quiz Information" })).toHaveAttribute("aria-selected", "true")
+    await expect(
+      page.getByRole("tab", { name: "Quiz Information" }),
+    ).toHaveAttribute("aria-selected", "true")
 
     // Info content should be visible
     await expect(page.getByText("Course Information")).toBeVisible()
@@ -524,17 +528,20 @@ test.describe("Quiz Detail Component", () => {
     })
 
     // Mock question stats API
-    await page.route(`**/api/v1/quiz/${mockQuizId}/questions/stats`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          total_questions: 50,
-          pending_questions: 30,
-          approved_questions: 20,
-        }),
-      })
-    })
+    await page.route(
+      `**/api/v1/quiz/${mockQuizId}/questions/stats`,
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            total_questions: 50,
+            pending_questions: 30,
+            approved_questions: 20,
+          }),
+        })
+      },
+    )
 
     await page.reload()
 
@@ -542,14 +549,21 @@ test.describe("Quiz Detail Component", () => {
     await page.getByRole("tab", { name: "Questions" }).click()
 
     // Questions tab should now be active
-    await expect(page.getByRole("tab", { name: "Questions" })).toHaveAttribute("aria-selected", "true")
-    await expect(page.getByRole("tab", { name: "Quiz Information" })).toHaveAttribute("aria-selected", "false")
+    await expect(page.getByRole("tab", { name: "Questions" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    )
+    await expect(
+      page.getByRole("tab", { name: "Quiz Information" }),
+    ).toHaveAttribute("aria-selected", "false")
 
     // Questions content should be visible (QuestionStats component)
     await expect(page.getByText("Question Review Progress")).toBeVisible()
   })
 
-  test("should show Review Quiz button when generation is complete", async ({ page }) => {
+  test("should show Review Quiz button when generation is complete", async ({
+    page,
+  }) => {
     const mockQuiz = {
       id: mockQuizId,
       title: "Complete Generation Quiz",
@@ -584,10 +598,15 @@ test.describe("Quiz Detail Component", () => {
     await reviewButton.click()
 
     // Questions tab should be active
-    await expect(page.getByRole("tab", { name: "Questions" })).toHaveAttribute("aria-selected", "true")
+    await expect(page.getByRole("tab", { name: "Questions" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    )
   })
 
-  test("should not show Review Quiz button when generation is not complete", async ({ page }) => {
+  test("should not show Review Quiz button when generation is not complete", async ({
+    page,
+  }) => {
     const mockQuiz = {
       id: mockQuizId,
       title: "Incomplete Generation Quiz",
@@ -615,10 +634,14 @@ test.describe("Quiz Detail Component", () => {
     await page.reload()
 
     // Check that Review Quiz button is not visible when generation is not complete
-    await expect(page.getByRole("button", { name: "Review Quiz" })).not.toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "Review Quiz" }),
+    ).not.toBeVisible()
   })
 
-  test("should show Review Quiz button only when both statuses are completed", async ({ page }) => {
+  test("should show Review Quiz button only when both statuses are completed", async ({
+    page,
+  }) => {
     // Test case 1: Only content extraction is complete
     const mockQuizPartial = {
       id: mockQuizId,
@@ -647,7 +670,9 @@ test.describe("Quiz Detail Component", () => {
     await page.reload()
 
     // Review Quiz button should not be visible
-    await expect(page.getByRole("button", { name: "Review Quiz" })).not.toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "Review Quiz" }),
+    ).not.toBeVisible()
 
     // Test case 2: Both are complete
     const mockQuizComplete = {
@@ -666,6 +691,8 @@ test.describe("Quiz Detail Component", () => {
     await page.reload()
 
     // Review Quiz button should now be visible
-    await expect(page.getByRole("button", { name: "Review Quiz" })).toBeVisible()
+    await expect(
+      page.getByRole("button", { name: "Review Quiz" }),
+    ).toBeVisible()
   })
 })

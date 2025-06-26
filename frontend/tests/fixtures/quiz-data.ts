@@ -180,7 +180,8 @@ export const emptyQuizList: Quiz[] = []
 export const quizWithLongTitle: Quiz = {
   ...baseQuiz,
   id: "quiz-long-title",
-  title: "This is a very long quiz title that should be truncated when displayed in the dashboard cards to test the text overflow handling",
+  title:
+    "This is a very long quiz title that should be truncated when displayed in the dashboard cards to test the text overflow handling",
   content_extraction_status: "completed",
   llm_generation_status: "completed",
   question_count: 100,
@@ -199,7 +200,10 @@ export const createUserResponse = () => ({
   body: JSON.stringify(mockUserData),
 })
 
-export const createErrorResponse = (status: number = 500, message: string = "Internal Server Error") => ({
+export const createErrorResponse = (
+  status = 500,
+  message = "Internal Server Error",
+) => ({
   status,
   contentType: "application/json",
   body: JSON.stringify({ detail: message }),

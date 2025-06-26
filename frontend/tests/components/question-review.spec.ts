@@ -40,17 +40,20 @@ test.describe("Question Review Component", () => {
     })
 
     // Mock question stats API
-    await page.route(`**/api/v1/quiz/${mockQuizId}/questions/stats`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          total: 2,
-          pending: 1,
-          approved: 1,
-        }),
-      })
-    })
+    await page.route(
+      `**/api/v1/quiz/${mockQuizId}/questions/stats`,
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            total: 2,
+            pending: 1,
+            approved: 1,
+          }),
+        })
+      },
+    )
   })
 
   test("should display questions when available", async ({ page }) => {
@@ -69,13 +72,16 @@ test.describe("Question Review Component", () => {
       },
     ]
 
-    await page.route(`**/api/v1/quiz/${mockQuizId}/questions`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(mockQuestions),
-      })
-    })
+    await page.route(
+      `**/api/v1/quiz/${mockQuizId}/questions`,
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify(mockQuestions),
+        })
+      },
+    )
 
     await page.goto(`/quiz/${mockQuizId}`)
     await page.getByRole("tab", { name: "Questions" }).click()
@@ -89,13 +95,16 @@ test.describe("Question Review Component", () => {
   })
 
   test("should show empty state when no questions", async ({ page }) => {
-    await page.route(`**/api/v1/quiz/${mockQuizId}/questions`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([]),
-      })
-    })
+    await page.route(
+      `**/api/v1/quiz/${mockQuizId}/questions`,
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([]),
+        })
+      },
+    )
 
     await page.goto(`/quiz/${mockQuizId}`)
     await page.getByRole("tab", { name: "Questions" }).click()
@@ -105,19 +114,24 @@ test.describe("Question Review Component", () => {
   })
 
   test("should handle API errors gracefully", async ({ page }) => {
-    await page.route(`**/api/v1/quiz/${mockQuizId}/questions`, async (route) => {
-      await route.fulfill({
-        status: 500,
-        contentType: "application/json",
-        body: JSON.stringify({ detail: "Internal server error" }),
-      })
-    })
+    await page.route(
+      `**/api/v1/quiz/${mockQuizId}/questions`,
+      async (route) => {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ detail: "Internal server error" }),
+        })
+      },
+    )
 
     await page.goto(`/quiz/${mockQuizId}`)
     await page.getByRole("tab", { name: "Questions" }).click()
 
     // Check error state - wait for error message
-    await expect(page.getByText("Failed to Load Questions")).toBeAttached({ timeout: 10000 })
+    await expect(page.getByText("Failed to Load Questions")).toBeAttached({
+      timeout: 10000,
+    })
   })
 
   test("should display action buttons for questions", async ({ page }) => {
@@ -134,13 +148,16 @@ test.describe("Question Review Component", () => {
       created_at: "2024-01-15T10:30:00Z",
     }
 
-    await page.route(`**/api/v1/quiz/${mockQuizId}/questions`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([mockQuestion]),
-      })
-    })
+    await page.route(
+      `**/api/v1/quiz/${mockQuizId}/questions`,
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([mockQuestion]),
+        })
+      },
+    )
 
     await page.goto(`/quiz/${mockQuizId}`)
     await page.getByRole("tab", { name: "Questions" }).click()
@@ -149,11 +166,13 @@ test.describe("Question Review Component", () => {
     await expect(page.getByText("Test question")).toBeAttached()
 
     // Just check that some action buttons exist (they may be anywhere on the page)
-    const buttonCount = await page.locator('button:has(svg)').count()
+    const buttonCount = await page.locator("button:has(svg)").count()
     expect(buttonCount).toBeGreaterThan(0)
   })
 
-  test("should show approved badge for approved questions", async ({ page }) => {
+  test("should show approved badge for approved questions", async ({
+    page,
+  }) => {
     const approvedQuestion = {
       id: "q1",
       quiz_id: mockQuizId,
@@ -167,13 +186,16 @@ test.describe("Question Review Component", () => {
       created_at: "2024-01-15T10:30:00Z",
     }
 
-    await page.route(`**/api/v1/quiz/${mockQuizId}/questions`, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([approvedQuestion]),
-      })
-    })
+    await page.route(
+      `**/api/v1/quiz/${mockQuizId}/questions`,
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([approvedQuestion]),
+        })
+      },
+    )
 
     await page.goto(`/quiz/${mockQuizId}`)
     await page.getByRole("tab", { name: "Questions" }).click()
@@ -187,14 +209,17 @@ test.describe("Question Review Component", () => {
 
   test("should show loading state", async ({ page }) => {
     // Delay the response to see loading state
-    await page.route(`**/api/v1/quiz/${mockQuizId}/questions`, async (route) => {
-      await new Promise((resolve) => setTimeout(resolve, 500))
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([]),
-      })
-    })
+    await page.route(
+      `**/api/v1/quiz/${mockQuizId}/questions`,
+      async (route) => {
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([]),
+        })
+      },
+    )
 
     await page.goto(`/quiz/${mockQuizId}`)
 
