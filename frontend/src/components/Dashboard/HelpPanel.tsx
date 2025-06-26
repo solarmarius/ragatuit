@@ -76,67 +76,6 @@ export function HelpPanel() {
             </VStack>
           </Box>
 
-          {/* Question Types Section */}
-          <Box>
-            <Text fontSize="sm" fontWeight="semibold" mb={3} color="gray.700">
-              Supported Question Types
-            </Text>
-            <VStack gap={2} align="stretch">
-              <HStack justify="space-between">
-                <HStack gap={2}>
-                  <Badge variant="solid" colorScheme="green" size="sm">
-                    ✓
-                  </Badge>
-                  <Text fontSize="sm" color="gray.600">
-                    Multiple Choice (MCQ)
-                  </Text>
-                </HStack>
-                <Text fontSize="sm" color="gray.500">
-                  Available now
-                </Text>
-              </HStack>
-              <HStack justify="space-between">
-                <HStack gap={2}>
-                  <Badge variant="outline" colorScheme="gray" size="sm">
-                    ⏳
-                  </Badge>
-                  <Text fontSize="sm" color="gray.500">
-                    True/False
-                  </Text>
-                </HStack>
-                <Text fontSize="sm" color="gray.500">
-                  Coming soon
-                </Text>
-              </HStack>
-              <HStack justify="space-between">
-                <HStack gap={2}>
-                  <Badge variant="outline" colorScheme="gray" size="sm">
-                    ⏳
-                  </Badge>
-                  <Text fontSize="sm" color="gray.500">
-                    Short Answer
-                  </Text>
-                </HStack>
-                <Text fontSize="sm" color="gray.500">
-                  Coming soon
-                </Text>
-              </HStack>
-              <HStack justify="space-between">
-                <HStack gap={2}>
-                  <Badge variant="outline" colorScheme="gray" size="sm">
-                    ⏳
-                  </Badge>
-                  <Text fontSize="sm" color="gray.500">
-                    Essay Questions
-                  </Text>
-                </HStack>
-                <Text fontSize="sm" color="gray.500">
-                  Coming soon
-                </Text>
-              </HStack>
-            </VStack>
-          </Box>
-
           {/* Helpful Links Section */}
           <Box>
             <Text fontSize="sm" fontWeight="semibold" mb={3} color="gray.700">
