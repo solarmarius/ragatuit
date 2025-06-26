@@ -372,9 +372,9 @@ Generate exactly ONE question based on this content."""
 
             if is_critical:
                 # Critical error - stop the workflow
-                state[
-                    "error_message"
-                ] = f"Critical error during question generation: {str(e)}"
+                state["error_message"] = (
+                    f"Critical error during question generation: {str(e)}"
+                )
                 return state
 
             # Non-critical error - move to next chunk and continue
