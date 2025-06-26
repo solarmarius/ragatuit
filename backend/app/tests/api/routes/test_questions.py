@@ -67,11 +67,12 @@ def test_get_quiz_questions_success(
     app.dependency_overrides[deps.get_db] = mock_get_db
 
     try:
-        with patch(
-            "app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz
-        ), patch(
-            "app.api.routes.questions.get_questions_by_quiz_id",
-            return_value=[mock_question],
+        with (
+            patch("app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz),
+            patch(
+                "app.api.routes.questions.get_questions_by_quiz_id",
+                return_value=[mock_question],
+            ),
         ):
             with TestClient(app) as client:
                 response = client.get(f"/api/v1/quiz/{mock_quiz.id}/questions")
@@ -164,10 +165,12 @@ def test_get_question_success(
     app.dependency_overrides[deps.get_db] = mock_get_db
 
     try:
-        with patch(
-            "app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz
-        ), patch(
-            "app.api.routes.questions.get_question_by_id", return_value=mock_question
+        with (
+            patch("app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz),
+            patch(
+                "app.api.routes.questions.get_question_by_id",
+                return_value=mock_question,
+            ),
         ):
             with TestClient(app) as client:
                 response = client.get(
@@ -197,9 +200,10 @@ def test_get_question_not_found(mock_user: User, mock_quiz: Quiz) -> None:
 
     try:
         question_id = uuid4()
-        with patch(
-            "app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz
-        ), patch("app.api.routes.questions.get_question_by_id", return_value=None):
+        with (
+            patch("app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz),
+            patch("app.api.routes.questions.get_question_by_id", return_value=None),
+        ):
             with TestClient(app) as client:
                 response = client.get(
                     f"/api/v1/quiz/{mock_quiz.id}/questions/{question_id}"
@@ -229,10 +233,12 @@ def test_get_question_quiz_mismatch(
         other_quiz_id = uuid4()
         mock_question.quiz_id = other_quiz_id  # Question belongs to different quiz
 
-        with patch(
-            "app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz
-        ), patch(
-            "app.api.routes.questions.get_question_by_id", return_value=mock_question
+        with (
+            patch("app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz),
+            patch(
+                "app.api.routes.questions.get_question_by_id",
+                return_value=mock_question,
+            ),
         ):
             with TestClient(app) as client:
                 response = client.get(
@@ -268,12 +274,16 @@ def test_update_question_success(
 
         updated_question = Question(**{**mock_question.model_dump(), **update_data})
 
-        with patch(
-            "app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz
-        ), patch(
-            "app.api.routes.questions.get_question_by_id", return_value=mock_question
-        ), patch(
-            "app.api.routes.questions.update_question", return_value=updated_question
+        with (
+            patch("app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz),
+            patch(
+                "app.api.routes.questions.get_question_by_id",
+                return_value=mock_question,
+            ),
+            patch(
+                "app.api.routes.questions.update_question",
+                return_value=updated_question,
+            ),
         ):
             with TestClient(app) as client:
                 response = client.put(
@@ -308,12 +318,16 @@ def test_approve_question_success(
         approved_question = Question(**mock_question.model_dump())
         approved_question.is_approved = True
 
-        with patch(
-            "app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz
-        ), patch(
-            "app.api.routes.questions.get_question_by_id", return_value=mock_question
-        ), patch(
-            "app.api.routes.questions.approve_question", return_value=approved_question
+        with (
+            patch("app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz),
+            patch(
+                "app.api.routes.questions.get_question_by_id",
+                return_value=mock_question,
+            ),
+            patch(
+                "app.api.routes.questions.approve_question",
+                return_value=approved_question,
+            ),
         ):
             with TestClient(app) as client:
                 response = client.put(
@@ -341,9 +355,10 @@ def test_approve_question_not_found(mock_user: User, mock_quiz: Quiz) -> None:
 
     try:
         question_id = uuid4()
-        with patch(
-            "app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz
-        ), patch("app.api.routes.questions.get_question_by_id", return_value=None):
+        with (
+            patch("app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz),
+            patch("app.api.routes.questions.get_question_by_id", return_value=None),
+        ):
             with TestClient(app) as client:
                 response = client.put(
                     f"/api/v1/quiz/{mock_quiz.id}/questions/{question_id}/approve"
@@ -370,9 +385,10 @@ def test_delete_question_success(
     app.dependency_overrides[deps.get_db] = mock_get_db
 
     try:
-        with patch(
-            "app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz
-        ), patch("app.api.routes.questions.delete_question", return_value=True):
+        with (
+            patch("app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz),
+            patch("app.api.routes.questions.delete_question", return_value=True),
+        ):
             with TestClient(app) as client:
                 response = client.delete(
                     f"/api/v1/quiz/{mock_quiz.id}/questions/{mock_question.id}"
@@ -399,9 +415,10 @@ def test_delete_question_not_found(mock_user: User, mock_quiz: Quiz) -> None:
 
     try:
         question_id = uuid4()
-        with patch(
-            "app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz
-        ), patch("app.api.routes.questions.delete_question", return_value=False):
+        with (
+            patch("app.api.routes.questions.get_quiz_by_id", return_value=mock_quiz),
+            patch("app.api.routes.questions.delete_question", return_value=False),
+        ):
             with TestClient(app) as client:
                 response = client.delete(
                     f"/api/v1/quiz/{mock_quiz.id}/questions/{question_id}"

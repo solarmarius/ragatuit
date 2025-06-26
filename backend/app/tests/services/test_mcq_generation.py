@@ -192,14 +192,20 @@ async def test_content_preparation_no_content(
         assert "No extracted content found" in result_state["error_message"]
 
 
+@patch("app.services.mcq_generation.settings")
 @patch("app.services.mcq_generation.ChatOpenAI")
 @pytest.mark.asyncio
 async def test_generate_question_success(
     mock_chat_openai: MagicMock,
+    mock_settings: MagicMock,
     sample_quiz_id: UUID,
     sample_generated_question: dict[str, str],
 ) -> None:
     """Test successful question generation."""
+    # Mock settings to have API key
+    mock_settings.OPENAI_SECRET_KEY = "test-api-key"
+    mock_settings.LLM_API_TIMEOUT = 120.0
+
     service = MCQGenerationService()
 
     # Mock LLM response
@@ -245,9 +251,16 @@ async def test_generate_question_success(
         assert generated_question["quiz_id"] == sample_quiz_id
 
 
+@patch("app.services.mcq_generation.settings")
 @pytest.mark.asyncio
-async def test_generate_question_invalid_json(sample_quiz_id: UUID) -> None:
+async def test_generate_question_invalid_json(
+    mock_settings: MagicMock, sample_quiz_id: UUID
+) -> None:
     """Test question generation with invalid JSON response."""
+    # Mock settings to have API key
+    mock_settings.OPENAI_SECRET_KEY = "test-api-key"
+    mock_settings.LLM_API_TIMEOUT = 120.0
+
     service = MCQGenerationService()
 
     # Mock LLM response with invalid JSON
@@ -282,9 +295,16 @@ async def test_generate_question_invalid_json(sample_quiz_id: UUID) -> None:
             assert result_state["questions_generated"] == 0
 
 
+@patch("app.services.mcq_generation.settings")
 @pytest.mark.asyncio
-async def test_generate_question_missing_fields(sample_quiz_id: UUID) -> None:
+async def test_generate_question_missing_fields(
+    mock_settings: MagicMock, sample_quiz_id: UUID
+) -> None:
     """Test question generation with missing required fields."""
+    # Mock settings to have API key
+    mock_settings.OPENAI_SECRET_KEY = "test-api-key"
+    mock_settings.LLM_API_TIMEOUT = 120.0
+
     service = MCQGenerationService()
 
     incomplete_question = {"question_text": "Incomplete question"}
