@@ -1,38 +1,46 @@
-import { Box, Button, Card, HStack, Text, VStack } from "@chakra-ui/react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { MdAutoAwesome } from "react-icons/md"
+import { Box, Button, Card, HStack, Text, VStack } from "@chakra-ui/react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { MdAutoAwesome } from "react-icons/md";
 
-import { type Quiz, QuizService } from "@/client"
-import useCustomToast from "@/hooks/useCustomToast"
+import { type Quiz, QuizService } from "@/client";
+import useCustomToast from "@/hooks/useCustomToast";
 
 interface QuestionGenerationTriggerProps {
-  quiz: Quiz
+  quiz: Quiz;
 }
 
 export function QuestionGenerationTrigger({
   quiz,
 }: QuestionGenerationTriggerProps) {
-  const { showErrorToast, showSuccessToast } = useCustomToast()
-  const queryClient = useQueryClient()
+  const { showErrorToast, showSuccessToast } = useCustomToast();
+  const queryClient = useQueryClient();
 
   const triggerGenerationMutation = useMutation({
     mutationFn: async () => {
-      return await QuizService.triggerQuestionGeneration({ quizId: quiz.id })
+      if (!quiz.id) {
+        throw new Error("Quiz ID is required");
+      }
+      return await QuizService.triggerQuestionGeneration({ quizId: quiz.id });
     },
     onSuccess: () => {
-      showSuccessToast("Question generation started")
-      queryClient.invalidateQueries({ queryKey: ["quiz", quiz.id] })
+      showSuccessToast("Question generation started");
+      queryClient.invalidateQueries({ queryKey: ["quiz", quiz.id] });
     },
     onError: (error: any) => {
       const message =
-        error?.body?.detail || "Failed to start question generation"
-      showErrorToast(message)
+        error?.body?.detail || "Failed to start question generation";
+      showErrorToast(message);
     },
-  })
+  });
+
+  // Don't show if quiz ID is missing
+  if (!quiz.id) {
+    return null;
+  }
 
   // Don't show if content extraction isn't completed
   if (quiz.content_extraction_status !== "completed") {
-    return null
+    return null;
   }
 
   // Don't show if generation is already processing or completed
@@ -40,7 +48,7 @@ export function QuestionGenerationTrigger({
     quiz.llm_generation_status === "processing" ||
     quiz.llm_generation_status === "completed"
   ) {
-    return null
+    return null;
   }
 
   return (
@@ -104,5 +112,5 @@ export function QuestionGenerationTrigger({
         </VStack>
       </Card.Body>
     </Card.Root>
-  )
+  );
 }

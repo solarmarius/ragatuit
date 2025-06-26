@@ -87,7 +87,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
         questionId,
       });
     },
-    onSuccess: (_, questionId) => {
+    onSuccess: (_, _questionId) => {
       showSuccessToast("Question approved");
       queryClient.invalidateQueries({
         queryKey: ["quiz", quizId, "questions"],
