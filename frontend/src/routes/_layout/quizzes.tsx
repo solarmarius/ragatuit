@@ -157,27 +157,42 @@ function QuizList() {
                         <Table.Cell>
                           <HStack gap={2} align="center">
                             <StatusLight
-                              extractionStatus={quiz.content_extraction_status || "pending"}
-                              generationStatus={quiz.llm_generation_status || "pending"}
+                              extractionStatus={
+                                quiz.content_extraction_status || "pending"
+                              }
+                              generationStatus={
+                                quiz.llm_generation_status || "pending"
+                              }
                             />
                             <Text fontSize="sm" color="gray.600">
                               {(() => {
-                                const extractionStatus = quiz.content_extraction_status || "pending";
-                                const generationStatus = quiz.llm_generation_status || "pending";
+                                const extractionStatus =
+                                  quiz.content_extraction_status || "pending"
+                                const generationStatus =
+                                  quiz.llm_generation_status || "pending"
 
-                                if (extractionStatus === "failed" || generationStatus === "failed") {
-                                  return "Failed";
+                                if (
+                                  extractionStatus === "failed" ||
+                                  generationStatus === "failed"
+                                ) {
+                                  return "Failed"
                                 }
 
-                                if (extractionStatus === "completed" && generationStatus === "completed") {
-                                  return "Complete";
+                                if (
+                                  extractionStatus === "completed" &&
+                                  generationStatus === "completed"
+                                ) {
+                                  return "Complete"
                                 }
 
-                                if (extractionStatus === "processing" || generationStatus === "processing") {
-                                  return "Processing";
+                                if (
+                                  extractionStatus === "processing" ||
+                                  generationStatus === "processing"
+                                ) {
+                                  return "Processing"
                                 }
 
-                                return "Pending";
+                                return "Pending"
                               })()}
                             </Text>
                           </HStack>

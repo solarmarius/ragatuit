@@ -1,30 +1,30 @@
-import { Badge, HStack, Spinner, Text } from "@chakra-ui/react";
+import { Badge, HStack, Spinner, Text } from "@chakra-ui/react"
 
 interface StatusBadgeProps {
-  status: string;
+  status: string
 }
 
 export function StatusBadge({ status }: StatusBadgeProps) {
   const getStatusConfig = () => {
     switch (status) {
       case "pending":
-        return { icon: "⏳", color: "gray", text: "Waiting" };
+        return { icon: "⏳", color: "gray", text: "Waiting" }
       case "processing":
         return {
           icon: <Spinner size="xs" />,
           color: "blue",
           text: "Processing",
-        };
+        }
       case "completed":
-        return { icon: "✅", color: "green", text: "Completed" };
+        return { icon: "✅", color: "green", text: "Completed" }
       case "failed":
-        return { icon: "❌", color: "red", text: "Failed" };
+        return { icon: "❌", color: "red", text: "Failed" }
       default:
-        return { icon: "❓", color: "gray", text: "Unknown" };
+        return { icon: "❓", color: "gray", text: "Unknown" }
     }
-  };
+  }
 
-  const config = getStatusConfig();
+  const config = getStatusConfig()
 
   return (
     <Badge variant="outline" colorScheme={config.color}>
@@ -37,5 +37,5 @@ export function StatusBadge({ status }: StatusBadgeProps) {
         <Text>{config.text}</Text>
       </HStack>
     </Badge>
-  );
+  )
 }

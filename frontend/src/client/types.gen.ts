@@ -18,6 +18,33 @@ export type Message = {
   message: string
 }
 
+export type QuestionPublic = {
+  id: string
+  quiz_id: string
+  question_text: string
+  option_a: string
+  option_b: string
+  option_c: string
+  option_d: string
+  correct_answer: string
+  is_approved: boolean
+  approved_at: string | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export type QuestionUpdate = {
+  question_text?: string | null
+  option_a?: string | null
+  option_b?: string | null
+  option_c?: string | null
+  option_d?: string | null
+  /**
+   * Must be A, B, C, or D
+   */
+  correct_answer?: string | null
+}
+
 export type Quiz = {
   id?: string
   owner_id: string
@@ -126,6 +153,41 @@ export type CanvasGetFileInfoResponse = {
   [key: string]: unknown
 }
 
+export type QuestionsGetQuizQuestionsData = {
+  quizId: string
+}
+
+export type QuestionsGetQuizQuestionsResponse = Array<QuestionPublic>
+
+export type QuestionsGetQuestionData = {
+  questionId: string
+  quizId: string
+}
+
+export type QuestionsGetQuestionResponse = QuestionPublic
+
+export type QuestionsUpdateQuizQuestionData = {
+  questionId: string
+  quizId: string
+  requestBody: QuestionUpdate
+}
+
+export type QuestionsUpdateQuizQuestionResponse = QuestionPublic
+
+export type QuestionsDeleteQuizQuestionData = {
+  questionId: string
+  quizId: string
+}
+
+export type QuestionsDeleteQuizQuestionResponse = Message
+
+export type QuestionsApproveQuizQuestionData = {
+  questionId: string
+  quizId: string
+}
+
+export type QuestionsApproveQuizQuestionResponse = QuestionPublic
+
 export type QuizGetUserQuizzesEndpointResponse = Array<Quiz>
 
 export type QuizCreateNewQuizData = {
@@ -152,6 +214,22 @@ export type QuizTriggerContentExtractionData = {
 
 export type QuizTriggerContentExtractionResponse = {
   [key: string]: string
+}
+
+export type QuizTriggerQuestionGenerationData = {
+  quizId: string
+}
+
+export type QuizTriggerQuestionGenerationResponse = {
+  [key: string]: string
+}
+
+export type QuizGetQuizQuestionStatsData = {
+  quizId: string
+}
+
+export type QuizGetQuizQuestionStatsResponse = {
+  [key: string]: number
 }
 
 export type UsersReadUserMeResponse = UserPublic

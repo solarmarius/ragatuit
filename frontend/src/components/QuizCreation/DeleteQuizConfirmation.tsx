@@ -24,7 +24,10 @@ interface DeleteQuizConfirmationProps {
   quizTitle: string
 }
 
-const DeleteQuizConfirmation = ({ quizId, quizTitle }: DeleteQuizConfirmationProps) => {
+const DeleteQuizConfirmation = ({
+  quizId,
+  quizTitle,
+}: DeleteQuizConfirmationProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
   const navigate = useNavigate()

@@ -78,6 +78,10 @@ class Settings(BaseSettings):
     MAX_RETRY_DELAY: float = 30.0
     RETRY_BACKOFF_FACTOR: float = 2.0
 
+    # LLM settings
+    OPENAI_SECRET_KEY: str | None = None
+    LLM_API_TIMEOUT: float = 120.0  # LLM request timeout in seconds (2 minutes)
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:

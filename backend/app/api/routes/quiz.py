@@ -7,9 +7,16 @@ from sqlmodel import Session, select
 from app.api.deps import CanvasToken, CurrentUser, SessionDep
 from app.core.db import engine
 from app.core.logging_config import get_logger
-from app.crud import create_quiz, delete_quiz, get_quiz_by_id, get_user_quizzes
+from app.crud import (
+    create_quiz,
+    delete_quiz,
+    get_question_counts_by_quiz_id,
+    get_quiz_by_id,
+    get_user_quizzes,
+)
 from app.models import Message, Quiz, QuizCreate
 from app.services.content_extraction import ContentExtractionService
+from app.services.mcq_generation import mcq_generation_service
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
 logger = get_logger("quiz")
@@ -36,8 +43,8 @@ async def create_new_quiz(
             - selected_modules: Dict mapping module IDs to names
             - title: Quiz title
             - question_count: Number of questions to generate (1-200, default 100)
-            - llm_model: LLM model to use (default "o3-pro")
-            - llm_temperature: LLM temperature setting (0.0-2.0, default 0.3)
+            - llm_model: LLM model to use (default "o3")
+            - llm_temperature: LLM temperature setting (0.0-2.0, default 1)
 
     **Returns:**
         Quiz: The created quiz object with generated UUID and timestamps
@@ -58,7 +65,7 @@ async def create_new_quiz(
             "title": "AI Fundamentals Quiz",
             "question_count": 50,
             "llm_model": "gpt-4o",
-            "llm_temperature": 0.3
+            "llm_temperature": 1
         }
         ```
     """
@@ -143,7 +150,7 @@ def get_quiz(
             "title": "AI Fundamentals Quiz",
             "question_count": 50,
             "llm_model": "gpt-4o",
-            "llm_temperature": 0.3,
+            "llm_temperature": 1,
             "created_at": "2023-01-01T12:00:00Z",
             "updated_at": "2023-01-01T12:00:00Z"
         }
@@ -233,7 +240,7 @@ def get_user_quizzes_endpoint(
                 "title": "AI Fundamentals Quiz",
                 "question_count": 50,
                 "llm_model": "gpt-4o",
-                "llm_temperature": 0.3,
+                "llm_temperature": 1,
                 "created_at": "2023-01-01T12:00:00Z",
                 "updated_at": "2023-01-01T12:00:00Z"
             }
@@ -344,6 +351,24 @@ async def extract_content_for_quiz(
                 total_word_count=content_summary["total_word_count"],
             )
 
+            # Automatically trigger question generation after content extraction completes
+            if quiz:
+                logger.info(
+                    "auto_triggering_question_generation",
+                    quiz_id=str(quiz_id),
+                    target_questions=quiz.question_count,
+                    llm_model=quiz.llm_model,
+                )
+
+                # Note: We can't use background_tasks here since this is already a background task
+                # Instead, we'll call the function directly as an async task
+                await generate_questions_for_quiz(
+                    quiz_id=quiz_id,
+                    target_question_count=quiz.question_count,
+                    llm_model=quiz.llm_model,
+                    llm_temperature=quiz.llm_temperature,
+                )
+
         except Exception as e:
             logger.error(
                 "content_extraction_failed",
@@ -365,6 +390,108 @@ async def extract_content_for_quiz(
             except Exception as update_error:
                 logger.error(
                     "content_extraction_status_update_failed",
+                    quiz_id=str(quiz_id),
+                    error=str(update_error),
+                )
+
+
+async def generate_questions_for_quiz(
+    quiz_id: UUID, target_question_count: int, llm_model: str, llm_temperature: float
+) -> None:
+    """
+    Background task to generate MCQ questions for a quiz.
+
+    This function runs asynchronously after content extraction is complete to generate
+    multiple-choice questions using the LangGraph workflow.
+    """
+    logger.info(
+        "question_generation_started",
+        quiz_id=str(quiz_id),
+        target_questions=target_question_count,
+        llm_model=llm_model,
+        llm_temperature=llm_temperature,
+    )
+
+    # Create a new database session for the background task
+    with Session(engine) as session:
+        try:
+            # Use SELECT FOR UPDATE to prevent race conditions
+            stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
+            quiz = session.exec(stmt).first()
+
+            if not quiz:
+                logger.error(
+                    "question_generation_quiz_not_found",
+                    quiz_id=str(quiz_id),
+                )
+                return
+
+            # Check if generation is already in progress
+            if quiz.llm_generation_status == "processing":
+                logger.warning(
+                    "question_generation_already_in_progress",
+                    quiz_id=str(quiz_id),
+                    current_status=quiz.llm_generation_status,
+                )
+                return
+
+            # Atomically update status to processing
+            quiz.llm_generation_status = "processing"
+            session.add(quiz)
+            session.commit()
+
+            # Generate questions using the MCQ generation service
+            results = await mcq_generation_service.generate_mcqs_for_quiz(
+                quiz_id=quiz_id,
+                target_question_count=target_question_count,
+                llm_model=llm_model,
+                llm_temperature=llm_temperature,
+            )
+
+            # Update quiz status based on results using fresh lock
+            stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
+            quiz = session.exec(stmt).first()
+
+            if quiz:
+                if results["success"]:
+                    quiz.llm_generation_status = "completed"
+                    logger.info(
+                        "question_generation_completed",
+                        quiz_id=str(quiz_id),
+                        questions_generated=results["questions_generated"],
+                        target_questions=target_question_count,
+                    )
+                else:
+                    quiz.llm_generation_status = "failed"
+                    logger.error(
+                        "question_generation_failed",
+                        quiz_id=str(quiz_id),
+                        error_message=results["error_message"],
+                    )
+
+                session.add(quiz)
+                session.commit()
+
+        except Exception as e:
+            logger.error(
+                "question_generation_failed",
+                quiz_id=str(quiz_id),
+                error=str(e),
+                error_type=type(e).__name__,
+                exc_info=True,
+            )
+
+            # Update quiz status to failed with locking
+            try:
+                stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
+                quiz = session.exec(stmt).first()
+                if quiz:
+                    quiz.llm_generation_status = "failed"
+                    session.add(quiz)
+                    session.commit()
+            except Exception as update_error:
+                logger.error(
+                    "question_generation_status_update_failed",
                     quiz_id=str(quiz_id),
                     error=str(update_error),
                 )
@@ -574,4 +701,206 @@ def delete_quiz_endpoint(
         )
         raise HTTPException(
             status_code=500, detail="Failed to delete quiz. Please try again."
+        )
+
+
+@router.post("/{quiz_id}/generate-questions")
+async def trigger_question_generation(
+    quiz_id: UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+    background_tasks: BackgroundTasks,
+) -> dict[str, str]:
+    """
+    Manually trigger question generation for a quiz.
+
+    This endpoint allows users to trigger question generation after content
+    extraction is complete. It uses the quiz's existing LLM settings.
+
+    **Parameters:**
+        quiz_id (UUID): The UUID of the quiz to generate questions for
+
+    **Returns:**
+        dict: Status message indicating generation has been triggered
+
+    **Authentication:**
+        Requires valid JWT token in Authorization header
+
+    **Raises:**
+        HTTPException: 404 if quiz not found or user doesn't own it
+        HTTPException: 400 if content extraction not completed
+        HTTPException: 409 if question generation already in progress
+        HTTPException: 500 if unable to trigger generation
+    """
+    logger.info(
+        "manual_question_generation_triggered",
+        user_id=str(current_user.id),
+        quiz_id=str(quiz_id),
+    )
+
+    try:
+        # Get the quiz and verify ownership
+        quiz = get_quiz_by_id(session, quiz_id)
+
+        if not quiz:
+            logger.warning(
+                "manual_generation_quiz_not_found",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+            )
+            raise HTTPException(status_code=404, detail="Quiz not found")
+
+        if quiz.owner_id != current_user.id:
+            logger.warning(
+                "manual_generation_access_denied",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+                quiz_owner_id=str(quiz.owner_id),
+            )
+            raise HTTPException(status_code=404, detail="Quiz not found")
+
+        # Check if content extraction is completed
+        if quiz.content_extraction_status != "completed":
+            logger.warning(
+                "manual_generation_content_not_ready",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+                content_status=quiz.content_extraction_status,
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="Content extraction must be completed before generating questions",
+            )
+
+        # Check if question generation is already in progress
+        if quiz.llm_generation_status == "processing":
+            logger.warning(
+                "manual_generation_already_in_progress",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+                current_status=quiz.llm_generation_status,
+            )
+            raise HTTPException(
+                status_code=409, detail="Question generation is already in progress"
+            )
+
+        # Reset generation status to pending
+        quiz.llm_generation_status = "pending"
+        session.add(quiz)
+        session.commit()
+
+        # Trigger question generation in the background
+        background_tasks.add_task(
+            generate_questions_for_quiz,
+            quiz_id,
+            quiz.question_count,
+            quiz.llm_model,
+            quiz.llm_temperature,
+        )
+
+        logger.info(
+            "manual_question_generation_started",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz_id),
+            question_count=quiz.question_count,
+            llm_model=quiz.llm_model,
+        )
+
+        return {"message": "Question generation started"}
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(
+            "manual_question_generation_failed",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz_id),
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to trigger question generation"
+        )
+
+
+@router.get("/{quiz_id}/questions/stats")
+def get_quiz_question_stats(
+    quiz_id: UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> dict[str, int]:
+    """
+    Get question statistics for a quiz.
+
+    Returns the total number of questions and approved questions for the quiz.
+
+    **Parameters:**
+        quiz_id (UUID): The UUID of the quiz to get stats for
+
+    **Returns:**
+        dict: Dictionary with 'total' and 'approved' question counts
+
+    **Authentication:**
+        Requires valid JWT token in Authorization header
+
+    **Raises:**
+        HTTPException: 404 if quiz not found or user doesn't own it
+        HTTPException: 500 if database operation fails
+    """
+    logger.info(
+        "question_stats_retrieval_initiated",
+        user_id=str(current_user.id),
+        quiz_id=str(quiz_id),
+    )
+
+    try:
+        # Verify quiz exists and user owns it
+        quiz = get_quiz_by_id(session, quiz_id)
+        if not quiz:
+            logger.warning(
+                "question_stats_quiz_not_found",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+            )
+            raise HTTPException(status_code=404, detail="Quiz not found")
+
+        if quiz.owner_id != current_user.id:
+            logger.warning(
+                "question_stats_access_denied",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+                quiz_owner_id=str(quiz.owner_id),
+            )
+            raise HTTPException(status_code=404, detail="Quiz not found")
+
+        # Get question counts
+        stats = get_question_counts_by_quiz_id(session, quiz_id)
+
+        logger.info(
+            "question_stats_retrieval_completed",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz_id),
+            total_questions=stats["total"],
+            approved_questions=stats["approved"],
+        )
+
+        return stats
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(
+            "question_stats_retrieval_failed",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz_id),
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve question stats. Please try again.",
         )

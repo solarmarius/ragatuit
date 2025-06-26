@@ -15,7 +15,9 @@ test.describe("StatusLight Component", () => {
     })
   })
 
-  test("should display red light when content extraction failed", async ({ page }) => {
+  test("should display red light when content extraction failed", async ({
+    page,
+  }) => {
     const mockQuizId = "123e4567-e89b-12d3-a456-426614174000"
     const mockQuiz = {
       id: mockQuizId,
@@ -49,7 +51,9 @@ test.describe("StatusLight Component", () => {
     await expect(statusLight).toHaveCSS("background-color", "rgb(239, 68, 68)") // red.500
   })
 
-  test("should display red light when LLM generation failed", async ({ page }) => {
+  test("should display red light when LLM generation failed", async ({
+    page,
+  }) => {
     const mockQuizId = "123e4567-e89b-12d3-a456-426614174000"
     const mockQuiz = {
       id: mockQuizId,
@@ -83,7 +87,9 @@ test.describe("StatusLight Component", () => {
     await expect(statusLight).toHaveCSS("background-color", "rgb(239, 68, 68)") // red.500
   })
 
-  test("should display green light when both processes completed", async ({ page }) => {
+  test("should display green light when both processes completed", async ({
+    page,
+  }) => {
     const mockQuizId = "123e4567-e89b-12d3-a456-426614174000"
     const mockQuiz = {
       id: mockQuizId,
@@ -112,12 +118,16 @@ test.describe("StatusLight Component", () => {
     await page.goto(`/quiz/${mockQuizId}`)
 
     // Check that the status light is present and has green color
-    const statusLight = page.locator('[title="Questions generated successfully"]')
+    const statusLight = page.locator(
+      '[title="Questions generated successfully"]',
+    )
     await expect(statusLight).toBeVisible()
     await expect(statusLight).toHaveCSS("background-color", "rgb(34, 197, 94)") // green.500
   })
 
-  test("should display orange light when content extraction is processing", async ({ page }) => {
+  test("should display orange light when content extraction is processing", async ({
+    page,
+  }) => {
     const mockQuizId = "123e4567-e89b-12d3-a456-426614174000"
     const mockQuiz = {
       id: mockQuizId,
@@ -151,7 +161,9 @@ test.describe("StatusLight Component", () => {
     await expect(statusLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
   })
 
-  test("should display orange light when LLM generation is processing", async ({ page }) => {
+  test("should display orange light when LLM generation is processing", async ({
+    page,
+  }) => {
     const mockQuizId = "123e4567-e89b-12d3-a456-426614174000"
     const mockQuiz = {
       id: mockQuizId,
@@ -185,7 +197,9 @@ test.describe("StatusLight Component", () => {
     await expect(statusLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
   })
 
-  test("should display orange light when both processes are pending", async ({ page }) => {
+  test("should display orange light when both processes are pending", async ({
+    page,
+  }) => {
     const mockQuizId = "123e4567-e89b-12d3-a456-426614174000"
     const mockQuiz = {
       id: mockQuizId,
@@ -219,7 +233,9 @@ test.describe("StatusLight Component", () => {
     await expect(statusLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
   })
 
-  test("should display orange light when extraction completed but generation pending", async ({ page }) => {
+  test("should display orange light when extraction completed but generation pending", async ({
+    page,
+  }) => {
     const mockQuizId = "123e4567-e89b-12d3-a456-426614174000"
     const mockQuiz = {
       id: mockQuizId,
@@ -328,7 +344,9 @@ test.describe("StatusLight Component", () => {
     await expect(statusLight).toHaveCSS("cursor", "help")
 
     // Check box shadow is present (glow effect) - Chakra may not render it in test environment
-    const boxShadow = await statusLight.evaluate((el) => getComputedStyle(el).boxShadow)
+    const boxShadow = await statusLight.evaluate(
+      (el) => getComputedStyle(el).boxShadow,
+    )
     // Box shadow might be 'none' in test environment, just check it's defined
     expect(typeof boxShadow).toBe("string")
   })

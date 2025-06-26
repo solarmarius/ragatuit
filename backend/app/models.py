@@ -62,8 +62,8 @@ class Quiz(SQLModel, table=True):
     selected_modules: str = Field(description="JSON array of selected Canvas modules")
     title: str = Field(min_length=1)
     question_count: int = Field(default=100, ge=1, le=200)
-    llm_model: str = Field(default="o3-pro")
-    llm_temperature: float = Field(default=0.3, ge=0.0, le=2.0)
+    llm_model: str = Field(default="o3")
+    llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
     content_extraction_status: str = Field(
         default="pending",
         description="Status of content extraction: pending, processing, completed, failed",
@@ -91,6 +91,9 @@ class Quiz(SQLModel, table=True):
             onupdate=func.now(),
             nullable=True,
         ),
+    )
+    questions: list["Question"] = Relationship(
+        back_populates="quiz", cascade_delete=True
     )
 
     # Methods to handle JSON strings for selected_modules field
@@ -150,8 +153,8 @@ class QuizCreate(SQLModel):
     selected_modules: dict[int, str]
     title: str = Field(min_length=1, max_length=255)
     question_count: int = Field(default=100, ge=1, le=200)
-    llm_model: str = Field(default="o3-pro")
-    llm_temperature: float = Field(default=0.3, ge=0.0, le=2.0)
+    llm_model: str = Field(default="o3")
+    llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
 
 
 class UserPublic(SQLModel):
@@ -200,3 +203,71 @@ class CanvasCourse(SQLModel):
 class CanvasModule(SQLModel):
     id: int
     name: str
+
+
+class Question(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    quiz_id: uuid.UUID = Field(
+        foreign_key="quiz.id", nullable=False, ondelete="CASCADE"
+    )
+    quiz: Quiz | None = Relationship(back_populates="questions")
+    question_text: str = Field(min_length=1, max_length=2000)
+    option_a: str = Field(min_length=1, max_length=500)
+    option_b: str = Field(min_length=1, max_length=500)
+    option_c: str = Field(min_length=1, max_length=500)
+    option_d: str = Field(min_length=1, max_length=500)
+    correct_answer: str = Field(regex=r"^[ABCD]$", description="Must be A, B, C, or D")
+    is_approved: bool = Field(default=False, description="Whether question is approved")
+    approved_at: datetime | None = Field(
+        default=None, description="Timestamp when question was approved"
+    )
+    created_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(
+            DateTime(timezone=True), server_default=func.now(), nullable=True
+        ),
+    )
+    updated_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(
+            DateTime(timezone=True),
+            onupdate=func.now(),
+            nullable=True,
+        ),
+    )
+
+
+class QuestionCreate(SQLModel):
+    quiz_id: uuid.UUID
+    question_text: str = Field(min_length=1, max_length=2000)
+    option_a: str = Field(min_length=1, max_length=500)
+    option_b: str = Field(min_length=1, max_length=500)
+    option_c: str = Field(min_length=1, max_length=500)
+    option_d: str = Field(min_length=1, max_length=500)
+    correct_answer: str = Field(regex=r"^[ABCD]$", description="Must be A, B, C, or D")
+
+
+class QuestionUpdate(SQLModel):
+    question_text: str | None = Field(default=None, min_length=1, max_length=2000)
+    option_a: str | None = Field(default=None, min_length=1, max_length=500)
+    option_b: str | None = Field(default=None, min_length=1, max_length=500)
+    option_c: str | None = Field(default=None, min_length=1, max_length=500)
+    option_d: str | None = Field(default=None, min_length=1, max_length=500)
+    correct_answer: str | None = Field(
+        default=None, regex=r"^[ABCD]$", description="Must be A, B, C, or D"
+    )
+
+
+class QuestionPublic(SQLModel):
+    id: uuid.UUID
+    quiz_id: uuid.UUID
+    question_text: str
+    option_a: str
+    option_b: str
+    option_c: str
+    option_d: str
+    correct_answer: str
+    is_approved: bool
+    approved_at: datetime | None
+    created_at: datetime | None
+    updated_at: datetime | None

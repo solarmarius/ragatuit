@@ -65,7 +65,7 @@ test.describe("Quiz List Component", () => {
         selected_modules:
           '{"173469": "Variables", "173470": "Functions", "173471": "Classes"}',
         question_count: 25,
-        llm_model: "o3-pro",
+        llm_model: "o3",
         llm_temperature: 0.3,
         created_at: "2024-01-10T08:15:00Z",
         updated_at: "2024-01-12T16:45:00Z",
@@ -115,7 +115,7 @@ test.describe("Quiz List Component", () => {
     await expect(page.getByText("CS101")).toBeVisible()
     await expect(page.getByText("ID: 67890")).toBeVisible()
     await expect(page.getByText("25")).toBeVisible()
-    await expect(page.getByText("o3-pro")).toBeVisible()
+    await expect(page.getByText("o3")).toBeVisible()
     await expect(page.getByText("10 Jan 2024")).toBeVisible()
 
     // Check action buttons

@@ -29,7 +29,7 @@ async def test_create_quiz_success() -> None:
         selected_modules='{"173467": "Module 1"}',
         title="Test Quiz",
         question_count=100,
-        llm_model="o3-pro",
+        llm_model="o3",
         llm_temperature=0.3,
     )
 
@@ -56,7 +56,7 @@ async def test_create_quiz_success() -> None:
                         "selected_modules": {"173467": "Module 1"},
                         "title": "Test Quiz",
                         "question_count": 100,
-                        "llm_model": "o3-pro",
+                        "llm_model": "o3",
                         "llm_temperature": 0.3,
                     },
                 )
@@ -67,7 +67,7 @@ async def test_create_quiz_success() -> None:
         assert data["canvas_course_name"] == "Test Course"
         assert data["title"] == "Test Quiz"
         assert data["question_count"] == 100
-        assert data["llm_model"] == "o3-pro"
+        assert data["llm_model"] == "o3"
         assert data["llm_temperature"] == 0.3
     finally:
         app.dependency_overrides.clear()
@@ -93,7 +93,7 @@ async def test_create_quiz_with_defaults() -> None:
         selected_modules='{"173467": "Module 1"}',
         title="Default Quiz",
         question_count=100,  # Default
-        llm_model="o3-pro",  # Default
+        llm_model="o3",  # Default
         llm_temperature=0.3,  # Default
     )
 
@@ -126,7 +126,7 @@ async def test_create_quiz_with_defaults() -> None:
         assert response.status_code == 200
         data = response.json()
         assert data["question_count"] == 100
-        assert data["llm_model"] == "o3-pro"
+        assert data["llm_model"] == "o3"
         assert data["llm_temperature"] == 0.3
     finally:
         app.dependency_overrides.clear()
@@ -382,7 +382,7 @@ async def test_get_user_quizzes_success() -> None:
             selected_modules='{"173468": "Module 2"}',
             title="Quiz 2",
             question_count=75,
-            llm_model="o3-pro",
+            llm_model="o3",
             llm_temperature=0.5,
         ),
     ]

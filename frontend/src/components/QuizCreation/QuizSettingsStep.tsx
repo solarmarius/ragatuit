@@ -27,8 +27,8 @@ interface QuizSettingsStepProps {
 
 const DEFAULT_SETTINGS: QuizSettings = {
   questionCount: 100,
-  llmModel: "o3-pro",
-  llmTemperature: 0.3,
+  llmModel: "o3",
+  llmTemperature: 1,
 }
 
 const SUPPORTED_MODELS = createListCollection({
@@ -36,7 +36,7 @@ const SUPPORTED_MODELS = createListCollection({
     { value: "gpt-4o", label: "GPT-4o" },
     { value: "gpt-4.1-mini", label: "GPT-4.1 Mini" },
     { value: "gpt-o3", label: "GPT-o3" },
-    { value: "o3-pro", label: "o3-pro" },
+    { value: "o3", label: "o3" },
   ],
 })
 
@@ -117,7 +117,7 @@ export function QuizSettingsStep({
 
                   <Box>
                     <Text fontWeight="medium">Model:</Text>
-                    <Text color="gray.600">o3-pro</Text>
+                    <Text color="gray.600">o3</Text>
                     <Text fontSize="sm" color="gray.500">
                       Optimized for educational content generation
                     </Text>
@@ -125,7 +125,7 @@ export function QuizSettingsStep({
 
                   <Box>
                     <Text fontWeight="medium">Temperature:</Text>
-                    <Text color="gray.600">0.3</Text>
+                    <Text color="gray.600">1</Text>
                     <Text fontSize="sm" color="gray.500">
                       Balanced creativity and consistency for quiz questions
                     </Text>

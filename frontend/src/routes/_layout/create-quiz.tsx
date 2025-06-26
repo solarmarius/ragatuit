@@ -81,8 +81,8 @@ function CreateQuiz() {
         selected_modules: formData.selectedModules,
         title: formData.title,
         question_count: formData.questionCount || 100,
-        llm_model: formData.llmModel || "o3-pro",
-        llm_temperature: formData.llmTemperature || 0.3,
+        llm_model: formData.llmModel || "o3",
+        llm_temperature: formData.llmTemperature || 1,
       }
 
       const response = await QuizService.createNewQuiz({
@@ -147,8 +147,8 @@ function CreateQuiz() {
           <QuizSettingsStep
             settings={{
               questionCount: formData.questionCount || 100,
-              llmModel: formData.llmModel || "o3-pro",
-              llmTemperature: formData.llmTemperature || 0.3,
+              llmModel: formData.llmModel || "o3",
+              llmTemperature: formData.llmTemperature || 1,
             }}
             onSettingsChange={(settings) =>
               updateFormData({
@@ -180,8 +180,8 @@ function CreateQuiz() {
       case 3: {
         // Step 3 is always valid since we have default values
         const questionCount = formData.questionCount || 100
-        const llmModel = formData.llmModel || "o3-pro"
-        const llmTemperature = formData.llmTemperature || 0.3
+        const llmModel = formData.llmModel || "o3"
+        const llmTemperature = formData.llmTemperature || 1
         return (
           questionCount >= 1 &&
           questionCount <= 200 &&
