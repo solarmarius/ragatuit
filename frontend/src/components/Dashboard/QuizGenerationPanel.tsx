@@ -7,31 +7,31 @@ import {
   Skeleton,
   Text,
   VStack,
-} from "@chakra-ui/react"
-import { Link as RouterLink } from "@tanstack/react-router"
+} from "@chakra-ui/react";
+import { Link as RouterLink } from "@tanstack/react-router";
 
-import type { Quiz } from "@/client/types.gen"
-import { Button } from "@/components/ui/button"
-import { StatusLight } from "@/components/ui/status-light"
+import type { Quiz } from "@/client/types.gen";
+import { Button } from "@/components/ui/button";
+import { StatusLight } from "@/components/ui/status-light";
 import {
   getQuizzesBeingGenerated,
   getQuizProcessingPhase,
   isQuizProcessing,
-} from "@/utils/quizFilters"
+} from "@/utils/quizFilters";
 
 interface QuizGenerationPanelProps {
-  quizzes: Quiz[]
-  isLoading: boolean
+  quizzes: Quiz[];
+  isLoading: boolean;
 }
 
 export function QuizGenerationPanel({
   quizzes,
   isLoading,
 }: QuizGenerationPanelProps) {
-  const generatingQuizzes = getQuizzesBeingGenerated(quizzes)
+  const generatingQuizzes = getQuizzesBeingGenerated(quizzes);
 
   if (isLoading) {
-    return <QuizGenerationPanelSkeleton />
+    return <QuizGenerationPanelSkeleton />;
   }
 
   return (
@@ -65,25 +65,25 @@ export function QuizGenerationPanel({
         ) : (
           <VStack gap={4} align="stretch">
             {generatingQuizzes.slice(0, 4).map((quiz) => {
-              const processingPhase = getQuizProcessingPhase(quiz)
-              const isCurrentlyProcessing = isQuizProcessing(quiz)
+              const processingPhase = getQuizProcessingPhase(quiz);
 
               // Calculate progress percentage
-              const extractionStatus = quiz.content_extraction_status || "pending"
-              const generationStatus = quiz.llm_generation_status || "pending"
+              const extractionStatus =
+                quiz.content_extraction_status || "pending";
+              const generationStatus = quiz.llm_generation_status || "pending";
 
-              let progressPercentage = 0
+              let progressPercentage = 0;
               if (extractionStatus === "completed") {
-                progressPercentage = 50
+                progressPercentage = 50;
               }
               if (generationStatus === "completed") {
-                progressPercentage = 100
+                progressPercentage = 100;
               }
               if (extractionStatus === "processing") {
-                progressPercentage = 25
+                progressPercentage = 25;
               }
               if (generationStatus === "processing") {
-                progressPercentage = 75
+                progressPercentage = 75;
               }
 
               return (
@@ -100,7 +100,11 @@ export function QuizGenerationPanel({
                   <VStack align="stretch" gap={3}>
                     <HStack justify="space-between" align="start">
                       <VStack align="start" gap={1} flex={1}>
-                        <Text fontWeight="medium" fontSize="sm" lineHeight="tight">
+                        <Text
+                          fontWeight="medium"
+                          fontSize="sm"
+                          lineHeight="tight"
+                        >
                           {quiz.title}
                         </Text>
                         <Text fontSize="xs" color="gray.600">
@@ -109,15 +113,23 @@ export function QuizGenerationPanel({
                       </VStack>
                       <HStack gap={2}>
                         <StatusLight
-                          extractionStatus={quiz.content_extraction_status || "pending"}
-                          generationStatus={quiz.llm_generation_status || "pending"}
+                          extractionStatus={
+                            quiz.content_extraction_status || "pending"
+                          }
+                          generationStatus={
+                            quiz.llm_generation_status || "pending"
+                          }
                         />
                       </HStack>
                     </HStack>
 
                     <Box>
                       <HStack justify="space-between" mb={2}>
-                        <Text fontSize="xs" color="gray.700" fontWeight="medium">
+                        <Text
+                          fontSize="xs"
+                          color="gray.700"
+                          fontWeight="medium"
+                        >
                           {processingPhase}
                         </Text>
                         <Text fontSize="xs" color="gray.600">
@@ -141,7 +153,11 @@ export function QuizGenerationPanel({
                           {quiz.question_count} questions
                         </Badge>
                         {quiz.llm_model && (
-                          <Badge variant="outline" colorScheme="purple" size="sm">
+                          <Badge
+                            variant="outline"
+                            colorScheme="purple"
+                            size="sm"
+                          >
                             {quiz.llm_model}
                           </Badge>
                         )}
@@ -158,7 +174,7 @@ export function QuizGenerationPanel({
                     </HStack>
                   </VStack>
                 </Box>
-              )
+              );
             })}
 
             {generatingQuizzes.length > 4 && (
@@ -175,7 +191,7 @@ export function QuizGenerationPanel({
         )}
       </Card.Body>
     </Card.Root>
-  )
+  );
 }
 
 function QuizGenerationPanelSkeleton() {
@@ -229,5 +245,5 @@ function QuizGenerationPanelSkeleton() {
         </VStack>
       </Card.Body>
     </Card.Root>
-  )
+  );
 }
