@@ -1,4 +1,13 @@
-import { Badge, Box, Card, HStack, Link, Text, VStack } from "@chakra-ui/react";
+import {
+  Badge,
+  Box,
+  Card,
+  HStack,
+  Link,
+  Text,
+  VStack,
+  Alert,
+} from "@chakra-ui/react";
 import { LuExternalLink } from "react-icons/lu";
 
 export function HelpPanel() {
@@ -136,6 +145,21 @@ export function HelpPanel() {
               </Text>
             </VStack>
           </Box>
+          <Alert.Root status="info" variant="subtle" colorPalette="orange">
+            <Alert.Content>
+              <Alert.Description>
+                Review our{" "}
+                <Link
+                  href="/privacy-policy"
+                  color="blue.500"
+                  textDecoration="underline"
+                >
+                  Privacy Policy
+                </Link>{" "}
+                to understand how we handle your data.
+              </Alert.Description>
+            </Alert.Content>
+          </Alert.Root>
         </VStack>
       </Card.Body>
     </Card.Root>

@@ -33,7 +33,7 @@ export function QuizReviewPanel({ quizzes, isLoading }: QuizReviewPanelProps) {
           <Text fontSize="lg" fontWeight="semibold">
             Quizzes Needing Review
           </Text>
-          <Badge variant="outline" colorScheme="green">
+          <Badge variant="outline" colorScheme="green" data-testid="badge">
             {reviewQuizzes.length}
           </Badge>
         </HStack>

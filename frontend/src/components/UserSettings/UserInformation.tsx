@@ -122,7 +122,13 @@ const UserInformation = () => {
         </Flex>
       </Box>
 
-      <Alert.Root status="info" variant="subtle" mt={6} colorPalette="teal">
+      <Alert.Root
+        status="info"
+        variant="subtle"
+        mt={6}
+        colorPalette="orange"
+        w="50%"
+      >
         <Alert.Content>
           <Alert.Description>
             Review our{" "}

@@ -41,7 +41,7 @@ export function QuizGenerationPanel({
           <Text fontSize="lg" fontWeight="semibold">
             Quizzes Being Generated
           </Text>
-          <Badge variant="outline" colorScheme="orange">
+          <Badge variant="outline" colorScheme="orange" data-testid="badge">
             {generatingQuizzes.length}
           </Badge>
         </HStack>

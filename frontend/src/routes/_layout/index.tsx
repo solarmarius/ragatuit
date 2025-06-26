@@ -71,7 +71,7 @@ function Dashboard() {
 
   return (
     <>
-      <Container maxW="6xl" py={8}>
+      <Container maxW="6xl" py={8} data-testid="dashboard-container">
         <VStack gap={6} align="stretch">
           {/* Header */}
           <HStack justify="space-between" align="center">
@@ -89,7 +89,7 @@ function Dashboard() {
           </HStack>
 
           {/* Dashboard Panels */}
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={6}>
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={6} data-testid="dashboard-grid">
             <QuizReviewPanel quizzes={quizzes || []} isLoading={isLoading} />
             <QuizGenerationPanel quizzes={quizzes || []} isLoading={isLoading} />
             <HelpPanel />
