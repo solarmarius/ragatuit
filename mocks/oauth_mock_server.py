@@ -2,12 +2,19 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import FastAPI, Form, Header, HTTPException, Query
-from fastapi.responses import HTMLResponse, RedirectResponse
-from mock_bodys import spatial_filtering_body, what_is_an_image_body
+from fastapi import Body, FastAPI, Form, Header, HTTPException, Query
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from mock_bodys import (
+    csp_body,
+    markov_decision_process_body,
+    reinforcement_learning_body,
+)
 from pydantic import BaseModel
 
 app = FastAPI(title="Mock Canvas Server", version="1.0.0")
+
+mock_quizzes = []
+mock_quiz_items = []
 
 # Mock data storage
 mock_users = {
@@ -23,14 +30,14 @@ mock_users = {
 mock_courses = [
     {
         "id": 37823,
-        "name": "FYS-2010 Image Analysis",
+        "name": "INF-2600 AI Methods and applications",
         "account_id": 27925,
         "uuid": "hfv2nToY5ae1MbmNWTfNhTpzVbwq9ENcT00yTEiK",
         "start_at": None,
         "grading_standard_id": None,
         "is_public": False,
         "created_at": "2025-03-06T16:18:18Z",
-        "course_code": "FYS-2010",
+        "course_code": "INF-2600",
         "default_view": "wiki",
         "root_account_id": 1,
         "enrollment_term_id": 3,
@@ -131,7 +138,7 @@ mock_modules = [
     },
     {
         "id": 173574,
-        "name": "Image Fundamentals",
+        "name": "Search",
         "position": 2,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -144,7 +151,7 @@ mock_modules = [
     },
     {
         "id": 173468,
-        "name": "Spatial Filtering",
+        "name": "Constraint Satisfaction Problems",
         "position": 3,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -157,7 +164,7 @@ mock_modules = [
     },
     {
         "id": 173469,
-        "name": "Convolution",
+        "name": "Sheduling and Adversarial Search",
         "position": 4,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -170,7 +177,7 @@ mock_modules = [
     },
     {
         "id": 173579,
-        "name": "Fourier Transforms",
+        "name": "Markov Decision Processes",
         "position": 5,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -183,7 +190,7 @@ mock_modules = [
     },
     {
         "id": 173577,
-        "name": "Computational Tomography",
+        "name": "Reinforcement Learning",
         "position": 6,
         "unlock_at": None,
         "require_sequential_progress": False,
@@ -199,61 +206,124 @@ mock_modules = [
 mock_items = {
     173574: [
         {
-            "id": 1188038,
-            "title": "what-is-an-image",
-            "position": 8,
-            "indent": 0,
-            "quiz_lti": False,
-            "type": "Page",
-            "module_id": 173690,
-            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1188038",
-            "page_url": "what-is-an-image",
-            "publish_at": None,
-            "url": "https://uit.instructure.com/api/v1/courses/37823/pages/what-is-an-image",
-            "published": True,
-            "unpublishable": True,
-        },
-        {
-            "id": 1188039,
-            "title": "Week8_color.pdf",
-            "position": 9,
+            "id": 1189103,
+            "title": "2 Lecture - Search - INF-2600.pdf",
+            "position": 7,
             "indent": 0,
             "quiz_lti": False,
             "type": "File",
-            "module_id": 173690,
-            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1188039",
-            "content_id": 3612012,
-            "url": "https://uit.instructure.com/api/v1/courses/37823/files/3612012",
+            "module_id": 182386,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1189103",
+            "content_id": 3615155,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/files/3615155",
             "published": True,
             "unpublishable": False,
         },
     ],
     173468: [
         {
-            "id": 1188040,
-            "title": "spatial-filtering",
+            "id": 1189102,
+            "title": "3 Lecture - Planning and CSP - INF-2600.pdf",
+            "position": 6,
+            "indent": 0,
+            "quiz_lti": False,
+            "type": "File",
+            "module_id": 182386,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1189102",
+            "content_id": 3615154,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/files/3615154",
+            "published": True,
+            "unpublishable": False,
+        },
+    ],
+    173469: [
+        {
+            "id": 1189104,
+            "title": "CSP",
+            "position": 8,
+            "indent": 0,
+            "quiz_lti": False,
+            "type": "Page",
+            "module_id": 182386,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1189104",
+            "page_url": "csp",
+            "publish_at": None,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/pages/csp",
+            "published": True,
+            "unpublishable": True,
+        },
+    ],
+    173469: [
+        {
+            "id": 1189100,
+            "title": "5 MDP - INF-2600.pdf",
+            "position": 4,
+            "indent": 0,
+            "quiz_lti": False,
+            "type": "File",
+            "module_id": 182386,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1189100",
+            "content_id": 3615152,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/files/3615152",
+            "published": True,
+            "unpublishable": False,
+        },
+        {
+            "id": 1189105,
+            "title": "Markov Decision Process",
+            "position": 9,
+            "indent": 0,
+            "quiz_lti": False,
+            "type": "Page",
+            "module_id": 182386,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1189105",
+            "page_url": "markov-decision-process",
+            "publish_at": None,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/pages/markov-decision-process",
+            "published": True,
+            "unpublishable": True,
+        },
+    ],
+    173577: [
+        {
+            "id": 1189140,
+            "title": "Reinforcement Learning",
             "position": 10,
             "indent": 0,
             "quiz_lti": False,
             "type": "Page",
-            "module_id": 173690,
-            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1188040",
-            "page_url": "spatial-filtering",
+            "module_id": 182386,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1189140",
+            "page_url": "reinforcement-learning",
             "publish_at": None,
-            "url": "https://uit.instructure.com/api/v1/courses/37823/pages/spatial-filtering",
+            "url": "https://uit.instructure.com/api/v1/courses/37823/pages/reinforcement-learning",
             "published": True,
             "unpublishable": True,
-        }
+        },
+        {
+            "id": 1189099,
+            "title": "6 Reinforcement Learning - INF-2600.pdf",
+            "position": 3,
+            "indent": 0,
+            "quiz_lti": False,
+            "type": "File",
+            "module_id": 182386,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1189099",
+            "content_id": 3615151,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/files/3615151",
+            "published": True,
+            "unpublishable": False,
+        },
     ],
 }
 
 mock_pages = {
-    "what-is-an-image": {
-        "title": "what-is-an-image",
-        "created_at": "2025-06-25T07:35:02Z",
-        "url": "what-is-an-image",
+    "markov-decision-process": {
+        "title": "Markov Decision Process",
+        "created_at": "2025-06-26T09:41:10Z",
+        "url": "markov-decision-process",
         "editing_roles": "teachers",
-        "page_id": 423573,
+        "page_id": 424240,
         "last_edited_by": {
             "id": 71202,
             "anonymous_id": "1ixu",
@@ -265,19 +335,19 @@ mock_pages = {
         "published": True,
         "hide_from_students": False,
         "front_page": False,
-        "html_url": "https://uit.instructure.com/courses/37823/pages/what-is-an-image",
+        "html_url": "https://uit.instructure.com/courses/37823/pages/markov-decision-process",
         "todo_date": None,
         "publish_at": None,
-        "updated_at": "2025-06-25T07:35:39Z",
+        "updated_at": "2025-06-26T10:18:42Z",
         "locked_for_user": False,
-        "body": what_is_an_image_body,
+        "body": markov_decision_process_body,
     },
-    "spatial-filtering": {
-        "title": "spatial-filtering",
-        "created_at": "2025-06-25T07:40:43Z",
-        "url": "spatial-filtering",
+    "csp": {
+        "title": "CSP",
+        "created_at": "2025-06-26T09:40:10Z",
+        "url": "csp",
         "editing_roles": "teachers",
-        "page_id": 423574,
+        "page_id": 424239,
         "last_edited_by": {
             "id": 71202,
             "anonymous_id": "1ixu",
@@ -289,43 +359,148 @@ mock_pages = {
         "published": True,
         "hide_from_students": False,
         "front_page": False,
-        "html_url": "https://uit.instructure.com/courses/37823/pages/spatial-filtering",
+        "html_url": "https://uit.instructure.com/courses/37823/pages/csp",
         "todo_date": None,
         "publish_at": None,
-        "updated_at": "2025-06-25T07:40:55Z",
+        "updated_at": "2025-06-26T09:40:39Z",
         "locked_for_user": False,
-        "body": spatial_filtering_body,
+        "body": csp_body,
+    },
+    "reinforcement-learning": {
+        "title": "Reinforcement Learning",
+        "created_at": "2025-06-26T10:19:13Z",
+        "url": "reinforcement-learning",
+        "editing_roles": "teachers",
+        "page_id": 424341,
+        "last_edited_by": {
+            "id": 71202,
+            "anonymous_id": "1ixu",
+            "display_name": "Marius Rungmanee Solaas",
+            "avatar_image_url": "https://uit.instructure.com/images/thumbnails/1711458/KP9GqxzKd0VQzE400AHhImiJtv8fzGV1cR5gfYW2",
+            "html_url": "https://uit.instructure.com/courses/37823/users/71202",
+            "pronouns": None,
+        },
+        "published": True,
+        "hide_from_students": False,
+        "front_page": False,
+        "html_url": "https://uit.instructure.com/courses/37823/pages/reinforcement-learning",
+        "todo_date": None,
+        "publish_at": None,
+        "updated_at": "2025-06-26T10:19:37Z",
+        "locked_for_user": False,
+        "body": reinforcement_learning_body,
     },
 }
 
 mock_files = {
-    3612012: {
-        "id": 3612012,
+    3615155: {
+        "id": 3615155,
         "folder_id": 708060,
-        "display_name": "Week8_color.pdf",
-        "filename": "Week8_color.pdf",
-        "uuid": "mBC1UvEdpKW1icxT4SEcTnMza6Iqk9NqVeXmm0nz",
+        "display_name": "2 Lecture - Search - INF-2600.pdf",
+        "filename": "2+Lecture+-+Search+-+INF-2600.pdf",
+        "uuid": "dEadZTvKyJqMIhhsw8af72M2Aj17rs8GkbWl8Vav",
         "upload_status": "success",
         "content-type": "application/pdf",
-        "url": "https://uit.instructure.com/files/3612012/download?download_frd=1&verifier=mBC1UvEdpKW1icxT4SEcTnMza6Iqk9NqVeXmm0nz",
-        "size": 4733671,
-        "created_at": "2025-06-25T07:37:50Z",
-        "updated_at": "2025-06-25T07:37:50Z",
+        "url": "https://uit.instructure.com/files/3615155/download?download_frd=1&verifier=dEadZTvKyJqMIhhsw8af72M2Aj17rs8GkbWl8Vav",
+        "size": 1102432,
+        "created_at": "2025-06-26T09:39:37Z",
+        "updated_at": "2025-06-26T09:39:37Z",
         "unlock_at": None,
         "locked": False,
         "hidden": False,
         "lock_at": None,
         "hidden_for_user": False,
         "thumbnail_url": None,
-        "modified_at": "2025-06-25T07:37:50Z",
+        "modified_at": "2025-06-26T09:39:37Z",
         "mime_class": "pdf",
         "media_entry_id": None,
         "category": "uncategorized",
         "locked_for_user": False,
         "visibility_level": "inherit",
-        "canvadoc_session_url": "/api/v1/canvadoc_session?blob=%7B%22user_id%22:107380000000071202,%22attachment_id%22:3612012,%22type%22:%22canvadoc%22%7D&hmac=17da101766a54e3ced85255631181dba7ef5b02d",
+        "canvadoc_session_url": "/api/v1/canvadoc_session?blob=%7B%22user_id%22:107380000000071202,%22attachment_id%22:3615155,%22type%22:%22canvadoc%22%7D&hmac=4a270db294b97efa87552b8a068b99fac25c991e",
         "crocodoc_session_url": None,
-    }
+    },
+    3615154: {
+        "id": 3615154,
+        "folder_id": 708060,
+        "display_name": "3 Lecture - Planning and CSP - INF-2600.pdf",
+        "filename": "3+Lecture+-+Planning+and+CSP+-+INF-2600.pdf",
+        "uuid": "FB9XRUbHRuM6EqroJYXnueoyOHmeMZe0jfbKriBK",
+        "upload_status": "success",
+        "content-type": "application/pdf",
+        "url": "https://uit.instructure.com/files/3615154/download?download_frd=1&verifier=FB9XRUbHRuM6EqroJYXnueoyOHmeMZe0jfbKriBK",
+        "size": 1201660,
+        "created_at": "2025-06-26T09:39:36Z",
+        "updated_at": "2025-06-26T09:39:36Z",
+        "unlock_at": None,
+        "locked": False,
+        "hidden": False,
+        "lock_at": None,
+        "hidden_for_user": False,
+        "thumbnail_url": None,
+        "modified_at": "2025-06-26T09:39:36Z",
+        "mime_class": "pdf",
+        "media_entry_id": None,
+        "category": "uncategorized",
+        "locked_for_user": False,
+        "visibility_level": "inherit",
+        "canvadoc_session_url": "/api/v1/canvadoc_session?blob=%7B%22user_id%22:107380000000071202,%22attachment_id%22:3615154,%22type%22:%22canvadoc%22%7D&hmac=0e0d035f8a2b8fdbc3bc32c45fe2d7449aefe0e8",
+        "crocodoc_session_url": None,
+    },
+    3615152: {
+        "id": 3615152,
+        "folder_id": 708060,
+        "display_name": "5 MDP - INF-2600.pdf",
+        "filename": "5+MDP+-+INF-2600.pdf",
+        "uuid": "JqNRNiepvkDpEjU1WTvTE0mxdra70JDMOc0KqeWC",
+        "upload_status": "success",
+        "content-type": "application/pdf",
+        "url": "https://uit.instructure.com/files/3615152/download?download_frd=1&verifier=JqNRNiepvkDpEjU1WTvTE0mxdra70JDMOc0KqeWC",
+        "size": 1429439,
+        "created_at": "2025-06-26T09:39:34Z",
+        "updated_at": "2025-06-26T09:39:34Z",
+        "unlock_at": None,
+        "locked": False,
+        "hidden": False,
+        "lock_at": None,
+        "hidden_for_user": False,
+        "thumbnail_url": None,
+        "modified_at": "2025-06-26T09:39:34Z",
+        "mime_class": "pdf",
+        "media_entry_id": None,
+        "category": "uncategorized",
+        "locked_for_user": False,
+        "visibility_level": "inherit",
+        "canvadoc_session_url": "/api/v1/canvadoc_session?blob=%7B%22user_id%22:107380000000071202,%22attachment_id%22:3615152,%22type%22:%22canvadoc%22%7D&hmac=a406e7436f6df2bd35df913f38c856a28fe0c669",
+        "crocodoc_session_url": None,
+    },
+    3615151: {
+        "id": 3615151,
+        "folder_id": 708060,
+        "display_name": "6 Reinforcement Learning - INF-2600.pdf",
+        "filename": "6+Reinforcement+Learning+-+INF-2600.pdf",
+        "uuid": "M2dfGnJiFvXvyOdosaDt06CRWkEbTxZkZOcjhrj5",
+        "upload_status": "success",
+        "content-type": "application/pdf",
+        "url": "https://uit.instructure.com/files/3615151/download?download_frd=1&verifier=M2dfGnJiFvXvyOdosaDt06CRWkEbTxZkZOcjhrj5",
+        "size": 2989874,
+        "created_at": "2025-06-26T09:39:33Z",
+        "updated_at": "2025-06-26T09:39:33Z",
+        "unlock_at": None,
+        "locked": False,
+        "hidden": False,
+        "lock_at": None,
+        "hidden_for_user": False,
+        "thumbnail_url": None,
+        "modified_at": "2025-06-26T09:39:33Z",
+        "mime_class": "pdf",
+        "media_entry_id": None,
+        "category": "uncategorized",
+        "locked_for_user": False,
+        "visibility_level": "inherit",
+        "canvadoc_session_url": "/api/v1/canvadoc_session?blob=%7B%22user_id%22:107380000000071202,%22attachment_id%22:3615151,%22type%22:%22canvadoc%22%7D&hmac=4af7e1bcbae50a160d36cb89e344359ce5a332de",
+        "crocodoc_session_url": None,
+    },
 }
 
 
@@ -769,6 +944,170 @@ async def get_user_by_id(user_id: str, authorization: str = Header(None)):
         raise HTTPException(status_code=404, detail="User not found")
 
     return mock_users[user_id]
+
+
+@app.post("/api/quiz/v1/courses/{course_id}/quizzes")
+async def create_quiz(
+    course_id: int, authorization: str = Header(None), quiz_data: dict = Body(None)
+):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+
+    validate_token(authorization)
+
+    # Validate course access
+    if course_id != 37823:
+        raise HTTPException(status_code=403, detail="Unauthorized access to course")
+
+    # Create quiz object
+    new_quiz = {
+        "id": uuid.uuid4(),
+        "course_id": course_id,
+        "title": quiz_data.get("title", "Untitled Quiz"),
+        "points_possible": quiz_data.get("points_possible", 0),
+        "due_at": quiz_data.get("due_at"),
+        "lock_at": quiz_data.get("lock_at"),
+        "unlock_at": quiz_data.get("unlock_at"),
+        "published": False,
+        "quiz_type": "assignment",
+        "quiz_settings": quiz_data.get(
+            "quiz_settings",
+            {
+                "shuffle_questions": True,
+                "shuffle_answers": True,
+                "time_limit": None,
+                "multiple_attempts": False,
+                "scoring_policy": "keep_highest",
+            },
+        ),
+        "created_at": datetime.now().isoformat() + "Z",
+        "updated_at": datetime.now().isoformat() + "Z",
+    }
+
+    # Store quiz
+    mock_quizzes.append(new_quiz)
+
+    return JSONResponse(content=new_quiz, status_code=201)
+
+
+@app.post("/api/quiz/v1/courses/{course_id}/quizzes/{quiz_id}/items")
+async def create_quiz_item(
+    course_id: int,
+    quiz_id: int,
+    authorization: str = Header(None),
+    item_data: dict = Body(None),
+):
+    """Create a quiz item in a quiz"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+
+    validate_token(authorization)
+
+    # Validate course access
+    if course_id != 37823:
+        raise HTTPException(status_code=403, detail="Unauthorized access to course")
+
+    # Validate required fields
+    if not item_data:
+        raise HTTPException(status_code=400, detail="Item data is required")
+
+    item = item_data.get("item", {})
+    entry = item.get("entry", {})
+
+    # Validate required fields
+    if not item.get("entry_type"):
+        raise HTTPException(status_code=400, detail="item[entry_type] is required")
+
+    if not entry.get("item_body"):
+        raise HTTPException(
+            status_code=400, detail="item[entry][item_body] is required"
+        )
+
+    if not entry.get("interaction_type_slug"):
+        raise HTTPException(
+            status_code=400, detail="item[entry][interaction_type_slug] is required"
+        )
+
+    if not entry.get("interaction_data"):
+        raise HTTPException(
+            status_code=400, detail="item[entry][interaction_data] is required"
+        )
+
+    if not entry.get("scoring_data"):
+        raise HTTPException(
+            status_code=400, detail="item[entry][scoring_data] is required"
+        )
+
+    if not entry.get("scoring_algorithm"):
+        raise HTTPException(
+            status_code=400, detail="item[entry][scoring_algorithm] is required"
+        )
+
+    # Validate interaction_type_slug
+    valid_interaction_types = [
+        "multi-answer",
+        "matching",
+        "categorization",
+        "file-upload",
+        "formula",
+        "ordering",
+        "rich-fill-blank",
+        "hot-spot",
+        "choice",
+        "numeric",
+        "true-false",
+        "essay",
+    ]
+
+    if entry.get("interaction_type_slug") not in valid_interaction_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid interaction_type_slug. Must be one of: {', '.join(valid_interaction_types)}",
+        )
+
+    # Validate calculator_type if provided
+    if entry.get("calculator_type") and entry.get("calculator_type") not in [
+        "none",
+        "basic",
+        "scientific",
+    ]:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid calculator_type. Must be one of: none, basic, scientific",
+        )
+
+    # Validate points_possible if provided
+    points_possible = item.get("points_possible")
+    if points_possible is not None and points_possible <= 0:
+        raise HTTPException(status_code=400, detail="points_possible must be positive")
+
+    # Create the quiz item
+    new_quiz_item = {
+        "id": str(uuid.uuid4()),
+        "quiz_id": quiz_id,
+        "position": item.get("position", len(mock_quiz_items) + 1),
+        "points_possible": points_possible or 1,
+        "entry_type": item.get("entry_type"),
+        "entry": {
+            "title": entry.get("title", "Question"),
+            "item_body": entry.get("item_body"),
+            "calculator_type": entry.get("calculator_type", "none"),
+            "feedback": entry.get("feedback", {}),
+            "interaction_type_slug": entry.get("interaction_type_slug"),
+            "interaction_data": entry.get("interaction_data"),
+            "properties": entry.get("properties", {}),
+            "scoring_data": entry.get("scoring_data"),
+            "answer_feedback": entry.get("answer_feedback", {}),
+            "scoring_algorithm": entry.get("scoring_algorithm"),
+        },
+        "created_at": datetime.now().isoformat() + "Z",
+        "updated_at": datetime.now().isoformat() + "Z",
+    }
+
+    # Store the quiz item
+    mock_quiz_items.append(new_quiz_item)
+
+    return JSONResponse(content=new_quiz_item, status_code=201)
 
 
 # Health check endpoint
