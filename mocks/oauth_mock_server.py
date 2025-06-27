@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import Body, FastAPI, Form, Header, HTTPException, Query
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from mock_bodys import (
     csp_body,
     markov_decision_process_body,
@@ -961,7 +961,7 @@ async def create_quiz(
 
     # Create quiz object
     new_quiz = {
-        "id": uuid.uuid4(),
+        "id": str(uuid.uuid4()),
         "course_id": course_id,
         "title": quiz_data.get("title", "Untitled Quiz"),
         "points_possible": quiz_data.get("points_possible", 0),
@@ -987,7 +987,7 @@ async def create_quiz(
     # Store quiz
     mock_quizzes.append(new_quiz)
 
-    return JSONResponse(content=new_quiz, status_code=201)
+    return new_quiz
 
 
 @app.post("/api/quiz/v1/courses/{course_id}/quizzes/{quiz_id}/items")
@@ -1107,7 +1107,7 @@ async def create_quiz_item(
     # Store the quiz item
     mock_quiz_items.append(new_quiz_item)
 
-    return JSONResponse(content=new_quiz_item, status_code=201)
+    return new_quiz_item
 
 
 # Health check endpoint

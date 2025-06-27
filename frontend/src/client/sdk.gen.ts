@@ -4,44 +4,46 @@ import type { CancelablePromise } from "./core/CancelablePromise"
 import { OpenAPI } from "./core/OpenAPI"
 import { request as __request } from "./core/request"
 import type {
-  AuthAuthCanvasResponse,
   AuthLoginCanvasResponse,
+  AuthAuthCanvasResponse,
   AuthLogoutCanvasResponse,
   AuthRefreshCanvasTokenResponse,
+  CanvasGetCoursesResponse,
   CanvasGetCourseModulesData,
   CanvasGetCourseModulesResponse,
-  CanvasGetCoursesResponse,
-  CanvasGetFileInfoData,
-  CanvasGetFileInfoResponse,
   CanvasGetModuleItemsData,
   CanvasGetModuleItemsResponse,
   CanvasGetPageContentData,
   CanvasGetPageContentResponse,
-  QuestionsApproveQuizQuestionData,
-  QuestionsApproveQuizQuestionResponse,
-  QuestionsDeleteQuizQuestionData,
-  QuestionsDeleteQuizQuestionResponse,
-  QuestionsGetQuestionData,
-  QuestionsGetQuestionResponse,
+  CanvasGetFileInfoData,
+  CanvasGetFileInfoResponse,
   QuestionsGetQuizQuestionsData,
   QuestionsGetQuizQuestionsResponse,
+  QuestionsGetQuestionData,
+  QuestionsGetQuestionResponse,
   QuestionsUpdateQuizQuestionData,
   QuestionsUpdateQuizQuestionResponse,
+  QuestionsDeleteQuizQuestionData,
+  QuestionsDeleteQuizQuestionResponse,
+  QuestionsApproveQuizQuestionData,
+  QuestionsApproveQuizQuestionResponse,
+  QuizGetUserQuizzesEndpointResponse,
   QuizCreateNewQuizData,
   QuizCreateNewQuizResponse,
+  QuizGetQuizData,
+  QuizGetQuizResponse,
   QuizDeleteQuizEndpointData,
   QuizDeleteQuizEndpointResponse,
-  QuizGetQuizData,
-  QuizGetQuizQuestionStatsData,
-  QuizGetQuizQuestionStatsResponse,
-  QuizGetQuizResponse,
-  QuizGetUserQuizzesEndpointResponse,
   QuizTriggerContentExtractionData,
   QuizTriggerContentExtractionResponse,
   QuizTriggerQuestionGenerationData,
   QuizTriggerQuestionGenerationResponse,
-  UsersDeleteUserMeResponse,
+  QuizGetQuizQuestionStatsData,
+  QuizGetQuizQuestionStatsResponse,
+  QuizExportQuizToCanvasData,
+  QuizExportQuizToCanvasResponse,
   UsersReadUserMeResponse,
+  UsersDeleteUserMeResponse,
   UsersUpdateUserMeData,
   UsersUpdateUserMeResponse,
   UtilsHealthCheckResponse,
@@ -1008,6 +1010,59 @@ export class QuizService {
     return __request(OpenAPI, {
       method: "GET",
       url: "/api/v1/quiz/{quiz_id}/questions/stats",
+      path: {
+        quiz_id: data.quizId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Export Quiz To Canvas
+   * Export a quiz to Canvas LMS.
+   *
+   * Triggers background export of the quiz to Canvas. Only the quiz owner can export
+   * their own quizzes. The export process runs asynchronously and the quiz status
+   * can be checked via the quiz detail endpoint.
+   *
+   * **Parameters:**
+   * quiz_id (UUID): The UUID of the quiz to export
+   *
+   * **Returns:**
+   * dict: Export initiation status message
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Raises:**
+   * HTTPException: 404 if quiz not found or user doesn't own it
+   * HTTPException: 400 if quiz has no approved questions
+   * HTTPException: 409 if export already in progress or completed
+   * HTTPException: 500 if unable to start export
+   *
+   * **Example Response:**
+   * ```json
+   * {
+   * "message": "Quiz export started"
+   * }
+   * ```
+   *
+   * **Usage:**
+   * After calling this endpoint, poll the quiz detail endpoint to check
+   * the export_status field for progress updates.
+   * @param data The data for the request.
+   * @param data.quizId
+   * @returns string Successful Response
+   * @throws ApiError
+   */
+  public static exportQuizToCanvas(
+    data: QuizExportQuizToCanvasData,
+  ): CancelablePromise<QuizExportQuizToCanvasResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/quiz/{quiz_id}/export",
       path: {
         quiz_id: data.quizId,
       },

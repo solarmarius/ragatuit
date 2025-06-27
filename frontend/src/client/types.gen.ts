@@ -31,6 +31,7 @@ export type QuestionPublic = {
   approved_at: string | null
   created_at: string | null
   updated_at: string | null
+  canvas_item_id: string | null
 }
 
 export type QuestionUpdate = {
@@ -76,6 +77,18 @@ export type Quiz = {
   content_extracted_at?: string | null
   created_at?: string | null
   updated_at?: string | null
+  /**
+   * Canvas quiz assignment ID after export
+   */
+  canvas_quiz_id?: string | null
+  /**
+   * Status of Canvas export: pending, processing, completed, failed
+   */
+  export_status?: string
+  /**
+   * Timestamp when quiz was exported to Canvas
+   */
+  exported_at?: string | null
 }
 
 export type QuizCreate = {
@@ -230,6 +243,14 @@ export type QuizGetQuizQuestionStatsData = {
 
 export type QuizGetQuizQuestionStatsResponse = {
   [key: string]: number
+}
+
+export type QuizExportQuizToCanvasData = {
+  quizId: string
+}
+
+export type QuizExportQuizToCanvasResponse = {
+  [key: string]: string
 }
 
 export type UsersReadUserMeResponse = UserPublic

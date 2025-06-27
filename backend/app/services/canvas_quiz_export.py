@@ -118,7 +118,7 @@ class CanvasQuizExportService:
                 total_points=len(approved_questions),  # 1 point per question
             )
 
-            canvas_quiz_id = canvas_quiz["assignment_id"]
+            canvas_quiz_id = canvas_quiz["id"]
             logger.info(
                 "canvas_quiz_created",
                 quiz_id=str(quiz_id),
@@ -244,7 +244,7 @@ class CanvasQuizExportService:
                     "canvas_quiz_creation_completed",
                     course_id=course_id,
                     title=title,
-                    canvas_quiz_id=canvas_quiz.get("assignment_id"),
+                    canvas_quiz_id=canvas_quiz.get("id"),
                 )
 
                 return canvas_quiz
