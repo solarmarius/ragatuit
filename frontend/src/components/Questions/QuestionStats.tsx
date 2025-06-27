@@ -1,6 +1,7 @@
 import {
   Badge,
   Box,
+  Button,
   Card,
   HStack,
   Progress,
@@ -8,23 +9,50 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { SiCanvas } from "react-icons/si"
 
-import { QuizService } from "@/client"
+import { type Quiz, QuizService } from "@/client"
+import useCustomToast from "@/hooks/useCustomToast"
 
 interface QuestionStatsProps {
-  quizId: string
+  quiz: Quiz
 }
 
-export function QuestionStats({ quizId }: QuestionStatsProps) {
+export function QuestionStats({ quiz }: QuestionStatsProps) {
+  const { showErrorToast, showSuccessToast } = useCustomToast()
+  const queryClient = useQueryClient()
+
   const {
     data: stats,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["quiz", quizId, "questions", "stats"],
+    queryKey: ["quiz", quiz.id, "questions", "stats"],
     queryFn: async () => {
-      return await QuizService.getQuizQuestionStats({ quizId })
+      if (!quiz.id) {
+        throw new Error("Quiz ID is required")
+      }
+      return await QuizService.getQuizQuestionStats({ quizId: quiz.id })
+    },
+  })
+
+  // Export quiz to Canvas mutation
+  const exportMutation = useMutation({
+    mutationFn: async () => {
+      if (!quiz.id) {
+        throw new Error("Quiz ID is required")
+      }
+      return await QuizService.exportQuizToCanvas({ quizId: quiz.id })
+    },
+    onSuccess: () => {
+      showSuccessToast("Quiz export to Canvas started successfully")
+      // Invalidate quiz queries to trigger status updates and polling
+      queryClient.invalidateQueries({ queryKey: ["quiz", quiz.id] })
+    },
+    onError: (error: any) => {
+      const message = error?.body?.detail || "Failed to export quiz to Canvas"
+      showErrorToast(message)
     },
   })
 
@@ -96,17 +124,64 @@ export function QuestionStats({ quizId }: QuestionStatsProps) {
                 fontWeight="medium"
                 color="green.700"
                 textAlign="center"
+                mb={quiz.export_status !== "completed" ? 3 : 0}
               >
-                🎉 All questions have been reviewed and approved!
+                All questions have been reviewed and approved!
               </Text>
-              <Text
-                fontSize="sm"
-                fontWeight="medium"
-                color="green.700"
-                textAlign="center"
-              >
-                TODO: Add post to Canvas button after all has been reviewed
-              </Text>
+
+              {(() => {
+                const isExported = quiz.export_status === "completed"
+                const isExporting =
+                  exportMutation.isPending ||
+                  quiz.export_status === "processing"
+                const canExport = !isExported
+
+                if (canExport) {
+                  return (
+                    <Button
+                      size="lg"
+                      colorPalette="green"
+                      onClick={() => exportMutation.mutate()}
+                      loading={isExporting}
+                      width="100%"
+                    >
+                      <SiCanvas />
+                      Post to Canvas
+                    </Button>
+                  )
+                }
+
+                if (isExported) {
+                  return (
+                    <Text
+                      fontSize="sm"
+                      fontWeight="medium"
+                      color="green.600"
+                      textAlign="center"
+                      mt={2}
+                    >
+                      ✅ Quiz has been successfully exported to Canvas!
+                      {quiz.exported_at && (
+                        <Text fontSize="xs" color="green.500" mt={1}>
+                          Exported on{" "}
+                          {new Date(quiz.exported_at).toLocaleDateString(
+                            "en-GB",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            },
+                          )}
+                        </Text>
+                      )}
+                    </Text>
+                  )
+                }
+
+                return null
+              })()}
             </Box>
           )}
 

@@ -10,11 +10,13 @@ from app.core.logging_config import get_logger
 from app.crud import (
     create_quiz,
     delete_quiz,
+    get_approved_questions_by_quiz_id,
     get_question_counts_by_quiz_id,
     get_quiz_by_id,
     get_user_quizzes,
 )
 from app.models import Message, Quiz, QuizCreate
+from app.services.canvas_quiz_export import CanvasQuizExportService
 from app.services.content_extraction import ContentExtractionService
 from app.services.mcq_generation import mcq_generation_service
 
@@ -903,4 +905,176 @@ def get_quiz_question_stats(
         raise HTTPException(
             status_code=500,
             detail="Failed to retrieve question stats. Please try again.",
+        )
+
+
+async def export_quiz_to_canvas_background(quiz_id: UUID, canvas_token: str) -> None:
+    """
+    Background task to export a quiz to Canvas LMS.
+
+    This function runs asynchronously after the export endpoint is called.
+    It handles the complete Canvas quiz creation and question export process.
+    """
+    logger.info(
+        "canvas_export_background_task_started",
+        quiz_id=str(quiz_id),
+    )
+
+    try:
+        # Initialize Canvas export service
+        export_service = CanvasQuizExportService(canvas_token)
+
+        # Export quiz to Canvas
+        result = await export_service.export_quiz_to_canvas(quiz_id)
+
+        logger.info(
+            "canvas_export_background_task_completed",
+            quiz_id=str(quiz_id),
+            success=result.get("success", False),
+            canvas_quiz_id=result.get("canvas_quiz_id"),
+            exported_questions=result.get("exported_questions", 0),
+        )
+
+    except Exception as e:
+        logger.error(
+            "canvas_export_background_task_failed",
+            quiz_id=str(quiz_id),
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+
+
+@router.post("/{quiz_id}/export")
+async def export_quiz_to_canvas(
+    quiz_id: UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+    canvas_token: CanvasToken,
+    background_tasks: BackgroundTasks,
+) -> dict[str, str]:
+    """
+    Export a quiz to Canvas LMS.
+
+    Triggers background export of the quiz to Canvas. Only the quiz owner can export
+    their own quizzes. The export process runs asynchronously and the quiz status
+    can be checked via the quiz detail endpoint.
+
+    **Parameters:**
+        quiz_id (UUID): The UUID of the quiz to export
+
+    **Returns:**
+        dict: Export initiation status message
+
+    **Authentication:**
+        Requires valid JWT token in Authorization header
+
+    **Raises:**
+        HTTPException: 404 if quiz not found or user doesn't own it
+        HTTPException: 400 if quiz has no approved questions
+        HTTPException: 409 if export already in progress or completed
+        HTTPException: 500 if unable to start export
+
+    **Example Response:**
+        ```json
+        {
+            "message": "Quiz export started"
+        }
+        ```
+
+    **Usage:**
+        After calling this endpoint, poll the quiz detail endpoint to check
+        the export_status field for progress updates.
+    """
+    logger.info(
+        "quiz_export_endpoint_called",
+        user_id=str(current_user.id),
+        quiz_id=str(quiz_id),
+    )
+
+    try:
+        # Verify quiz exists and user owns it
+        quiz = get_quiz_by_id(session, quiz_id)
+        if not quiz:
+            logger.warning(
+                "quiz_export_quiz_not_found",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+            )
+            raise HTTPException(status_code=404, detail="Quiz not found")
+
+        if quiz.owner_id != current_user.id:
+            logger.warning(
+                "quiz_export_access_denied",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+                quiz_owner_id=str(quiz.owner_id),
+            )
+            raise HTTPException(status_code=404, detail="Quiz not found")
+
+        # Check if already exported
+        if quiz.export_status == "completed" and quiz.canvas_quiz_id:
+            logger.warning(
+                "quiz_export_already_completed",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+                canvas_quiz_id=quiz.canvas_quiz_id,
+            )
+            raise HTTPException(
+                status_code=409, detail="Quiz has already been exported to Canvas"
+            )
+
+        # Check if export is already in progress
+        if quiz.export_status == "processing":
+            logger.warning(
+                "quiz_export_already_in_progress",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+            )
+            raise HTTPException(
+                status_code=409, detail="Quiz export is already in progress"
+            )
+
+        # Check if quiz has approved questions
+        approved_questions = get_approved_questions_by_quiz_id(session, quiz_id)
+        if not approved_questions:
+            logger.warning(
+                "quiz_export_no_approved_questions",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+            )
+            raise HTTPException(
+                status_code=400, detail="Quiz has no approved questions to export"
+            )
+
+        # Trigger background export
+        background_tasks.add_task(
+            export_quiz_to_canvas_background,
+            quiz_id,
+            canvas_token,
+        )
+
+        logger.info(
+            "quiz_export_background_task_triggered",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz_id),
+            approved_questions_count=len(approved_questions),
+        )
+
+        return {"message": "Quiz export started"}
+
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
+    except Exception as e:
+        logger.error(
+            "quiz_export_endpoint_failed",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz_id),
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to start quiz export. Please try again."
         )

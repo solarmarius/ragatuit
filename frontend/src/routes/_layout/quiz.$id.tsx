@@ -55,17 +55,20 @@ function QuizDetail() {
       if (data) {
         const extractionStatus = data.content_extraction_status || "pending"
         const generationStatus = data.llm_generation_status || "pending"
+        const exportStatus = data.export_status || "pending"
 
         if (
           extractionStatus === "pending" ||
           extractionStatus === "processing" ||
           generationStatus === "pending" ||
-          generationStatus === "processing"
+          generationStatus === "processing" ||
+          exportStatus === "pending" ||
+          exportStatus === "processing"
         ) {
           return 5000 // 5 seconds
         }
       }
-      return false // Stop polling when both are completed or failed
+      return false // Stop polling when all are completed or failed
     },
     refetchIntervalInBackground: false, // Only poll when tab is active
   })
@@ -367,6 +370,21 @@ function QuizDetail() {
                         type="generation"
                       />
                     </Box>
+
+                    {/* Canvas Export Status */}
+                    <Box>
+                      <HStack justify="space-between" mb={2}>
+                        <Text fontWeight="medium" color="gray.700">
+                          Canvas Export
+                        </Text>
+                        <StatusBadge status={quiz.export_status || "pending"} />
+                      </HStack>
+                      <StatusDescription
+                        status={quiz.export_status || "pending"}
+                        type="export"
+                        timestamp={quiz.exported_at || null}
+                      />
+                    </Box>
                   </VStack>
                 </Card.Body>
               </Card.Root>
@@ -380,7 +398,7 @@ function QuizDetail() {
             <VStack gap={6} align="stretch" mt={6}>
               {/* Question Statistics */}
               {quiz.llm_generation_status === "completed" && (
-                <QuestionStats quizId={id} />
+                <QuestionStats quiz={quiz} />
               )}
 
               {/* Question Review */}
