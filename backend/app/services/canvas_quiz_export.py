@@ -330,7 +330,7 @@ class CanvasQuizExportService:
                         }
                     )
 
-                    logger.debug(
+                    logger.info(
                         "canvas_quiz_item_created",
                         course_id=course_id,
                         canvas_quiz_id=quiz_id,

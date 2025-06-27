@@ -59,7 +59,7 @@ def mock_questions(mock_quiz: Quiz) -> list[Question]:
 
 
 @pytest.fixture
-def mock_question_data(_mock_quiz: Quiz) -> list[dict[str, Any]]:
+def mock_question_data() -> list[dict[str, Any]]:
     """Create mock question dictionaries for testing."""
     question_data = []
     for i in range(3):
