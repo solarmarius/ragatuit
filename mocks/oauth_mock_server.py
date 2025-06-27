@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Optional
 
-from fastapi import FastAPI, Form, Header, HTTPException, Query
+from fastapi import Body, FastAPI, Form, Header, HTTPException, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
 from mock_bodys import (
     csp_body,
@@ -12,6 +12,9 @@ from mock_bodys import (
 from pydantic import BaseModel
 
 app = FastAPI(title="Mock Canvas Server", version="1.0.0")
+
+mock_quizzes = []
+mock_quiz_items = []
 
 # Mock data storage
 mock_users = {
@@ -941,6 +944,170 @@ async def get_user_by_id(user_id: str, authorization: str = Header(None)):
         raise HTTPException(status_code=404, detail="User not found")
 
     return mock_users[user_id]
+
+
+@app.post("/api/quiz/v1/courses/{course_id}/quizzes")
+async def create_quiz(
+    course_id: int, authorization: str = Header(None), quiz_data: dict = Body(None)
+):
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+
+    validate_token(authorization)
+
+    # Validate course access
+    if course_id != 37823:
+        raise HTTPException(status_code=403, detail="Unauthorized access to course")
+
+    # Create quiz object
+    new_quiz = {
+        "id": uuid.uuid4,
+        "course_id": course_id,
+        "title": quiz_data.get("title", "Untitled Quiz"),
+        "points_possible": quiz_data.get("points_possible", 0),
+        "due_at": quiz_data.get("due_at"),
+        "lock_at": quiz_data.get("lock_at"),
+        "unlock_at": quiz_data.get("unlock_at"),
+        "published": False,
+        "quiz_type": "assignment",
+        "quiz_settings": quiz_data.get(
+            "quiz_settings",
+            {
+                "shuffle_questions": True,
+                "shuffle_answers": True,
+                "time_limit": None,
+                "multiple_attempts": False,
+                "scoring_policy": "keep_highest",
+            },
+        ),
+        "created_at": datetime.now().isoformat() + "Z",
+        "updated_at": datetime.now().isoformat() + "Z",
+    }
+
+    # Store quiz
+    mock_quizzes.append(new_quiz)
+
+    return new_quiz
+
+
+@app.post("/api/quiz/v1/courses/{course_id}/quizzes/{quiz_id}/items")
+async def create_quiz_item(
+    course_id: int,
+    quiz_id: int,
+    authorization: str = Header(None),
+    item_data: dict = Body(None),
+):
+    """Create a quiz item in a quiz"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+
+    validate_token(authorization)
+
+    # Validate course access
+    if course_id != 37823:
+        raise HTTPException(status_code=403, detail="Unauthorized access to course")
+
+    # Validate required fields
+    if not item_data:
+        raise HTTPException(status_code=400, detail="Item data is required")
+
+    item = item_data.get("item", {})
+    entry = item.get("entry", {})
+
+    # Validate required fields
+    if not item.get("entry_type"):
+        raise HTTPException(status_code=400, detail="item[entry_type] is required")
+
+    if not entry.get("item_body"):
+        raise HTTPException(
+            status_code=400, detail="item[entry][item_body] is required"
+        )
+
+    if not entry.get("interaction_type_slug"):
+        raise HTTPException(
+            status_code=400, detail="item[entry][interaction_type_slug] is required"
+        )
+
+    if not entry.get("interaction_data"):
+        raise HTTPException(
+            status_code=400, detail="item[entry][interaction_data] is required"
+        )
+
+    if not entry.get("scoring_data"):
+        raise HTTPException(
+            status_code=400, detail="item[entry][scoring_data] is required"
+        )
+
+    if not entry.get("scoring_algorithm"):
+        raise HTTPException(
+            status_code=400, detail="item[entry][scoring_algorithm] is required"
+        )
+
+    # Validate interaction_type_slug
+    valid_interaction_types = [
+        "multi-answer",
+        "matching",
+        "categorization",
+        "file-upload",
+        "formula",
+        "ordering",
+        "rich-fill-blank",
+        "hot-spot",
+        "choice",
+        "numeric",
+        "true-false",
+        "essay",
+    ]
+
+    if entry.get("interaction_type_slug") not in valid_interaction_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid interaction_type_slug. Must be one of: {', '.join(valid_interaction_types)}",
+        )
+
+    # Validate calculator_type if provided
+    if entry.get("calculator_type") and entry.get("calculator_type") not in [
+        "none",
+        "basic",
+        "scientific",
+    ]:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid calculator_type. Must be one of: none, basic, scientific",
+        )
+
+    # Validate points_possible if provided
+    points_possible = item.get("points_possible")
+    if points_possible is not None and points_possible <= 0:
+        raise HTTPException(status_code=400, detail="points_possible must be positive")
+
+    # Create the quiz item
+    new_quiz_item = {
+        "id": str(uuid.uuid4()),
+        "quiz_id": quiz_id,
+        "position": item.get("position", len(mock_quiz_items) + 1),
+        "points_possible": points_possible or 1,
+        "entry_type": item.get("entry_type"),
+        "entry": {
+            "title": entry.get("title", "Question"),
+            "item_body": entry.get("item_body"),
+            "calculator_type": entry.get("calculator_type", "none"),
+            "feedback": entry.get("feedback", {}),
+            "interaction_type_slug": entry.get("interaction_type_slug"),
+            "interaction_data": entry.get("interaction_data"),
+            "properties": entry.get("properties", {}),
+            "scoring_data": entry.get("scoring_data"),
+            "answer_feedback": entry.get("answer_feedback", {}),
+            "scoring_algorithm": entry.get("scoring_algorithm"),
+        },
+        "created_at": datetime.now().isoformat() + "Z",
+        "updated_at": datetime.now().isoformat() + "Z",
+    }
+
+    # Store the quiz item
+    mock_quiz_items.append(new_quiz_item)
+
+    return new_quiz_item
 
 
 # Health check endpoint
