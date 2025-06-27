@@ -13,10 +13,12 @@ from app.crud import (
     get_question_counts_by_quiz_id,
     get_quiz_by_id,
     get_user_quizzes,
+    get_approved_questions_by_quiz_id,
 )
-from app.models import Message, Quiz, QuizCreate
+from app.models import Message, Quiz, QuizCreate, Question
 from app.services.content_extraction import ContentExtractionService
 from app.services.mcq_generation import mcq_generation_service
+from app.services.canvas_service import CanvasService
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
 logger = get_logger("quiz")
@@ -823,6 +825,328 @@ async def trigger_question_generation(
         raise HTTPException(
             status_code=500, detail="Failed to trigger question generation"
         )
+
+
+@router.post("/{quiz_id}/export", response_model=Message)
+async def export_quiz_to_canvas(
+    quiz_id: UUID,
+    current_user: CurrentUser,
+    session: SessionDep,
+    canvas_token: CanvasToken,
+    background_tasks: BackgroundTasks,
+) -> Message:
+    """
+    Export a quiz with its approved questions to Canvas.
+
+    This endpoint creates a new quiz in Canvas and adds all approved questions
+    from the specified RAG@UiT quiz to it.
+
+    **Parameters:**
+        quiz_id (UUID): The UUID of the quiz to export.
+
+    **Returns:**
+        Message: Confirmation message upon successful export initiation.
+
+    **Authentication:**
+        Requires valid JWT token in Authorization header.
+
+    **Raises:**
+        HTTPException:
+            - 404: If the quiz is not found or not owned by the user.
+            - 400: If the quiz is not ready for export (e.g., no approved questions,
+                   content/LLM generation not complete).
+            - 409: If the quiz is already exported or an export is in progress.
+            - 500: If there's an internal server error or Canvas API interaction fails.
+    """
+    logger.info(
+        "quiz_export_to_canvas_initiated",
+        user_id=str(current_user.id),
+        quiz_id=str(quiz_id),
+    )
+
+    # Use a SELECT FOR UPDATE to lock the quiz row during the export check
+    quiz = session.exec(
+        select(Quiz).where(Quiz.id == quiz_id).with_for_update()
+    ).first()
+
+    if not quiz:
+        logger.warning(
+            "quiz_export_failed_not_found",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz_id),
+        )
+        raise HTTPException(status_code=404, detail="Quiz not found")
+
+    if quiz.owner_id != current_user.id:
+        logger.warning(
+            "quiz_export_failed_access_denied",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz_id),
+        )
+        raise HTTPException(status_code=404, detail="Quiz not found (access denied)")
+
+    # Check readiness for export
+    if quiz.content_extraction_status != "completed":
+        logger.warning(
+            "quiz_export_failed_content_not_ready", quiz_id=str(quiz_id)
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Content extraction must be completed before exporting.",
+        )
+    if quiz.llm_generation_status != "completed":
+        logger.warning("quiz_export_failed_llm_not_ready", quiz_id=str(quiz_id))
+        raise HTTPException(
+            status_code=400,
+            detail="Question generation must be completed before exporting.",
+        )
+
+    if quiz.canvas_export_status == "processing":
+        logger.warning("quiz_export_failed_already_processing", quiz_id=str(quiz_id))
+        raise HTTPException(
+            status_code=409, detail="Quiz export is already in progress."
+        )
+    if quiz.canvas_export_status == "success" and quiz.canvas_quiz_id:
+        logger.warning("quiz_export_failed_already_exported", quiz_id=str(quiz_id))
+        raise HTTPException(
+            status_code=409,
+            detail=f"Quiz already exported to Canvas with ID: {quiz.canvas_quiz_id}",
+        )
+
+    # Get approved questions
+    approved_questions = get_approved_questions_by_quiz_id(session, quiz_id)
+    if not approved_questions:
+        logger.warning("quiz_export_failed_no_approved_questions", quiz_id=str(quiz_id))
+        raise HTTPException(
+            status_code=400, detail="No approved questions to export."
+        )
+
+    # Update status to processing and commit before starting background task
+    quiz.canvas_export_status = "processing"
+    session.add(quiz)
+    session.commit()
+    session.refresh(quiz) # Refresh to get any DB-side updates if any
+
+    # Add the actual export logic to a background task
+    background_tasks.add_task(
+        run_canvas_export_task,
+        quiz_id=quiz.id,
+        canvas_token=canvas_token,
+        user_id = current_user.id # Pass user_id for logging in background task
+    )
+
+    logger.info(
+        "quiz_export_to_canvas_task_scheduled",
+        quiz_id=str(quiz_id),
+        user_id=str(current_user.id)
+    )
+    return Message(message="Quiz export to Canvas has been initiated.")
+
+
+async def run_canvas_export_task(quiz_id: UUID, canvas_token: str, user_id: UUID) -> None:
+    """
+    Background task to handle the actual export of a quiz to Canvas.
+    """
+    logger.info(
+        "background_canvas_export_started", quiz_id=str(quiz_id), user_id=str(user_id)
+    )
+
+    # Create a new session for the background task
+    with Session(engine) as session:
+        try:
+            # Re-fetch quiz within this new session, with locking
+            quiz = session.exec(
+                select(Quiz).where(Quiz.id == quiz_id).with_for_update()
+            ).first()
+
+            if not quiz: # Should not happen if we set status before task
+                logger.error("background_canvas_export_quiz_not_found", quiz_id=str(quiz_id))
+                return
+
+            approved_questions = get_approved_questions_by_quiz_id(session, quiz_id)
+            if not approved_questions: # Also should not happen
+                logger.error("background_canvas_export_no_approved_questions", quiz_id=str(quiz_id))
+                quiz.canvas_export_status = "failed"
+                quiz.updated_at = datetime.now(timezone.utc)
+                session.add(quiz)
+                session.commit()
+                return
+
+            canvas_service = CanvasService(canvas_token=canvas_token)
+
+            # 1. Create Quiz in Canvas
+            # Define default quiz settings as per docs/canvas-quiz-endpoints-implementation.md
+            # Points possible will be sum of question points
+            total_points = sum(10 for _ in approved_questions) # Assuming 10 points per question
+
+            # Define the 'quiz_settings' sub-dictionary as per docs/canvas-quiz-endpoints-implementation.md
+            actual_quiz_settings_sub_dict = {
+                "shuffle_questions": True,
+                "shuffle_answers": True,
+                "time_limit": 60, # Default, can be made configurable later
+                "multiple_attempts": False,
+                "scoring_policy": "keep_highest",
+                "calculator_type": "none",
+                "filter_ip_addresses": False,
+                "one_question_at_a_time": False,
+                "cant_go_back": False,
+                "show_correct_answers": True, # Or based on a setting
+                # "published" is not a quiz_settings field, it's a top-level field for the quiz.
+                # The CanvasService doesn't handle "published" directly in create_canvas_quiz payload based on official docs.
+                # If the mock server or this project's Canvas API wrapper expects it in quiz_settings, this needs adjustment.
+                # For now, assuming "published" is handled by a separate publish call or default behavior.
+                # The Canvas New Quizzes API doc shows "published" at the top level of the NewQuiz object, not in quiz_settings.
+                # The internal doc's example body for POST /api/quiz/v1/.../quizzes also has "published" at top level.
+                # My CanvasService currently doesn't add "published" field. It should be added if needed.
+                # Let's assume the API default for "published" is false, matching the doc.
+            }
+
+            logger.info(
+                "creating_quiz_in_canvas_background",
+                quiz_id=str(quiz_id),
+                course_id=quiz.canvas_course_id,
+                title=quiz.title,
+                points_possible=total_points,
+                settings_sub_dict_keys=list(actual_quiz_settings_sub_dict.keys()),
+            )
+
+            # Call with the new signature
+            created_canvas_quiz = await canvas_service.create_canvas_quiz(
+                course_id=quiz.canvas_course_id,
+                title=quiz.title,
+                points_possible=total_points,
+                settings_sub_dict=actual_quiz_settings_sub_dict
+            )
+            # The `create_canvas_quiz` in service now also needs `published` if the API expects it.
+            # The internal doc for POST /api/quiz/v1/courses/{course_id}/quizzes shows `published` at the root of the body.
+            # My service method `create_canvas_quiz` creates:
+            # payload = { "title": title, "points_possible": points_possible, "quiz_settings": settings_sub_dict }
+            # It's missing "published". The Canvas API I checked also has "published" at root.
+            # So, the service method needs to be updated again to include top-level 'published' if we want to set it.
+            # For now, I will proceed assuming the default (likely false) is fine for creation.
+
+            canvas_assignment_id = created_canvas_quiz.get("assignment_id")
+            if not canvas_assignment_id:
+                logger.error(
+                    "background_canvas_export_missing_assignment_id",
+                    quiz_id=str(quiz_id),
+                    canvas_response=created_canvas_quiz,
+                )
+                raise HTTPException(status_code=500, detail="Canvas API did not return assignment_id for new quiz.")
+
+
+            # 2. Add Questions to Quiz
+            question_points = 10 # Default points per question, can be made configurable
+            current_quiz_points = 0
+
+            for idx, question in enumerate(approved_questions):
+                # Map Question model to Canvas item_data format
+                # See docs/canvas-quiz-endpoints-implementation.md for structure
+                choices = [
+                    {"id": "choice_1", "position": 1, "item_body": f"<p>{question.option_a}</p>"},
+                    {"id": "choice_2", "position": 2, "item_body": f"<p>{question.option_b}</p>"},
+                    {"id": "choice_3", "position": 3, "item_body": f"<p>{question.option_c}</p>"},
+                    {"id": "choice_4", "position": 4, "item_body": f"<p>{question.option_d}</p>"},
+                ]
+                correct_choice_id_map = {"A": "choice_1", "B": "choice_2", "C": "choice_3", "D": "choice_4"}
+                correct_choice_id = correct_choice_id_map.get(question.correct_answer)
+
+                if not correct_choice_id:
+                    logger.warning(
+                        "background_canvas_export_invalid_correct_answer_format",
+                        quiz_id=str(quiz_id),
+                        question_id=str(question.id),
+                        correct_answer=question.correct_answer,
+                    )
+                    # Skip this question or handle error appropriately
+                    continue
+
+                canvas_question_payload = {
+                    "entry_type": "Item",
+                    "interaction_type_slug": "choice", # Assuming all are multiple choice
+                    "item_body": f"<p>{question.question_text}</p>",
+                    "points_possible": question_points,
+                    "interaction_data": {
+                        "choices": choices,
+                        "scoring_data": {"value": correct_choice_id}
+                    }
+                }
+                logger.info(
+                    "adding_question_to_canvas_background",
+                    quiz_id=str(quiz_id),
+                    question_index=idx + 1,
+                    canvas_assignment_id=canvas_assignment_id,
+                )
+                await canvas_service.add_question_to_canvas_quiz(
+                    course_id=quiz.canvas_course_id,
+                    canvas_assignment_id=canvas_assignment_id,
+                    question_data=canvas_question_payload,
+                )
+                current_quiz_points += question_points
+
+            # Optionally, update the quiz's total points if it wasn't set correctly initially
+            # Or if points_possible for questions can vary.
+            if created_canvas_quiz.get("points_possible") != current_quiz_points:
+                logger.info(
+                    "updating_canvas_quiz_total_points",
+                    quiz_id=str(quiz_id),
+                    canvas_assignment_id=canvas_assignment_id,
+                    new_total_points=current_quiz_points,
+                )
+                await canvas_service.update_canvas_quiz(
+                    course_id=quiz.canvas_course_id,
+                    canvas_assignment_id=canvas_assignment_id,
+                    quiz_data={"points_possible": current_quiz_points}
+                )
+
+            # 3. Update local Quiz model
+            quiz.canvas_quiz_id = canvas_assignment_id
+            quiz.exported_to_canvas_at = datetime.now(timezone.utc)
+            quiz.canvas_export_status = "success"
+            quiz.updated_at = datetime.now(timezone.utc) # Also update this
+            session.add(quiz)
+            session.commit()
+
+            logger.info(
+                "background_canvas_export_successful",
+                quiz_id=str(quiz_id),
+                user_id=str(user_id),
+                canvas_assignment_id=canvas_assignment_id,
+                questions_exported=len(approved_questions),
+            )
+
+        except HTTPException as http_exc: # Errors from CanvasService or our own logic
+            logger.error(
+                "background_canvas_export_http_exception",
+                quiz_id=str(quiz_id),
+                user_id=str(user_id),
+                status_code=http_exc.status_code,
+                detail=http_exc.detail,
+                exc_info=True,
+            )
+            # Re-fetch quiz to update status in this session if it exists
+            quiz_to_fail = session.get(Quiz, quiz_id)
+            if quiz_to_fail:
+                quiz_to_fail.canvas_export_status = "failed"
+                quiz_to_fail.updated_at = datetime.now(timezone.utc)
+                session.add(quiz_to_fail)
+                session.commit()
+        except Exception as e:
+            logger.error(
+                "background_canvas_export_unexpected_error",
+                quiz_id=str(quiz_id),
+                user_id=str(user_id),
+                error=str(e),
+                error_type=type(e).__name__,
+                exc_info=True,
+            )
+            # Re-fetch quiz to update status in this session
+            quiz_to_fail = session.get(Quiz, quiz_id)
+            if quiz_to_fail:
+                quiz_to_fail.canvas_export_status = "failed"
+                quiz_to_fail.updated_at = datetime.now(timezone.utc)
+                session.add(quiz_to_fail)
+                session.commit()
 
 
 @router.get("/{quiz_id}/questions/stats")

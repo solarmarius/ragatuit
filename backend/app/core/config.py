@@ -59,7 +59,8 @@ class Settings(BaseSettings):
     CANVAS_CLIENT_ID: str
     CANVAS_CLIENT_SECRET: str
     CANVAS_REDIRECT_URI: HttpUrl
-    CANVAS_BASE_URL: HttpUrl
+    CANVAS_BASE_URL: HttpUrl # Used for OAuth and general Canvas frontend links
+    CANVAS_API_URL: HttpUrl # Specifically for backend server-to-server New Quizzes API calls
 
     # Content extraction limits
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB per file

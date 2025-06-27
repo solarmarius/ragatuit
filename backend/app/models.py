@@ -72,6 +72,18 @@ class Quiz(SQLModel, table=True):
         default="pending",
         description="Status of LLM generation: pending, processing, completed, failed",
     )
+    # Canvas export related fields
+    canvas_quiz_id: str | None = Field(
+        default=None, index=True, description="ID of the quiz in Canvas (assignment_id)"
+    )
+    exported_to_canvas_at: datetime | None = Field(
+        default=None, description="Timestamp when the quiz was exported to Canvas"
+    )
+    canvas_export_status: str | None = Field(
+        default=None,
+        description="Status of Canvas export: pending, success, failed",
+        max_length=50,
+    )
     extracted_content: str | None = Field(
         default=None, description="JSON string of extracted page content"
     )
