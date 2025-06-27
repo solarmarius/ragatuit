@@ -99,6 +99,25 @@ class CanvasQuizExportService:
                         f"Quiz {quiz_id} has no approved questions to export"
                     )
 
+                # Extract question data while objects are still attached to session
+                question_data = []
+                for question in approved_questions:
+                    question_data.append(
+                        {
+                            "id": question.id,
+                            "question_text": question.question_text,
+                            "option_a": question.option_a,
+                            "option_b": question.option_b,
+                            "option_c": question.option_c,
+                            "option_d": question.option_d,
+                            "correct_answer": question.correct_answer,
+                        }
+                    )
+
+                # Store quiz data we'll need later
+                quiz_course_id = quiz.canvas_course_id
+                quiz_title = quiz.title
+
                 # Update status to processing
                 quiz.export_status = "processing"
                 session.add(quiz)
@@ -107,15 +126,15 @@ class CanvasQuizExportService:
                 logger.info(
                     "canvas_quiz_export_processing",
                     quiz_id=str(quiz_id),
-                    course_id=quiz.canvas_course_id,
-                    approved_questions_count=len(approved_questions),
+                    course_id=quiz_course_id,
+                    approved_questions_count=len(question_data),
                 )
 
             # Create quiz in Canvas
             canvas_quiz = await self.create_canvas_quiz(
-                course_id=quiz.canvas_course_id,
-                title=quiz.title,
-                total_points=len(approved_questions),  # 1 point per question
+                course_id=quiz_course_id,
+                title=quiz_title,
+                total_points=len(question_data),  # 1 point per question
             )
 
             canvas_quiz_id = canvas_quiz["id"]
@@ -127,9 +146,9 @@ class CanvasQuizExportService:
 
             # Create quiz items for approved questions
             exported_items = await self.create_quiz_items(
-                course_id=quiz.canvas_course_id,
+                course_id=quiz_course_id,
                 quiz_id=canvas_quiz_id,
-                questions=approved_questions,
+                questions=question_data,
             )
 
             # Update quiz with Canvas quiz ID and export status
@@ -143,12 +162,15 @@ class CanvasQuizExportService:
                     session.add(quiz)
 
                     # Update questions with Canvas item IDs
-                    for question, item_result in zip(
-                        approved_questions, exported_items, strict=False
+                    for question_dict, item_result in zip(
+                        question_data, exported_items, strict=False
                     ):
                         if item_result["success"]:
-                            question.canvas_item_id = item_result["item_id"]
-                            session.add(question)
+                            # Get fresh question object from current session
+                            question_obj = session.get(Question, question_dict["id"])
+                            if question_obj:
+                                question_obj.canvas_item_id = item_result["item_id"]
+                                session.add(question_obj)
 
                     session.commit()
 
@@ -260,7 +282,7 @@ class CanvasQuizExportService:
                 raise
 
     async def create_quiz_items(
-        self, course_id: int, quiz_id: str, questions: list[Question]
+        self, course_id: int, quiz_id: str, questions: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
         """
         Create quiz items (questions) in Canvas for the given quiz.
@@ -268,7 +290,7 @@ class CanvasQuizExportService:
         Args:
             course_id: Canvas course ID
             quiz_id: Canvas quiz assignment ID
-            questions: List of Question objects to create
+            questions: List of question dictionaries to create
 
         Returns:
             list: Results for each question creation attempt
@@ -302,7 +324,7 @@ class CanvasQuizExportService:
                     results.append(
                         {
                             "success": True,
-                            "question_id": question.id,
+                            "question_id": question["id"],
                             "item_id": item_response.get("id"),
                             "position": i + 1,
                         }
@@ -312,7 +334,7 @@ class CanvasQuizExportService:
                         "canvas_quiz_item_created",
                         course_id=course_id,
                         canvas_quiz_id=quiz_id,
-                        question_id=str(question.id),
+                        question_id=str(question["id"]),
                         canvas_item_id=item_response.get("id"),
                         position=i + 1,
                     )
@@ -322,7 +344,7 @@ class CanvasQuizExportService:
                         "canvas_quiz_item_creation_failed",
                         course_id=course_id,
                         canvas_quiz_id=quiz_id,
-                        question_id=str(question.id),
+                        question_id=str(question["id"]),
                         position=i + 1,
                         status_code=e.response.status_code,
                         response_text=e.response.text,
@@ -330,7 +352,7 @@ class CanvasQuizExportService:
                     results.append(
                         {
                             "success": False,
-                            "question_id": question.id,
+                            "question_id": question["id"],
                             "error": f"HTTP {e.response.status_code}: {e.response.text}",
                             "position": i + 1,
                         }
@@ -341,7 +363,7 @@ class CanvasQuizExportService:
                         "canvas_quiz_item_creation_error",
                         course_id=course_id,
                         canvas_quiz_id=quiz_id,
-                        question_id=str(question.id),
+                        question_id=str(question["id"]),
                         position=i + 1,
                         error=str(e),
                         error_type=type(e).__name__,
@@ -349,7 +371,7 @@ class CanvasQuizExportService:
                     results.append(
                         {
                             "success": False,
-                            "question_id": question.id,
+                            "question_id": question["id"],
                             "error": str(e),
                             "position": i + 1,
                         }
@@ -368,13 +390,13 @@ class CanvasQuizExportService:
         return results
 
     def _convert_question_to_canvas_item(
-        self, question: Question, position: int
+        self, question: dict[str, Any], position: int
     ) -> dict[str, Any]:
         """
-        Convert a Question model to Canvas New Quiz item format.
+        Convert a question dictionary to Canvas New Quiz item format.
 
         Args:
-            question: Question model instance
+            question: Question dictionary with question data
             position: Position of the question in the quiz
 
         Returns:
@@ -382,7 +404,7 @@ class CanvasQuizExportService:
         """
         # Map correct answer letter to choice index
         correct_answer_map = {"A": 0, "B": 1, "C": 2, "D": 3}
-        correct_index = correct_answer_map.get(question.correct_answer, 0)
+        correct_index = correct_answer_map.get(question["correct_answer"], 0)
 
         choices = [
             {
@@ -392,15 +414,15 @@ class CanvasQuizExportService:
             }
             for i, choice in enumerate(
                 [
-                    question.option_a,
-                    question.option_b,
-                    question.option_c,
-                    question.option_d,
+                    question["option_a"],
+                    question["option_b"],
+                    question["option_c"],
+                    question["option_d"],
                 ]
             )
         ]
 
-        item_id = f"item_{question.id}"
+        item_id = f"item_{question['id']}"
 
         return {
             "item": {
@@ -413,7 +435,7 @@ class CanvasQuizExportService:
                 "points_possible": 1,  # 1 point per question
                 "entry": {
                     "interaction_type_slug": "choice",
-                    "item_body": f"<p>{question.question_text}</p>",
+                    "item_body": f"<p>{question['question_text']}</p>",
                     "interaction_data": {"choices": choices},
                     "scoring_algorithm": "Equivalence",
                     "scoring_data": {"value": f"choice_{correct_index + 1}"},

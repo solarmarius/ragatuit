@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timezone
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -58,6 +59,25 @@ def mock_questions(mock_quiz: Quiz) -> list[Question]:
 
 
 @pytest.fixture
+def mock_question_data(_mock_quiz: Quiz) -> list[dict[str, Any]]:
+    """Create mock question dictionaries for testing."""
+    question_data = []
+    for i in range(3):
+        question_data.append(
+            {
+                "id": uuid.uuid4(),
+                "question_text": f"Test question {i + 1}?",
+                "option_a": f"Option A {i + 1}",
+                "option_b": f"Option B {i + 1}",
+                "option_c": f"Option C {i + 1}",
+                "option_d": f"Option D {i + 1}",
+                "correct_answer": "A",
+            }
+        )
+    return question_data
+
+
+@pytest.fixture
 def export_service() -> CanvasQuizExportService:
     """Create CanvasQuizExportService instance."""
     return CanvasQuizExportService("test_canvas_token")
@@ -76,17 +96,16 @@ class TestCanvasQuizExportService:
         self, export_service: CanvasQuizExportService, mock_quiz: Quiz
     ) -> None:
         """Test question to Canvas item conversion."""
-        question = Question(
-            id=uuid.uuid4(),
-            quiz_id=mock_quiz.id,
-            question_text="What is 2+2?",
-            option_a="3",
-            option_b="4",
-            option_c="5",
-            option_d="6",
-            correct_answer="B",
-            is_approved=True,
-        )
+        question_id = uuid.uuid4()
+        question = {
+            "id": question_id,
+            "question_text": "What is 2+2?",
+            "option_a": "3",
+            "option_b": "4",
+            "option_c": "5",
+            "option_d": "6",
+            "correct_answer": "B",
+        }
 
         result = export_service._convert_question_to_canvas_item(question, 1)
 
@@ -94,7 +113,7 @@ class TestCanvasQuizExportService:
         assert "item" in result
         item = result["item"]
 
-        assert item["id"] == f"item_{question.id}"
+        assert item["id"] == f"item_{question_id}"
         assert item["entry_type"] == "Item"
         assert item["position"] == 1
         assert item["item_type"] == "Question"
@@ -128,17 +147,15 @@ class TestCanvasQuizExportService:
         ]
 
         for correct_answer, expected_choice in test_cases:
-            question = Question(
-                id=uuid.uuid4(),
-                quiz_id=mock_quiz.id,
-                question_text="Test question?",
-                option_a="Option A",
-                option_b="Option B",
-                option_c="Option C",
-                option_d="Option D",
-                correct_answer=correct_answer,
-                is_approved=True,
-            )
+            question = {
+                "id": uuid.uuid4(),
+                "question_text": "Test question?",
+                "option_a": "Option A",
+                "option_b": "Option B",
+                "option_c": "Option C",
+                "option_d": "Option D",
+                "correct_answer": correct_answer,
+            }
 
             result = export_service._convert_question_to_canvas_item(question, 1)
             scoring_data = result["item"]["entry"]["scoring_data"]
@@ -214,11 +231,13 @@ class TestCanvasQuizExportService:
 
     @pytest.mark.asyncio
     async def test_create_quiz_items_success(
-        self, export_service: CanvasQuizExportService, mock_questions: list[Question]
+        self,
+        export_service: CanvasQuizExportService,
+        mock_question_data: list[dict[str, Any]],
     ) -> None:
         """Test successful Canvas quiz items creation."""
         mock_responses = []
-        for i, _question in enumerate(mock_questions):
+        for i, _question in enumerate(mock_question_data):
             mock_response = MagicMock()
             mock_response.status_code = 200
             mock_response.json.return_value = {"id": f"item_{i + 1}"}
@@ -233,7 +252,7 @@ class TestCanvasQuizExportService:
             results = await export_service.create_quiz_items(
                 course_id=37823,
                 quiz_id="quiz_12345",
-                questions=mock_questions,
+                questions=mock_question_data,
             )
 
             assert len(results) == 3
@@ -244,7 +263,9 @@ class TestCanvasQuizExportService:
 
     @pytest.mark.asyncio
     async def test_create_quiz_items_partial_failure(
-        self, export_service: CanvasQuizExportService, mock_questions: list[Question]
+        self,
+        export_service: CanvasQuizExportService,
+        mock_question_data: list[dict[str, Any]],
     ) -> None:
         """Test Canvas quiz items creation with partial failures."""
         # First item succeeds, second fails, third succeeds
@@ -273,7 +294,7 @@ class TestCanvasQuizExportService:
             results = await export_service.create_quiz_items(
                 course_id=37823,
                 quiz_id="quiz_12345",
-                questions=mock_questions,
+                questions=mock_question_data,
             )
 
             assert len(results) == 3
@@ -310,7 +331,7 @@ class TestCanvasQuizExportService:
             mock_get_quiz.return_value = mock_quiz
             mock_get_questions.return_value = mock_questions
 
-            mock_create_quiz.return_value = {"assignment_id": "quiz_12345"}
+            mock_create_quiz.return_value = {"id": "quiz_12345"}
             mock_create_items.return_value = [
                 {"success": True, "question_id": q.id, "item_id": f"item_{i}"}
                 for i, q in enumerate(mock_questions)

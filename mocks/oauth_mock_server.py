@@ -961,7 +961,7 @@ async def create_quiz(
 
     # Create quiz object
     new_quiz = {
-        "id": str(uuid.uuid4()),
+        "id": str(len(mock_quizzes) + 10000),  # 5-digit int starting from 10000
         "course_id": course_id,
         "title": quiz_data.get("title", "Untitled Quiz"),
         "points_possible": quiz_data.get("points_possible", 0),
@@ -1083,7 +1083,7 @@ async def create_quiz_item(
 
     # Create the quiz item
     new_quiz_item = {
-        "id": str(uuid.uuid4()),
+        "id": str(len(mock_quiz_items) + 20000),  # 5-digit int starting from 20000
         "quiz_id": quiz_id,
         "position": item.get("position", len(mock_quiz_items) + 1),
         "points_possible": points_possible or 1,
