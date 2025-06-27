@@ -8,20 +8,20 @@ import {
   Skeleton,
   Text,
   VStack,
-} from "@chakra-ui/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { SiCanvas } from "react-icons/si";
+} from "@chakra-ui/react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { SiCanvas } from "react-icons/si"
 
-import { type Quiz, QuizService } from "@/client";
-import useCustomToast from "@/hooks/useCustomToast";
+import { type Quiz, QuizService } from "@/client"
+import useCustomToast from "@/hooks/useCustomToast"
 
 interface QuestionStatsProps {
-  quiz: Quiz;
+  quiz: Quiz
 }
 
 export function QuestionStats({ quiz }: QuestionStatsProps) {
-  const { showErrorToast, showSuccessToast } = useCustomToast();
-  const queryClient = useQueryClient();
+  const { showErrorToast, showSuccessToast } = useCustomToast()
+  const queryClient = useQueryClient()
 
   const {
     data: stats,
@@ -31,33 +31,33 @@ export function QuestionStats({ quiz }: QuestionStatsProps) {
     queryKey: ["quiz", quiz.id, "questions", "stats"],
     queryFn: async () => {
       if (!quiz.id) {
-        throw new Error("Quiz ID is required");
+        throw new Error("Quiz ID is required")
       }
-      return await QuizService.getQuizQuestionStats({ quizId: quiz.id });
+      return await QuizService.getQuizQuestionStats({ quizId: quiz.id })
     },
-  });
+  })
 
   // Export quiz to Canvas mutation
   const exportMutation = useMutation({
     mutationFn: async () => {
       if (!quiz.id) {
-        throw new Error("Quiz ID is required");
+        throw new Error("Quiz ID is required")
       }
-      return await QuizService.exportQuizToCanvas({ quizId: quiz.id });
+      return await QuizService.exportQuizToCanvas({ quizId: quiz.id })
     },
     onSuccess: () => {
-      showSuccessToast("Quiz export to Canvas started successfully");
+      showSuccessToast("Quiz export to Canvas started successfully")
       // Invalidate quiz queries to trigger status updates and polling
-      queryClient.invalidateQueries({ queryKey: ["quiz", quiz.id] });
+      queryClient.invalidateQueries({ queryKey: ["quiz", quiz.id] })
     },
     onError: (error: any) => {
-      const message = error?.body?.detail || "Failed to export quiz to Canvas";
-      showErrorToast(message);
+      const message = error?.body?.detail || "Failed to export quiz to Canvas"
+      showErrorToast(message)
     },
-  });
+  })
 
   if (isLoading) {
-    return <QuestionStatsSkeleton />;
+    return <QuestionStatsSkeleton />
   }
 
   if (error || !stats) {
@@ -67,11 +67,11 @@ export function QuestionStats({ quiz }: QuestionStatsProps) {
           <Text color="red.500">Failed to load question statistics</Text>
         </Card.Body>
       </Card.Root>
-    );
+    )
   }
 
   const progressPercentage =
-    stats.total > 0 ? (stats.approved / stats.total) * 100 : 0;
+    stats.total > 0 ? (stats.approved / stats.total) * 100 : 0
 
   return (
     <Card.Root>
@@ -130,11 +130,11 @@ export function QuestionStats({ quiz }: QuestionStatsProps) {
               </Text>
 
               {(() => {
-                const isExported = quiz.export_status === "completed";
+                const isExported = quiz.export_status === "completed"
                 const isExporting =
                   exportMutation.isPending ||
-                  quiz.export_status === "processing";
-                const canExport = !isExported;
+                  quiz.export_status === "processing"
+                const canExport = !isExported
 
                 if (canExport) {
                   return (
@@ -148,7 +148,7 @@ export function QuestionStats({ quiz }: QuestionStatsProps) {
                       <SiCanvas />
                       Post to Canvas
                     </Button>
-                  );
+                  )
                 }
 
                 if (isExported) {
@@ -172,15 +172,15 @@ export function QuestionStats({ quiz }: QuestionStatsProps) {
                               day: "numeric",
                               hour: "2-digit",
                               minute: "2-digit",
-                            }
+                            },
                           )}
                         </Text>
                       )}
                     </Text>
-                  );
+                  )
                 }
 
-                return null;
+                return null
               })()}
             </Box>
           )}
@@ -202,7 +202,7 @@ export function QuestionStats({ quiz }: QuestionStatsProps) {
         </VStack>
       </Card.Body>
     </Card.Root>
-  );
+  )
 }
 
 function QuestionStatsSkeleton() {
@@ -231,5 +231,5 @@ function QuestionStatsSkeleton() {
         </VStack>
       </Card.Body>
     </Card.Root>
-  );
+  )
 }

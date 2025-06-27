@@ -60,7 +60,9 @@ test.describe("QuestionStats Component", () => {
   }
 
   test.describe("Loading State", () => {
-    test("should display skeleton while stats are loading", async ({ page }) => {
+    test("should display skeleton while stats are loading", async ({
+      page,
+    }) => {
       // Delay the stats response to see loading state
       await page.route(
         `**/api/v1/quiz/${mockQuizId}/questions/stats`,
@@ -183,11 +185,15 @@ test.describe("QuestionStats Component", () => {
 
       // Check for the specific empty state text from QuestionStats component
       await expect(
-        page.getByText("Questions will appear here once generation is complete"),
+        page.getByText(
+          "Questions will appear here once generation is complete",
+        ),
       ).toBeAttached()
     })
 
-    test("should show 0% progress when no questions exist", async ({ page }) => {
+    test("should show 0% progress when no questions exist", async ({
+      page,
+    }) => {
       await page.route(
         `**/api/v1/quiz/${mockQuizId}/questions/stats`,
         async (route) => {
@@ -297,17 +303,14 @@ test.describe("QuestionStats Component", () => {
         },
       )
 
-      await page.route(
-        `**/api/v1/quiz/${mockQuizId}/export`,
-        async (route) => {
-          exportCalled = true
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({ message: "Quiz export started" }),
-          })
-        },
-      )
+      await page.route(`**/api/v1/quiz/${mockQuizId}/export`, async (route) => {
+        exportCalled = true
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ message: "Quiz export started" }),
+        })
+      })
 
       await navigateToQuestionsTab(page)
 
@@ -333,17 +336,14 @@ test.describe("QuestionStats Component", () => {
       )
 
       // Delay export response to see loading state
-      await page.route(
-        `**/api/v1/quiz/${mockQuizId}/export`,
-        async (route) => {
-          await new Promise((resolve) => setTimeout(resolve, 200))
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({ message: "Quiz export started" }),
-          })
-        },
-      )
+      await page.route(`**/api/v1/quiz/${mockQuizId}/export`, async (route) => {
+        await new Promise((resolve) => setTimeout(resolve, 200))
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ message: "Quiz export started" }),
+        })
+      })
 
       await navigateToQuestionsTab(page)
 
@@ -366,18 +366,15 @@ test.describe("QuestionStats Component", () => {
         },
       )
 
-      await page.route(
-        `**/api/v1/quiz/${mockQuizId}/export`,
-        async (route) => {
-          await route.fulfill({
-            status: 400,
-            contentType: "application/json",
-            body: JSON.stringify({
-              body: { detail: "Export failed: Canvas API error" }
-            }),
-          })
-        },
-      )
+      await page.route(`**/api/v1/quiz/${mockQuizId}/export`, async (route) => {
+        await route.fulfill({
+          status: 400,
+          contentType: "application/json",
+          body: JSON.stringify({
+            body: { detail: "Export failed: Canvas API error" },
+          }),
+        })
+      })
 
       await navigateToQuestionsTab(page)
 

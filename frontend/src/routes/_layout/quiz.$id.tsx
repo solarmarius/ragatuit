@@ -377,9 +377,7 @@ function QuizDetail() {
                         <Text fontWeight="medium" color="gray.700">
                           Canvas Export
                         </Text>
-                        <StatusBadge
-                          status={quiz.export_status || "pending"}
-                        />
+                        <StatusBadge status={quiz.export_status || "pending"} />
                       </HStack>
                       <StatusDescription
                         status={quiz.export_status || "pending"}
