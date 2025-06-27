@@ -92,6 +92,16 @@ class Quiz(SQLModel, table=True):
             nullable=True,
         ),
     )
+    canvas_quiz_id: str | None = Field(
+        default=None, description="Canvas quiz assignment ID after export"
+    )
+    export_status: str = Field(
+        default="pending",
+        description="Status of Canvas export: pending, processing, completed, failed",
+    )
+    exported_at: datetime | None = Field(
+        default=None, description="Timestamp when quiz was exported to Canvas"
+    )
     questions: list["Question"] = Relationship(
         back_populates="quiz", cascade_delete=True
     )
@@ -235,6 +245,9 @@ class Question(SQLModel, table=True):
             nullable=True,
         ),
     )
+    canvas_item_id: str | None = Field(
+        default=None, description="Canvas quiz item ID after export"
+    )
 
 
 class QuestionCreate(SQLModel):
@@ -271,3 +284,4 @@ class QuestionPublic(SQLModel):
     approved_at: datetime | None
     created_at: datetime | None
     updated_at: datetime | None
+    canvas_item_id: str | None
