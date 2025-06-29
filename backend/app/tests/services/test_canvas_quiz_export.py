@@ -317,17 +317,21 @@ class TestCanvasQuizExportService:
     ) -> None:
         """Test complete quiz export to Canvas."""
         with (
-            patch("app.services.canvas_quiz_export.Session") as mock_session_class,
-            patch("app.services.canvas_quiz_export.get_quiz_by_id") as mock_get_quiz,
             patch(
-                "app.services.canvas_quiz_export.get_approved_questions_by_quiz_id"
+                "app.services.canvas_quiz_export.get_async_session"
+            ) as mock_session_class,
+            patch(
+                "app.services.canvas_quiz_export.get_quiz_for_update"
+            ) as mock_get_quiz,
+            patch(
+                "app.services.canvas_quiz_export.get_approved_questions_by_quiz_id_async"
             ) as mock_get_questions,
             patch.object(export_service, "create_canvas_quiz") as mock_create_quiz,
             patch.object(export_service, "create_quiz_items") as mock_create_items,
         ):
             # Setup mocks
-            mock_session = MagicMock()
-            mock_session_class.return_value.__enter__.return_value = mock_session
+            mock_session = AsyncMock()
+            mock_session_class.return_value.__aenter__.return_value = mock_session
 
             mock_get_quiz.return_value = mock_quiz
             mock_get_questions.return_value = mock_questions
@@ -359,11 +363,15 @@ class TestCanvasQuizExportService:
         mock_quiz.canvas_quiz_id = "existing_quiz_123"
 
         with (
-            patch("app.services.canvas_quiz_export.Session") as mock_session_class,
-            patch("app.services.canvas_quiz_export.get_quiz_by_id") as mock_get_quiz,
+            patch(
+                "app.services.canvas_quiz_export.get_async_session"
+            ) as mock_session_class,
+            patch(
+                "app.services.canvas_quiz_export.get_quiz_for_update"
+            ) as mock_get_quiz,
         ):
-            mock_session = MagicMock()
-            mock_session_class.return_value.__enter__.return_value = mock_session
+            mock_session = AsyncMock()
+            mock_session_class.return_value.__aenter__.return_value = mock_session
             mock_get_quiz.return_value = mock_quiz
 
             result = await export_service.export_quiz_to_canvas(mock_quiz.id)
@@ -381,11 +389,15 @@ class TestCanvasQuizExportService:
         mock_quiz.export_status = "processing"
 
         with (
-            patch("app.services.canvas_quiz_export.Session") as mock_session_class,
-            patch("app.services.canvas_quiz_export.get_quiz_by_id") as mock_get_quiz,
+            patch(
+                "app.services.canvas_quiz_export.get_async_session"
+            ) as mock_session_class,
+            patch(
+                "app.services.canvas_quiz_export.get_quiz_for_update"
+            ) as mock_get_quiz,
         ):
-            mock_session = MagicMock()
-            mock_session_class.return_value.__enter__.return_value = mock_session
+            mock_session = AsyncMock()
+            mock_session_class.return_value.__aenter__.return_value = mock_session
             mock_get_quiz.return_value = mock_quiz
 
             result = await export_service.export_quiz_to_canvas(mock_quiz.id)
@@ -402,11 +414,15 @@ class TestCanvasQuizExportService:
         quiz_id = uuid.uuid4()
 
         with (
-            patch("app.services.canvas_quiz_export.Session") as mock_session_class,
-            patch("app.services.canvas_quiz_export.get_quiz_by_id") as mock_get_quiz,
+            patch(
+                "app.services.canvas_quiz_export.get_async_session"
+            ) as mock_session_class,
+            patch(
+                "app.services.canvas_quiz_export.get_quiz_for_update"
+            ) as mock_get_quiz,
         ):
-            mock_session = MagicMock()
-            mock_session_class.return_value.__enter__.return_value = mock_session
+            mock_session = AsyncMock()
+            mock_session_class.return_value.__aenter__.return_value = mock_session
             mock_get_quiz.return_value = None
 
             with pytest.raises(ValueError, match=f"Quiz {quiz_id} not found"):
@@ -418,14 +434,18 @@ class TestCanvasQuizExportService:
     ) -> None:
         """Test export of quiz with no approved questions."""
         with (
-            patch("app.services.canvas_quiz_export.Session") as mock_session_class,
-            patch("app.services.canvas_quiz_export.get_quiz_by_id") as mock_get_quiz,
             patch(
-                "app.services.canvas_quiz_export.get_approved_questions_by_quiz_id"
+                "app.services.canvas_quiz_export.get_async_session"
+            ) as mock_session_class,
+            patch(
+                "app.services.canvas_quiz_export.get_quiz_for_update"
+            ) as mock_get_quiz,
+            patch(
+                "app.services.canvas_quiz_export.get_approved_questions_by_quiz_id_async"
             ) as mock_get_questions,
         ):
-            mock_session = MagicMock()
-            mock_session_class.return_value.__enter__.return_value = mock_session
+            mock_session = AsyncMock()
+            mock_session_class.return_value.__aenter__.return_value = mock_session
             mock_get_quiz.return_value = mock_quiz
             mock_get_questions.return_value = []
 
@@ -441,15 +461,19 @@ class TestCanvasQuizExportService:
     ) -> None:
         """Test that Canvas API errors update quiz status to failed."""
         with (
-            patch("app.services.canvas_quiz_export.Session") as mock_session_class,
-            patch("app.services.canvas_quiz_export.get_quiz_by_id") as mock_get_quiz,
             patch(
-                "app.services.canvas_quiz_export.get_approved_questions_by_quiz_id"
+                "app.services.canvas_quiz_export.get_async_session"
+            ) as mock_session_class,
+            patch(
+                "app.services.canvas_quiz_export.get_quiz_for_update"
+            ) as mock_get_quiz,
+            patch(
+                "app.services.canvas_quiz_export.get_approved_questions_by_quiz_id_async"
             ) as mock_get_questions,
             patch.object(export_service, "create_canvas_quiz") as mock_create_quiz,
         ):
-            mock_session = MagicMock()
-            mock_session_class.return_value.__enter__.return_value = mock_session
+            mock_session = AsyncMock()
+            mock_session_class.return_value.__aenter__.return_value = mock_session
 
             mock_get_quiz.return_value = mock_quiz
             mock_get_questions.return_value = mock_questions

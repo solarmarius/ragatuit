@@ -56,6 +56,14 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = ""
     POSTGRES_DB: str = ""
 
+    # Database pool settings
+    DATABASE_POOL_SIZE: int = 20
+    DATABASE_MAX_OVERFLOW: int = 40
+    DATABASE_POOL_TIMEOUT: int = 30
+    DATABASE_POOL_RECYCLE: int = 1800
+    # Feature flag for optimized pool
+    USE_OPTIMIZED_DB_POOL: bool = True
+
     CANVAS_CLIENT_ID: str
     CANVAS_CLIENT_SECRET: str
     CANVAS_REDIRECT_URI: HttpUrl

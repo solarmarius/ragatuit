@@ -112,7 +112,9 @@ def client() -> Generator[TestClient, None, None]:
 
 @pytest.fixture(autouse=True)
 def mock_canvas_settings() -> Generator[None, None, None]:
-    """Mock Canvas settings for all tests to use canvas-mock URL."""
+    """
+    Mock Canvas settings for all tests to use canvas-mock URL.
+    """
     with (
         patch.object(settings, "CANVAS_BASE_URL", "http://canvas-mock:8001"),
         patch.object(settings, "CANVAS_MOCK_URL", "http://canvas-mock:8001"),

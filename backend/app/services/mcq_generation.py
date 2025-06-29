@@ -8,10 +8,9 @@ from langchain.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from pydantic import SecretStr
-from sqlmodel import Session
 
 from app.core.config import settings
-from app.core.db import engine
+from app.core.db import get_async_session
 from app.core.logging_config import get_logger
 from app.crud import get_content_from_quiz
 from app.models import Question, QuestionCreate
@@ -142,16 +141,14 @@ Generate exactly ONE question based on this content."""
         )
 
         try:
-            with Session(engine) as session:
-                # Use the CRUD function to get extracted content
-                extracted_content_json = get_content_from_quiz(
+            async with get_async_session() as session:
+                extracted_content_json = await get_content_from_quiz(
                     session, state["quiz_id"]
                 )
 
                 if not extracted_content_json:
                     raise ValueError("No extracted content found for quiz")
 
-                # Parse the JSON content
                 content_dict = json.loads(extracted_content_json)
 
                 chunks = self._chunk_content(content_dict)
@@ -435,17 +432,14 @@ Generate exactly ONE question based on this content."""
         )
 
         try:
-            with Session(engine) as session:
+            async with get_async_session() as session:
                 saved_count = 0
                 question_objects = []
 
-                # First, validate all questions before saving any
                 for question_data in questions:
                     try:
-                        # Create QuestionCreate instance for validation
                         question_create = QuestionCreate(**question_data)
 
-                        # Create Question instance
                         question = Question(
                             quiz_id=quiz_id,
                             question_text=question_create.question_text,
@@ -466,17 +460,15 @@ Generate exactly ONE question based on this content."""
                             else "invalid_format",
                             error=str(validation_error),
                         )
-                        continue  # Skip invalid questions but continue with others
+                        continue
 
-                # Add all valid questions in a single transaction
                 if question_objects:
                     try:
-                        for question in question_objects:
-                            session.add(question)
-                        session.commit()
+                        session.add_all(question_objects)
+                        await session.commit()
                         saved_count = len(question_objects)
                     except Exception as db_error:
-                        session.rollback()
+                        await session.rollback()
                         raise db_error
 
                 logger.info(

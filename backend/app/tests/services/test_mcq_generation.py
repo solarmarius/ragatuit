@@ -442,14 +442,14 @@ async def test_save_questions_to_database_success(
         "error_message": None,
     }
 
-    with patch("app.services.mcq_generation.Session") as mock_session_class:
-        mock_session = MagicMock()
-        mock_session_class.return_value.__enter__.return_value = mock_session
+    with patch("app.services.mcq_generation.get_async_session") as mock_session_class:
+        mock_session = AsyncMock()
+        mock_session_class.return_value.__aenter__.return_value = mock_session
 
         result_state = await service.save_questions_to_database(state)
 
         assert result_state["error_message"] is None
-        mock_session.add.assert_called()
+        mock_session.add_all.assert_called()
         mock_session.commit.assert_called()
 
 
@@ -475,10 +475,10 @@ async def test_save_questions_to_database_failure(
         "error_message": None,
     }
 
-    with patch("app.services.mcq_generation.Session") as mock_session_class:
-        mock_session = MagicMock()
+    with patch("app.services.mcq_generation.get_async_session") as mock_session_class:
+        mock_session = AsyncMock()
         mock_session.commit.side_effect = Exception("Database error")
-        mock_session_class.return_value.__enter__.return_value = mock_session
+        mock_session_class.return_value.__aenter__.return_value = mock_session
 
         result_state = await service.save_questions_to_database(state)
 

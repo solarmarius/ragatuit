@@ -1,7 +1,9 @@
 import json
 from datetime import datetime, timezone
+from typing import Any
 from uuid import UUID
 
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import Session, asc, desc, select
 
 from app.core.security import token_encryption
@@ -14,6 +16,60 @@ from app.models import (
     User,
     UserCreate,
 )
+
+
+async def get_quiz_for_update(session: AsyncSession, quiz_id: UUID) -> Quiz | None:
+    """
+    Retrieve a quiz with a lock for updating.
+
+    **Parameters:**
+        session (AsyncSession): Async database session for the query
+        quiz_id (UUID): Quiz UUID to look up
+
+    **Returns:**
+        Quiz | None: Quiz object if found, None if not found
+    """
+    result = await session.execute(
+        select(Quiz).where(Quiz.id == quiz_id).with_for_update()
+    )
+    return result.scalar_one_or_none()
+
+
+async def update_quiz_content_extraction_status(
+    session: AsyncSession,
+    quiz: Quiz,
+    status: str,
+    content: dict[str, Any] | None = None,
+) -> None:
+    """
+    Update the content extraction status and content of a quiz.
+
+    **Parameters:**
+        session (AsyncSession): Async database session for the transaction
+        quiz (Quiz): The quiz object to update
+        status (str): The new content extraction status
+        content (dict | None): The extracted content, if any
+    """
+    quiz.content_extraction_status = status
+    if content is not None:
+        quiz.content_dict = content
+        quiz.content_extracted_at = datetime.now(timezone.utc)
+    await session.commit()
+
+
+async def update_quiz_llm_generation_status(
+    session: AsyncSession, quiz: Quiz, status: str
+) -> None:
+    """
+    Update the LLM generation status of a quiz.
+
+    **Parameters:**
+        session (AsyncSession): Async database session for the transaction
+        quiz (Quiz): The quiz object to update
+        status (str): The new LLM generation status
+    """
+    quiz.llm_generation_status = status
+    await session.commit()
 
 
 def create_user(session: Session, user_create: UserCreate) -> User:
@@ -281,36 +337,19 @@ def delete_quiz(session: Session, quiz_id: UUID, user_id: UUID) -> bool:
     return True
 
 
-def get_content_from_quiz(session: Session, quiz_id: UUID) -> str | None:
+async def get_content_from_quiz(session: AsyncSession, quiz_id: UUID) -> str | None:
     """
-    Retrieve the extracted content from a quiz by its UUID.
+    Retrieve the extracted content from a quiz by its UUID asynchronously.
 
     **Parameters:**
-        session (Session): Database session for the query
+        session (AsyncSession): Async database session for the query
         quiz_id (UUID): Quiz UUID to get extracted content from
 
     **Returns:**
         str | None: The extracted content as a JSON string if found and available,
                    None if quiz not found or no content extracted yet
-
-    **Usage:**
-    - Content processing: Access extracted Canvas module content for LLM generation
-    - Status checking: Verify if content extraction has completed
-    - Content display: Show extracted content to users for review
-
-    **Example:**
-        >>> content = get_content_from_quiz(session, quiz_uuid)
-        >>> if content:
-        ...     content_dict = json.loads(content)
-        ...     print(f"Found {len(content_dict)} extracted items")
-        ... else:
-        ...     print("No content extracted yet")
-
-    **Note:**
-    Returns the raw JSON string stored in the database. Use json.loads()
-    to parse into a dictionary, or use the quiz.content_dict property.
     """
-    quiz = session.get(Quiz, quiz_id)
+    quiz = await session.get(Quiz, quiz_id)
     if not quiz:
         return None
     return quiz.extracted_content
@@ -480,6 +519,28 @@ def get_approved_questions_by_quiz_id(
         .order_by(asc(Question.created_at))
     )
     return list(session.exec(statement).all())
+
+
+async def get_approved_questions_by_quiz_id_async(
+    session: AsyncSession, quiz_id: UUID
+) -> list[Question]:
+    """
+    Retrieve all approved questions for a specific quiz asynchronously.
+
+    **Parameters:**
+        session (AsyncSession): Async database session for the query
+        quiz_id (UUID): Quiz UUID to get approved questions for
+
+    **Returns:**
+        list[Question]: List of approved question objects for the quiz
+    """
+    statement = (
+        select(Question)
+        .where(Question.quiz_id == quiz_id, Question.is_approved == True)  # noqa: E712
+        .order_by(asc(Question.created_at))
+    )
+    result = await session.execute(statement)
+    return list(result.scalars().all())
 
 
 def get_question_counts_by_quiz_id(session: Session, quiz_id: UUID) -> dict[str, int]:
