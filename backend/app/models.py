@@ -43,9 +43,7 @@ class User(SQLModel, table=True):
     # 1 hour expiration from Canvas
     expires_at: datetime | None = Field(
         default_factory=lambda: datetime.now(timezone.utc) + timedelta(hours=1),
-        sa_column=Column(
-            DateTime(timezone=True), nullable=True
-        ),
+        sa_column=Column(DateTime(timezone=True), nullable=True),
     )
     token_type: str = Field(default="Bearer")
     onboarding_completed: bool = Field(
@@ -79,10 +77,9 @@ class Quiz(SQLModel, table=True):
         default=None, description="JSON string of extracted page content"
     )
     content_extracted_at: datetime | None = Field(
-        default=None, description="Timestamp when content extraction was completed",         
-        sa_column=Column(
-            DateTime(timezone=True), nullable=True
-        ),
+        default=None,
+        description="Timestamp when content extraction was completed",
+        sa_column=Column(DateTime(timezone=True), nullable=True),
     )
     created_at: datetime | None = Field(
         default=None,
@@ -106,10 +103,9 @@ class Quiz(SQLModel, table=True):
         description="Status of Canvas export: pending, processing, completed, failed",
     )
     exported_at: datetime | None = Field(
-        sa_column=Column(
-            DateTime(timezone=True), nullable=True
-        ),
-        default=None, description="Timestamp when quiz was exported to Canvas"
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+        default=None,
+        description="Timestamp when quiz was exported to Canvas",
     )
     questions: list["Question"] = Relationship(
         back_populates="quiz", cascade_delete=True
@@ -238,10 +234,9 @@ class Question(SQLModel, table=True):
     correct_answer: str = Field(regex=r"^[ABCD]$", description="Must be A, B, C, or D")
     is_approved: bool = Field(default=False, description="Whether question is approved")
     approved_at: datetime | None = Field(
-        sa_column=Column(
-            DateTime(timezone=True), nullable=True
-        ),
-        default=None, description="Timestamp when question was approved"
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+        default=None,
+        description="Timestamp when question was approved",
     )
     created_at: datetime | None = Field(
         default=None,
