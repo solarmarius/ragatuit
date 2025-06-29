@@ -1,5 +1,6 @@
 import uuid
 from collections.abc import Generator
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -107,3 +108,15 @@ def user_id(db: Session) -> uuid.UUID:
 def client() -> Generator[TestClient, None, None]:
     with TestClient(app) as c:
         yield c
+
+
+@pytest.fixture(autouse=True)
+def mock_canvas_settings() -> Generator[None, None, None]:
+    """Mock Canvas settings for all tests to use canvas-mock URL."""
+    with (
+        patch.object(settings, "CANVAS_BASE_URL", "http://canvas-mock:8001"),
+        patch.object(settings, "CANVAS_MOCK_URL", "http://canvas-mock:8001"),
+        patch.object(settings, "USE_CANVAS_MOCK", True),
+        patch.object(settings, "CANVAS_API_VERSION", "v1"),
+    ):
+        yield

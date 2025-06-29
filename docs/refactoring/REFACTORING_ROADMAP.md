@@ -48,7 +48,7 @@ This roadmap provides a structured approach to refactoring the Rag@UiT FastAPI b
 **Timeline**: Week 1 (7 days)
 **Goal**: Immediate improvements with no blockers
 
-### 1.1 Hardcoded API URLs in Services (1 day)
+### 1.1 Hardcoded API URLs in Services (1 day) OK
 
 - **Issue**: `hardcoded_url.md`
 - **Priority**: High

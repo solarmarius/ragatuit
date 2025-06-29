@@ -60,6 +60,11 @@ class Settings(BaseSettings):
     CANVAS_CLIENT_SECRET: str
     CANVAS_REDIRECT_URI: HttpUrl
     CANVAS_BASE_URL: HttpUrl
+    CANVAS_API_VERSION: str = "v1"
+
+    # Mock Canvas URL for testing
+    CANVAS_MOCK_URL: HttpUrl | None = None
+    USE_CANVAS_MOCK: bool = False
 
     # Content extraction limits
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB per file
@@ -107,6 +112,17 @@ class Settings(BaseSettings):
             port=self.POSTGRES_PORT,
             path=test_db_name,
         )
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def canvas_api_url(self) -> str:
+        """Get full Canvas API URL."""
+        base = str(
+            self.CANVAS_MOCK_URL
+            if self.USE_CANVAS_MOCK and self.CANVAS_MOCK_URL
+            else self.CANVAS_BASE_URL
+        )
+        return f"{base.rstrip('/')}/api/{self.CANVAS_API_VERSION}"
 
     def _check_default_secret(self, var_name: str, value: str | None) -> None:
         if value == "changethis":

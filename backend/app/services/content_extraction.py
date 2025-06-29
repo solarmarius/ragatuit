@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup, Comment
 
 from app.core.config import settings
 from app.core.logging_config import get_logger
+from app.services.url_builder import CanvasURLBuilder
 
 logger = get_logger("content_extraction")
 
@@ -28,8 +29,13 @@ class ContentExtractionService:
     def __init__(self, canvas_token: str, course_id: int):
         self.canvas_token = canvas_token
         self.course_id = course_id
-        self.canvas_base_url = "http://canvas-mock:8001/api/v1"
         self.total_content_size = 0  # Track total content size for limits
+
+        # Initialize URL builder with settings
+        base_url = str(settings.CANVAS_BASE_URL)
+        if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
+            base_url = str(settings.CANVAS_MOCK_URL)
+        self.url_builder = CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
 
         # Load configuration settings
         self.max_file_size = settings.MAX_FILE_SIZE
@@ -263,9 +269,7 @@ class ContentExtractionService:
 
     async def _fetch_module_items(self, module_id: int) -> list[dict[str, Any]]:
         """Fetch items from a Canvas module."""
-        url = (
-            f"{self.canvas_base_url}/courses/{self.course_id}/modules/{module_id}/items"
-        )
+        url = self.url_builder.module_items(self.course_id, module_id)
         headers = {
             "Authorization": f"Bearer {self.canvas_token}",
             "Accept": "application/json",
@@ -363,12 +367,7 @@ class ContentExtractionService:
 
     async def _fetch_page_content(self, page_url: str) -> dict[str, Any]:
         """Fetch content of a specific Canvas page."""
-        from urllib.parse import quote
-
-        encoded_page_url = quote(page_url.strip(), safe="")
-        url = (
-            f"{self.canvas_base_url}/courses/{self.course_id}/pages/{encoded_page_url}"
-        )
+        url = self.url_builder.pages(self.course_id, page_url)
         headers = {
             "Authorization": f"Bearer {self.canvas_token}",
             "Accept": "application/json",
@@ -491,7 +490,7 @@ class ContentExtractionService:
         This calls the same Canvas API endpoint that our canvas.py router uses,
         ensuring consistent behavior and avoiding code duplication.
         """
-        url = f"{self.canvas_base_url}/courses/{self.course_id}/files/{file_id}"
+        url = self.url_builder.files(self.course_id, file_id)
         headers = {
             "Authorization": f"Bearer {self.canvas_token}",
             "Accept": "application/json",

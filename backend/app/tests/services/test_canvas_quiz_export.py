@@ -90,7 +90,8 @@ class TestCanvasQuizExportService:
         """Test service initialization."""
         service = CanvasQuizExportService("test_token")
         assert service.canvas_token == "test_token"
-        assert service.canvas_base_url == "http://canvas-mock:8001/api"
+        assert service.url_builder is not None
+        assert service.url_builder.base_url == "http://canvas-mock:8001"
 
     def test_convert_question_to_canvas_item(
         self, export_service: CanvasQuizExportService, mock_quiz: Quiz
@@ -194,7 +195,7 @@ class TestCanvasQuizExportService:
 
             assert (
                 call_args[0][0]
-                == "http://canvas-mock:8001/api/quiz/v1/courses/37823/quizzes"
+                == "http://canvas-mock:8001/quiz/v1/courses/37823/quizzes"
             )
             assert (
                 call_args[1]["headers"]["Authorization"] == "Bearer test_canvas_token"
