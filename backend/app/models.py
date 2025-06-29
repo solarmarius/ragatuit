@@ -1,9 +1,10 @@
-import json
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from pydantic import validator
 from sqlalchemy import Column, DateTime, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
 
@@ -60,7 +61,9 @@ class Quiz(SQLModel, table=True):
     owner: User | None = Relationship(back_populates="quizzes")
     canvas_course_id: int = Field(index=True)
     canvas_course_name: str
-    selected_modules: str = Field(description="JSON array of selected Canvas modules")
+    selected_modules: dict[str, str] = Field(
+        default_factory=dict, sa_column=Column(JSONB, nullable=False, default={})
+    )
     title: str = Field(min_length=1)
     question_count: int = Field(default=100, ge=1, le=200)
     llm_model: str = Field(default="o3")
@@ -75,8 +78,8 @@ class Quiz(SQLModel, table=True):
         description="Status of LLM generation: pending, processing, completed, failed",
         index=True,
     )
-    extracted_content: str | None = Field(
-        default=None, description="JSON string of extracted page content"
+    extracted_content: dict[str, Any] | None = Field(
+        default=None, sa_column=Column(JSONB, nullable=True)
     )
     content_extracted_at: datetime | None = Field(
         default=None,
@@ -114,55 +117,24 @@ class Quiz(SQLModel, table=True):
         back_populates="quiz", cascade_delete=True
     )
 
-    # Methods to handle JSON strings for selected_modules field
-    @property
-    def modules_dict(self) -> dict[int, str]:
-        """Get selected_modules as a dictionary."""
-        if not self.selected_modules:
-            return {}
+    # Pydantic validators for structure
+    @validator("selected_modules")
+    def validate_selected_modules(cls, v: Any) -> dict[str, str]:
+        """Ensure selected_modules has correct structure."""
+        if not isinstance(v, dict):
+            raise ValueError("selected_modules must be a dictionary")
+        # Validate all keys are strings (module IDs)
+        for _key, value in v.items():
+            if not isinstance(value, str):
+                raise ValueError(f"Module name must be string, got {type(value)}")
+        return v
 
-        try:
-            parsed = json.loads(self.selected_modules)
-            if isinstance(parsed, dict):
-                result = {}
-                for k, v in parsed.items():
-                    try:
-                        # Convert key to int and value to string safely
-                        key = int(k)
-                        value = str(v) if v is not None else ""
-                        result[key] = value
-                    except (ValueError, TypeError):
-                        # Skip invalid key-value pairs
-                        continue
-                return result
-            return {}
-        except (json.JSONDecodeError, TypeError):
-            # Return empty dict if JSON is malformed
-            return {}
-
-    @modules_dict.setter
-    def modules_dict(self, value: dict[int, str]) -> None:
-        """Set selected_modules from a dictionary."""
-        self.selected_modules = json.dumps(value)
-
-    @property
-    def content_dict(self) -> dict[str, Any]:
-        """Get extracted_content as a dictionary."""
-        if not self.extracted_content:
-            return {}
-
-        try:
-            result = json.loads(self.extracted_content)
-            if isinstance(result, dict):
-                return result
-            return {}
-        except (json.JSONDecodeError, TypeError):
-            return {}
-
-    @content_dict.setter
-    def content_dict(self, value: dict[str, Any]) -> None:
-        """Set extracted_content from a dictionary."""
-        self.extracted_content = json.dumps(value) if value else None
+    @validator("extracted_content")
+    def validate_extracted_content(cls, v: Any) -> dict[str, Any] | None:
+        """Validate extracted content structure."""
+        if v is not None and not isinstance(v, dict):
+            raise ValueError("extracted_content must be a dictionary")
+        return v
 
 
 class QuizCreate(SQLModel):

@@ -51,10 +51,9 @@ export type Quiz = {
   owner_id: string
   canvas_course_id: number
   canvas_course_name: string
-  /**
-   * JSON array of selected Canvas modules
-   */
-  selected_modules: string
+  selected_modules?: {
+    [key: string]: string
+  }
   title: string
   question_count?: number
   llm_model?: string
@@ -67,10 +66,9 @@ export type Quiz = {
    * Status of LLM generation: pending, processing, completed, failed
    */
   llm_generation_status?: string
-  /**
-   * JSON string of extracted page content
-   */
-  extracted_content?: string | null
+  extracted_content?: {
+    [key: string]: unknown
+  } | null
   /**
    * Timestamp when content extraction was completed
    */
@@ -264,3 +262,7 @@ export type UsersUpdateUserMeData = {
 export type UsersUpdateUserMeResponse = UserPublic
 
 export type UtilsHealthCheckResponse = boolean
+
+export type UtilsGetDbHealthResponse = {
+  [key: string]: unknown
+}

@@ -142,14 +142,10 @@ Generate exactly ONE question based on this content."""
 
         try:
             async with get_async_session() as session:
-                extracted_content_json = await get_content_from_quiz(
-                    session, state["quiz_id"]
-                )
+                content_dict = await get_content_from_quiz(session, state["quiz_id"])
 
-                if not extracted_content_json:
+                if not content_dict:
                     raise ValueError("No extracted content found for quiz")
-
-                content_dict = json.loads(extracted_content_json)
 
                 chunks = self._chunk_content(content_dict)
                 if not chunks:

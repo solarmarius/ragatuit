@@ -69,28 +69,28 @@ This roadmap provides a structured approach to refactoring the Rag@UiT FastAPI b
 - **Why First**: Immediate query performance improvement
 - **Deliverable**: Indexed foreign keys and query fields
 
-### 1.4 API Pagination Implementation (2 days)
+### 1.4 API Pagination Implementation (2 days) NOT APPLICABLE FOR OUR USE CASE
 
 - **Issue**: `api_pagination.md`
 - **Priority**: Medium
 - **Why First**: Prevents memory issues, improves UX
 - **Deliverable**: Paginated list endpoints
 
-### 1.5 Security Headers (1 day)
+### 1.5 Security Headers (1 day) NOT APPLICABLE FOR OUR USE CASE
 
 - **Issue**: `security_headers.md`
 - **Priority**: Low
 - **Why First**: Quick security enhancement
 - **Deliverable**: Proper security headers middleware
 
-### 1.6 Request ID Correlation (1 day)
+### 1.6 Request ID Correlation (1 day) NOT APPLICABLE FOR OUR USE CASE
 
 - **Issue**: `request_id_correlation.md`
 - **Priority**: Low
 - **Why First**: Improves debugging and monitoring
 - **Deliverable**: Request tracking across logs
 
-### 1.7 API Versioning Strategy (Planning Only)
+### 1.7 API Versioning Strategy (Planning Only) NOT APPLICABLE FOR OUR USE CASE
 
 - **Issue**: `api_versioning_strategy.md`
 - **Priority**: Low
@@ -110,7 +110,7 @@ This roadmap provides a structured approach to refactoring the Rag@UiT FastAPI b
 **Timeline**: Week 2 (8 days)
 **Goal**: Build on Phase 1 with low-dependency improvements
 
-### 2.1 JSON Column Migration (2 days)
+### 2.1 JSON Column Migration (2 days) OK
 
 - **Issue**: `json_column_migration.md`
 - **Priority**: Medium
@@ -134,7 +134,7 @@ This roadmap provides a structured approach to refactoring the Rag@UiT FastAPI b
 - **Why Now**: Major performance improvement
 - **Deliverable**: Optimized query patterns
 
-### 2.4 Rate Limiting Implementation (2 days)
+### 2.4 Rate Limiting Implementation (2 days) NOT APPLICABLE FOR OUR USE CASE
 
 - **Issue**: `rate_limiting.md`
 - **Priority**: Low

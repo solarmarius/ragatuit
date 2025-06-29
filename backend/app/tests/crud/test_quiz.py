@@ -1,4 +1,3 @@
-import json
 import uuid
 
 from sqlmodel import Session
@@ -41,14 +40,10 @@ def test_create_quiz(db: Session, user_id: uuid.UUID) -> None:
     assert quiz.created_at is not None
     assert quiz.updated_at is not None
 
-    # Check that modules are stored as JSON string
+    # Check that modules are stored as dict with string keys
     assert quiz.selected_modules is not None
-    parsed_modules = json.loads(quiz.selected_modules)
     expected_modules = {str(k): v for k, v in selected_modules.items()}
-    assert parsed_modules == expected_modules
-
-    # Check modules_dict property
-    assert quiz.modules_dict == selected_modules
+    assert quiz.selected_modules == expected_modules
 
 
 def test_create_quiz_with_defaults(db: Session, user_id: uuid.UUID) -> None:
@@ -201,8 +196,8 @@ def test_get_user_quizzes_user_isolation(db: Session, user_id: uuid.UUID) -> Non
     assert second_quizzes[0].id == second_quiz.id
 
 
-def test_quiz_modules_dict_property(db: Session, user_id: uuid.UUID) -> None:
-    """Test the modules_dict property getter and setter."""
+def test_quiz_selected_modules_jsonb(db: Session, user_id: uuid.UUID) -> None:
+    """Test that selected_modules works as native JSONB."""
     modules = {173467: "Module 1", 173468: "Module 2"}
     quiz_in = QuizCreate(
         canvas_course_id=12345,
@@ -212,24 +207,21 @@ def test_quiz_modules_dict_property(db: Session, user_id: uuid.UUID) -> None:
     )
     quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
 
-    # Test getter
-    assert quiz.modules_dict == modules
+    # Test that modules are stored with string keys
+    expected = {str(k): v for k, v in modules.items()}
+    assert quiz.selected_modules == expected
 
-    # Test setter
-    new_modules = {999: "New Module", 1000: "Another Module"}
-    quiz.modules_dict = new_modules
+    # Test direct assignment
+    new_modules = {"999": "New Module", "1000": "Another Module"}
+    quiz.selected_modules = new_modules
     db.commit()
     db.refresh(quiz)
 
-    assert quiz.modules_dict == new_modules
-    # Check that JSON string was updated
-    parsed = json.loads(quiz.selected_modules)
-    expected = {str(k): v for k, v in new_modules.items()}
-    assert parsed == expected
+    assert quiz.selected_modules == new_modules
 
 
-def test_quiz_modules_dict_edge_cases(db: Session, user_id: uuid.UUID) -> None:
-    """Test modules_dict property with edge cases."""
+def test_quiz_selected_modules_edge_cases(db: Session, user_id: uuid.UUID) -> None:
+    """Test selected_modules JSONB with edge cases."""
     quiz_in = QuizCreate(
         canvas_course_id=12345,
         canvas_course_name="Test Course",
@@ -239,13 +231,13 @@ def test_quiz_modules_dict_edge_cases(db: Session, user_id: uuid.UUID) -> None:
     quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
 
     # Test empty modules
-    assert quiz.modules_dict == {}
+    assert quiz.selected_modules == {}
 
     # Test setting empty modules
-    quiz.modules_dict = {}
+    quiz.selected_modules = {}
     db.commit()
     db.refresh(quiz)
-    assert quiz.modules_dict == {}
+    assert quiz.selected_modules == {}
 
 
 def test_quiz_field_constraints(db: Session, user_id: uuid.UUID) -> None:
@@ -394,13 +386,11 @@ def test_delete_quiz_with_extracted_content(db: Session, user_id: uuid.UUID) -> 
     created_quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
 
     # Add some extracted content
-    created_quiz.extracted_content = json.dumps(
-        {
-            "modules": {
-                "173467": {"pages": [{"title": "Test Page", "content": "Test content"}]}
-            }
+    created_quiz.extracted_content = {
+        "modules": {
+            "173467": {"pages": [{"title": "Test Page", "content": "Test content"}]}
         }
-    )
+    }
     created_quiz.content_extraction_status = "completed"
     db.add(created_quiz)
     db.commit()
