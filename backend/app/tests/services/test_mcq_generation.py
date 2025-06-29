@@ -148,9 +148,9 @@ async def test_content_preparation_success(
         "error_message": None,
     }
 
-    with patch("app.services.mcq_generation.Session") as mock_session_class:
-        mock_session = MagicMock()
-        mock_session_class.return_value.__enter__.return_value = mock_session
+    with patch("app.services.mcq_generation.get_async_session") as mock_get_session:
+        mock_session = AsyncMock()
+        mock_get_session.return_value.__aenter__.return_value = mock_session
 
         result_state = await service.content_preparation(state)
 
@@ -182,9 +182,9 @@ async def test_content_preparation_no_content(
         "error_message": None,
     }
 
-    with patch("app.services.mcq_generation.Session") as mock_session_class:
-        mock_session = MagicMock()
-        mock_session_class.return_value.__enter__.return_value = mock_session
+    with patch("app.services.mcq_generation.get_async_session") as mock_get_session:
+        mock_session = AsyncMock()
+        mock_get_session.return_value.__aenter__.return_value = mock_session
 
         result_state = await service.content_preparation(state)
 

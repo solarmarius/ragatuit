@@ -55,7 +55,7 @@ class User(SQLModel, table=True):
 class Quiz(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     owner_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE"
+        foreign_key="user.id", nullable=False, ondelete="CASCADE", index=True
     )
     owner: User | None = Relationship(back_populates="quizzes")
     canvas_course_id: int = Field(index=True)
@@ -68,10 +68,12 @@ class Quiz(SQLModel, table=True):
     content_extraction_status: str = Field(
         default="pending",
         description="Status of content extraction: pending, processing, completed, failed",
+        index=True,
     )
     llm_generation_status: str = Field(
         default="pending",
         description="Status of LLM generation: pending, processing, completed, failed",
+        index=True,
     )
     extracted_content: str | None = Field(
         default=None, description="JSON string of extracted page content"
@@ -101,6 +103,7 @@ class Quiz(SQLModel, table=True):
     export_status: str = Field(
         default="pending",
         description="Status of Canvas export: pending, processing, completed, failed",
+        index=True,
     )
     exported_at: datetime | None = Field(
         sa_column=Column(DateTime(timezone=True), nullable=True),
@@ -223,7 +226,7 @@ class CanvasModule(SQLModel):
 class Question(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     quiz_id: uuid.UUID = Field(
-        foreign_key="quiz.id", nullable=False, ondelete="CASCADE"
+        foreign_key="quiz.id", nullable=False, ondelete="CASCADE", index=True
     )
     quiz: Quiz | None = Relationship(back_populates="questions")
     question_text: str = Field(min_length=1, max_length=2000)
@@ -232,7 +235,9 @@ class Question(SQLModel, table=True):
     option_c: str = Field(min_length=1, max_length=500)
     option_d: str = Field(min_length=1, max_length=500)
     correct_answer: str = Field(regex=r"^[ABCD]$", description="Must be A, B, C, or D")
-    is_approved: bool = Field(default=False, description="Whether question is approved")
+    is_approved: bool = Field(
+        default=False, description="Whether question is approved", index=True
+    )
     approved_at: datetime | None = Field(
         sa_column=Column(DateTime(timezone=True), nullable=True),
         default=None,
