@@ -2,8 +2,9 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy import Integer, cast
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import Session, asc, desc, select
+from sqlmodel import Session, asc, col, desc, func, select
 
 from app.core.security import token_encryption
 from app.models import (
@@ -553,13 +554,20 @@ def get_question_counts_by_quiz_id(session: Session, quiz_id: UUID) -> dict[str,
     **Returns:**
         dict: Dictionary with 'total' and 'approved' question counts
     """
-    statement = select(Question).where(Question.quiz_id == quiz_id)
-    questions = list(session.exec(statement).all())
+    statement = select(
+        func.count(col(Question.id)), func.sum(cast(col(Question.is_approved), Integer))
+    ).where(Question.quiz_id == quiz_id)
 
-    total_count = len(questions)
-    approved_count = sum(1 for q in questions if q.is_approved)
+    result = session.exec(statement).first()
 
-    return {
-        "total": total_count,
-        "approved": approved_count,
-    }
+    if result:
+        total, approved = result
+        return {
+            "total": total or 0,
+            "approved": approved or 0,
+        }
+    else:
+        return {
+            "total": 0,
+            "approved": 0,
+        }

@@ -118,7 +118,7 @@ This roadmap provides a structured approach to refactoring the Rag@UiT FastAPI b
 - **Why Now**: Enables better querying and performance
 - **Deliverable**: Native JSON storage
 
-### 2.2 Bulk Operations Optimization (2 days)
+### 2.2 Bulk Operations Optimization (2 days) NOT APPLICABLE FOR OUR USE CASE
 
 - **Issue**: `bulk_operations_optimization.md`
 - **Priority**: Medium
@@ -126,7 +126,7 @@ This roadmap provides a structured approach to refactoring the Rag@UiT FastAPI b
 - **Why Now**: Improves question generation performance
 - **Deliverable**: Efficient bulk inserts
 
-### 2.3 N+1 Query Pattern Fixes (2 days)
+### 2.3 N+1 Query Pattern Fixes (2 days) OK
 
 - **Issue**: `n1_query_patterns.md`
 - **Priority**: Critical
