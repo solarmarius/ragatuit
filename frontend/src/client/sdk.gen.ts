@@ -4,49 +4,50 @@ import type { CancelablePromise } from "./core/CancelablePromise"
 import { OpenAPI } from "./core/OpenAPI"
 import { request as __request } from "./core/request"
 import type {
-  AuthAuthCanvasResponse,
   AuthLoginCanvasResponse,
+  AuthAuthCanvasResponse,
   AuthLogoutCanvasResponse,
   AuthRefreshCanvasTokenResponse,
+  CanvasGetCoursesResponse,
   CanvasGetCourseModulesData,
   CanvasGetCourseModulesResponse,
-  CanvasGetCoursesResponse,
-  CanvasGetFileInfoData,
-  CanvasGetFileInfoResponse,
   CanvasGetModuleItemsData,
   CanvasGetModuleItemsResponse,
   CanvasGetPageContentData,
   CanvasGetPageContentResponse,
-  QuestionsApproveQuizQuestionData,
-  QuestionsApproveQuizQuestionResponse,
-  QuestionsDeleteQuizQuestionData,
-  QuestionsDeleteQuizQuestionResponse,
-  QuestionsGetQuestionData,
-  QuestionsGetQuestionResponse,
+  CanvasGetFileInfoData,
+  CanvasGetFileInfoResponse,
   QuestionsGetQuizQuestionsData,
   QuestionsGetQuizQuestionsResponse,
+  QuestionsGetQuestionData,
+  QuestionsGetQuestionResponse,
   QuestionsUpdateQuizQuestionData,
   QuestionsUpdateQuizQuestionResponse,
+  QuestionsDeleteQuizQuestionData,
+  QuestionsDeleteQuizQuestionResponse,
+  QuestionsApproveQuizQuestionData,
+  QuestionsApproveQuizQuestionResponse,
+  QuizGetUserQuizzesEndpointResponse,
   QuizCreateNewQuizData,
   QuizCreateNewQuizResponse,
+  QuizGetQuizData,
+  QuizGetQuizResponse,
   QuizDeleteQuizEndpointData,
   QuizDeleteQuizEndpointResponse,
-  QuizExportQuizToCanvasData,
-  QuizExportQuizToCanvasResponse,
-  QuizGetQuizData,
-  QuizGetQuizQuestionStatsData,
-  QuizGetQuizQuestionStatsResponse,
-  QuizGetQuizResponse,
-  QuizGetUserQuizzesEndpointResponse,
   QuizTriggerContentExtractionData,
   QuizTriggerContentExtractionResponse,
   QuizTriggerQuestionGenerationData,
   QuizTriggerQuestionGenerationResponse,
-  UsersDeleteUserMeResponse,
+  QuizGetQuizQuestionStatsData,
+  QuizGetQuizQuestionStatsResponse,
+  QuizExportQuizToCanvasData,
+  QuizExportQuizToCanvasResponse,
   UsersReadUserMeResponse,
+  UsersDeleteUserMeResponse,
   UsersUpdateUserMeData,
   UsersUpdateUserMeResponse,
   UtilsHealthCheckResponse,
+  UtilsGetDbHealthResponse,
 } from "./types.gen"
 
 export class AuthService {
@@ -1270,6 +1271,19 @@ export class UtilsService {
     return __request(OpenAPI, {
       method: "GET",
       url: "/api/v1/utils/health-check/",
+    })
+  }
+
+  /**
+   * Get Db Health
+   * Check database connection pool health.
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static getDbHealth(): CancelablePromise<UtilsGetDbHealthResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/utils/health/db",
     })
   }
 }

@@ -134,7 +134,7 @@ async def test_content_preparation_success(
 ) -> None:
     """Test successful content preparation."""
     service = MCQGenerationService()
-    mock_get_content.return_value = json.dumps(sample_content_dict)
+    mock_get_content.return_value = sample_content_dict
 
     state: MCQGenerationState = {
         "quiz_id": sample_quiz_id,
@@ -508,7 +508,7 @@ async def test_generate_mcqs_for_quiz_success(
 ) -> None:
     """Test the complete MCQ generation workflow."""
     service = MCQGenerationService()
-    mock_get_content.return_value = json.dumps(sample_content_dict)
+    mock_get_content.return_value = sample_content_dict
 
     # Mock the workflow compilation and execution
     final_state = {

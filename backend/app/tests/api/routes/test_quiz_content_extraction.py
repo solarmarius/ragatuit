@@ -1,4 +1,3 @@
-import json
 import uuid
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -345,7 +344,7 @@ async def test_get_quiz_with_content_extraction_status(
     # Update quiz with extraction status
     quiz.content_extraction_status = "completed"
     quiz.llm_generation_status = "pending"
-    quiz.extracted_content = json.dumps({"module_173467": []})
+    quiz.extracted_content = {"module_173467": []}
     quiz.content_extracted_at = datetime.now(timezone.utc)
     db.add(quiz)
     db.commit()
@@ -457,13 +456,13 @@ async def test_quiz_content_dict_property(db: Session) -> None:
     test_content = {
         "module_173467": [{"title": "Test Page", "content": "Test content"}]
     }
-    quiz.content_dict = test_content
+    quiz.extracted_content = test_content
     db.add(quiz)
     db.commit()
     db.refresh(quiz)
 
     # Test getting content via property
-    retrieved_content = quiz.content_dict
+    retrieved_content = quiz.extracted_content
     assert retrieved_content == test_content
     assert "module_173467" in retrieved_content
     assert len(retrieved_content["module_173467"]) == 1
@@ -494,16 +493,12 @@ async def test_quiz_content_dict_property_empty(db: Session) -> None:
     )
     quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user.id)
 
-    # Test with None content
-    assert quiz.content_dict == {}
+    # Test with None content (default value should be None, not {})
+    assert quiz.extracted_content is None
 
     # Test with empty content
-    quiz.content_dict = {}
-    assert quiz.content_dict == {}
-
-    # Test with invalid JSON
-    quiz.extracted_content = "invalid json"
+    quiz.extracted_content = {}
     db.add(quiz)
     db.commit()
     db.refresh(quiz)
-    assert quiz.content_dict == {}
+    assert quiz.extracted_content == {}

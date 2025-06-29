@@ -90,7 +90,7 @@ async def create_new_quiz(
             extract_content_for_quiz,
             quiz.id,
             quiz_data.canvas_course_id,
-            list(quiz_data.selected_modules.keys()),
+            [int(module_id) for module_id in quiz_data.selected_modules.keys()],
             canvas_token,
         )
 
@@ -542,8 +542,8 @@ async def trigger_content_extraction(
         session.commit()
 
         # Get selected modules from the quiz
-        selected_modules = quiz.modules_dict
-        module_ids = list(selected_modules.keys())
+        selected_modules = quiz.selected_modules
+        module_ids = [int(module_id) for module_id in selected_modules.keys()]
 
         # Trigger content extraction in the background
         background_tasks.add_task(

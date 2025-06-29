@@ -119,10 +119,8 @@ function QuizList() {
                 </Table.Header>
                 <Table.Body>
                   {quizzes.map((quiz) => {
-                    // Parse selected modules for display
-                    const selectedModules = JSON.parse(
-                      quiz.selected_modules || "{}",
-                    )
+                    // Get selected modules for display (already an object from API)
+                    const selectedModules = quiz.selected_modules || {}
                     const moduleCount = Object.keys(selectedModules).length
 
                     return (

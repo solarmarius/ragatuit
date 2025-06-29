@@ -1,4 +1,3 @@
-import json
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
@@ -52,7 +51,7 @@ async def update_quiz_content_extraction_status(
     """
     quiz.content_extraction_status = status
     if content is not None:
-        quiz.content_dict = content
+        quiz.extracted_content = content
         quiz.content_extracted_at = datetime.now(timezone.utc)
     await session.commit()
 
@@ -267,17 +266,15 @@ def create_quiz(session: Session, quiz_create: QuizCreate, owner_id: UUID) -> Qu
         Quiz: The newly created quiz object with generated UUID and timestamps
     """
 
-    quiz_data = quiz_create.model_dump()
-    quiz_data["selected_modules"] = json.dumps(quiz_create.selected_modules)
-    quiz_data["owner_id"] = owner_id
-    current_time = datetime.now(timezone.utc)
-    quiz_data["updated_at"] = current_time
-
-    db_quiz = Quiz.model_validate(quiz_data)
-    session.add(db_quiz)
+    quiz = Quiz(
+        **quiz_create.model_dump(),
+        owner_id=owner_id,
+        updated_at=datetime.now(timezone.utc),
+    )
+    session.add(quiz)
     session.commit()
-    session.refresh(db_quiz)
-    return db_quiz
+    session.refresh(quiz)
+    return quiz
 
 
 def get_quiz_by_id(session: Session, quiz_id: UUID) -> Quiz | None:
@@ -337,7 +334,9 @@ def delete_quiz(session: Session, quiz_id: UUID, user_id: UUID) -> bool:
     return True
 
 
-async def get_content_from_quiz(session: AsyncSession, quiz_id: UUID) -> str | None:
+async def get_content_from_quiz(
+    session: AsyncSession, quiz_id: UUID
+) -> dict[str, Any] | None:
     """
     Retrieve the extracted content from a quiz by its UUID asynchronously.
 
@@ -346,8 +345,8 @@ async def get_content_from_quiz(session: AsyncSession, quiz_id: UUID) -> str | N
         quiz_id (UUID): Quiz UUID to get extracted content from
 
     **Returns:**
-        str | None: The extracted content as a JSON string if found and available,
-                   None if quiz not found or no content extracted yet
+        dict[str, Any] | None: The extracted content as a dictionary if found and available,
+                              None if quiz not found or no content extracted yet
     """
     quiz = await session.get(Quiz, quiz_id)
     if not quiz:

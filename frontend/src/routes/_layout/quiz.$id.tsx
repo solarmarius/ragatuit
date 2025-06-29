@@ -113,8 +113,8 @@ function QuizDetail() {
     )
   }
 
-  // Parse selected modules from JSON string
-  const selectedModules = JSON.parse(quiz.selected_modules || "{}")
+  // Get selected modules (already an object from API)
+  const selectedModules = quiz.selected_modules || {}
   const moduleNames = Object.values(selectedModules) as string[]
 
   // Check if quiz is ready for approval
