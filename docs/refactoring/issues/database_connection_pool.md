@@ -212,44 +212,6 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
         finally:
             await session.close()
 
-class DatabaseSessionManager:
-    """
-    Manager for database sessions in background tasks.
-
-    Ensures proper connection management and prevents leaks.
-    """
-
-    def __init__(self, engine: Engine = engine):
-        self.engine = engine
-        self._session: Session | None = None
-
-    def __enter__(self) -> Session:
-        """Create and return session."""
-        self._session = Session(self.engine)
-        return self._session
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Clean up session."""
-        if self._session:
-            if exc_type:
-                self._session.rollback()
-            else:
-                try:
-                    self._session.commit()
-                except Exception:
-                    self._session.rollback()
-                    raise
-            finally:
-                self._session.close()
-                self._session = None
-
-    @property
-    def session(self) -> Session:
-        """Get current session."""
-        if not self._session:
-            raise RuntimeError("Session not available outside context manager")
-        return self._session
-
 # Health check function
 def check_database_health() -> dict[str, any]:
     """
