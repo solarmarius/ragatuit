@@ -175,14 +175,14 @@ async def ensure_valid_canvas_token(session: Session, user: User) -> str:
     # Check if token expires within 5 minutes
     if user.expires_at:
         expires_soon = datetime.now(timezone.utc) + timedelta(minutes=5)
-        
+
         # Ensure both datetimes are timezone-aware for comparison
         if user.expires_at.tzinfo is None:
             # If stored datetime is naive, assume it's UTC
             user_expires_at = user.expires_at.replace(tzinfo=timezone.utc)
         else:
             user_expires_at = user.expires_at
-            
+
         if user_expires_at <= expires_soon:
             try:
                 from app.api.routes.auth import refresh_canvas_token

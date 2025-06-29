@@ -195,7 +195,7 @@ class TestCanvasQuizExportService:
 
             assert (
                 call_args[0][0]
-                == "http://canvas-mock:8001/quiz/v1/courses/37823/quizzes"
+                == "http://canvas-mock:8001/api/quiz/v1/courses/37823/quizzes"
             )
             assert (
                 call_args[1]["headers"]["Authorization"] == "Bearer test_canvas_token"

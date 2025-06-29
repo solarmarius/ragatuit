@@ -96,7 +96,7 @@ class CanvasURLBuilder:
 
     def quiz_api_courses(self, course_id: int) -> str:
         """Build URL for Canvas New Quizzes API courses endpoint."""
-        return f"{self.base_url}/quiz/v1/courses/{course_id}"
+        return f"{self.base_url}/api/quiz/v1/courses/{course_id}"
 
     def quiz_api_quizzes(self, course_id: int, quiz_id: str | None = None) -> str:
         """Build URL for Canvas New Quizzes API quizzes endpoint."""
