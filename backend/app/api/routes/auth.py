@@ -13,6 +13,7 @@ from app.core.logging_config import get_logger
 from app.core.middleware.logging_middleware import add_user_to_logs
 from app.core.security import create_access_token
 from app.models import UserCreate
+from app.services.url_builder import CanvasURLBuilder
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = get_logger("auth")
@@ -125,11 +126,11 @@ async def auth_canvas(session: SessionDep, request: Request) -> RedirectResponse
                 status_code=400, detail="Authorization code not provided"
             )
 
-        # Parse Canvas base URL the same way as in login endpoint
-        # parsed_url = urlparse(str(settings.CANVAS_BASE_URL))
-        # if not parsed_url.scheme or not parsed_url.netloc:
-        #     raise ValueError("Invalid Canvas base URL")
-        # canvas_base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+        # Initialize URL builder
+        base_url = str(settings.CANVAS_BASE_URL)
+        if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
+            base_url = str(settings.CANVAS_MOCK_URL)
+        url_builder = CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
 
         token_data = {
             "grant_type": "authorization_code",
@@ -142,7 +143,7 @@ async def auth_canvas(session: SessionDep, request: Request) -> RedirectResponse
         async with httpx.AsyncClient(follow_redirects=False) as client:
             try:
                 response = await client.post(
-                    "http://canvas-mock:8001/login/oauth2/token",
+                    url_builder.oauth_token_url(),
                     data=token_data,
                     headers={
                         "Content-Type": "application/x-www-form-urlencoded",
@@ -299,10 +300,16 @@ async def logout_canvas(
 
         # Revoke token on Canvas side first
         if canvas_access_token:
+            # Initialize URL builder
+            base_url = str(settings.CANVAS_BASE_URL)
+            if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
+                base_url = str(settings.CANVAS_MOCK_URL)
+            url_builder = CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
+
             async with httpx.AsyncClient() as client:
                 try:
                     response = await client.delete(
-                        "http://canvas-mock:8001/login/oauth2/token",
+                        url_builder.oauth_token_url(),
                         headers={"Authorization": f"Bearer {canvas_access_token}"},
                     )
                     # Canvas returns 200 on successful revocation

@@ -4,8 +4,10 @@ import httpx
 from fastapi import APIRouter, HTTPException
 
 from app.api.deps import CanvasToken, CurrentUser
+from app.core.config import settings
 from app.core.logging_config import get_logger
 from app.models import CanvasCourse, CanvasModule
+from app.services.url_builder import CanvasURLBuilder
 
 router = APIRouter(prefix="/canvas", tags=["canvas"])
 logger = get_logger("canvas")
@@ -48,11 +50,17 @@ async def get_courses(
         # Canvas token is automatically refreshed by the CanvasToken dependency
         # if it's expiring within 5 minutes
 
+        # Initialize URL builder
+        base_url = str(settings.CANVAS_BASE_URL)
+        if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
+            base_url = str(settings.CANVAS_MOCK_URL)
+        url_builder = CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
+
         # Call Canvas API to get courses
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
-                    "http://canvas-mock:8001/api/v1/courses",
+                    url_builder.build_url("courses"),
                     headers={
                         "Authorization": f"Bearer {canvas_token}",
                         "Accept": "application/json",
@@ -226,11 +234,17 @@ async def get_course_modules(
         # Canvas token is automatically refreshed by the CanvasToken dependency
         # if it's expiring within 5 minutes
 
+        # Initialize URL builder
+        base_url = str(settings.CANVAS_BASE_URL)
+        if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
+            base_url = str(settings.CANVAS_MOCK_URL)
+        url_builder = CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
+
         # Call Canvas API to get course modules
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
-                    f"http://canvas-mock:8001/api/v1/courses/{course_id}/modules",
+                    url_builder.modules(course_id),
                     headers={
                         "Authorization": f"Bearer {canvas_token}",
                         "Accept": "application/json",
@@ -413,11 +427,17 @@ async def get_module_items(
     )
 
     try:
+        # Initialize URL builder
+        base_url = str(settings.CANVAS_BASE_URL)
+        if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
+            base_url = str(settings.CANVAS_MOCK_URL)
+        url_builder = CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
+
         # Call Canvas API to get module items
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
-                    f"http://canvas-mock:8001/api/v1/courses/{course_id}/modules/{module_id}/items",
+                    url_builder.module_items(course_id, module_id),
                     headers={
                         "Authorization": f"Bearer {canvas_token}",
                         "Accept": "application/json",
@@ -620,16 +640,17 @@ async def get_page_content(
     )
 
     try:
+        # Initialize URL builder
+        base_url = str(settings.CANVAS_BASE_URL)
+        if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
+            base_url = str(settings.CANVAS_MOCK_URL)
+        url_builder = CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
+
         # Call Canvas API to get page content
         async with httpx.AsyncClient() as client:
             try:
-                # URL encode the page_url to handle special characters
-                from urllib.parse import quote
-
-                encoded_page_url = quote(page_url.strip(), safe="")
-
                 response = await client.get(
-                    f"http://canvas-mock:8001/api/v1/courses/{course_id}/pages/{encoded_page_url}",
+                    url_builder.pages(course_id, page_url),
                     headers={
                         "Authorization": f"Bearer {canvas_token}",
                         "Accept": "application/json",
@@ -806,11 +827,17 @@ async def get_file_info(
     )
 
     try:
+        # Initialize URL builder
+        base_url = str(settings.CANVAS_BASE_URL)
+        if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
+            base_url = str(settings.CANVAS_MOCK_URL)
+        url_builder = CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
+
         # Call Canvas API to get file info
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
-                    f"http://canvas-mock:8001/api/v1/courses/{course_id}/files/{file_id}",
+                    url_builder.files(course_id, file_id),
                     headers={
                         "Authorization": f"Bearer {canvas_token}",
                         "Accept": "application/json",

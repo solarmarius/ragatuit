@@ -10,6 +10,7 @@ from app.core.db import engine
 from app.core.logging_config import get_logger
 from app.crud import get_approved_questions_by_quiz_id, get_quiz_by_id
 from app.models import Question
+from app.services.url_builder import CanvasURLBuilder
 
 logger = get_logger("canvas_quiz_export")
 
@@ -24,8 +25,13 @@ class CanvasQuizExportService:
 
     def __init__(self, canvas_token: str):
         self.canvas_token = canvas_token
-        self.canvas_base_url = "http://canvas-mock:8001/api"
         self.api_timeout = settings.CANVAS_API_TIMEOUT
+
+        # Initialize URL builder with settings
+        base_url = str(settings.CANVAS_BASE_URL)
+        if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
+            base_url = str(settings.CANVAS_MOCK_URL)
+        self.url_builder = CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
 
     async def export_quiz_to_canvas(self, quiz_id: UUID) -> dict[str, Any]:
         """
@@ -252,7 +258,7 @@ class CanvasQuizExportService:
         async with httpx.AsyncClient(timeout=self.api_timeout) as client:
             try:
                 response = await client.post(
-                    f"{self.canvas_base_url}/quiz/v1/courses/{course_id}/quizzes",
+                    self.url_builder.quiz_api_quizzes(course_id),
                     headers={
                         "Authorization": f"Bearer {self.canvas_token}",
                         "Content-Type": "application/json",
@@ -311,7 +317,7 @@ class CanvasQuizExportService:
                     item_data = self._convert_question_to_canvas_item(question, i + 1)
 
                     response = await client.post(
-                        f"{self.canvas_base_url}/quiz/v1/courses/{course_id}/quizzes/{quiz_id}/items",
+                        self.url_builder.quiz_api_items(course_id, quiz_id),
                         headers={
                             "Authorization": f"Bearer {self.canvas_token}",
                             "Content-Type": "application/json",
