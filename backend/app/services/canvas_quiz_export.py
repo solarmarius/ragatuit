@@ -3,12 +3,11 @@ from typing import Any
 from uuid import UUID
 
 import httpx
-from sqlmodel import Session
 
 from app.core.config import settings
-from app.core.db import engine
+from app.core.db import get_async_session
 from app.core.logging_config import get_logger
-from app.crud import get_approved_questions_by_quiz_id, get_quiz_by_id
+from app.crud import get_approved_questions_by_quiz_id_async, get_quiz_for_update
 from app.models import Question
 from app.services.url_builder import CanvasURLBuilder
 
@@ -53,10 +52,8 @@ class CanvasQuizExportService:
         )
 
         try:
-            # Get quiz and validated approved questions in a transaction
-            with Session(engine) as session:
-                # Get quiz using existing CRUD function
-                quiz = get_quiz_by_id(session, quiz_id)
+            async with get_async_session() as session:
+                quiz = await get_quiz_for_update(session, quiz_id)
 
                 if not quiz:
                     logger.error(
@@ -65,7 +62,6 @@ class CanvasQuizExportService:
                     )
                     raise ValueError(f"Quiz {quiz_id} not found")
 
-                # Check if already exported
                 if quiz.export_status == "completed" and quiz.canvas_quiz_id:
                     logger.warning(
                         "canvas_quiz_export_already_exported",
@@ -80,7 +76,6 @@ class CanvasQuizExportService:
                         "already_exported": True,
                     }
 
-                # Check if export is already in progress
                 if quiz.export_status == "processing":
                     logger.warning(
                         "canvas_quiz_export_already_processing",
@@ -93,8 +88,9 @@ class CanvasQuizExportService:
                         "export_in_progress": True,
                     }
 
-                # Get approved questions using existing CRUD function
-                approved_questions = get_approved_questions_by_quiz_id(session, quiz_id)
+                approved_questions = await get_approved_questions_by_quiz_id_async(
+                    session, quiz_id
+                )
 
                 if not approved_questions:
                     logger.error(
@@ -105,29 +101,24 @@ class CanvasQuizExportService:
                         f"Quiz {quiz_id} has no approved questions to export"
                     )
 
-                # Extract question data while objects are still attached to session
-                question_data = []
-                for question in approved_questions:
-                    question_data.append(
-                        {
-                            "id": question.id,
-                            "question_text": question.question_text,
-                            "option_a": question.option_a,
-                            "option_b": question.option_b,
-                            "option_c": question.option_c,
-                            "option_d": question.option_d,
-                            "correct_answer": question.correct_answer,
-                        }
-                    )
+                question_data = [
+                    {
+                        "id": question.id,
+                        "question_text": question.question_text,
+                        "option_a": question.option_a,
+                        "option_b": question.option_b,
+                        "option_c": question.option_c,
+                        "option_d": question.option_d,
+                        "correct_answer": question.correct_answer,
+                    }
+                    for question in approved_questions
+                ]
 
-                # Store quiz data we'll need later
                 quiz_course_id = quiz.canvas_course_id
                 quiz_title = quiz.title
 
-                # Update status to processing
                 quiz.export_status = "processing"
-                session.add(quiz)
-                session.commit()
+                await session.commit()
 
                 logger.info(
                     "canvas_quiz_export_processing",
@@ -136,11 +127,10 @@ class CanvasQuizExportService:
                     approved_questions_count=len(question_data),
                 )
 
-            # Create quiz in Canvas
             canvas_quiz = await self.create_canvas_quiz(
                 course_id=quiz_course_id,
                 title=quiz_title,
-                total_points=len(question_data),  # 1 point per question
+                total_points=len(question_data),
             )
 
             canvas_quiz_id = canvas_quiz["id"]
@@ -150,35 +140,31 @@ class CanvasQuizExportService:
                 canvas_quiz_id=canvas_quiz_id,
             )
 
-            # Create quiz items for approved questions
             exported_items = await self.create_quiz_items(
                 course_id=quiz_course_id,
                 quiz_id=canvas_quiz_id,
                 questions=question_data,
             )
 
-            # Update quiz with Canvas quiz ID and export status
-            with Session(engine) as session:
-                quiz = get_quiz_by_id(session, quiz_id)
+            async with get_async_session() as session:
+                quiz = await get_quiz_for_update(session, quiz_id)
 
                 if quiz:
                     quiz.canvas_quiz_id = canvas_quiz_id
                     quiz.export_status = "completed"
                     quiz.exported_at = datetime.now(timezone.utc)
-                    session.add(quiz)
 
-                    # Update questions with Canvas item IDs
                     for question_dict, item_result in zip(
                         question_data, exported_items, strict=False
                     ):
                         if item_result["success"]:
-                            # Get fresh question object from current session
-                            question_obj = session.get(Question, question_dict["id"])
+                            question_obj = await session.get(
+                                Question, question_dict["id"]
+                            )
                             if question_obj:
                                 question_obj.canvas_item_id = item_result["item_id"]
-                                session.add(question_obj)
 
-                    session.commit()
+                    await session.commit()
 
             logger.info(
                 "canvas_quiz_export_completed",
@@ -195,14 +181,12 @@ class CanvasQuizExportService:
             }
 
         except Exception as e:
-            # Update quiz status to failed
             try:
-                with Session(engine) as session:
-                    quiz = get_quiz_by_id(session, quiz_id)
+                async with get_async_session() as error_session:
+                    quiz = await get_quiz_for_update(error_session, quiz_id)
                     if quiz:
                         quiz.export_status = "failed"
-                        session.add(quiz)
-                        session.commit()
+                        await error_session.commit()
             except Exception as update_error:
                 logger.error(
                     "canvas_quiz_export_status_update_failed",

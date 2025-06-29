@@ -10,7 +10,7 @@ from sqlmodel import Session
 
 from app.core import security
 from app.core.config import settings
-from app.core.db import engine
+from app.core.db import get_session
 from app.core.security import ensure_valid_canvas_token
 from app.models import TokenPayload, User
 
@@ -51,7 +51,7 @@ def get_db() -> Generator[Session, None, None]:
     **Thread Safety:**
     Each request gets its own session instance, ensuring thread safety.
     """
-    with Session(engine) as session:
+    with get_session() as session:
         yield session
 
 

@@ -1,11 +1,10 @@
-from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
-from sqlmodel import Session, select
+from sqlmodel import select
 
 from app.api.deps import CanvasToken, CurrentUser, SessionDep
-from app.core.db import engine
+from app.core.db import get_async_session
 from app.core.logging_config import get_logger
 from app.crud import (
     create_quiz,
@@ -13,7 +12,10 @@ from app.crud import (
     get_approved_questions_by_quiz_id,
     get_question_counts_by_quiz_id,
     get_quiz_by_id,
+    get_quiz_for_update,
     get_user_quizzes,
+    update_quiz_content_extraction_status,
+    update_quiz_llm_generation_status,
 )
 from app.models import Message, Quiz, QuizCreate
 from app.services.canvas_quiz_export import CanvasQuizExportService
@@ -294,12 +296,9 @@ async def extract_content_for_quiz(
         module_count=len(module_ids),
     )
 
-    # Create a new database session for the background task
-    with Session(engine) as session:
+    async with get_async_session() as session:
         try:
-            # Use SELECT FOR UPDATE to prevent race conditions
-            stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
-            quiz = session.exec(stmt).first()
+            quiz = await get_quiz_for_update(session, quiz_id)
 
             if not quiz:
                 logger.error(
@@ -308,7 +307,6 @@ async def extract_content_for_quiz(
                 )
                 return
 
-            # Check if extraction is already in progress to prevent duplicate work
             if quiz.content_extraction_status == "processing":
                 logger.warning(
                     "content_extraction_already_in_progress",
@@ -317,32 +315,24 @@ async def extract_content_for_quiz(
                 )
                 return
 
-            # Atomically update status to processing
-            quiz.content_extraction_status = "processing"
-            session.add(quiz)
-            session.commit()
+            # Store quiz settings immediately to avoid lazy loading issues later
+            target_questions = quiz.question_count
+            llm_model = quiz.llm_model
+            llm_temperature = quiz.llm_temperature
 
-            # Initialize content extraction service
+            await update_quiz_content_extraction_status(session, quiz, "processing")
+
             extraction_service = ContentExtractionService(canvas_token, course_id)
-
-            # Extract content from all selected modules
             extracted_content = await extraction_service.extract_content_for_modules(
                 module_ids
             )
-
-            # Get content summary for logging
             content_summary = extraction_service.get_content_summary(extracted_content)
 
-            # Update quiz with extracted content using fresh lock
-            stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
-            quiz = session.exec(stmt).first()
-
+            quiz = await get_quiz_for_update(session, quiz_id)
             if quiz:
-                quiz.content_dict = extracted_content
-                quiz.content_extraction_status = "completed"
-                quiz.content_extracted_at = datetime.now(timezone.utc)
-                session.add(quiz)
-                session.commit()
+                await update_quiz_content_extraction_status(
+                    session, quiz, "completed", extracted_content
+                )
 
             logger.info(
                 "content_extraction_completed",
@@ -353,22 +343,18 @@ async def extract_content_for_quiz(
                 total_word_count=content_summary["total_word_count"],
             )
 
-            # Automatically trigger question generation after content extraction completes
             if quiz:
                 logger.info(
                     "auto_triggering_question_generation",
                     quiz_id=str(quiz_id),
-                    target_questions=quiz.question_count,
-                    llm_model=quiz.llm_model,
+                    target_questions=target_questions,
+                    llm_model=llm_model,
                 )
-
-                # Note: We can't use background_tasks here since this is already a background task
-                # Instead, we'll call the function directly as an async task
                 await generate_questions_for_quiz(
                     quiz_id=quiz_id,
-                    target_question_count=quiz.question_count,
-                    llm_model=quiz.llm_model,
-                    llm_temperature=quiz.llm_temperature,
+                    target_question_count=target_questions,
+                    llm_model=llm_model,
+                    llm_temperature=llm_temperature,
                 )
 
         except Exception as e:
@@ -380,15 +366,13 @@ async def extract_content_for_quiz(
                 error_type=type(e).__name__,
                 exc_info=True,
             )
-
-            # Update quiz status to failed with locking
             try:
-                stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
-                quiz = session.exec(stmt).first()
-                if quiz:
-                    quiz.content_extraction_status = "failed"
-                    session.add(quiz)
-                    session.commit()
+                async with get_async_session() as error_session:
+                    quiz = await get_quiz_for_update(error_session, quiz_id)
+                    if quiz:
+                        await update_quiz_content_extraction_status(
+                            error_session, quiz, "failed"
+                        )
             except Exception as update_error:
                 logger.error(
                     "content_extraction_status_update_failed",
@@ -414,12 +398,9 @@ async def generate_questions_for_quiz(
         llm_temperature=llm_temperature,
     )
 
-    # Create a new database session for the background task
-    with Session(engine) as session:
+    async with get_async_session() as session:
         try:
-            # Use SELECT FOR UPDATE to prevent race conditions
-            stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
-            quiz = session.exec(stmt).first()
+            quiz = await get_quiz_for_update(session, quiz_id)
 
             if not quiz:
                 logger.error(
@@ -428,7 +409,6 @@ async def generate_questions_for_quiz(
                 )
                 return
 
-            # Check if generation is already in progress
             if quiz.llm_generation_status == "processing":
                 logger.warning(
                     "question_generation_already_in_progress",
@@ -437,12 +417,8 @@ async def generate_questions_for_quiz(
                 )
                 return
 
-            # Atomically update status to processing
-            quiz.llm_generation_status = "processing"
-            session.add(quiz)
-            session.commit()
+            await update_quiz_llm_generation_status(session, quiz, "processing")
 
-            # Generate questions using the MCQ generation service
             results = await mcq_generation_service.generate_mcqs_for_quiz(
                 quiz_id=quiz_id,
                 target_question_count=target_question_count,
@@ -450,13 +426,10 @@ async def generate_questions_for_quiz(
                 llm_temperature=llm_temperature,
             )
 
-            # Update quiz status based on results using fresh lock
-            stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
-            quiz = session.exec(stmt).first()
-
+            quiz = await get_quiz_for_update(session, quiz_id)
             if quiz:
                 if results["success"]:
-                    quiz.llm_generation_status = "completed"
+                    await update_quiz_llm_generation_status(session, quiz, "completed")
                     logger.info(
                         "question_generation_completed",
                         quiz_id=str(quiz_id),
@@ -464,15 +437,12 @@ async def generate_questions_for_quiz(
                         target_questions=target_question_count,
                     )
                 else:
-                    quiz.llm_generation_status = "failed"
+                    await update_quiz_llm_generation_status(session, quiz, "failed")
                     logger.error(
                         "question_generation_failed",
                         quiz_id=str(quiz_id),
                         error_message=results["error_message"],
                     )
-
-                session.add(quiz)
-                session.commit()
 
         except Exception as e:
             logger.error(
@@ -482,15 +452,13 @@ async def generate_questions_for_quiz(
                 error_type=type(e).__name__,
                 exc_info=True,
             )
-
-            # Update quiz status to failed with locking
             try:
-                stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
-                quiz = session.exec(stmt).first()
-                if quiz:
-                    quiz.llm_generation_status = "failed"
-                    session.add(quiz)
-                    session.commit()
+                async with get_async_session() as error_session:
+                    quiz = await get_quiz_for_update(error_session, quiz_id)
+                    if quiz:
+                        await update_quiz_llm_generation_status(
+                            error_session, quiz, "failed"
+                        )
             except Exception as update_error:
                 logger.error(
                     "question_generation_status_update_failed",
