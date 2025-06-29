@@ -402,12 +402,7 @@ class TestQuizExportBackgroundTask:
             }
         )
 
-        with (
-            patch("app.api.routes.quiz.Session") as mock_session_class,
-            patch("app.api.routes.quiz.CanvasQuizExportService") as mock_service_class,
-        ):
-            mock_session = MagicMock()
-            mock_session_class.return_value.__enter__.return_value = mock_session
+        with patch("app.api.routes.quiz.CanvasQuizExportService") as mock_service_class:
             mock_service_class.return_value = mock_export_service
 
             # Import and call the background task function
@@ -430,12 +425,7 @@ class TestQuizExportBackgroundTask:
             side_effect=Exception("Canvas API Error")
         )
 
-        with (
-            patch("app.api.routes.quiz.Session") as mock_session_class,
-            patch("app.api.routes.quiz.CanvasQuizExportService") as mock_service_class,
-        ):
-            mock_session = MagicMock()
-            mock_session_class.return_value.__enter__.return_value = mock_session
+        with patch("app.api.routes.quiz.CanvasQuizExportService") as mock_service_class:
             mock_service_class.return_value = mock_export_service
 
             # Import and call the background task function

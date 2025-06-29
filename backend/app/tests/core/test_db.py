@@ -45,8 +45,10 @@ def test_concurrent_connections() -> None:
     assert getattr(engine.pool, "checkedout", lambda: 0)() == 0  # All returned
 
 
-def test_session_context_manager_rollback(_db: Session) -> None:
+def test_session_context_manager_rollback(db: Session) -> None:
     """Test session rollback on error."""
+    # db fixture ensures database is available
+    _ = db  # Mark as used for linter
     with pytest.raises(ValueError):
         with get_session() as session:
             # Make changes

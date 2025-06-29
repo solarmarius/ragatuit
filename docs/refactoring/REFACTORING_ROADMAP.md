@@ -55,14 +55,14 @@ This roadmap provides a structured approach to refactoring the Rag@UiT FastAPI b
 - **Why First**: Simple configuration change, enables environment flexibility
 - **Deliverable**: Configurable Canvas API URLs
 
-### 1.2 Database Connection Pool Configuration (1 day)
+### 1.2 Database Connection Pool Configuration (1 day) OK
 
 - **Issue**: `database_connection_pool.md`
 - **Priority**: Critical
 - **Why First**: Prevents connection exhaustion, improves performance
 - **Deliverable**: Optimized connection pooling
 
-### 1.3 Missing Database Indexes (1 day)
+### 1.3 Missing Database Indexes (1 day) OK
 
 - **Issue**: `missing_database_indexes.md`
 - **Priority**: Critical
