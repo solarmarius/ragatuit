@@ -1,10 +1,12 @@
+from datetime import datetime, timezone
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from sqlmodel import select
 
 from app.api.deps import CanvasToken, CurrentUser, SessionDep
-from app.core.db import get_async_session
+from app.core.db import execute_in_transaction
 from app.core.dependencies import ServiceContainer
 from app.core.exceptions import ServiceError
 from app.core.logging_config import get_logger
@@ -16,8 +18,6 @@ from app.crud import (
     get_quiz_by_id,
     get_quiz_for_update,
     get_user_quizzes,
-    update_quiz_content_extraction_status,
-    update_quiz_llm_generation_status,
 )
 from app.models import Message, Quiz, QuizCreate
 
@@ -286,10 +286,11 @@ async def extract_content_for_quiz(
     quiz_id: UUID, course_id: int, module_ids: list[int], canvas_token: str
 ) -> None:
     """
-    Background task to extract content from Canvas modules for a quiz.
+    Orchestrates the content extraction task using a robust two-transaction approach.
 
-    This function runs asynchronously after quiz creation to fetch and process
-    content from the selected Canvas modules.
+    Transaction 1: Reserve the job (very fast)
+    I/O Operation: Extract content from Canvas (outside transaction)
+    Transaction 2: Save the result (very fast)
     """
     logger.info(
         "content_extraction_started",
@@ -298,121 +299,133 @@ async def extract_content_for_quiz(
         module_count=len(module_ids),
     )
 
-    async with get_async_session() as session:
-        try:
-            quiz = await get_quiz_for_update(session, quiz_id)
+    # === Transaction 1: Reserve the Job (very fast) ===
+    async def _reserve_job(session: Any, quiz_id: UUID) -> dict[str, Any] | None:
+        """Reserve the extraction job and return quiz settings if successful."""
+        quiz = await get_quiz_for_update(session, quiz_id)
 
-            if not quiz:
-                logger.error(
-                    "content_extraction_quiz_not_found",
-                    quiz_id=str(quiz_id),
-                )
-                return
+        if not quiz:
+            logger.error("content_extraction_quiz_not_found", quiz_id=str(quiz_id))
+            return None
 
-            if quiz.content_extraction_status == "processing":
-                logger.warning(
-                    "content_extraction_already_in_progress",
-                    quiz_id=str(quiz_id),
-                    current_status=quiz.content_extraction_status,
-                )
-                return
-
-            # Store quiz settings immediately to avoid lazy loading issues later
-            target_questions = quiz.question_count
-            llm_model = quiz.llm_model
-            llm_temperature = quiz.llm_temperature
-
-            await update_quiz_content_extraction_status(session, quiz, "processing")
-
-            extraction_service = ServiceContainer.get_content_extraction_service(
-                canvas_token, course_id
-            )
-            extracted_content = await extraction_service.extract_content_for_modules(
-                module_ids
-            )
-            content_summary = extraction_service.get_content_summary(extracted_content)
-
-            quiz = await get_quiz_for_update(session, quiz_id)
-            if quiz:
-                await update_quiz_content_extraction_status(
-                    session, quiz, "completed", extracted_content
-                )
-
+        if quiz.content_extraction_status in ["processing", "completed"]:
             logger.info(
-                "content_extraction_completed",
+                "content_extraction_job_already_taken",
                 quiz_id=str(quiz_id),
-                course_id=course_id,
-                modules_processed=content_summary["modules_processed"],
-                total_pages=content_summary["total_pages"],
-                total_word_count=content_summary["total_word_count"],
+                current_status=quiz.content_extraction_status,
             )
+            return None  # Job already taken or completed
 
-            if quiz:
-                logger.info(
-                    "auto_triggering_question_generation",
-                    quiz_id=str(quiz_id),
-                    target_questions=target_questions,
-                    llm_model=llm_model,
-                )
-                await generate_questions_for_quiz(
-                    quiz_id=quiz_id,
-                    target_question_count=target_questions,
-                    llm_model=llm_model,
-                    llm_temperature=llm_temperature,
-                )
+        # Reserve the job
+        quiz.content_extraction_status = "processing"
+        await session.flush()  # Make status visible immediately
 
-        except ServiceError as e:
+        # Return quiz settings for later use
+        return {
+            "target_questions": quiz.question_count,
+            "llm_model": quiz.llm_model,
+            "llm_temperature": quiz.llm_temperature,
+        }
+
+    quiz_settings = await execute_in_transaction(
+        _reserve_job, quiz_id, isolation_level="REPEATABLE READ", retries=3
+    )
+
+    if not quiz_settings:
+        logger.info(
+            "content_extraction_skipped",
+            quiz_id=str(quiz_id),
+            reason="job_already_running_or_complete",
+        )
+        return
+
+    # === Slow I/O Operation (occurs outside any transaction) ===
+    try:
+        extraction_service = ServiceContainer.get_content_extraction_service(
+            canvas_token, course_id
+        )
+        extracted_content = await extraction_service.extract_content_for_modules(
+            module_ids
+        )
+        content_summary = extraction_service.get_content_summary(extracted_content)
+
+        logger.info(
+            "content_extraction_completed",
+            quiz_id=str(quiz_id),
+            course_id=course_id,
+            modules_processed=content_summary["modules_processed"],
+            total_pages=content_summary["total_pages"],
+            total_word_count=content_summary["total_word_count"],
+        )
+
+        final_status = "completed"
+
+    except Exception as e:
+        logger.error(
+            "content_extraction_failed_during_api_call",
+            quiz_id=str(quiz_id),
+            course_id=course_id,
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        extracted_content = None
+        final_status = "failed"
+
+    # === Transaction 2: Save the Result (very fast) ===
+    async def _save_result(
+        session: Any,
+        quiz_id: UUID,
+        content: dict[str, Any] | None,
+        status: str,
+    ) -> None:
+        """Save the extraction result to the quiz."""
+        quiz = await get_quiz_for_update(session, quiz_id)
+        if not quiz:
             logger.error(
-                "content_extraction_service_error",
-                quiz_id=str(quiz_id),
-                course_id=course_id,
-                error=str(e),
+                "content_extraction_quiz_not_found_during_save", quiz_id=str(quiz_id)
             )
-            try:
-                async with get_async_session() as error_session:
-                    quiz = await get_quiz_for_update(error_session, quiz_id)
-                    if quiz:
-                        await update_quiz_content_extraction_status(
-                            error_session, quiz, "failed"
-                        )
-            except Exception as update_error:
-                logger.error(
-                    "content_extraction_status_update_failed",
-                    quiz_id=str(quiz_id),
-                    error=str(update_error),
-                )
-        except Exception as e:
-            logger.error(
-                "content_extraction_unexpected_error",
-                quiz_id=str(quiz_id),
-                course_id=course_id,
-                error=str(e),
-                error_type=type(e).__name__,
-                exc_info=True,
-            )
-            try:
-                async with get_async_session() as error_session:
-                    quiz = await get_quiz_for_update(error_session, quiz_id)
-                    if quiz:
-                        await update_quiz_content_extraction_status(
-                            error_session, quiz, "failed"
-                        )
-            except Exception as update_error:
-                logger.error(
-                    "content_extraction_status_update_failed",
-                    quiz_id=str(quiz_id),
-                    error=str(update_error),
-                )
+            return
+
+        quiz.content_extraction_status = status
+        if status == "completed" and content is not None:
+            quiz.extracted_content = content
+            quiz.content_extracted_at = datetime.now(timezone.utc)
+
+    await execute_in_transaction(
+        _save_result,
+        quiz_id,
+        extracted_content,
+        final_status,
+        isolation_level="REPEATABLE READ",
+        retries=3,
+    )
+
+    # If extraction was successful, trigger question generation
+    if final_status == "completed" and quiz_settings:
+        logger.info(
+            "auto_triggering_question_generation",
+            quiz_id=str(quiz_id),
+            target_questions=quiz_settings["target_questions"],
+            llm_model=quiz_settings["llm_model"],
+        )
+        await generate_questions_for_quiz(
+            quiz_id=quiz_id,
+            target_question_count=quiz_settings["target_questions"],
+            llm_model=quiz_settings["llm_model"],
+            llm_temperature=quiz_settings["llm_temperature"],
+        )
 
 
 async def generate_questions_for_quiz(
     quiz_id: UUID, target_question_count: int, llm_model: str, llm_temperature: float
 ) -> None:
     """
-    Background task to generate MCQ questions for a quiz.
+    Orchestrates the question generation task using a robust two-transaction approach.
 
-    This function runs asynchronously after content extraction is complete to generate
-    multiple-choice questions using the LangGraph workflow.
+    Transaction 1: Reserve the job (very fast)
+    I/O Operation: Generate questions via LLM (outside transaction)
+    Transaction 2: Save the result (very fast)
     """
     logger.info(
         "question_generation_started",
@@ -422,74 +435,99 @@ async def generate_questions_for_quiz(
         llm_temperature=llm_temperature,
     )
 
-    async with get_async_session() as session:
-        try:
-            quiz = await get_quiz_for_update(session, quiz_id)
+    # === Transaction 1: Reserve the Job (very fast) ===
+    async def _reserve_generation_job(session: Any, quiz_id: UUID) -> bool:
+        """Reserve the question generation job."""
+        quiz = await get_quiz_for_update(session, quiz_id)
 
-            if not quiz:
-                logger.error(
-                    "question_generation_quiz_not_found",
-                    quiz_id=str(quiz_id),
-                )
-                return
+        if not quiz:
+            logger.error("question_generation_quiz_not_found", quiz_id=str(quiz_id))
+            return False
 
-            if quiz.llm_generation_status == "processing":
-                logger.warning(
-                    "question_generation_already_in_progress",
-                    quiz_id=str(quiz_id),
-                    current_status=quiz.llm_generation_status,
-                )
-                return
-
-            await update_quiz_llm_generation_status(session, quiz, "processing")
-
-            mcq_service = ServiceContainer.get_mcq_generation_service()
-            results = await mcq_service.generate_mcqs_for_quiz(
-                quiz_id=quiz_id,
-                target_question_count=target_question_count,
-                llm_model=llm_model,
-                llm_temperature=llm_temperature,
-            )
-
-            quiz = await get_quiz_for_update(session, quiz_id)
-            if quiz:
-                if results["success"]:
-                    await update_quiz_llm_generation_status(session, quiz, "completed")
-                    logger.info(
-                        "question_generation_completed",
-                        quiz_id=str(quiz_id),
-                        questions_generated=results["questions_generated"],
-                        target_questions=target_question_count,
-                    )
-                else:
-                    await update_quiz_llm_generation_status(session, quiz, "failed")
-                    logger.error(
-                        "question_generation_failed",
-                        quiz_id=str(quiz_id),
-                        error_message=results["error_message"],
-                    )
-
-        except Exception as e:
-            logger.error(
-                "question_generation_failed",
+        if quiz.llm_generation_status in ["processing", "completed"]:
+            logger.info(
+                "question_generation_job_already_taken",
                 quiz_id=str(quiz_id),
-                error=str(e),
-                error_type=type(e).__name__,
-                exc_info=True,
+                current_status=quiz.llm_generation_status,
             )
-            try:
-                async with get_async_session() as error_session:
-                    quiz = await get_quiz_for_update(error_session, quiz_id)
-                    if quiz:
-                        await update_quiz_llm_generation_status(
-                            error_session, quiz, "failed"
-                        )
-            except Exception as update_error:
-                logger.error(
-                    "question_generation_status_update_failed",
-                    quiz_id=str(quiz_id),
-                    error=str(update_error),
-                )
+            return False  # Job already taken or completed
+
+        # Reserve the job
+        quiz.llm_generation_status = "processing"
+        await session.flush()  # Make status visible immediately
+        return True
+
+    should_proceed = await execute_in_transaction(
+        _reserve_generation_job, quiz_id, isolation_level="REPEATABLE READ", retries=3
+    )
+
+    if not should_proceed:
+        logger.info(
+            "question_generation_skipped",
+            quiz_id=str(quiz_id),
+            reason="job_already_running_or_complete",
+        )
+        return
+
+    # === Slow I/O Operation (occurs outside any transaction) ===
+    try:
+        mcq_service = ServiceContainer.get_mcq_generation_service()
+        results = await mcq_service.generate_mcqs_for_quiz(
+            quiz_id=quiz_id,
+            target_question_count=target_question_count,
+            llm_model=llm_model,
+            llm_temperature=llm_temperature,
+        )
+
+        if results["success"]:
+            final_status = "completed"
+            logger.info(
+                "question_generation_completed",
+                quiz_id=str(quiz_id),
+                questions_generated=results["questions_generated"],
+                target_questions=target_question_count,
+            )
+        else:
+            final_status = "failed"
+            logger.error(
+                "question_generation_failed_during_llm_call",
+                quiz_id=str(quiz_id),
+                error_message=results["error_message"],
+            )
+
+    except Exception as e:
+        logger.error(
+            "question_generation_failed_during_llm_call",
+            quiz_id=str(quiz_id),
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        final_status = "failed"
+
+    # === Transaction 2: Save the Result (very fast) ===
+    async def _save_generation_result(
+        session: Any,
+        quiz_id: UUID,
+        status: str,
+    ) -> None:
+        """Save the generation result to the quiz."""
+        quiz = await get_quiz_for_update(session, quiz_id)
+        if not quiz:
+            logger.error(
+                "question_generation_quiz_not_found_during_save", quiz_id=str(quiz_id)
+            )
+            return
+
+        quiz.llm_generation_status = status
+
+    await execute_in_transaction(
+        _save_generation_result,
+        quiz_id,
+        final_status,
+        isolation_level="REPEATABLE READ",
+        retries=3,
+    )
 
 
 @router.post("/{quiz_id}/extract-content")

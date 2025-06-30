@@ -1,8 +1,9 @@
+import asyncio
 from collections.abc import AsyncGenerator, Generator
 from contextlib import asynccontextmanager, contextmanager
 from typing import Any
 
-from sqlalchemy import Engine, create_engine, event
+from sqlalchemy import Engine, create_engine, event, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool, QueuePool
 from sqlmodel import Session, select
@@ -158,6 +159,134 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
             await session.close()
 
 
+@asynccontextmanager
+async def transaction(
+    isolation_level: str | None = None, retries: int = 3
+) -> AsyncGenerator[AsyncSession, None]:
+    """
+    Async transaction context manager with proper isolation and retry logic.
+
+    Provides atomic transaction boundaries for background tasks and operations
+    that require consistency guarantees.
+
+    Args:
+        isolation_level: Transaction isolation level ("READ COMMITTED",
+                        "REPEATABLE READ", "SERIALIZABLE")
+        retries: Number of retry attempts for retryable errors (deadlocks, etc.)
+
+    Yields:
+        AsyncSession: Async SQLAlchemy session with transaction context
+
+    Example:
+        async with transaction(isolation_level="REPEATABLE READ") as session:
+            quiz = await session.get(Quiz, quiz_id, with_for_update=True)
+            quiz.status = "processing"
+            # All changes committed together or rolled back on error
+    """
+    attempt = 0
+    last_exception = None
+
+    while attempt <= retries:
+        async with AsyncSession(async_engine) as session:
+            try:
+                # Begin transaction
+                await session.begin()
+
+                # Set isolation level if specified
+                if isolation_level:
+                    await session.execute(
+                        text(f"SET TRANSACTION ISOLATION LEVEL {isolation_level}")
+                    )
+
+                logger.debug(
+                    "transaction_started",
+                    isolation_level=isolation_level,
+                    attempt=attempt,
+                )
+
+                yield session
+
+                # Commit transaction
+                await session.commit()
+                logger.debug("transaction_committed", attempt=attempt)
+                return
+
+            except Exception as e:
+                await session.rollback()
+                last_exception = e
+
+                logger.error(
+                    "transaction_failed", error=str(e), attempt=attempt, exc_info=True
+                )
+
+                # Check if error is retryable
+                error_str = str(e).lower()
+                retryable_errors = [
+                    "deadlock",
+                    "serialization failure",
+                    "concurrent update",
+                    "lock timeout",
+                    "could not serialize",
+                ]
+
+                is_retryable = any(err in error_str for err in retryable_errors)
+
+                if attempt < retries and is_retryable:
+                    attempt += 1
+                    logger.info("transaction_retry", attempt=attempt, error=str(e))
+                    # Small delay before retry
+                    await asyncio.sleep(0.1 * attempt)
+                    continue
+
+                # Re-raise if not retryable or max attempts reached
+                raise
+
+    # If we get here, all retries failed
+    if last_exception:
+        raise last_exception
+    else:
+        raise RuntimeError("Transaction failed after all retry attempts")
+
+
+async def execute_in_transaction(
+    task_func: Any,
+    *args: Any,
+    isolation_level: str | None = None,
+    retries: int = 3,
+    **kwargs: Any,
+) -> Any:
+    """
+    Execute a background task function within a transaction context.
+
+    Simple wrapper for background tasks that need transactional guarantees.
+    Provides the session as the first argument to the task function.
+
+    Args:
+        task_func: Async function to execute (receives session as first arg)
+        *args: Additional positional arguments to pass to task_func
+        isolation_level: Transaction isolation level
+        retries: Number of retry attempts
+        **kwargs: Additional keyword arguments to pass to task_func
+
+    Returns:
+        Result from task_func execution
+
+    Example:
+        async def update_quiz_task(session, quiz_id, status):
+            quiz = await session.get(Quiz, quiz_id, with_for_update=True)
+            quiz.status = status
+
+        await execute_in_transaction(
+            update_quiz_task,
+            quiz_id,
+            "completed",
+            isolation_level="REPEATABLE READ"
+        )
+    """
+    async with transaction(isolation_level=isolation_level, retries=retries) as session:
+        return await task_func(session, *args, **kwargs)
+
+
 # Health check function
 def check_database_health() -> dict[str, Any]:
     """
@@ -168,8 +297,6 @@ def check_database_health() -> dict[str, Any]:
     """
     try:
         # Test connection
-        from sqlalchemy import text
-
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
 

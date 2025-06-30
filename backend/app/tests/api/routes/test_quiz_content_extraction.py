@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timezone
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -220,11 +221,10 @@ async def test_content_extraction_background_task_success(db: Session) -> None:
         patch(
             "app.api.routes.quiz.ServiceContainer.get_content_extraction_service"
         ) as mock_service_factory,
-        patch("app.api.routes.quiz.get_async_session") as mock_session_class,
-        patch("app.api.routes.quiz.get_quiz_for_update") as mock_get_quiz,
+        patch("app.api.routes.quiz.execute_in_transaction") as mock_execute_transaction,
         patch(
-            "app.api.routes.quiz.update_quiz_content_extraction_status"
-        ) as mock_update_status,
+            "app.api.routes.quiz.generate_questions_for_quiz"
+        ) as mock_generate_questions,
     ):
         # Mock the service
         mock_service = MagicMock()
@@ -240,13 +240,41 @@ async def test_content_extraction_background_task_success(db: Session) -> None:
         }
         mock_service_factory.return_value = mock_service
 
-        # Mock the async session context manager
-        mock_async_session = AsyncMock()
-        mock_session_class.return_value.__aenter__.return_value = mock_async_session
+        # Mock the transaction execution to handle both calls
+        call_count = 0
 
-        # Mock the CRUD functions
-        mock_get_quiz.return_value = quiz
-        mock_update_status.return_value = None
+        async def mock_transaction_call(
+            task_func: Any, *args: Any, **kwargs: Any
+        ) -> Any:
+            nonlocal call_count
+            call_count += 1
+
+            # Create a mock session for the task function
+            mock_session = AsyncMock()
+            mock_session.flush = AsyncMock()
+
+            # Remove isolation_level and retries from kwargs since task function doesn't expect them
+            task_kwargs = {
+                k: v
+                for k, v in kwargs.items()
+                if k not in ["isolation_level", "retries"]
+            }
+
+            # Mock get_quiz_for_update to return our quiz
+            with patch("app.api.routes.quiz.get_quiz_for_update", return_value=quiz):
+                result = await task_func(mock_session, *args, **task_kwargs)
+
+                # First call should return quiz settings, second call returns None
+                if call_count == 1:
+                    return {
+                        "target_questions": quiz.question_count,
+                        "llm_model": quiz.llm_model,
+                        "llm_temperature": quiz.llm_temperature,
+                    }
+                return result
+
+        mock_execute_transaction.side_effect = mock_transaction_call
+        mock_generate_questions.return_value = None
 
         # Import the background task function
         from app.api.routes.quiz import extract_content_for_quiz
@@ -264,8 +292,16 @@ async def test_content_extraction_background_task_success(db: Session) -> None:
             [173467, 173468]
         )
 
-        # Verify session operations were called
-        mock_async_session.commit.assert_called()
+        # Verify the transaction was executed twice (mark processing + save content)
+        assert mock_execute_transaction.call_count == 2
+
+        # Verify that question generation was triggered
+        mock_generate_questions.assert_called_once_with(
+            quiz_id=quiz.id,
+            target_question_count=quiz.question_count,
+            llm_model=quiz.llm_model,
+            llm_temperature=quiz.llm_temperature,
+        )
 
 
 @pytest.mark.asyncio
@@ -299,11 +335,7 @@ async def test_content_extraction_background_task_failure(db: Session) -> None:
         patch(
             "app.api.routes.quiz.ServiceContainer.get_content_extraction_service"
         ) as mock_service_factory,
-        patch("app.api.routes.quiz.get_async_session") as mock_session_class,
-        patch("app.api.routes.quiz.get_quiz_for_update") as mock_get_quiz,
-        patch(
-            "app.api.routes.quiz.update_quiz_content_extraction_status"
-        ) as mock_update_status,
+        patch("app.api.routes.quiz.execute_in_transaction") as mock_execute_transaction,
     ):
         # Mock service to raise an exception
         mock_service = MagicMock()
@@ -312,13 +344,40 @@ async def test_content_extraction_background_task_failure(db: Session) -> None:
         )
         mock_service_factory.return_value = mock_service
 
-        # Mock the async session context manager
-        mock_async_session = AsyncMock()
-        mock_session_class.return_value.__aenter__.return_value = mock_async_session
+        # Mock the transaction execution to handle both calls
+        call_count = 0
 
-        # Mock the CRUD functions
-        mock_get_quiz.return_value = quiz
-        mock_update_status.return_value = None
+        async def mock_transaction_call(
+            task_func: Any, *args: Any, **kwargs: Any
+        ) -> Any:
+            nonlocal call_count
+            call_count += 1
+
+            # Create a mock session for the task function
+            mock_session = AsyncMock()
+            mock_session.flush = AsyncMock()
+
+            # Remove isolation_level and retries from kwargs since task function doesn't expect them
+            task_kwargs = {
+                k: v
+                for k, v in kwargs.items()
+                if k not in ["isolation_level", "retries"]
+            }
+
+            # Mock get_quiz_for_update to return our quiz
+            with patch("app.api.routes.quiz.get_quiz_for_update", return_value=quiz):
+                result = await task_func(mock_session, *args, **task_kwargs)
+
+                # First call should return quiz settings, second call handles the failure result
+                if call_count == 1:
+                    return {
+                        "target_questions": quiz.question_count,
+                        "llm_model": quiz.llm_model,
+                        "llm_temperature": quiz.llm_temperature,
+                    }
+                return result
+
+        mock_execute_transaction.side_effect = mock_transaction_call
 
         # Import the background task function
         from app.api.routes.quiz import extract_content_for_quiz
@@ -331,11 +390,11 @@ async def test_content_extraction_background_task_failure(db: Session) -> None:
             canvas_token="test_token",
         )
 
+        # Verify both transactions were called (reserve job + save failure result)
+        assert mock_execute_transaction.call_count == 2
+
         # Verify the service was called and failed
         mock_service.extract_content_for_modules.assert_called_once_with([173467])
-
-        # Verify update status was called for error handling
-        mock_update_status.assert_called()
 
 
 @pytest.mark.asyncio

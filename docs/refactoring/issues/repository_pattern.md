@@ -198,43 +198,6 @@ class BaseRepository(Generic[ModelType], ABC):
         """
         return self.session.get(self.model, id)
 
-    def get_multi(
-        self,
-        skip: int = 0,
-        limit: int = 100,
-        order_by: Optional[str] = None,
-        order_direction: str = "desc",
-        **filters
-    ) -> List[ModelType]:
-        """
-        Get multiple records with filtering and pagination.
-
-        Args:
-            skip: Number of records to skip
-            limit: Maximum number of records to return
-            order_by: Field to order by
-            order_direction: "asc" or "desc"
-            **filters: Field filters
-
-        Returns:
-            List of model instances
-        """
-        query = select(self.model)
-
-        # Apply filters
-        for field, value in filters.items():
-            if hasattr(self.model, field):
-                query = query.where(getattr(self.model, field) == value)
-
-        # Apply ordering
-        if order_by and hasattr(self.model, order_by):
-            order_func = desc if order_direction == "desc" else asc
-            query = query.order_by(order_func(getattr(self.model, order_by)))
-
-        # Apply pagination
-        query = query.offset(skip).limit(limit)
-
-        return list(self.session.exec(query).all())
 
     def create(self, obj_in: Dict[str, Any]) -> ModelType:
         """
@@ -300,27 +263,6 @@ class BaseRepository(Generic[ModelType], ABC):
             return True
         return False
 
-    def soft_delete(self, id: UUID) -> bool:
-        """
-        Soft delete record (mark as deleted).
-
-        Args:
-            id: Record identifier
-
-        Returns:
-            True if deleted, False if not found
-        """
-        if hasattr(self.model, 'is_deleted'):
-            stmt = (
-                update(self.model)
-                .where(self.model.id == id)
-                .values(is_deleted=True)
-            )
-            result = self.session.execute(stmt)
-            self.session.commit()
-            return result.rowcount > 0
-        else:
-            return self.delete(id)
 
     def count(self, **filters) -> int:
         """
@@ -372,70 +314,6 @@ class BaseRepository(Generic[ModelType], ABC):
 
         return db_objects
 
-    def bulk_update(self, updates: List[Dict[str, Any]]) -> int:
-        """
-        Update multiple records efficiently.
-
-        Args:
-            updates: List of update data with 'id' field
-
-        Returns:
-            Number of updated records
-        """
-        if not updates:
-            return 0
-
-        # Group updates by fields being updated
-        update_groups = {}
-        for update_data in updates:
-            if 'id' not in update_data:
-                continue
-
-            # Create key from fields being updated (excluding id)
-            fields_key = tuple(sorted(k for k in update_data.keys() if k != 'id'))
-
-            if fields_key not in update_groups:
-                update_groups[fields_key] = []
-
-            update_groups[fields_key].append(update_data)
-
-        total_updated = 0
-
-        for fields, group_updates in update_groups.items():
-            if not fields:
-                continue
-
-            # Prepare bulk update statement
-            ids = [update_data['id'] for update_data in group_updates]
-
-            # Create case statements for each field
-            case_statements = {}
-            for field in fields:
-                cases = {
-                    update_data['id']: update_data[field]
-                    for update_data in group_updates
-                    if field in update_data
-                }
-                if cases:
-                    case_statements[field] = cases
-
-            if case_statements:
-                stmt = update(self.model).where(self.model.id.in_(ids))
-
-                # Add case statements for each field
-                for field, cases in case_statements.items():
-                    stmt = stmt.values({
-                        field: sqlalchemy.case(
-                            cases,
-                            value=self.model.id
-                        )
-                    })
-
-                result = self.session.execute(stmt)
-                total_updated += result.rowcount
-
-        self.session.commit()
-        return total_updated
 
 # File: app/repositories/user.py (NEW)
 from typing import Optional, List
@@ -476,30 +354,6 @@ class UserRepository(BaseRepository[User]):
         stmt = select(User).where(User.canvas_id == canvas_id)
         return self.session.exec(stmt).first()
 
-    def get_active_users(
-        self,
-        skip: int = 0,
-        limit: int = 100
-    ) -> List[User]:
-        """
-        Get active users (with valid tokens).
-
-        Args:
-            skip: Number of records to skip
-            limit: Maximum number of records
-
-        Returns:
-            List of active users
-        """
-        stmt = (
-            select(User)
-            .where(User.access_token.isnot(None))
-            .where(User.expires_at > func.now())
-            .order_by(desc(User.created_at))
-            .offset(skip)
-            .limit(limit)
-        )
-        return list(self.session.exec(stmt).all())
 
     def update_tokens(
         self,
@@ -531,35 +385,6 @@ class UserRepository(BaseRepository[User]):
         self.session.refresh(user)
         return user
 
-    def search_users(
-        self,
-        query: str,
-        skip: int = 0,
-        limit: int = 100
-    ) -> List[User]:
-        """
-        Search users by name or email.
-
-        Args:
-            query: Search query
-            skip: Number of records to skip
-            limit: Maximum number of records
-
-        Returns:
-            List of matching users
-        """
-        search_pattern = f"%{query}%"
-        stmt = (
-            select(User)
-            .where(
-                (User.full_name.ilike(search_pattern)) |
-                (User.email.ilike(search_pattern))
-            )
-            .order_by(User.full_name)
-            .offset(skip)
-            .limit(limit)
-        )
-        return list(self.session.exec(stmt).all())
 
 # File: app/repositories/quiz.py (NEW)
 from typing import Optional, List, Dict, Any
@@ -642,114 +467,6 @@ class QuizRepository(BaseRepository[Quiz]):
         query = query.offset(skip).limit(limit)
         return list(self.session.exec(query).all())
 
-    def get_with_question_counts(
-        self,
-        owner_id: UUID,
-        skip: int = 0,
-        limit: int = 20
-    ) -> List[Dict[str, Any]]:
-        """
-        Get quizzes with question counts using efficient query.
-
-        Args:
-            owner_id: Owner user ID
-            skip: Number of records to skip
-            limit: Maximum number of records
-
-        Returns:
-            List of quiz data with question counts
-        """
-        # Subquery for question counts
-        question_counts_subquery = (
-            select(
-                Question.quiz_id,
-                func.count(Question.id).label('total_questions'),
-                func.sum(
-                    func.case(
-                        (Question.is_approved == True, 1),
-                        else_=0
-                    )
-                ).label('approved_questions')
-            )
-            .group_by(Question.quiz_id)
-            .subquery()
-        )
-
-        # Main query with left join
-        stmt = (
-            select(
-                Quiz,
-                func.coalesce(question_counts_subquery.c.total_questions, 0).label('total_questions'),
-                func.coalesce(question_counts_subquery.c.approved_questions, 0).label('approved_questions')
-            )
-            .outerjoin(
-                question_counts_subquery,
-                Quiz.id == question_counts_subquery.c.quiz_id
-            )
-            .where(Quiz.owner_id == owner_id)
-            .order_by(desc(Quiz.created_at))
-            .offset(skip)
-            .limit(limit)
-        )
-
-        results = self.session.exec(stmt).all()
-
-        # Transform results
-        quiz_data = []
-        for quiz, total_questions, approved_questions in results:
-            quiz_dict = quiz.model_dump()
-            quiz_dict.update({
-                'total_questions': total_questions,
-                'approved_questions': approved_questions
-            })
-            quiz_data.append(quiz_dict)
-
-        return quiz_data
-
-    def get_by_course(
-        self,
-        course_id: int,
-        skip: int = 0,
-        limit: int = 20
-    ) -> List[Quiz]:
-        """
-        Get quizzes by Canvas course ID.
-
-        Args:
-            course_id: Canvas course ID
-            skip: Number of records to skip
-            limit: Maximum number of records
-
-        Returns:
-            List of course quizzes
-        """
-        stmt = (
-            select(Quiz)
-            .where(Quiz.canvas_course_id == course_id)
-            .order_by(desc(Quiz.created_at))
-            .offset(skip)
-            .limit(limit)
-        )
-        return list(self.session.exec(stmt).all())
-
-    def get_pending_extraction(self, limit: int = 50) -> List[Quiz]:
-        """
-        Get quizzes pending content extraction.
-
-        Args:
-            limit: Maximum number of records
-
-        Returns:
-            List of quizzes needing content extraction
-        """
-        stmt = (
-            select(Quiz)
-            .where(Quiz.content_extraction_status == "pending")
-            .order_by(Quiz.created_at)  # Process oldest first
-            .limit(limit)
-        )
-        return list(self.session.exec(stmt).all())
-
     def update_extraction_status(
         self,
         quiz_id: UUID,
@@ -786,40 +503,6 @@ class QuizRepository(BaseRepository[Quiz]):
         result = self.session.execute(stmt)
         self.session.commit()
         return result.rowcount > 0
-
-    def search_quizzes(
-        self,
-        query: str,
-        owner_id: Optional[UUID] = None,
-        skip: int = 0,
-        limit: int = 20
-    ) -> List[Quiz]:
-        """
-        Search quizzes by title or description.
-
-        Args:
-            query: Search query
-            owner_id: Optional owner filter
-            skip: Number of records to skip
-            limit: Maximum number of records
-
-        Returns:
-            List of matching quizzes
-        """
-        search_pattern = f"%{query}%"
-        stmt = (
-            select(Quiz)
-            .where(
-                (Quiz.title.ilike(search_pattern)) |
-                (Quiz.description.ilike(search_pattern))
-            )
-        )
-
-        if owner_id:
-            stmt = stmt.where(Quiz.owner_id == owner_id)
-
-        stmt = stmt.order_by(desc(Quiz.created_at)).offset(skip).limit(limit)
-        return list(self.session.exec(stmt).all())
 
 # File: app/repositories/question.py (NEW)
 from typing import Optional, List, Dict, Any
@@ -866,43 +549,6 @@ class QuestionRepository(BaseRepository[Question]):
         query = query.offset(skip).limit(limit)
         return list(self.session.exec(query).all())
 
-    def search_questions(
-        self,
-        quiz_id: UUID,
-        search_query: str,
-        approved_only: bool = False,
-        skip: int = 0,
-        limit: int = 50
-    ) -> List[Question]:
-        """
-        Search questions within a quiz.
-
-        Args:
-            quiz_id: Quiz identifier
-            search_query: Text to search for
-            approved_only: Only search approved questions
-            skip: Number of records to skip
-            limit: Maximum number of records
-
-        Returns:
-            List of matching questions
-        """
-        search_pattern = f"%{search_query}%"
-        query = (
-            select(Question)
-            .where(Question.quiz_id == quiz_id)
-            .where(
-                (Question.question_text.ilike(search_pattern)) |
-                (Question.correct_answer.ilike(search_pattern))
-            )
-        )
-
-        if approved_only:
-            query = query.where(Question.is_approved == True)
-
-        query = query.order_by(desc(Question.created_at)).offset(skip).limit(limit)
-        return list(self.session.exec(query).all())
-
     def get_pending_approval(
         self,
         quiz_id: Optional[UUID] = None,
@@ -929,45 +575,6 @@ class QuestionRepository(BaseRepository[Question]):
 
         query = query.limit(limit)
         return list(self.session.exec(query).all())
-
-    def bulk_approve(self, question_ids: List[UUID]) -> int:
-        """
-        Approve multiple questions efficiently.
-
-        Args:
-            question_ids: List of question IDs to approve
-
-        Returns:
-            Number of questions approved
-        """
-        stmt = (
-            update(Question)
-            .where(Question.id.in_(question_ids))
-            .values(
-                is_approved=True,
-                approved_at=datetime.utcnow()
-            )
-        )
-
-        result = self.session.execute(stmt)
-        self.session.commit()
-        return result.rowcount
-
-    def bulk_reject(self, question_ids: List[UUID]) -> int:
-        """
-        Reject multiple questions efficiently.
-
-        Args:
-            question_ids: List of question IDs to reject
-
-        Returns:
-            Number of questions rejected
-        """
-        result = self.session.execute(
-            delete(Question).where(Question.id.in_(question_ids))
-        )
-        self.session.commit()
-        return result.rowcount
 
     def get_statistics(self, quiz_id: UUID) -> Dict[str, int]:
         """
@@ -1032,113 +639,6 @@ def get_question_repository(session: SessionDep) -> QuestionRepository:
 UserRepositoryDep = Annotated[UserRepository, Depends(get_user_repository)]
 QuizRepositoryDep = Annotated[QuizRepository, Depends(get_quiz_repository)]
 QuestionRepositoryDep = Annotated[QuestionRepository, Depends(get_question_repository)]
-
-# File: app/services/unit_of_work.py (NEW)
-from contextlib import contextmanager
-from typing import Generator, Optional, Dict, Any
-
-from sqlmodel import Session
-from app.core.db import engine, get_session
-from app.repositories.user import UserRepository
-from app.repositories.quiz import QuizRepository
-from app.repositories.question import QuestionRepository
-
-class UnitOfWork:
-    """
-    Unit of Work pattern implementation for managing transactions.
-
-    Provides a single transaction context across multiple repositories.
-    """
-
-    def __init__(self, session: Optional[Session] = None):
-        """
-        Initialize Unit of Work.
-
-        Args:
-            session: Optional existing session
-        """
-        self._session = session
-        self._own_session = session is None
-        self._users: Optional[UserRepository] = None
-        self._quizzes: Optional[QuizRepository] = None
-        self._questions: Optional[QuestionRepository] = None
-
-    @property
-    def session(self) -> Session:
-        """Get database session."""
-        if not self._session:
-            self._session = Session(engine)
-        return self._session
-
-    @property
-    def users(self) -> UserRepository:
-        """Get user repository."""
-        if not self._users:
-            self._users = UserRepository(self.session)
-        return self._users
-
-    @property
-    def quizzes(self) -> QuizRepository:
-        """Get quiz repository."""
-        if not self._quizzes:
-            self._quizzes = QuizRepository(self.session)
-        return self._quizzes
-
-    @property
-    def questions(self) -> QuestionRepository:
-        """Get question repository."""
-        if not self._questions:
-            self._questions = QuestionRepository(self.session)
-        return self._questions
-
-    def commit(self) -> None:
-        """Commit transaction."""
-        self.session.commit()
-
-    def rollback(self) -> None:
-        """Rollback transaction."""
-        self.session.rollback()
-
-    def close(self) -> None:
-        """Close session if owned by this unit of work."""
-        if self._own_session and self._session:
-            self._session.close()
-            self._session = None
-
-    def __enter__(self):
-        """Enter context manager."""
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Exit context manager with proper cleanup."""
-        if exc_type:
-            self.rollback()
-        else:
-            try:
-                self.commit()
-            except Exception:
-                self.rollback()
-                raise
-        finally:
-            self.close()
-
-@contextmanager
-def get_unit_of_work() -> Generator[UnitOfWork, None, None]:
-    """
-    Context manager for Unit of Work.
-
-    Yields:
-        UnitOfWork instance with managed transaction
-    """
-    uow = UnitOfWork()
-    try:
-        yield uow
-        uow.commit()
-    except Exception:
-        uow.rollback()
-        raise
-    finally:
-        uow.close()
 
 # File: app/api/routes/quiz.py (UPDATED to use repositories)
 from app.repositories.dependencies import QuizRepositoryDep, QuestionRepositoryDep
@@ -1220,40 +720,6 @@ def get_quiz_questions_endpoint(
         skip=skip,
         limit=limit
     )
-
-# Complex operation using Unit of Work
-@router.post("/{quiz_id}/approve-questions")
-def approve_quiz_questions(
-    quiz_id: UUID,
-    question_ids: List[UUID],
-    current_user: CurrentUser
-) -> Dict[str, Any]:
-    """Approve multiple questions in a single transaction."""
-
-    with get_unit_of_work() as uow:
-        # Verify quiz ownership
-        quiz = uow.quizzes.get(quiz_id)
-        if not quiz or quiz.owner_id != current_user.id:
-            raise HTTPException(status_code=404, detail="Quiz not found")
-
-        # Approve questions
-        approved_count = uow.questions.bulk_approve(question_ids)
-
-        # Update quiz status if all questions are approved
-        stats = uow.questions.get_statistics(quiz_id)
-        if stats['pending'] == 0 and stats['approved'] > 0:
-            uow.quizzes.update(
-                quiz,
-                {"llm_generation_status": "completed"}
-            )
-
-        # Transaction committed automatically by context manager
-
-        return {
-            "message": f"Approved {approved_count} questions",
-            "approved_count": approved_count,
-            "quiz_status": "completed" if stats['pending'] == 0 else "in_progress"
-        }
 ```
 
 ## Implementation Details
@@ -1270,8 +736,6 @@ backend/
 │   │   ├── quiz.py                  # NEW: Quiz repository
 │   │   ├── question.py              # NEW: Question repository
 │   │   └── dependencies.py          # NEW: Repository dependencies
-│   ├── services/
-│   │   └── unit_of_work.py          # NEW: Unit of Work pattern
 │   ├── crud.py                      # UPDATE: Migrate to repositories
 │   ├── api/
 │   │   └── routes/

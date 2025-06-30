@@ -170,7 +170,7 @@ This roadmap provides a structured approach to refactoring the Rag@UiT FastAPI b
 - **Why Now**: Enables testing and modularity
 - **Deliverable**: Injectable services
 
-### 3.3 Service Layer Error Handling (2 days)
+### 3.3 Service Layer Error Handling (2 days) OK
 
 - **Issue**: `service_layer_error_handling.md`
 - **Priority**: High
@@ -178,7 +178,7 @@ This roadmap provides a structured approach to refactoring the Rag@UiT FastAPI b
 - **Why Now**: Consistent error management
 - **Deliverable**: Robust error handling
 
-### 3.4 Caching Layer Implementation (3 days)
+### 3.4 Caching Layer Implementation (3 days) NOT APPLICABLE FOR OUR USE CASE
 
 - **Issue**: `caching_layer.md`
 - **Priority**: High
@@ -198,7 +198,7 @@ This roadmap provides a structured approach to refactoring the Rag@UiT FastAPI b
 **Timeline**: Weeks 5-6 (14 days)
 **Goal**: Implement resilience and advanced patterns
 
-### 4.1 Background Task Session Management (2 days)
+### 4.1 Background Task Session Management (2 days) OK PARTIALLY
 
 - **Issue**: `background_task_session.md`
 - **Priority**: Critical
@@ -206,7 +206,7 @@ This roadmap provides a structured approach to refactoring the Rag@UiT FastAPI b
 - **Why Now**: Prevents connection leaks
 - **Deliverable**: Proper async sessions
 
-### 4.2 Transaction Management (2 days)
+### 4.2 Transaction Management (2 days) OK
 
 - **Issue**: `transaction_management.md`
 - **Priority**: Critical

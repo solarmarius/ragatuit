@@ -10,7 +10,7 @@ from langgraph.graph import END, START, StateGraph
 from pydantic import SecretStr
 
 from app.core.config import settings
-from app.core.db import get_async_session
+from app.core.db import get_async_session, transaction
 from app.core.exceptions import ValidationError
 from app.core.logging_config import get_logger
 from app.crud import get_content_from_quiz
@@ -429,7 +429,7 @@ Generate exactly ONE question based on this content."""
         )
 
         try:
-            async with get_async_session() as session:
+            async with transaction(isolation_level="SERIALIZABLE") as session:
                 saved_count = 0
                 question_objects = []
 
@@ -460,13 +460,8 @@ Generate exactly ONE question based on this content."""
                         continue
 
                 if question_objects:
-                    try:
-                        session.add_all(question_objects)
-                        await session.commit()
-                        saved_count = len(question_objects)
-                    except Exception as db_error:
-                        await session.rollback()
-                        raise db_error
+                    session.add_all(question_objects)
+                    saved_count = len(question_objects)
 
                 logger.info(
                     "saving_questions_completed",

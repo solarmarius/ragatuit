@@ -35,43 +35,6 @@ async def get_quiz_for_update(session: AsyncSession, quiz_id: UUID) -> Quiz | No
     return result.scalar_one_or_none()
 
 
-async def update_quiz_content_extraction_status(
-    session: AsyncSession,
-    quiz: Quiz,
-    status: str,
-    content: dict[str, Any] | None = None,
-) -> None:
-    """
-    Update the content extraction status and content of a quiz.
-
-    **Parameters:**
-        session (AsyncSession): Async database session for the transaction
-        quiz (Quiz): The quiz object to update
-        status (str): The new content extraction status
-        content (dict | None): The extracted content, if any
-    """
-    quiz.content_extraction_status = status
-    if content is not None:
-        quiz.extracted_content = content
-        quiz.content_extracted_at = datetime.now(timezone.utc)
-    await session.commit()
-
-
-async def update_quiz_llm_generation_status(
-    session: AsyncSession, quiz: Quiz, status: str
-) -> None:
-    """
-    Update the LLM generation status of a quiz.
-
-    **Parameters:**
-        session (AsyncSession): Async database session for the transaction
-        quiz (Quiz): The quiz object to update
-        status (str): The new LLM generation status
-    """
-    quiz.llm_generation_status = status
-    await session.commit()
-
-
 def create_user(session: Session, user_create: UserCreate) -> User:
     """
     Create a new user account with encrypted Canvas OAuth tokens.
