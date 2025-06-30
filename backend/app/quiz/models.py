@@ -11,7 +11,7 @@ from sqlmodel import Field, Relationship, SQLModel
 
 if TYPE_CHECKING:
     from app.auth.models import User
-    from app.models import Question
+    from app.question.models import Question
 
 
 class Quiz(SQLModel, table=True):

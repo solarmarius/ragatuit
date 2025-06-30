@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlmodel import Session
 
 from app import crud
-from app.models import QuestionCreate, QuestionUpdate
+from app.question.schemas import QuestionCreate, QuestionUpdate
 from app.quiz.schemas import QuizCreate
 
 

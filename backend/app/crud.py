@@ -6,11 +6,8 @@ from sqlalchemy import Integer, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import Session, asc, col, desc, func, select
 
-from app.models import (
-    Question,
-    QuestionCreate,
-    QuestionUpdate,
-)
+from app.question.models import Question
+from app.question.schemas import QuestionCreate, QuestionUpdate
 from app.quiz.models import Quiz
 from app.quiz.schemas import QuizCreate
 

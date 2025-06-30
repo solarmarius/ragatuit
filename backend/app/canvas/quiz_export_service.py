@@ -12,7 +12,7 @@ from app.exceptions import (
     ValidationError,
 )
 from app.logging_config import get_logger
-from app.models import Question
+from app.question.models import Question
 from app.retry import retry_on_failure
 
 from .url_builder import CanvasURLBuilder

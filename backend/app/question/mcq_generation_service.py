@@ -13,8 +13,9 @@ from app.config import settings
 from app.database import get_async_session, transaction
 from app.exceptions import ValidationError
 from app.logging_config import get_logger
-from app.question.models import Question
-from app.question.schemas import QuestionCreate
+
+from .models import Question
+from .schemas import QuestionCreate
 
 logger = get_logger("mcq_generation")
 

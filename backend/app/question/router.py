@@ -3,17 +3,13 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 
 from app.api.deps import CurrentUser
-from app.crud import (
-    approve_question,
-    delete_question,
-    get_question_by_id,
-    get_questions_by_quiz_id,
-    get_quiz_by_id,
-    update_question,
-)
 from app.deps import SessionDep
 from app.logging_config import get_logger
-from app.models import Message, Question, QuestionPublic, QuestionUpdate
+from app.models import Message
+
+from .models import Question
+from .schemas import QuestionPublic, QuestionUpdate
+from .service import QuestionService
 
 router = APIRouter(prefix="/quiz", tags=["questions"])
 logger = get_logger("questions")
@@ -50,7 +46,13 @@ def get_quiz_questions(
         quiz_id=str(quiz_id),
     )
 
+    # Initialize service
+    question_service = QuestionService(session)
+
     try:
+        # Import get_quiz_by_id locally to avoid circular imports
+        from app.crud import get_quiz_by_id
+
         # Verify quiz exists and user owns it
         quiz = get_quiz_by_id(session, quiz_id)
         if not quiz:
@@ -71,7 +73,7 @@ def get_quiz_questions(
             raise HTTPException(status_code=404, detail="Quiz not found")
 
         # Get all questions for the quiz
-        questions = get_questions_by_quiz_id(session, quiz_id)
+        questions = question_service.get_questions_by_quiz_id(quiz_id)
 
         logger.info(
             "quiz_questions_retrieval_completed",
@@ -130,7 +132,13 @@ def get_question(
         question_id=str(question_id),
     )
 
+    # Initialize service
+    question_service = QuestionService(session)
+
     try:
+        # Import get_quiz_by_id locally to avoid circular imports
+        from app.crud import get_quiz_by_id
+
         # Verify quiz exists and user owns it
         quiz = get_quiz_by_id(session, quiz_id)
         if not quiz:
@@ -151,7 +159,7 @@ def get_question(
             raise HTTPException(status_code=404, detail="Quiz not found")
 
         # Get the question
-        question = get_question_by_id(session, question_id)
+        question = question_service.get_question_by_id(question_id)
         if not question:
             logger.warning(
                 "question_not_found",
@@ -236,7 +244,13 @@ def update_quiz_question(
         question_id=str(question_id),
     )
 
+    # Initialize service
+    question_service = QuestionService(session)
+
     try:
+        # Import get_quiz_by_id locally to avoid circular imports
+        from app.crud import get_quiz_by_id
+
         # Verify quiz exists and user owns it
         quiz = get_quiz_by_id(session, quiz_id)
         if not quiz:
@@ -257,7 +271,7 @@ def update_quiz_question(
             raise HTTPException(status_code=404, detail="Quiz not found")
 
         # Get and verify the question
-        question = get_question_by_id(session, question_id)
+        question = question_service.get_question_by_id(question_id)
         if not question:
             logger.warning(
                 "question_update_not_found",
@@ -278,7 +292,9 @@ def update_quiz_question(
             raise HTTPException(status_code=404, detail="Question not found")
 
         # Update the question
-        updated_question = update_question(session, question_id, question_update)
+        updated_question = question_service.update_question(
+            question_id, question_update
+        )
         if not updated_question:
             raise HTTPException(status_code=500, detail="Failed to update question")
 
@@ -343,7 +359,13 @@ def approve_quiz_question(
         question_id=str(question_id),
     )
 
+    # Initialize service
+    question_service = QuestionService(session)
+
     try:
+        # Import get_quiz_by_id locally to avoid circular imports
+        from app.crud import get_quiz_by_id
+
         # Verify quiz exists and user owns it
         quiz = get_quiz_by_id(session, quiz_id)
         if not quiz:
@@ -364,7 +386,7 @@ def approve_quiz_question(
             raise HTTPException(status_code=404, detail="Quiz not found")
 
         # Get and verify the question
-        question = get_question_by_id(session, question_id)
+        question = question_service.get_question_by_id(question_id)
         if not question:
             logger.warning(
                 "question_approval_not_found",
@@ -385,7 +407,7 @@ def approve_quiz_question(
             raise HTTPException(status_code=404, detail="Question not found")
 
         # Approve the question
-        approved_question = approve_question(session, question_id)
+        approved_question = question_service.approve_question(question_id)
         if not approved_question:
             raise HTTPException(status_code=500, detail="Failed to approve question")
 
@@ -449,7 +471,13 @@ def delete_quiz_question(
         question_id=str(question_id),
     )
 
+    # Initialize service
+    question_service = QuestionService(session)
+
     try:
+        # Import get_quiz_by_id locally to avoid circular imports
+        from app.crud import get_quiz_by_id
+
         # Verify quiz exists and user owns it
         quiz = get_quiz_by_id(session, quiz_id)
         if not quiz:
@@ -469,8 +497,8 @@ def delete_quiz_question(
             )
             raise HTTPException(status_code=404, detail="Quiz not found")
 
-        # Delete the question (CRUD function handles ownership verification)
-        success = delete_question(session, question_id, current_user.id)
+        # Delete the question (service handles ownership verification)
+        success = question_service.delete_question(question_id, current_user.id)
         if not success:
             logger.warning(
                 "question_deletion_failed_not_found",

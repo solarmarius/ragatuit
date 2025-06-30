@@ -13,7 +13,7 @@ from app.exceptions import (
     ResourceNotFoundError,
     ValidationError,
 )
-from app.models import Question
+from app.question.models import Question
 from app.quiz.models import Quiz
 
 
