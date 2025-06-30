@@ -3,13 +3,11 @@ Authentication service layer combining user CRUD and Canvas OAuth operations.
 """
 
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 from uuid import UUID
 
 import httpx
 from sqlmodel import Session, select
 
-from app import crud
 from app.config import settings
 from app.encryption import token_encryption
 from app.exceptions import AuthenticationError, ExternalServiceError
@@ -100,8 +98,8 @@ class AuthService:
         self,
         user: User,
         access_token: str,
-        refresh_token: Optional[str] = None,
-        expires_at: Optional[datetime] = None,
+        refresh_token: str | None = None,
+        expires_at: datetime | None = None,
     ) -> User:
         """Update user's Canvas tokens"""
         # Encrypt tokens
@@ -126,7 +124,7 @@ class AuthService:
         self.session.refresh(user)
         return user
 
-    def get_user_by_canvas_id(self, canvas_id: int) -> Optional[User]:
+    def get_user_by_canvas_id(self, canvas_id: int) -> User | None:
         """
         Retrieve a user by their Canvas LMS user ID.
 
@@ -160,7 +158,7 @@ class AuthService:
         statement = select(User).where(User.canvas_id == canvas_id)
         return self.session.exec(statement).first()
 
-    def get_user_by_id(self, user_id: UUID) -> Optional[User]:
+    def get_user_by_id(self, user_id: UUID) -> User | None:
         """
         Retrieve a user by their internal UUID.
 

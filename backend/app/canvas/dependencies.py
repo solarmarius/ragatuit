@@ -6,8 +6,7 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from app.api.deps import CanvasToken, CurrentUser
-from app.deps import SessionDep
+from app.api.deps import CanvasToken
 
 from .service import CanvasQuizExportService, ContentExtractionService
 

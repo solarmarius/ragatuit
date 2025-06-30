@@ -1,14 +1,9 @@
 from typing import Annotated
 
-import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jwt.exceptions import InvalidTokenError
-from pydantic import ValidationError
 
-from app import security
-from app.auth import CurrentUser, User, get_current_user
-from app.config import settings
+from app.auth import CurrentUser, get_current_user
 from app.deps import SessionDep, get_db
 from app.security import ensure_valid_canvas_token
 
@@ -20,7 +15,15 @@ TokenDep = Annotated[HTTPAuthorizationCredentials, Depends(reusable_oauth2)]
 # CurrentUser is already defined in auth.dependencies
 
 # Re-export CurrentUser from auth module
-__all__ = ["SessionDep", "TokenDep", "CurrentUser", "CanvasToken", "get_canvas_token", "get_current_user", "get_db"]
+__all__ = [
+    "SessionDep",
+    "TokenDep",
+    "CurrentUser",
+    "CanvasToken",
+    "get_canvas_token",
+    "get_current_user",
+    "get_db",
+]
 
 
 async def get_canvas_token(current_user: CurrentUser, session: SessionDep) -> str:

@@ -6,7 +6,6 @@ from fastapi.security import HTTPAuthorizationCredentials
 from jose import jwt
 from sqlmodel import Session
 
-from app import crud
 from app.api.deps import get_canvas_token
 from app.auth import get_current_user
 from app.auth.schemas import UserCreate

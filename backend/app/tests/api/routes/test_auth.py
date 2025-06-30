@@ -6,7 +6,6 @@ from httpx import ASGITransport, AsyncClient
 
 from app.api import deps
 from app.auth.models import User
-from app.auth.service import AuthService
 from app.config import settings
 from app.main import app
 

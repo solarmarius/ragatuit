@@ -13,7 +13,8 @@ from app.exceptions import (
     ResourceNotFoundError,
     ValidationError,
 )
-from app.models import Question, Quiz
+from app.models import Question
+from app.quiz.models import Quiz
 
 
 @pytest.fixture

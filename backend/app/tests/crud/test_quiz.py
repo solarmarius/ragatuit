@@ -5,7 +5,7 @@ from sqlmodel import Session
 from app import crud
 from app.auth.schemas import UserCreate
 from app.auth.service import AuthService
-from app.models import QuizCreate
+from app.quiz.schemas import QuizCreate
 
 
 def test_create_quiz(db: Session, user_id: uuid.UUID) -> None:

@@ -13,7 +13,8 @@ from app.auth.models import User
 from app.auth.schemas import UserCreate
 from app.auth.service import AuthService
 from app.main import app
-from app.models import Quiz, QuizCreate
+from app.quiz.models import Quiz
+from app.quiz.schemas import QuizCreate
 
 
 @pytest.fixture

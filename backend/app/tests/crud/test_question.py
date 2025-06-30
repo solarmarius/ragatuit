@@ -5,7 +5,8 @@ from datetime import datetime
 from sqlmodel import Session
 
 from app import crud
-from app.models import QuestionCreate, QuestionUpdate, QuizCreate
+from app.models import QuestionCreate, QuestionUpdate
+from app.quiz.schemas import QuizCreate
 
 
 def test_create_question(db: Session, user_id: uuid.UUID) -> None:

@@ -5,7 +5,6 @@ from uuid import UUID
 import httpx
 
 from app.config import settings
-from app.crud import get_approved_questions_by_quiz_id_async, get_quiz_for_update
 from app.database import get_async_session
 from app.exceptions import (
     ExternalServiceError,
@@ -60,6 +59,8 @@ class CanvasQuizExportService:
 
         try:
             async with get_async_session() as session:
+                from app.crud import get_quiz_for_update
+
                 quiz = await get_quiz_for_update(session, quiz_id)
 
                 if not quiz:
@@ -94,6 +95,8 @@ class CanvasQuizExportService:
                         "message": "Quiz export is already in progress",
                         "export_in_progress": True,
                     }
+
+                from app.crud import get_approved_questions_by_quiz_id_async
 
                 approved_questions = await get_approved_questions_by_quiz_id_async(
                     session, quiz_id
@@ -152,6 +155,8 @@ class CanvasQuizExportService:
             )
 
             async with get_async_session() as session:
+                from app.crud import get_quiz_for_update
+
                 quiz = await get_quiz_for_update(session, quiz_id)
 
                 if quiz:
@@ -188,6 +193,8 @@ class CanvasQuizExportService:
         except Exception as e:
             try:
                 async with get_async_session() as error_session:
+                    from app.crud import get_quiz_for_update
+
                     quiz = await get_quiz_for_update(error_session, quiz_id)
                     if quiz:
                         quiz.export_status = "failed"

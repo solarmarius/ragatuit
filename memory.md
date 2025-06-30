@@ -14,7 +14,8 @@ Current Status:
 
 - Phase 1 (Foundation Setup) ✅ COMPLETED and committed
 - Phase 2 (Auth Module Migration) ✅ COMPLETED and committed
-- Phase 3 (Canvas Module Migration) 🔄 NEXT UP
+- Phase 3 (Canvas Module Migration) ✅ COMPLETED and committed
+- Phase 4 (Quiz Module Migration) 🔄 NEXT UP
 
 Important Context
 
@@ -94,6 +95,39 @@ Completed Actions:
 
 5. Current test status: 261 passing out of 326 total
 6. Committed with message: "refactor: migrate auth module to domain structure"
+
+Phase 3: Canvas Module Migration ✅
+
+Completed Actions:
+
+1. Created canvas module structure:
+   - canvas/schemas.py - Canvas-specific schemas (CanvasCourse, CanvasModule, ExtractedContent, etc.)
+   - canvas/service.py - Re-exports ContentExtractionService and CanvasQuizExportService
+   - canvas/content_extraction_service.py - Moved from services/
+   - canvas/quiz_export_service.py - Moved from services/
+   - canvas/router.py - Canvas endpoints moved from api/routes/canvas.py
+   - canvas/dependencies.py - Canvas service factories
+   - canvas/exceptions.py - Canvas-specific exceptions
+   - canvas/utils.py - Canvas utilities (clean_html_content, etc.)
+   - canvas/constants.py - Canvas constants
+   - canvas/url_builder.py - Moved from services/
+
+2. Fixed circular imports:
+   - Used local imports for CanvasURLBuilder in auth service/router
+   - Removed router import from canvas __init__.py top level
+
+3. Updated service locations:
+   - Moved canvas_auth.py to auth module (auth-related)
+   - Updated all imports to use new canvas module paths
+   - Updated test imports
+
+4. Fixed mypy issues:
+   - Added proper type conversions
+   - Fixed method names (oauth_token_url)
+   - Added exports to api.deps
+
+5. All Canvas tests passing (20/20)
+6. Committed with message: "refactor: implement Phase 3 - Canvas module migration"
 
 Current Challenges
 

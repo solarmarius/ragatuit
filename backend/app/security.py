@@ -1,15 +1,11 @@
 from datetime import datetime, timedelta, timezone
-from typing import Any
 
 from fastapi import HTTPException
-from jose import jwt
 from sqlmodel import Session
 
 from app.auth.canvas_auth import refresh_canvas_token
 from app.auth.models import User
 from app.auth.service import AuthService
-from app.config import settings
-from app.encryption import token_encryption
 
 ALGORITHM = "HS256"
 

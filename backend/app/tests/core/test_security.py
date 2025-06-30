@@ -7,7 +7,7 @@ from fastapi import HTTPException
 from jose import jwt
 from sqlmodel import Session
 
-from app import crud, security
+from app import security
 from app.auth.schemas import UserCreate
 from app.auth.service import AuthService
 from app.auth.utils import create_access_token

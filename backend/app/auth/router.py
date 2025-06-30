@@ -15,7 +15,7 @@ from app.deps import SessionDep
 from app.logging_config import get_logger
 from app.middleware.logging import add_user_to_logs
 
-from .dependencies import CurrentUser, get_auth_service
+from .dependencies import CurrentUser
 from .schemas import UserCreate
 from .service import AuthService
 from .utils import create_access_token

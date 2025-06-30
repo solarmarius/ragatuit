@@ -7,7 +7,7 @@ from httpx import ASGITransport, AsyncClient
 from app.api import deps
 from app.auth.models import User
 from app.main import app
-from app.models import Quiz
+from app.quiz.models import Quiz
 
 
 @pytest.mark.asyncio
@@ -45,7 +45,7 @@ async def test_create_quiz_success() -> None:
     app.dependency_overrides[deps.get_db] = mock_get_db
 
     try:
-        with patch("app.api.routes.quiz.create_quiz", return_value=mock_quiz):
+        with patch("app.crud.create_quiz", return_value=mock_quiz):
             async with AsyncClient(
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as ac:
@@ -109,7 +109,7 @@ async def test_create_quiz_with_defaults() -> None:
     app.dependency_overrides[deps.get_db] = mock_get_db
 
     try:
-        with patch("app.api.routes.quiz.create_quiz", return_value=mock_quiz):
+        with patch("app.crud.create_quiz", return_value=mock_quiz):
             async with AsyncClient(
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as ac:
@@ -189,9 +189,7 @@ async def test_create_quiz_server_error() -> None:
     app.dependency_overrides[deps.get_db] = mock_get_db
 
     try:
-        with patch(
-            "app.api.routes.quiz.create_quiz", side_effect=Exception("Database error")
-        ):
+        with patch("app.crud.create_quiz", side_effect=Exception("Database error")):
             async with AsyncClient(
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as ac:
@@ -248,7 +246,7 @@ async def test_get_quiz_by_id_success() -> None:
     app.dependency_overrides[deps.get_db] = mock_get_db
 
     try:
-        with patch("app.api.routes.quiz.get_quiz_by_id", return_value=mock_quiz):
+        with patch("app.crud.get_quiz_by_id", return_value=mock_quiz):
             async with AsyncClient(
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as ac:
@@ -288,7 +286,7 @@ async def test_get_quiz_by_id_not_found() -> None:
     app.dependency_overrides[deps.get_db] = mock_get_db
 
     try:
-        with patch("app.api.routes.quiz.get_quiz_by_id", return_value=None):
+        with patch("app.crud.get_quiz_by_id", return_value=None):
             async with AsyncClient(
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as ac:
@@ -338,7 +336,7 @@ async def test_get_quiz_by_id_access_denied() -> None:
     app.dependency_overrides[deps.get_db] = mock_get_db
 
     try:
-        with patch("app.api.routes.quiz.get_quiz_by_id", return_value=mock_quiz):
+        with patch("app.crud.get_quiz_by_id", return_value=mock_quiz):
             async with AsyncClient(
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as ac:
@@ -399,7 +397,7 @@ async def test_get_user_quizzes_success() -> None:
     app.dependency_overrides[deps.get_db] = mock_get_db
 
     try:
-        with patch("app.api.routes.quiz.get_user_quizzes", return_value=mock_quizzes):
+        with patch("app.crud.get_user_quizzes", return_value=mock_quizzes):
             async with AsyncClient(
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as ac:
@@ -437,7 +435,7 @@ async def test_get_user_quizzes_empty() -> None:
     app.dependency_overrides[deps.get_db] = mock_get_db
 
     try:
-        with patch("app.api.routes.quiz.get_user_quizzes", return_value=[]):
+        with patch("app.crud.get_user_quizzes", return_value=[]):
             async with AsyncClient(
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as ac:
@@ -615,7 +613,7 @@ async def test_delete_quiz_success() -> None:
     app.dependency_overrides[deps.get_db] = mock_get_db
 
     try:
-        with patch("app.api.routes.quiz.delete_quiz", return_value=True):
+        with patch("app.crud.delete_quiz", return_value=True):
             async with AsyncClient(
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as ac:
@@ -651,7 +649,7 @@ async def test_delete_quiz_not_found() -> None:
     app.dependency_overrides[deps.get_db] = mock_get_db
 
     try:
-        with patch("app.api.routes.quiz.delete_quiz", return_value=False):
+        with patch("app.crud.delete_quiz", return_value=False):
             async with AsyncClient(
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as ac:
@@ -687,9 +685,7 @@ async def test_delete_quiz_server_error() -> None:
     app.dependency_overrides[deps.get_db] = mock_get_db
 
     try:
-        with patch(
-            "app.api.routes.quiz.delete_quiz", side_effect=Exception("Database error")
-        ):
+        with patch("app.crud.delete_quiz", side_effect=Exception("Database error")):
             async with AsyncClient(
                 transport=ASGITransport(app=app), base_url="http://test"
             ) as ac:
@@ -780,7 +776,7 @@ async def test_delete_quiz_ownership_verification() -> None:
 
     try:
         # Mock delete_quiz function being called with correct parameters
-        with patch("app.api.routes.quiz.delete_quiz") as mock_delete:
+        with patch("app.crud.delete_quiz") as mock_delete:
             mock_delete.return_value = True
 
             async with AsyncClient(

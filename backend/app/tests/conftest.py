@@ -7,7 +7,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlmodel import Session, SQLModel, create_engine
 
-from app import crud
 from app.auth.schemas import UserCreate
 from app.auth.service import AuthService
 from app.config import settings

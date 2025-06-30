@@ -5,23 +5,19 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from sqlmodel import select
 
-from app.api.deps import CanvasToken, CurrentUser
+from app.api.deps import CanvasToken
+from app.auth.dependencies import CurrentUser
 from app.canvas.service import CanvasQuizExportService, ContentExtractionService
-from app.crud import (
-    create_quiz,
-    delete_quiz,
-    get_approved_questions_by_quiz_id,
-    get_question_counts_by_quiz_id,
-    get_quiz_by_id,
-    get_quiz_for_update,
-    get_user_quizzes,
-)
 from app.database import execute_in_transaction
 from app.deps import SessionDep
 from app.exceptions import ServiceError
 from app.logging_config import get_logger
-from app.models import Message, Quiz, QuizCreate
+from app.models import Message
 from app.services.mcq_generation import MCQGenerationService
+
+from .models import Quiz
+from .schemas import QuizCreate
+from .service import QuizService
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
 logger = get_logger("quiz")
@@ -84,7 +80,8 @@ async def create_new_quiz(
     )
 
     try:
-        quiz = create_quiz(session, quiz_data, current_user.id)
+        quiz_service = QuizService(session)
+        quiz = quiz_service.create_quiz(quiz_data, current_user.id)
 
         # Trigger content extraction in the background
         background_tasks.add_task(
@@ -168,7 +165,8 @@ def get_quiz(
     )
 
     try:
-        quiz = get_quiz_by_id(session, quiz_id)
+        quiz_service = QuizService(session)
+        quiz = quiz_service.get_quiz_by_id(quiz_id)
 
         if not quiz:
             logger.warning(
@@ -258,7 +256,8 @@ def get_user_quizzes_endpoint(
     )
 
     try:
-        quizzes = get_user_quizzes(session, current_user.id)
+        quiz_service = QuizService(session)
+        quizzes = quiz_service.get_user_quizzes(current_user.id)
 
         logger.info(
             "user_quizzes_retrieval_completed",
@@ -304,7 +303,8 @@ async def extract_content_for_quiz(
     # === Transaction 1: Reserve the Job (very fast) ===
     async def _reserve_job(session: Any, quiz_id: UUID) -> dict[str, Any] | None:
         """Reserve the extraction job and return quiz settings if successful."""
-        quiz = await get_quiz_for_update(session, quiz_id)
+        quiz_service = QuizService(session)
+        quiz = await quiz_service.get_quiz_for_update(session, quiz_id)
 
         if not quiz:
             logger.error("content_extraction_quiz_not_found", quiz_id=str(quiz_id))
@@ -380,7 +380,8 @@ async def extract_content_for_quiz(
         status: str,
     ) -> None:
         """Save the extraction result to the quiz."""
-        quiz = await get_quiz_for_update(session, quiz_id)
+        quiz_service = QuizService(session)
+        quiz = await quiz_service.get_quiz_for_update(session, quiz_id)
         if not quiz:
             logger.error(
                 "content_extraction_quiz_not_found_during_save", quiz_id=str(quiz_id)
@@ -438,7 +439,8 @@ async def generate_questions_for_quiz(
     # === Transaction 1: Reserve the Job (very fast) ===
     async def _reserve_generation_job(session: Any, quiz_id: UUID) -> bool:
         """Reserve the question generation job."""
-        quiz = await get_quiz_for_update(session, quiz_id)
+        quiz_service = QuizService(session)
+        quiz = await quiz_service.get_quiz_for_update(session, quiz_id)
 
         if not quiz:
             logger.error("question_generation_quiz_not_found", quiz_id=str(quiz_id))
@@ -512,7 +514,8 @@ async def generate_questions_for_quiz(
         status: str,
     ) -> None:
         """Save the generation result to the quiz."""
-        quiz = await get_quiz_for_update(session, quiz_id)
+        quiz_service = QuizService(session)
+        quiz = await quiz_service.get_quiz_for_update(session, quiz_id)
         if not quiz:
             logger.error(
                 "question_generation_quiz_not_found_during_save", quiz_id=str(quiz_id)
@@ -702,7 +705,8 @@ def delete_quiz_endpoint(
     )
 
     try:
-        success = delete_quiz(session, quiz_id, current_user.id)
+        quiz_service = QuizService(session)
+        success = quiz_service.delete_quiz(quiz_id, current_user.id)
 
         if not success:
             logger.warning(
@@ -773,7 +777,8 @@ async def trigger_question_generation(
 
     try:
         # Get the quiz and verify ownership
-        quiz = get_quiz_by_id(session, quiz_id)
+        quiz_service = QuizService(session)
+        quiz = quiz_service.get_quiz_by_id(quiz_id)
 
         if not quiz:
             logger.warning(
@@ -890,7 +895,8 @@ def get_quiz_question_stats(
 
     try:
         # Verify quiz exists and user owns it
-        quiz = get_quiz_by_id(session, quiz_id)
+        quiz_service = QuizService(session)
+        quiz = quiz_service.get_quiz_by_id(quiz_id)
         if not quiz:
             logger.warning(
                 "question_stats_quiz_not_found",
@@ -909,6 +915,8 @@ def get_quiz_question_stats(
             raise HTTPException(status_code=404, detail="Quiz not found")
 
         # Get question counts
+        from app.crud import get_question_counts_by_quiz_id
+
         stats = get_question_counts_by_quiz_id(session, quiz_id)
 
         logger.info(
@@ -1025,7 +1033,8 @@ async def export_quiz_to_canvas(
 
     try:
         # Verify quiz exists and user owns it
-        quiz = get_quiz_by_id(session, quiz_id)
+        quiz_service = QuizService(session)
+        quiz = quiz_service.get_quiz_by_id(quiz_id)
         if not quiz:
             logger.warning(
                 "quiz_export_quiz_not_found",
@@ -1067,6 +1076,8 @@ async def export_quiz_to_canvas(
             )
 
         # Check if quiz has approved questions
+        from app.crud import get_approved_questions_by_quiz_id
+
         approved_questions = get_approved_questions_by_quiz_id(session, quiz_id)
         if not approved_questions:
             logger.warning(

@@ -4,14 +4,11 @@ Utility functions for authentication module.
 
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Union
 
 from jose import jwt
 
 from app.config import settings
 from app.logging_config import get_logger
-
-from .schemas import TokenPayload
 
 logger = get_logger("auth_utils")
 
@@ -19,7 +16,7 @@ ALGORITHM = "HS256"
 
 
 def create_access_token(
-    subject: Union[str, int], expires_delta: Optional[timedelta] = None
+    subject: str | int, expires_delta: timedelta | None = None
 ) -> str:
     """
     Create a JWT access token.
@@ -48,7 +45,7 @@ def generate_oauth_state() -> str:
     return secrets.token_urlsafe(32)
 
 
-def verify_oauth_state(state: Optional[str], expected_state: Optional[str]) -> bool:
+def verify_oauth_state(state: str | None, expected_state: str | None) -> bool:
     """
     Verify OAuth state parameter.
 

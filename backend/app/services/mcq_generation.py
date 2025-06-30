@@ -10,7 +10,6 @@ from langgraph.graph import END, START, StateGraph
 from pydantic import SecretStr
 
 from app.config import settings
-from app.crud import get_content_from_quiz
 from app.database import get_async_session, transaction
 from app.exceptions import ValidationError
 from app.logging_config import get_logger
@@ -143,6 +142,8 @@ Generate exactly ONE question based on this content."""
 
         try:
             async with get_async_session() as session:
+                from app.crud import get_content_from_quiz
+
                 content_dict = await get_content_from_quiz(session, state["quiz_id"])
 
                 if not content_dict:

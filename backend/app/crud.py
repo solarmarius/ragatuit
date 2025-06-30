@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import Integer, cast
@@ -10,12 +10,12 @@ from app.models import (
     Question,
     QuestionCreate,
     QuestionUpdate,
-    Quiz,
-    QuizCreate,
 )
+from app.quiz.models import Quiz
+from app.quiz.schemas import QuizCreate
 
 
-async def get_quiz_for_update(session: AsyncSession, quiz_id: UUID) -> Optional[Quiz]:
+async def get_quiz_for_update(session: AsyncSession, quiz_id: UUID) -> Quiz | None:
     """
     Retrieve a quiz with a lock for updating.
 
@@ -59,7 +59,7 @@ def create_quiz(session: Session, quiz_create: QuizCreate, owner_id: UUID) -> Qu
     return quiz
 
 
-def get_quiz_by_id(session: Session, quiz_id: UUID) -> Optional[Quiz]:
+def get_quiz_by_id(session: Session, quiz_id: UUID) -> Quiz | None:
     """
     Retrieve a quiz by its UUID.
 
@@ -118,7 +118,7 @@ def delete_quiz(session: Session, quiz_id: UUID, user_id: UUID) -> bool:
 
 async def get_content_from_quiz(
     session: AsyncSession, quiz_id: UUID
-) -> Optional[dict[str, Any]]:
+) -> dict[str, Any] | None:
     """
     Retrieve the extracted content from a quiz by its UUID asynchronously.
 
@@ -161,7 +161,7 @@ def create_question(session: Session, question_create: QuestionCreate) -> Questi
     return db_question
 
 
-def get_question_by_id(session: Session, question_id: UUID) -> Optional[Question]:
+def get_question_by_id(session: Session, question_id: UUID) -> Question | None:
     """
     Retrieve a question by its UUID.
 
@@ -196,7 +196,7 @@ def get_questions_by_quiz_id(session: Session, quiz_id: UUID) -> list[Question]:
 
 def update_question(
     session: Session, question_id: UUID, question_update: QuestionUpdate
-) -> Optional[Question]:
+) -> Question | None:
     """
     Update a question with new data.
 
@@ -226,7 +226,7 @@ def update_question(
     return question
 
 
-def approve_question(session: Session, question_id: UUID) -> Optional[Question]:
+def approve_question(session: Session, question_id: UUID) -> Question | None:
     """
     Approve a question by setting is_approved to True and recording approval timestamp.
 

@@ -3,7 +3,7 @@ Pydantic schemas for authentication module.
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from sqlmodel import Field, SQLModel
 
@@ -29,7 +29,7 @@ class UserUpdateMe(SQLModel):
     """Schema for user self-update."""
 
     name: str
-    onboarding_completed: Optional[bool] = Field(default=None)
+    onboarding_completed: bool | None = Field(default=None)
 
 
 # Token schemas
@@ -38,13 +38,13 @@ class TokenUpdate(SQLModel):
 
     access_token: str = Field(default=None)
     refresh_token: str = Field(default=None)
-    expires_at: Optional[datetime] = Field(default=None)
+    expires_at: datetime | None = Field(default=None)
 
 
 class TokenPayload(SQLModel):
     """JWT token payload schema."""
 
-    sub: Optional[str] = None
+    sub: str | None = None
 
 
 # Canvas OAuth schemas
@@ -52,7 +52,7 @@ class CanvasAuthRequest(SQLModel):
     """Schema for Canvas OAuth callback request."""
 
     code: str
-    state: Optional[str] = None
+    state: str | None = None
     canvas_base_url: str
 
 
