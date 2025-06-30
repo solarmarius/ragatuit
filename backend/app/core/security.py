@@ -10,6 +10,7 @@ from sqlmodel import Session
 from app import crud
 from app.core.config import settings
 from app.models import User
+from app.services.canvas_auth import refresh_canvas_token
 
 ALGORITHM = "HS256"
 
@@ -185,8 +186,6 @@ async def ensure_valid_canvas_token(session: Session, user: User) -> str:
 
         if user_expires_at <= expires_soon:
             try:
-                from app.api.routes.auth import refresh_canvas_token
-
                 await refresh_canvas_token(user, session)
             except HTTPException as e:
                 if e.status_code == 401:

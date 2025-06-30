@@ -211,7 +211,7 @@ async def test_ensure_valid_canvas_token_refresh_success(db: Session) -> None:
     db.add(user)
     db.commit()
 
-    with patch("app.api.routes.auth.refresh_canvas_token") as mock_refresh:
+    with patch("app.core.security.refresh_canvas_token") as mock_refresh:
         mock_refresh.return_value = None  # Successful refresh
 
         with patch("app.crud.get_decrypted_access_token") as mock_get_token:
@@ -238,7 +238,7 @@ async def test_ensure_valid_canvas_token_401_error(db: Session) -> None:
     db.add(user)
     db.commit()
 
-    with patch("app.api.routes.auth.refresh_canvas_token") as mock_refresh:
+    with patch("app.core.security.refresh_canvas_token") as mock_refresh:
         # Simulate 401 error (invalid refresh token)
         mock_refresh.side_effect = HTTPException(
             status_code=401, detail="Invalid token"
@@ -269,7 +269,7 @@ async def test_ensure_valid_canvas_token_503_error(db: Session) -> None:
     db.add(user)
     db.commit()
 
-    with patch("app.api.routes.auth.refresh_canvas_token") as mock_refresh:
+    with patch("app.core.security.refresh_canvas_token") as mock_refresh:
         # Simulate 503 error (Canvas temporarily unavailable)
         mock_refresh.side_effect = HTTPException(
             status_code=503, detail="Service unavailable"
