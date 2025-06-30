@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlmodel import Session, SQLModel, create_engine
 
 from app import crud
-from app.core.config import settings
+from app.config import settings
 from app.main import app
 from app.models import UserCreate
 

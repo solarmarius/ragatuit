@@ -8,14 +8,12 @@ import pytest
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from app.core.exceptions import (
+from app.exceptions import (
     AuthenticationError,
     ExternalServiceError,
     ResourceNotFoundError,
     ServiceError,
     ValidationError,
-)
-from app.core.global_exception_handler import (
     general_exception_handler,
     service_error_handler,
 )

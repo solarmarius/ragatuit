@@ -9,11 +9,11 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from pydantic import SecretStr
 
-from app.core.config import settings
-from app.core.db import get_async_session, transaction
-from app.core.exceptions import ValidationError
-from app.core.logging_config import get_logger
+from app.config import settings
 from app.crud import get_content_from_quiz
+from app.database import get_async_session, transaction
+from app.exceptions import ValidationError
+from app.logging_config import get_logger
 from app.models import Question, QuestionCreate
 
 logger = get_logger("mcq_generation")

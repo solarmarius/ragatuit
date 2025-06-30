@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from app.core.exceptions import (
+from app.exceptions import (
     ExternalServiceError,
     ResourceNotFoundError,
     ValidationError,

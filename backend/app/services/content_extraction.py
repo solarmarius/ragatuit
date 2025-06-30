@@ -7,10 +7,10 @@ import httpx
 import pypdf
 from bs4 import BeautifulSoup, Comment
 
-from app.core.config import settings
-from app.core.exceptions import ExternalServiceError
-from app.core.logging_config import get_logger
-from app.core.retry import retry_on_failure
+from app.config import settings
+from app.exceptions import ExternalServiceError
+from app.logging_config import get_logger
+from app.retry import retry_on_failure
 from app.services.url_builder import CanvasURLBuilder
 
 logger = get_logger("content_extraction")

@@ -2,8 +2,8 @@ from typing import Any
 
 from fastapi import APIRouter
 
-from app.core.db import check_database_health
-from app.core.logging_config import get_logger
+from app.database import check_database_health
+from app.logging_config import get_logger
 
 router = APIRouter(prefix="/utils", tags=["utils"])
 logger = get_logger("utils")

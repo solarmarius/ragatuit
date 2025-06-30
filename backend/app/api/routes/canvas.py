@@ -4,8 +4,8 @@ import httpx
 from fastapi import APIRouter, HTTPException
 
 from app.api.deps import CanvasToken, CurrentUser
-from app.core.config import settings
-from app.core.logging_config import get_logger
+from app.config import settings
+from app.logging_config import get_logger
 from app.models import CanvasCourse, CanvasModule
 from app.services.url_builder import CanvasURLBuilder
 

@@ -8,11 +8,11 @@ from fastapi.responses import RedirectResponse
 
 from app import crud
 from app.api.deps import CurrentUser, SessionDep
-from app.core.config import settings
-from app.core.logging_config import get_logger
-from app.core.middleware.logging_middleware import add_user_to_logs
-from app.core.security import create_access_token
+from app.config import settings
+from app.logging_config import get_logger
+from app.middleware.logging import add_user_to_logs
 from app.models import UserCreate
+from app.security import create_access_token
 from app.services.url_builder import CanvasURLBuilder
 
 router = APIRouter(prefix="/auth", tags=["auth"])

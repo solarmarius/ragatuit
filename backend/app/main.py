@@ -5,14 +5,14 @@ from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
 from app.api.main import api_router
-from app.core.config import settings
-from app.core.exceptions import ServiceError
-from app.core.global_exception_handler import (
+from app.config import settings
+from app.exceptions import (
+    ServiceError,
     general_exception_handler,
     service_error_handler,
 )
-from app.core.logging_config import configure_logging, get_logger
-from app.core.middleware.logging_middleware import LoggingMiddleware
+from app.logging_config import configure_logging, get_logger
+from app.middleware.logging import LoggingMiddleware
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:

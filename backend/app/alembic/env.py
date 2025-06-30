@@ -19,8 +19,8 @@ fileConfig(config.config_file_name)
 # target_metadata = mymodel.Base.metadata
 # target_metadata = None
 
-from app.core.db import engine  # noqa
-from app.core.config import settings  # noqa
+from app.database import engine  # noqa
+from app.config import settings  # noqa
 
 # Import all models so that SQLModel has them
 import app.models  # noqa

@@ -8,11 +8,11 @@ from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
 from sqlmodel import Session
 
-from app.core import security
-from app.core.config import settings
-from app.core.db import get_session
-from app.core.security import ensure_valid_canvas_token
+from app import security
+from app.config import settings
+from app.database import get_session
 from app.models import TokenPayload, User
+from app.security import ensure_valid_canvas_token
 
 reusable_oauth2 = HTTPBearer()
 

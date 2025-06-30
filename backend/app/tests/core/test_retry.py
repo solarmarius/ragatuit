@@ -6,7 +6,7 @@ import time
 
 import pytest
 
-from app.core.retry import retry_on_failure
+from app.retry import retry_on_failure
 
 
 @pytest.mark.asyncio

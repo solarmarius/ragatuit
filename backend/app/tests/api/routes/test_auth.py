@@ -5,7 +5,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.api import deps
-from app.core.config import settings
+from app.config import settings
 from app.main import app
 from app.models import User
 
@@ -196,7 +196,7 @@ async def test_logout_canvas(mock_crud: MagicMock) -> None:
 @pytest.mark.asyncio
 async def test_login_canvas_invalid_base_url() -> None:
     """Test login with invalid Canvas base URL"""
-    with patch("app.core.config.settings.CANVAS_BASE_URL", "invalid-url"):
+    with patch("app.config.settings.CANVAS_BASE_URL", "invalid-url"):
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as ac:

@@ -6,10 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from sqlmodel import select
 
 from app.api.deps import CanvasToken, CurrentUser, SessionDep
-from app.core.db import execute_in_transaction
 from app.core.dependencies import ServiceContainer
-from app.core.exceptions import ServiceError
-from app.core.logging_config import get_logger
 from app.crud import (
     create_quiz,
     delete_quiz,
@@ -19,6 +16,9 @@ from app.crud import (
     get_quiz_for_update,
     get_user_quizzes,
 )
+from app.database import execute_in_transaction
+from app.exceptions import ServiceError
+from app.logging_config import get_logger
 from app.models import Message, Quiz, QuizCreate
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])

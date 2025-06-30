@@ -4,17 +4,17 @@ from uuid import UUID
 
 import httpx
 
-from app.core.config import settings
-from app.core.db import get_async_session
-from app.core.exceptions import (
+from app.config import settings
+from app.crud import get_approved_questions_by_quiz_id_async, get_quiz_for_update
+from app.database import get_async_session
+from app.exceptions import (
     ExternalServiceError,
     ResourceNotFoundError,
     ValidationError,
 )
-from app.core.logging_config import get_logger
-from app.core.retry import retry_on_failure
-from app.crud import get_approved_questions_by_quiz_id_async, get_quiz_for_update
+from app.logging_config import get_logger
 from app.models import Question
+from app.retry import retry_on_failure
 from app.services.url_builder import CanvasURLBuilder
 
 logger = get_logger("canvas_quiz_export")

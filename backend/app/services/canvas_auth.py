@@ -4,11 +4,11 @@ import httpx
 from sqlmodel import Session
 
 from app import crud
-from app.core.config import settings
-from app.core.exceptions import AuthenticationError, ExternalServiceError
-from app.core.logging_config import get_logger
-from app.core.retry import retry_on_failure
+from app.config import settings
+from app.exceptions import AuthenticationError, ExternalServiceError
+from app.logging_config import get_logger
 from app.models import User
+from app.retry import retry_on_failure
 from app.services.url_builder import CanvasURLBuilder
 
 logger = get_logger("canvas_auth_service")

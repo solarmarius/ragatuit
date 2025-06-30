@@ -5,8 +5,8 @@ import pytest
 from sqlalchemy import text
 from sqlmodel import Session, select
 
-from app.core.config import settings
-from app.core.db import (
+from app.config import settings
+from app.database import (
     check_database_health,
     engine,
     get_session,

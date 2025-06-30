@@ -6,7 +6,6 @@ from sqlalchemy import Integer, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import Session, asc, col, desc, func, select
 
-from app.core.security import token_encryption
 from app.models import (
     Question,
     QuestionCreate,
@@ -16,6 +15,7 @@ from app.models import (
     User,
     UserCreate,
 )
+from app.security import token_encryption
 
 
 async def get_quiz_for_update(session: AsyncSession, quiz_id: UUID) -> Quiz | None:

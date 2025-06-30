@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 import pytest
 from sqlalchemy import text
 
-from app.core.db import check_database_health, get_session
+from app.database import check_database_health, get_session
 
 
 @pytest.mark.performance

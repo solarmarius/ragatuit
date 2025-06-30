@@ -13,7 +13,7 @@ Our new structure will **exactly match** the guide's recommended layout:
 ```
 backend/
 ├── alembic/                    # Database migrations (existing)
-├── src/
+├── app/
 │   ├── auth/                   # Authentication domain
 │   │   ├── router.py          # OAuth endpoints, token management
 │   │   ├── schemas.py         # TokenPayload, CanvasTokens, etc.

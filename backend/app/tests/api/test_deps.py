@@ -8,9 +8,9 @@ from sqlmodel import Session
 
 from app import crud
 from app.api.deps import get_canvas_token, get_current_user, get_db
-from app.core.config import settings
-from app.core.security import ALGORITHM, create_access_token
+from app.config import settings
 from app.models import UserCreate
+from app.security import ALGORITHM, create_access_token
 
 
 def test_get_db() -> None:

@@ -1,7 +1,7 @@
 from typing import Any
 from urllib.parse import quote, urlencode, urlparse
 
-from app.core.logging_config import get_logger
+from app.logging_config import get_logger
 
 logger = get_logger("url_builder")
 

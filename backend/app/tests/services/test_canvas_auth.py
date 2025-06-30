@@ -5,7 +5,7 @@ import httpx
 import pytest
 from sqlmodel import Session
 
-from app.core.exceptions import AuthenticationError, ExternalServiceError
+from app.exceptions import AuthenticationError, ExternalServiceError
 from app.models import User
 from app.services.canvas_auth import refresh_canvas_token
 

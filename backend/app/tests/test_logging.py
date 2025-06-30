@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from app.core.logging_config import configure_logging, get_logger, log_context
+from app.logging_config import configure_logging, get_logger, log_context
 from app.main import app
 
 

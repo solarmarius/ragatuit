@@ -7,15 +7,14 @@ from fastapi import HTTPException
 from jose import jwt
 from sqlmodel import Session
 
-from app import crud
-from app.core import security
-from app.core.config import settings
-from app.core.security import (
+from app import crud, security
+from app.config import settings
+from app.models import UserCreate
+from app.security import (
     TokenEncryption,
     create_access_token,
     ensure_valid_canvas_token,
 )
-from app.models import UserCreate
 
 
 def test_encrypt_decrypt_token() -> None:
@@ -211,7 +210,7 @@ async def test_ensure_valid_canvas_token_refresh_success(db: Session) -> None:
     db.add(user)
     db.commit()
 
-    with patch("app.core.security.refresh_canvas_token") as mock_refresh:
+    with patch("app.security.refresh_canvas_token") as mock_refresh:
         mock_refresh.return_value = None  # Successful refresh
 
         with patch("app.crud.get_decrypted_access_token") as mock_get_token:
@@ -238,7 +237,7 @@ async def test_ensure_valid_canvas_token_401_error(db: Session) -> None:
     db.add(user)
     db.commit()
 
-    with patch("app.core.security.refresh_canvas_token") as mock_refresh:
+    with patch("app.security.refresh_canvas_token") as mock_refresh:
         # Simulate 401 error (invalid refresh token)
         mock_refresh.side_effect = HTTPException(
             status_code=401, detail="Invalid token"
@@ -269,7 +268,7 @@ async def test_ensure_valid_canvas_token_503_error(db: Session) -> None:
     db.add(user)
     db.commit()
 
-    with patch("app.core.security.refresh_canvas_token") as mock_refresh:
+    with patch("app.security.refresh_canvas_token") as mock_refresh:
         # Simulate 503 error (Canvas temporarily unavailable)
         mock_refresh.side_effect = HTTPException(
             status_code=503, detail="Service unavailable"
