@@ -217,7 +217,9 @@ async def test_content_extraction_background_task_success(db: Session) -> None:
     }
 
     with (
-        patch("app.api.routes.quiz.ContentExtractionService") as mock_service_class,
+        patch(
+            "app.api.routes.quiz.ServiceContainer.get_content_extraction_service"
+        ) as mock_service_factory,
         patch("app.api.routes.quiz.get_async_session") as mock_session_class,
         patch("app.api.routes.quiz.get_quiz_for_update") as mock_get_quiz,
         patch(
@@ -236,7 +238,7 @@ async def test_content_extraction_background_task_success(db: Session) -> None:
             "average_words_per_page": 12,
             "extracted_at": "2023-01-15T12:30:45",
         }
-        mock_service_class.return_value = mock_service
+        mock_service_factory.return_value = mock_service
 
         # Mock the async session context manager
         mock_async_session = AsyncMock()
@@ -294,7 +296,9 @@ async def test_content_extraction_background_task_failure(db: Session) -> None:
     db.commit()
 
     with (
-        patch("app.api.routes.quiz.ContentExtractionService") as mock_service_class,
+        patch(
+            "app.api.routes.quiz.ServiceContainer.get_content_extraction_service"
+        ) as mock_service_factory,
         patch("app.api.routes.quiz.get_async_session") as mock_session_class,
         patch("app.api.routes.quiz.get_quiz_for_update") as mock_get_quiz,
         patch(
@@ -306,7 +310,7 @@ async def test_content_extraction_background_task_failure(db: Session) -> None:
         mock_service.extract_content_for_modules = AsyncMock(
             side_effect=Exception("Canvas API error")
         )
-        mock_service_class.return_value = mock_service
+        mock_service_factory.return_value = mock_service
 
         # Mock the async session context manager
         mock_async_session = AsyncMock()

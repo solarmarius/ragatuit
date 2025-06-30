@@ -8,7 +8,6 @@ import pytest
 from app.services.mcq_generation import (
     MCQGenerationService,
     MCQGenerationState,
-    mcq_generation_service,
 )
 
 
@@ -563,9 +562,3 @@ async def test_generate_mcqs_for_quiz_failure(sample_quiz_id: UUID) -> None:
         assert result["success"] is False
         assert result["questions_generated"] == 0
         assert "Workflow error" in result["error_message"]
-
-
-def test_global_service_instance_exists() -> None:
-    """Test that the global service instance is created."""
-    assert mcq_generation_service is not None
-    assert isinstance(mcq_generation_service, MCQGenerationService)

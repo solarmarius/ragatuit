@@ -5,6 +5,7 @@ from sqlmodel import select
 
 from app.api.deps import CanvasToken, CurrentUser, SessionDep
 from app.core.db import get_async_session
+from app.core.dependencies import ServiceContainer
 from app.core.logging_config import get_logger
 from app.crud import (
     create_quiz,
@@ -18,9 +19,6 @@ from app.crud import (
     update_quiz_llm_generation_status,
 )
 from app.models import Message, Quiz, QuizCreate
-from app.services.canvas_quiz_export import CanvasQuizExportService
-from app.services.content_extraction import ContentExtractionService
-from app.services.mcq_generation import mcq_generation_service
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
 logger = get_logger("quiz")
@@ -322,7 +320,9 @@ async def extract_content_for_quiz(
 
             await update_quiz_content_extraction_status(session, quiz, "processing")
 
-            extraction_service = ContentExtractionService(canvas_token, course_id)
+            extraction_service = ServiceContainer.get_content_extraction_service(
+                canvas_token, course_id
+            )
             extracted_content = await extraction_service.extract_content_for_modules(
                 module_ids
             )
@@ -419,7 +419,8 @@ async def generate_questions_for_quiz(
 
             await update_quiz_llm_generation_status(session, quiz, "processing")
 
-            results = await mcq_generation_service.generate_mcqs_for_quiz(
+            mcq_service = ServiceContainer.get_mcq_generation_service()
+            results = await mcq_service.generate_mcqs_for_quiz(
                 quiz_id=quiz_id,
                 target_question_count=target_question_count,
                 llm_model=llm_model,
@@ -890,7 +891,7 @@ async def export_quiz_to_canvas_background(quiz_id: UUID, canvas_token: str) -> 
 
     try:
         # Initialize Canvas export service
-        export_service = CanvasQuizExportService(canvas_token)
+        export_service = ServiceContainer.get_canvas_quiz_export_service(canvas_token)
 
         # Export quiz to Canvas
         result = await export_service.export_quiz_to_canvas(quiz_id)

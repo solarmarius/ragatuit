@@ -402,8 +402,10 @@ class TestQuizExportBackgroundTask:
             }
         )
 
-        with patch("app.api.routes.quiz.CanvasQuizExportService") as mock_service_class:
-            mock_service_class.return_value = mock_export_service
+        with patch(
+            "app.api.routes.quiz.ServiceContainer.get_canvas_quiz_export_service"
+        ) as mock_service_factory:
+            mock_service_factory.return_value = mock_export_service
 
             # Import and call the background task function
             from app.api.routes.quiz import export_quiz_to_canvas_background
@@ -411,7 +413,7 @@ class TestQuizExportBackgroundTask:
             await export_quiz_to_canvas_background(quiz_id, canvas_token)
 
             # Verify service was created and called
-            mock_service_class.assert_called_once_with(canvas_token)
+            mock_service_factory.assert_called_once_with(canvas_token)
             mock_export_service.export_quiz_to_canvas.assert_called_once_with(quiz_id)
 
     @pytest.mark.asyncio
@@ -425,8 +427,10 @@ class TestQuizExportBackgroundTask:
             side_effect=Exception("Canvas API Error")
         )
 
-        with patch("app.api.routes.quiz.CanvasQuizExportService") as mock_service_class:
-            mock_service_class.return_value = mock_export_service
+        with patch(
+            "app.api.routes.quiz.ServiceContainer.get_canvas_quiz_export_service"
+        ) as mock_service_factory:
+            mock_service_factory.return_value = mock_export_service
 
             # Import and call the background task function
             from app.api.routes.quiz import export_quiz_to_canvas_background
@@ -435,5 +439,5 @@ class TestQuizExportBackgroundTask:
             await export_quiz_to_canvas_background(quiz_id, canvas_token)
 
             # Verify service was created and called
-            mock_service_class.assert_called_once_with(canvas_token)
+            mock_service_factory.assert_called_once_with(canvas_token)
             mock_export_service.export_quiz_to_canvas.assert_called_once_with(quiz_id)

@@ -604,7 +604,3 @@ Generate exactly ONE question based on this content."""
                 "error_message": str(e),
                 "generated_at": datetime.now(timezone.utc).isoformat(),
             }
-
-
-# Global service instance
-mcq_generation_service = MCQGenerationService()
