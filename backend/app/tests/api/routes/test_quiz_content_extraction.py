@@ -7,7 +7,7 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlmodel import Session
 
-from app import crud
+from app.quiz.service import QuizService
 from app.api import deps
 from app.auth.models import User
 from app.auth.schemas import UserCreate
@@ -39,7 +39,8 @@ def test_user_and_quiz(db: Session) -> tuple[User, Quiz]:
         llm_model="gpt-4",
         llm_temperature=0.3,
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user.id)
+    quiz_service = QuizService(db)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user.id)
 
     return user, quiz
 
@@ -200,7 +201,8 @@ async def test_content_extraction_background_task_success(db: Session) -> None:
         llm_model="gpt-4",
         llm_temperature=0.3,
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user.id)
+    quiz_service = QuizService(db)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user.id)
 
     # Ensure the quiz is committed to the database so the background task can find it
     db.commit()
@@ -330,7 +332,8 @@ async def test_content_extraction_background_task_failure(db: Session) -> None:
         llm_model="gpt-4",
         llm_temperature=0.3,
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user.id)
+    quiz_service = QuizService(db)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user.id)
 
     # Ensure the quiz is committed to the database so the background task can find it
     db.commit()
@@ -517,7 +520,8 @@ async def test_quiz_content_dict_property(db: Session) -> None:
         llm_model="gpt-4",
         llm_temperature=0.3,
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user.id)
+    quiz_service = QuizService(db)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user.id)
 
     # Test setting content via property
     test_content = {
@@ -558,7 +562,8 @@ async def test_quiz_content_dict_property_empty(db: Session) -> None:
         llm_model="gpt-4",
         llm_temperature=0.3,
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user.id)
+    quiz_service = QuizService(db)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user.id)
 
     # Test with None content (default value should be None, not {})
     assert quiz.extracted_content is None

@@ -23,7 +23,9 @@ from app.database import engine  # noqa
 from app.config import settings  # noqa
 
 # Import all models so that SQLModel has them
-import app.models  # noqa
+import app.auth.models  # noqa
+import app.quiz.models  # noqa
+import app.question.models  # noqa
 
 target_metadata = SQLModel.metadata
 

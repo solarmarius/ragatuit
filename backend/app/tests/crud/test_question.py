@@ -4,7 +4,8 @@ from datetime import datetime
 
 from sqlmodel import Session
 
-from app import crud
+from app.question.service import QuestionService
+from app.quiz.service import QuizService
 from app.question.schemas import QuestionCreate, QuestionUpdate
 from app.quiz.schemas import QuizCreate
 
@@ -21,7 +22,8 @@ def test_create_question(db: Session, user_id: uuid.UUID) -> None:
         llm_model="gpt-4o",
         llm_temperature=1,
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz_service = QuizService(db)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
     # Create a question
     question_in = QuestionCreate(
@@ -34,7 +36,8 @@ def test_create_question(db: Session, user_id: uuid.UUID) -> None:
         correct_answer="A",
     )
 
-    question = crud.create_question(session=db, question_create=question_in)
+    question_service = QuestionService(db)
+    question = question_service.create_question(question_create=question_in)
 
     # Check basic fields
     assert question.id is not None
@@ -63,7 +66,8 @@ def test_get_question_by_id(db: Session, user_id: uuid.UUID) -> None:
         llm_model="gpt-4o",
         llm_temperature=1,
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz_service = QuizService(db)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
     question_in = QuestionCreate(
         quiz_id=quiz.id,
@@ -74,10 +78,11 @@ def test_get_question_by_id(db: Session, user_id: uuid.UUID) -> None:
         option_d="6",
         correct_answer="B",
     )
-    created_question = crud.create_question(session=db, question_create=question_in)
+    question_service = QuestionService(db)
+    created_question = question_service.create_question(question_create=question_in)
 
     # Retrieve the question
-    question = crud.get_question_by_id(session=db, question_id=created_question.id)
+    question = question_service.get_question_by_id(question_id=created_question.id)
 
     assert question is not None
     assert question.id == created_question.id
@@ -88,7 +93,8 @@ def test_get_question_by_id(db: Session, user_id: uuid.UUID) -> None:
 def test_get_question_by_id_not_found(db: Session) -> None:
     """Test retrieving a non-existent question."""
     fake_id = uuid.uuid4()
-    question = crud.get_question_by_id(session=db, question_id=fake_id)
+    question_service = QuestionService(db)
+    question = question_service.get_question_by_id(question_id=fake_id)
     assert question is None
 
 
@@ -104,7 +110,8 @@ def test_get_questions_by_quiz_id(db: Session, user_id: uuid.UUID) -> None:
         llm_model="gpt-4o",
         llm_temperature=1,
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz_service = QuizService(db)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
     # Create multiple questions
     question1_in = QuestionCreate(
@@ -126,11 +133,12 @@ def test_get_questions_by_quiz_id(db: Session, user_id: uuid.UUID) -> None:
         correct_answer="B",
     )
 
-    crud.create_question(session=db, question_create=question1_in)
-    crud.create_question(session=db, question_create=question2_in)
+    question_service = QuestionService(db)
+    question_service.create_question(question_create=question1_in)
+    question_service.create_question(question_create=question2_in)
 
     # Retrieve all questions for the quiz
-    questions = crud.get_questions_by_quiz_id(session=db, quiz_id=quiz.id)
+    questions = question_service.get_questions_by_quiz_id(quiz_id=quiz.id)
 
     assert len(questions) == 2
     question_texts = [q.question_text for q in questions]
@@ -150,9 +158,11 @@ def test_get_questions_by_quiz_id_empty(db: Session, user_id: uuid.UUID) -> None
         llm_model="gpt-4o",
         llm_temperature=1,
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz_service = QuizService(db)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
-    questions = crud.get_questions_by_quiz_id(session=db, quiz_id=quiz.id)
+    question_service = QuestionService(db)
+    questions = question_service.get_questions_by_quiz_id(quiz_id=quiz.id)
     assert len(questions) == 0
 
 
@@ -168,7 +178,8 @@ def test_update_question(db: Session, user_id: uuid.UUID) -> None:
         llm_model="gpt-4o",
         llm_temperature=1,
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz_service = QuizService(db)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
     question_in = QuestionCreate(
         quiz_id=quiz.id,
@@ -179,7 +190,8 @@ def test_update_question(db: Session, user_id: uuid.UUID) -> None:
         option_d="Original D",
         correct_answer="A",
     )
-    question = crud.create_question(session=db, question_create=question_in)
+    question_service = QuestionService(db)
+    question = question_service.create_question(question_create=question_in)
 
     # Add small delay to ensure different timestamp
     time.sleep(0.01)
@@ -191,8 +203,8 @@ def test_update_question(db: Session, user_id: uuid.UUID) -> None:
         correct_answer="B",
     )
 
-    updated_question = crud.update_question(
-        session=db, question_id=question.id, question_update=question_update
+    updated_question = question_service.update_question(
+        question_id=question.id, question_update=question_update
     )
 
     assert updated_question is not None
@@ -211,8 +223,8 @@ def test_update_question_not_found(db: Session) -> None:
     fake_id = uuid.uuid4()
     question_update = QuestionUpdate(question_text="Updated question")
 
-    updated_question = crud.update_question(
-        session=db, question_id=fake_id, question_update=question_update
+    updated_question = question_service.update_question(
+        question_id=fake_id, question_update=question_update
     )
     assert updated_question is None
 
@@ -229,7 +241,8 @@ def test_approve_question(db: Session, user_id: uuid.UUID) -> None:
         llm_model="gpt-4o",
         llm_temperature=1,
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz_service = QuizService(db)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
     question_in = QuestionCreate(
         quiz_id=quiz.id,
@@ -240,7 +253,8 @@ def test_approve_question(db: Session, user_id: uuid.UUID) -> None:
         option_d="D",
         correct_answer="A",
     )
-    question = crud.create_question(session=db, question_create=question_in)
+    question_service = QuestionService(db)
+    question = question_service.create_question(question_create=question_in)
 
     # Verify initially not approved
     assert question.is_approved is False
@@ -250,7 +264,7 @@ def test_approve_question(db: Session, user_id: uuid.UUID) -> None:
     time.sleep(0.01)
 
     # Approve the question
-    approved_question = crud.approve_question(session=db, question_id=question.id)
+    approved_question = question_service.approve_question(question_id=question.id)
 
     assert approved_question is not None
     assert approved_question.is_approved is True
@@ -265,7 +279,8 @@ def test_approve_question(db: Session, user_id: uuid.UUID) -> None:
 def test_approve_question_not_found(db: Session) -> None:
     """Test approving a non-existent question."""
     fake_id = uuid.uuid4()
-    approved_question = crud.approve_question(session=db, question_id=fake_id)
+    question_service = QuestionService(db)
+    approved_question = question_service.approve_question(question_id=fake_id)
     assert approved_question is None
 
 
@@ -281,7 +296,8 @@ def test_delete_question(db: Session, user_id: uuid.UUID) -> None:
         llm_model="gpt-4o",
         llm_temperature=1,
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz_service = QuizService(db)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
     question_in = QuestionCreate(
         quiz_id=quiz.id,
@@ -292,16 +308,17 @@ def test_delete_question(db: Session, user_id: uuid.UUID) -> None:
         option_d="D",
         correct_answer="A",
     )
-    question = crud.create_question(session=db, question_create=question_in)
+    question_service = QuestionService(db)
+    question = question_service.create_question(question_create=question_in)
 
     # Delete the question
-    success = crud.delete_question(
-        session=db, question_id=question.id, quiz_owner_id=user_id
+    success = question_service.delete_question(
+        question_id=question.id, quiz_owner_id=user_id
     )
     assert success is True
 
     # Verify question is deleted
-    deleted_question = crud.get_question_by_id(session=db, question_id=question.id)
+    deleted_question = question_service.get_question_by_id(question_id=question.id)
     assert deleted_question is None
 
 
@@ -317,7 +334,8 @@ def test_delete_question_unauthorized(db: Session, user_id: uuid.UUID) -> None:
         llm_model="gpt-4o",
         llm_temperature=1,
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz_service = QuizService(db)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
     question_in = QuestionCreate(
         quiz_id=quiz.id,
@@ -328,25 +346,26 @@ def test_delete_question_unauthorized(db: Session, user_id: uuid.UUID) -> None:
         option_d="D",
         correct_answer="A",
     )
-    question = crud.create_question(session=db, question_create=question_in)
+    question_service = QuestionService(db)
+    question = question_service.create_question(question_create=question_in)
 
     # Try to delete with different user ID
     other_user_id = uuid.uuid4()
-    success = crud.delete_question(
-        session=db, question_id=question.id, quiz_owner_id=other_user_id
+    success = question_service.delete_question(
+        question_id=question.id, quiz_owner_id=other_user_id
     )
     assert success is False
 
     # Verify question still exists
-    existing_question = crud.get_question_by_id(session=db, question_id=question.id)
+    existing_question = question_service.get_question_by_id(question_id=question.id)
     assert existing_question is not None
 
 
 def test_delete_question_not_found(db: Session, user_id: uuid.UUID) -> None:
     """Test deleting a non-existent question."""
     fake_id = uuid.uuid4()
-    success = crud.delete_question(
-        session=db, question_id=fake_id, quiz_owner_id=user_id
+    success = question_service.delete_question(
+        question_id=fake_id, quiz_owner_id=user_id
     )
     assert success is False
 
@@ -363,7 +382,8 @@ def test_get_approved_questions_by_quiz_id(db: Session, user_id: uuid.UUID) -> N
         llm_model="gpt-4o",
         llm_temperature=1,
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz_service = QuizService(db)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
     # Create questions (some approved, some not)
     question1_in = QuestionCreate(
@@ -385,15 +405,16 @@ def test_get_approved_questions_by_quiz_id(db: Session, user_id: uuid.UUID) -> N
         correct_answer="B",
     )
 
-    question1 = crud.create_question(session=db, question_create=question1_in)
-    crud.create_question(session=db, question_create=question2_in)
+    question_service = QuestionService(db)
+    question1 = question_service.create_question(question_create=question1_in)
+    question_service.create_question(question_create=question2_in)
 
     # Approve only the first question
-    crud.approve_question(session=db, question_id=question1.id)
+    question_service.approve_question(question_id=question1.id)
 
     # Get only approved questions
-    approved_questions = crud.get_approved_questions_by_quiz_id(
-        session=db, quiz_id=quiz.id
+    approved_questions = question_service.get_approved_questions_by_quiz_id(
+        quiz_id=quiz.id
     )
 
     assert len(approved_questions) == 1
@@ -413,7 +434,8 @@ def test_get_question_counts_by_quiz_id(db: Session, user_id: uuid.UUID) -> None
         llm_model="gpt-4o",
         llm_temperature=1,
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz_service = QuizService(db)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
     # Create questions
     question1_in = QuestionCreate(
@@ -444,16 +466,17 @@ def test_get_question_counts_by_quiz_id(db: Session, user_id: uuid.UUID) -> None
         correct_answer="C",
     )
 
-    question1 = crud.create_question(session=db, question_create=question1_in)
-    question2 = crud.create_question(session=db, question_create=question2_in)
-    crud.create_question(session=db, question_create=question3_in)
+    question_service = QuestionService(db)
+    question1 = question_service.create_question(question_create=question1_in)
+    question2 = question_service.create_question(question_create=question2_in)
+    question_service.create_question(question_create=question3_in)
 
     # Approve two questions
-    crud.approve_question(session=db, question_id=question1.id)
-    crud.approve_question(session=db, question_id=question2.id)
+    question_service.approve_question(question_id=question1.id)
+    question_service.approve_question(question_id=question2.id)
 
     # Get counts
-    counts = crud.get_question_counts_by_quiz_id(session=db, quiz_id=quiz.id)
+    counts = question_service.get_question_counts_by_quiz_id(quiz_id=quiz.id)
 
     assert counts["total"] == 3
     assert counts["approved"] == 2
@@ -471,9 +494,10 @@ def test_get_question_counts_empty_quiz(db: Session, user_id: uuid.UUID) -> None
         llm_model="gpt-4o",
         llm_temperature=1,
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz_service = QuizService(db)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
-    counts = crud.get_question_counts_by_quiz_id(session=db, quiz_id=quiz.id)
+    counts = question_service.get_question_counts_by_quiz_id(quiz_id=quiz.id)
 
     assert counts["total"] == 0
     assert counts["approved"] == 0

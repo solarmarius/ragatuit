@@ -12,8 +12,8 @@ from app.database import execute_in_transaction
 from app.deps import SessionDep
 from app.exceptions import ServiceError
 from app.logging_config import get_logger
-from app.models import Message
-from app.services.mcq_generation import MCQGenerationService
+from app.common import Message
+from app.question.mcq_generation_service import MCQGenerationService
 
 from .models import Quiz
 from .schemas import QuizCreate
@@ -915,9 +915,10 @@ def get_quiz_question_stats(
             raise HTTPException(status_code=404, detail="Quiz not found")
 
         # Get question counts
-        from app.crud import get_question_counts_by_quiz_id
+        from app.question.service import QuestionService
 
-        stats = get_question_counts_by_quiz_id(session, quiz_id)
+        question_service = QuestionService(session)
+        stats = question_service.get_question_counts_by_quiz_id(quiz_id)
 
         logger.info(
             "question_stats_retrieval_completed",
@@ -1076,9 +1077,10 @@ async def export_quiz_to_canvas(
             )
 
         # Check if quiz has approved questions
-        from app.crud import get_approved_questions_by_quiz_id
+        from app.question.service import QuestionService
 
-        approved_questions = get_approved_questions_by_quiz_id(session, quiz_id)
+        question_service = QuestionService(session)
+        approved_questions = question_service.get_approved_questions_by_quiz_id(quiz_id)
         if not approved_questions:
             logger.warning(
                 "quiz_export_no_approved_questions",

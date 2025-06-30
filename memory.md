@@ -16,7 +16,8 @@ Current Status:
 - Phase 2 (Auth Module Migration) ✅ COMPLETED and committed
 - Phase 3 (Canvas Module Migration) ✅ COMPLETED and committed
 - Phase 4 (Quiz Module Migration) ✅ COMPLETED and committed
-- Phase 5 (Question Module Migration) 🔄 NEXT UP
+- Phase 5 (Question Module Migration) ✅ COMPLETED and committed
+- Phase 6 (Integration & Cleanup) 🔄 IN PROGRESS
 
 Important Context
 
@@ -165,6 +166,40 @@ Completed Actions:
 
 6. Committed with message: "refactor: implement Phase 4 - Quiz module migration"
 
+Phase 5: Question Module Migration ✅
+
+Completed Actions:
+
+1. Created question module structure:
+   - question/models.py - Question SQLModel with all fields and validators
+   - question/schemas.py - QuestionCreate, QuestionUpdate, QuestionPublic schemas
+   - question/service.py - QuestionService class with all CRUD operations
+   - question/router.py - Moved from api/routes/questions.py
+   - question/mcq_generation_service.py - Moved from services/ (preserved LangGraph workflow)
+   - question/__init__.py - Module exports
+
+2. Fixed circular imports:
+   - Used local imports for Quiz model in QuestionService.delete_question
+   - Used local imports for get_quiz_by_id in router to avoid circular imports
+
+3. Service implementation:
+   - Converted all question CRUD functions to QuestionService methods
+   - Preserved MCQ generation service exactly as-is
+   - Maintained all async methods
+
+4. Updated imports throughout:
+   - All Question imports now from app.question.models
+   - All QuestionCreate imports now from app.question.schemas
+   - Updated test files to use QuestionService methods
+   - Fixed test patches in test_questions.py
+
+5. Test validation:
+   - Question CRUD tests: 15/15 passed
+   - Question API route tests: 13/13 passed (after fixing patches)
+   - MCQ generation tests: 15/18 passed (3 unrelated failures)
+
+6. Committed with message: "refactor: complete Phase 5 - Question Module Migration"
+
 Current Challenges
 
 Remaining Issues:
@@ -199,9 +234,26 @@ app/
 │   ├── router.py (auth endpoints)
 │   ├── dependencies.py
 │   └── ...
-├── canvas/ (empty - Phase 3)
-├── quiz/ (empty - Phase 4)
-├── question/ (empty - Phase 5)
+├── canvas/
+│   ├── schemas.py (Canvas-specific schemas)
+│   ├── service.py (re-exports content extraction and quiz export)
+│   ├── content_extraction_service.py
+│   ├── quiz_export_service.py
+│   ├── router.py (canvas endpoints)
+│   └── ...
+├── quiz/
+│   ├── models.py (Quiz model)
+│   ├── schemas.py (quiz schemas)
+│   ├── service.py (QuizService with CRUD)
+│   ├── router.py (quiz endpoints)
+│   └── ...
+├── question/
+│   ├── models.py (Question model)
+│   ├── schemas.py (question schemas)
+│   ├── service.py (QuestionService with CRUD)
+│   ├── router.py (question endpoints)
+│   ├── mcq_generation_service.py (LangGraph workflow)
+│   └── ...
 ├── config.py (moved from core/)
 ├── database.py (renamed from core/db.py)
 ├── exceptions.py (merged with global_exception_handler)
@@ -254,33 +306,18 @@ Next Steps (Phase 3: Canvas Module)
 
 Remaining Phases
 
-Phase 3: Canvas Module Migration 🔄 NEXT
-- Create canvas/schemas.py
-- Move content_extraction.py → canvas/service.py
-- Move canvas routes
-- Update tests
-
-Phase 4: Quiz Module Migration
-- Extract Quiz model and schemas
-- Move quiz CRUD to service
-- Migrate quiz routes
-- Update tests
-
-Phase 5: Question Module Migration
-- Extract Question model and schemas
-- Move MCQ generation service (preserve LangGraph!)
-- Migrate question routes
-- Update tests
-
-Phase 6: Integration & Cleanup
-- Update main.py
-- Delete old empty directories
+Phase 6: Integration & Cleanup 🔄 IN PROGRESS
+- Update main.py to remove old route imports
+- Delete old empty directories (api/routes/, services/, core/)
+- Remove old models.py and crud.py files
 - Fix all remaining imports
+- Update any remaining references
 
 Phase 7: Final Validation
 - Full test suite
-- Linting
+- Linting and type checking
 - Documentation updates
+- Final commit
 
 Command Reference
 

@@ -5,7 +5,7 @@ from uuid import UUID
 
 import pytest
 
-from app.services.mcq_generation import (
+from app.question.mcq_generation_service import (
     MCQGenerationService,
     MCQGenerationState,
 )

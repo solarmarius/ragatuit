@@ -2,7 +2,7 @@ import uuid
 
 from sqlmodel import Session
 
-from app import crud
+from app.quiz.service import QuizService
 from app.auth.schemas import UserCreate
 from app.auth.service import AuthService
 from app.quiz.schemas import QuizCreate
@@ -28,7 +28,8 @@ def test_create_quiz(db: Session, user_id: uuid.UUID) -> None:
         llm_temperature=llm_temperature,
     )
 
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz_service = QuizService(db)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
     # Check basic fields
     assert quiz.id is not None
@@ -58,7 +59,7 @@ def test_create_quiz_with_defaults(db: Session, user_id: uuid.UUID) -> None:
         # question_count, llm_model, llm_temperature will use defaults
     )
 
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
     # Check default values
     assert quiz.question_count == 100  # Default
@@ -74,9 +75,9 @@ def test_get_quiz_by_id(db: Session, user_id: uuid.UUID) -> None:
         selected_modules={173467: "Module 1"},
         title="Test Quiz",
     )
-    created_quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    created_quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
-    retrieved_quiz = crud.get_quiz_by_id(session=db, quiz_id=created_quiz.id)
+    retrieved_quiz = quiz_service.get_quiz_by_id(quiz_id=created_quiz.id)
 
     assert retrieved_quiz is not None
     assert retrieved_quiz.id == created_quiz.id
@@ -88,14 +89,14 @@ def test_get_quiz_by_id_not_found(db: Session) -> None:
     """Test retrieving a quiz with non-existent ID."""
     non_existent_id = uuid.uuid4()
 
-    quiz = crud.get_quiz_by_id(session=db, quiz_id=non_existent_id)
+    quiz = quiz_service.get_quiz_by_id(quiz_id=non_existent_id)
 
     assert quiz is None
 
 
 def test_get_user_quizzes_empty(db: Session, user_id: uuid.UUID) -> None:
     """Test getting quizzes for user with no quizzes."""
-    quizzes = crud.get_user_quizzes(session=db, user_id=user_id)
+    quizzes = quiz_service.get_user_quizzes(user_id=user_id)
 
     assert quizzes == []
 
@@ -108,9 +109,9 @@ def test_get_user_quizzes_single(db: Session, user_id: uuid.UUID) -> None:
         selected_modules={173467: "Module 1"},
         title="Single Quiz",
     )
-    created_quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    created_quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
-    quizzes = crud.get_user_quizzes(session=db, user_id=user_id)
+    quizzes = quiz_service.get_user_quizzes(user_id=user_id)
 
     assert len(quizzes) == 1
     assert quizzes[0].id == created_quiz.id
@@ -126,7 +127,7 @@ def test_get_user_quizzes_multiple_ordered(db: Session, user_id: uuid.UUID) -> N
         selected_modules={173467: "Module 1"},
         title="First Quiz",
     )
-    first_quiz = crud.create_quiz(session=db, quiz_create=quiz_in_1, owner_id=user_id)
+    first_quiz = quiz_service.create_quiz(quiz_create=quiz_in_1, owner_id=user_id)
 
     # Small delay to ensure different timestamps
     import time
@@ -140,9 +141,9 @@ def test_get_user_quizzes_multiple_ordered(db: Session, user_id: uuid.UUID) -> N
         selected_modules={173468: "Module 2"},
         title="Second Quiz",
     )
-    second_quiz = crud.create_quiz(session=db, quiz_create=quiz_in_2, owner_id=user_id)
+    second_quiz = quiz_service.create_quiz(quiz_create=quiz_in_2, owner_id=user_id)
 
-    quizzes = crud.get_user_quizzes(session=db, user_id=user_id)
+    quizzes = quiz_service.get_user_quizzes(user_id=user_id)
 
     assert len(quizzes) == 2
     # Check that both quizzes are returned
@@ -188,12 +189,12 @@ def test_get_user_quizzes_user_isolation(db: Session, user_id: uuid.UUID) -> Non
     )
 
     # Check first user only sees their quiz
-    first_quizzes = crud.get_user_quizzes(session=db, user_id=user_id)
+    first_quizzes = quiz_service.get_user_quizzes(user_id=user_id)
     assert len(first_quizzes) == 1
     assert first_quizzes[0].id == first_quiz.id
 
     # Check second user only sees their quiz
-    second_quizzes = crud.get_user_quizzes(session=db, user_id=second_user.id)
+    second_quizzes = quiz_service.get_user_quizzes(user_id=second_user.id)
     assert len(second_quizzes) == 1
     assert second_quizzes[0].id == second_quiz.id
 
@@ -207,7 +208,7 @@ def test_quiz_selected_modules_jsonb(db: Session, user_id: uuid.UUID) -> None:
         selected_modules=modules,
         title="Modules Test Quiz",
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
     # Test that modules are stored with string keys
     expected = {str(k): v for k, v in modules.items()}
@@ -230,7 +231,7 @@ def test_quiz_selected_modules_edge_cases(db: Session, user_id: uuid.UUID) -> No
         selected_modules={},  # Empty modules
         title="Edge Case Quiz",
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
     # Test empty modules
     assert quiz.selected_modules == {}
@@ -252,25 +253,25 @@ def test_quiz_field_constraints(db: Session, user_id: uuid.UUID) -> None:
         title="Min Questions Quiz",
         question_count=1,  # Minimum
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
     assert quiz.question_count == 1
 
     # Test maximum question count
     quiz_in.question_count = 200  # Maximum
     quiz_in.title = "Max Questions Quiz"
-    quiz2 = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz2 = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
     assert quiz2.question_count == 200
 
     # Test minimum temperature
     quiz_in.llm_temperature = 0.0  # Minimum
     quiz_in.title = "Min Temp Quiz"
-    quiz3 = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz3 = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
     assert quiz3.llm_temperature == 0.0
 
     # Test maximum temperature
     quiz_in.llm_temperature = 2.0  # Maximum
     quiz_in.title = "Max Temp Quiz"
-    quiz4 = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz4 = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
     assert quiz4.llm_temperature == 2.0
 
 
@@ -283,13 +284,13 @@ def test_quiz_title_handling(db: Session, user_id: uuid.UUID) -> None:
         selected_modules={173467: "Module 1"},
         title="A",  # Single character
     )
-    quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
     assert quiz.title == "A"
 
     # Test title with special characters
     special_title = "Quiz: Machine Learning & AI (2024) - Test #1"
     quiz_in.title = special_title
-    quiz2 = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    quiz2 = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
     assert quiz2.title == special_title
 
 
@@ -305,7 +306,7 @@ def test_quiz_llm_models(db: Session, user_id: uuid.UUID) -> None:
             title=f"Quiz {i}",
             llm_model=model,
         )
-        quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+        quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
         assert quiz.llm_model == model
 
 
@@ -318,18 +319,18 @@ def test_delete_quiz_success(db: Session, user_id: uuid.UUID) -> None:
         selected_modules={173467: "Module 1"},
         title="Quiz to Delete",
     )
-    created_quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    created_quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
     quiz_id = created_quiz.id
 
     # Verify quiz exists
-    assert crud.get_quiz_by_id(session=db, quiz_id=quiz_id) is not None
+    assert quiz_service.get_quiz_by_id(quiz_id=quiz_id) is not None
 
     # Delete the quiz
-    result = crud.delete_quiz(session=db, quiz_id=quiz_id, user_id=user_id)
+    result = quiz_service.delete_quiz(quiz_id=quiz_id, user_id=user_id)
 
     # Verify deletion was successful
     assert result is True
-    assert crud.get_quiz_by_id(session=db, quiz_id=quiz_id) is None
+    assert quiz_service.get_quiz_by_id(quiz_id=quiz_id) is None
 
 
 def test_delete_quiz_not_found(db: Session, user_id: uuid.UUID) -> None:
@@ -337,7 +338,7 @@ def test_delete_quiz_not_found(db: Session, user_id: uuid.UUID) -> None:
     non_existent_id = uuid.uuid4()
 
     # Try to delete non-existent quiz
-    result = crud.delete_quiz(session=db, quiz_id=non_existent_id, user_id=user_id)
+    result = quiz_service.delete_quiz(quiz_id=non_existent_id, user_id=user_id)
 
     # Should return False
     assert result is False
@@ -373,7 +374,7 @@ def test_delete_quiz_unauthorized(db: Session, user_id: uuid.UUID) -> None:
     # Should return False (unauthorized)
     assert result is False
     # Quiz should still exist
-    assert crud.get_quiz_by_id(session=db, quiz_id=first_user_quiz.id) is not None
+    assert quiz_service.get_quiz_by_id(quiz_id=first_user_quiz.id) is not None
 
 
 def test_delete_quiz_with_extracted_content(db: Session, user_id: uuid.UUID) -> None:
@@ -385,7 +386,7 @@ def test_delete_quiz_with_extracted_content(db: Session, user_id: uuid.UUID) -> 
         selected_modules={173467: "Module 1"},
         title="Quiz with Content",
     )
-    created_quiz = crud.create_quiz(session=db, quiz_create=quiz_in, owner_id=user_id)
+    created_quiz = quiz_service.create_quiz(quiz_create=quiz_in, owner_id=user_id)
 
     # Add some extracted content
     created_quiz.extracted_content = {
@@ -398,17 +399,17 @@ def test_delete_quiz_with_extracted_content(db: Session, user_id: uuid.UUID) -> 
     db.commit()
 
     # Verify content exists
-    quiz = crud.get_quiz_by_id(session=db, quiz_id=created_quiz.id)
+    quiz = quiz_service.get_quiz_by_id(quiz_id=created_quiz.id)
     assert quiz is not None
     assert quiz.extracted_content is not None
     assert quiz.content_extraction_status == "completed"
 
     # Delete the quiz
-    result = crud.delete_quiz(session=db, quiz_id=created_quiz.id, user_id=user_id)
+    result = quiz_service.delete_quiz(quiz_id=created_quiz.id, user_id=user_id)
 
     # Verify deletion was successful (including content)
     assert result is True
-    assert crud.get_quiz_by_id(session=db, quiz_id=created_quiz.id) is None
+    assert quiz_service.get_quiz_by_id(quiz_id=created_quiz.id) is None
 
 
 def test_delete_quiz_multiple_users_isolation(db: Session, user_id: uuid.UUID) -> None:
@@ -444,21 +445,21 @@ def test_delete_quiz_multiple_users_isolation(db: Session, user_id: uuid.UUID) -
     )
 
     # Delete first user's quiz
-    result = crud.delete_quiz(session=db, quiz_id=first_quiz.id, user_id=user_id)
+    result = quiz_service.delete_quiz(quiz_id=first_quiz.id, user_id=user_id)
 
     # Verify first user's quiz is deleted
     assert result is True
-    assert crud.get_quiz_by_id(session=db, quiz_id=first_quiz.id) is None
+    assert quiz_service.get_quiz_by_id(quiz_id=first_quiz.id) is None
 
     # Verify second user's quiz is still there
-    remaining_quiz = crud.get_quiz_by_id(session=db, quiz_id=second_quiz.id)
+    remaining_quiz = quiz_service.get_quiz_by_id(quiz_id=second_quiz.id)
     assert remaining_quiz is not None
     assert remaining_quiz.owner_id == second_user.id
     assert remaining_quiz.title == "Second User Quiz"
 
     # Verify user quiz lists are correct
-    first_user_quizzes = crud.get_user_quizzes(session=db, user_id=user_id)
-    second_user_quizzes = crud.get_user_quizzes(session=db, user_id=second_user.id)
+    first_user_quizzes = quiz_service.get_user_quizzes(user_id=user_id)
+    second_user_quizzes = quiz_service.get_user_quizzes(user_id=second_user.id)
 
     assert len(first_user_quizzes) == 0
     assert len(second_user_quizzes) == 1

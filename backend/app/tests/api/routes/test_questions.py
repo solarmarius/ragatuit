@@ -70,7 +70,7 @@ def test_get_quiz_questions_success(
 
     try:
         with (
-            patch("app.crud.get_quiz_by_id", return_value=mock_quiz),
+            patch("app.quiz.service.QuizService.get_quiz_by_id", return_value=mock_quiz),
             patch(
                 "app.question.service.QuestionService.get_questions_by_quiz_id",
                 return_value=[mock_question],
@@ -104,7 +104,7 @@ def test_get_quiz_questions_quiz_not_found(mock_user: User) -> None:
 
     try:
         quiz_id = uuid4()
-        with patch("app.crud.get_quiz_by_id", return_value=None):
+        with patch("app.quiz.service.QuizService.get_quiz_by_id", return_value=None):
             with TestClient(app) as client:
                 response = client.get(f"/api/v1/quiz/{quiz_id}/questions")
 
@@ -140,7 +140,7 @@ def test_get_quiz_questions_access_denied(mock_user: User) -> None:
             llm_temperature=1,
         )
 
-        with patch("app.crud.get_quiz_by_id", return_value=other_user_quiz):
+        with patch("app.quiz.service.QuizService.get_quiz_by_id", return_value=other_user_quiz):
             with TestClient(app) as client:
                 response = client.get(f"/api/v1/quiz/{other_user_quiz.id}/questions")
 
@@ -166,7 +166,7 @@ def test_get_question_success(
 
     try:
         with (
-            patch("app.crud.get_quiz_by_id", return_value=mock_quiz),
+            patch("app.quiz.service.QuizService.get_quiz_by_id", return_value=mock_quiz),
             patch(
                 "app.question.service.QuestionService.get_question_by_id",
                 return_value=mock_question,
@@ -201,7 +201,7 @@ def test_get_question_not_found(mock_user: User, mock_quiz: Quiz) -> None:
     try:
         question_id = uuid4()
         with (
-            patch("app.crud.get_quiz_by_id", return_value=mock_quiz),
+            patch("app.quiz.service.QuizService.get_quiz_by_id", return_value=mock_quiz),
             patch(
                 "app.question.service.QuestionService.get_question_by_id",
                 return_value=None,
@@ -237,7 +237,7 @@ def test_get_question_quiz_mismatch(
         mock_question.quiz_id = other_quiz_id  # Question belongs to different quiz
 
         with (
-            patch("app.crud.get_quiz_by_id", return_value=mock_quiz),
+            patch("app.quiz.service.QuizService.get_quiz_by_id", return_value=mock_quiz),
             patch(
                 "app.question.service.QuestionService.get_question_by_id",
                 return_value=mock_question,
@@ -278,7 +278,7 @@ def test_update_question_success(
         updated_question = Question(**{**mock_question.model_dump(), **update_data})
 
         with (
-            patch("app.crud.get_quiz_by_id", return_value=mock_quiz),
+            patch("app.quiz.service.QuizService.get_quiz_by_id", return_value=mock_quiz),
             patch(
                 "app.question.service.QuestionService.get_question_by_id",
                 return_value=mock_question,
@@ -322,7 +322,7 @@ def test_approve_question_success(
         approved_question.is_approved = True
 
         with (
-            patch("app.crud.get_quiz_by_id", return_value=mock_quiz),
+            patch("app.quiz.service.QuizService.get_quiz_by_id", return_value=mock_quiz),
             patch(
                 "app.question.service.QuestionService.get_question_by_id",
                 return_value=mock_question,
@@ -359,7 +359,7 @@ def test_approve_question_not_found(mock_user: User, mock_quiz: Quiz) -> None:
     try:
         question_id = uuid4()
         with (
-            patch("app.crud.get_quiz_by_id", return_value=mock_quiz),
+            patch("app.quiz.service.QuizService.get_quiz_by_id", return_value=mock_quiz),
             patch(
                 "app.question.service.QuestionService.get_question_by_id",
                 return_value=None,
@@ -392,7 +392,7 @@ def test_delete_question_success(
 
     try:
         with (
-            patch("app.crud.get_quiz_by_id", return_value=mock_quiz),
+            patch("app.quiz.service.QuizService.get_quiz_by_id", return_value=mock_quiz),
             patch(
                 "app.question.service.QuestionService.delete_question",
                 return_value=True,
@@ -425,7 +425,7 @@ def test_delete_question_not_found(mock_user: User, mock_quiz: Quiz) -> None:
     try:
         question_id = uuid4()
         with (
-            patch("app.crud.get_quiz_by_id", return_value=mock_quiz),
+            patch("app.quiz.service.QuizService.get_quiz_by_id", return_value=mock_quiz),
             patch(
                 "app.question.service.QuestionService.delete_question",
                 return_value=False,
@@ -486,7 +486,7 @@ def test_server_error_handling(mock_user: User, mock_quiz: Quiz) -> None:
 
     try:
         with patch(
-            "app.crud.get_quiz_by_id",
+            "app.quiz.service.QuizService.get_quiz_by_id",
             side_effect=Exception("Database error"),
         ):
             with TestClient(app) as client:

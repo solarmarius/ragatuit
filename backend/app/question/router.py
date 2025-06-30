@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from app.api.deps import CurrentUser
 from app.deps import SessionDep
 from app.logging_config import get_logger
-from app.models import Message
+from app.common import Message
 
 from .models import Question
 from .schemas import QuestionPublic, QuestionUpdate
@@ -50,11 +50,12 @@ def get_quiz_questions(
     question_service = QuestionService(session)
 
     try:
-        # Import get_quiz_by_id locally to avoid circular imports
-        from app.crud import get_quiz_by_id
+        # Import QuizService locally to avoid circular imports
+        from app.quiz.service import QuizService
 
         # Verify quiz exists and user owns it
-        quiz = get_quiz_by_id(session, quiz_id)
+        quiz_service = QuizService(session)
+        quiz = quiz_service.get_quiz_by_id(quiz_id)
         if not quiz:
             logger.warning(
                 "quiz_questions_quiz_not_found",
@@ -136,11 +137,12 @@ def get_question(
     question_service = QuestionService(session)
 
     try:
-        # Import get_quiz_by_id locally to avoid circular imports
-        from app.crud import get_quiz_by_id
+        # Import QuizService locally to avoid circular imports
+        from app.quiz.service import QuizService
 
         # Verify quiz exists and user owns it
-        quiz = get_quiz_by_id(session, quiz_id)
+        quiz_service = QuizService(session)
+        quiz = quiz_service.get_quiz_by_id(quiz_id)
         if not quiz:
             logger.warning(
                 "question_quiz_not_found",
@@ -248,11 +250,12 @@ def update_quiz_question(
     question_service = QuestionService(session)
 
     try:
-        # Import get_quiz_by_id locally to avoid circular imports
-        from app.crud import get_quiz_by_id
+        # Import QuizService locally to avoid circular imports
+        from app.quiz.service import QuizService
 
         # Verify quiz exists and user owns it
-        quiz = get_quiz_by_id(session, quiz_id)
+        quiz_service = QuizService(session)
+        quiz = quiz_service.get_quiz_by_id(quiz_id)
         if not quiz:
             logger.warning(
                 "question_update_quiz_not_found",
@@ -363,11 +366,12 @@ def approve_quiz_question(
     question_service = QuestionService(session)
 
     try:
-        # Import get_quiz_by_id locally to avoid circular imports
-        from app.crud import get_quiz_by_id
+        # Import QuizService locally to avoid circular imports
+        from app.quiz.service import QuizService
 
         # Verify quiz exists and user owns it
-        quiz = get_quiz_by_id(session, quiz_id)
+        quiz_service = QuizService(session)
+        quiz = quiz_service.get_quiz_by_id(quiz_id)
         if not quiz:
             logger.warning(
                 "question_approval_quiz_not_found",
@@ -475,11 +479,12 @@ def delete_quiz_question(
     question_service = QuestionService(session)
 
     try:
-        # Import get_quiz_by_id locally to avoid circular imports
-        from app.crud import get_quiz_by_id
+        # Import QuizService locally to avoid circular imports
+        from app.quiz.service import QuizService
 
         # Verify quiz exists and user owns it
-        quiz = get_quiz_by_id(session, quiz_id)
+        quiz_service = QuizService(session)
+        quiz = quiz_service.get_quiz_by_id(quiz_id)
         if not quiz:
             logger.warning(
                 "question_deletion_quiz_not_found",

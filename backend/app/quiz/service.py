@@ -1,6 +1,6 @@
 """Quiz service for business logic."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -55,6 +55,7 @@ class QuizService:
             question_count=quiz_create.question_count,
             llm_model=quiz_create.llm_model,
             llm_temperature=quiz_create.llm_temperature,
+            updated_at=datetime.now(timezone.utc),
         )
 
         self.session.add(quiz)
