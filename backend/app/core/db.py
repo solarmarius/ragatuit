@@ -8,9 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engin
 from sqlalchemy.pool import NullPool, QueuePool
 from sqlmodel import Session, select
 
-from app import crud
 from app.auth.models import User
 from app.auth.schemas import UserCreate
+from app.auth.service import AuthService
 from app.core.config import settings
 from app.core.logging_config import get_logger
 
@@ -336,4 +336,5 @@ def init_db(session: Session) -> None:
             access_token="test_token",
             refresh_token="refresh_test_token",
         )
-        user = crud.create_user(session=session, user_create=user_in)
+        auth_service = AuthService(session)
+        user = auth_service.create_user(user_in)

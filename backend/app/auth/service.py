@@ -15,7 +15,6 @@ from app.encryption import token_encryption
 from app.exceptions import AuthenticationError, ExternalServiceError
 from app.logging_config import get_logger
 from app.retry import retry_on_failure
-from app.services.url_builder import CanvasURLBuilder
 
 from .models import User
 from .schemas import UserCreate
@@ -230,8 +229,10 @@ async def refresh_canvas_token(user: User, session: Session) -> None:
     refresh_token = auth_service.get_decrypted_refresh_token(user)
 
     # Prepare refresh request
-    url_builder = CanvasURLBuilder(settings.CANVAS_BASE_URL)
-    refresh_url = url_builder.build_oauth_token_url()
+    from app.canvas.url_builder import CanvasURLBuilder
+
+    url_builder = CanvasURLBuilder(str(settings.CANVAS_BASE_URL))
+    refresh_url = url_builder.oauth_token_url()
 
     refresh_data = {
         "grant_type": "refresh_token",

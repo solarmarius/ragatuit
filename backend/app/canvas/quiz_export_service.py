@@ -15,7 +15,8 @@ from app.exceptions import (
 from app.logging_config import get_logger
 from app.models import Question
 from app.retry import retry_on_failure
-from app.services.url_builder import CanvasURLBuilder
+
+from .url_builder import CanvasURLBuilder
 
 logger = get_logger("canvas_quiz_export")
 

@@ -1,13 +1,19 @@
+"""
+Canvas API routes.
+"""
+
 from typing import Any
 
 import httpx
 from fastapi import APIRouter, HTTPException
 
-from app.api.deps import CanvasToken, CurrentUser
+from app.api.deps import CanvasToken
+from app.auth.dependencies import CurrentUser
 from app.config import settings
 from app.logging_config import get_logger
-from app.models import CanvasCourse, CanvasModule
-from app.services.url_builder import CanvasURLBuilder
+
+from .schemas import CanvasCourse, CanvasModule
+from .url_builder import CanvasURLBuilder
 
 router = APIRouter(prefix="/canvas", tags=["canvas"])
 logger = get_logger("canvas")

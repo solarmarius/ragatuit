@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from app.services.content_extraction import ContentExtractionService
+from app.canvas.content_extraction_service import ContentExtractionService
 
 
 class TestContentExtractionPDF:

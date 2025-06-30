@@ -126,16 +126,6 @@ class CanvasConfigResponse(SQLModel):
     scope: str
 
 
-class CanvasCourse(SQLModel):
-    id: int
-    name: str
-
-
-class CanvasModule(SQLModel):
-    id: int
-    name: str
-
-
 class Question(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     quiz_id: uuid.UUID = Field(

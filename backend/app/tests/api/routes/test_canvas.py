@@ -10,8 +10,8 @@ from httpx import ASGITransport, AsyncClient
 
 from app.api import deps
 from app.auth.models import User
+from app.canvas.schemas import CanvasCourse, CanvasModule
 from app.main import app
-from app.models import CanvasCourse, CanvasModule
 
 
 @pytest.mark.asyncio
@@ -82,7 +82,7 @@ async def test_get_courses_success() -> None:
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
     app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
 
-    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+    with patch("app.canvas.router.httpx.AsyncClient") as mock_httpx:
         # Mock Canvas API response
         mock_response = MagicMock()
         mock_response.json.return_value = mock_canvas_courses
@@ -160,7 +160,7 @@ async def test_get_courses_no_teacher_enrollments() -> None:
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
     app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
 
-    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+    with patch("app.canvas.router.httpx.AsyncClient") as mock_httpx:
         mock_response = MagicMock()
         mock_response.json.return_value = mock_canvas_courses
         mock_response.raise_for_status.return_value = None
@@ -239,7 +239,7 @@ async def test_get_courses_canvas_unauthorized() -> None:
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
     app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
 
-    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+    with patch("app.canvas.router.httpx.AsyncClient") as mock_httpx:
         # Mock Canvas API 401 response
         mock_response = MagicMock()
         mock_response.status_code = 401
@@ -286,7 +286,7 @@ async def test_get_courses_canvas_api_error() -> None:
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
     app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
 
-    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+    with patch("app.canvas.router.httpx.AsyncClient") as mock_httpx:
         # Mock Canvas API 500 response
         mock_response = MagicMock()
         mock_response.status_code = 500
@@ -336,7 +336,7 @@ async def test_get_courses_network_error() -> None:
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
     app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
 
-    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+    with patch("app.canvas.router.httpx.AsyncClient") as mock_httpx:
         # Mock network error
         mock_request_error = httpx.RequestError("Connection failed")
 
@@ -406,7 +406,7 @@ async def test_get_courses_malformed_canvas_data() -> None:
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
     app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
 
-    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+    with patch("app.canvas.router.httpx.AsyncClient") as mock_httpx:
         mock_response = MagicMock()
         mock_response.json.return_value = mock_canvas_courses
         mock_response.raise_for_status.return_value = None
@@ -491,7 +491,7 @@ async def test_get_file_info_success() -> None:
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
     app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
 
-    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+    with patch("app.canvas.router.httpx.AsyncClient") as mock_httpx:
         mock_response = MagicMock()
         mock_response.json.return_value = mock_file_data
         mock_response.raise_for_status.return_value = None
@@ -596,7 +596,7 @@ async def test_get_file_info_canvas_errors() -> None:
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
     app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
 
-    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+    with patch("app.canvas.router.httpx.AsyncClient") as mock_httpx:
         mock_client = AsyncMock()
         mock_httpx.return_value.__aenter__.return_value = mock_client
 
@@ -707,7 +707,7 @@ async def test_get_file_info_invalid_response() -> None:
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
     app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
 
-    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+    with patch("app.canvas.router.httpx.AsyncClient") as mock_httpx:
         mock_response = MagicMock()
         mock_response.json.return_value = (
             "invalid_response_format"  # String instead of dict
@@ -810,7 +810,7 @@ async def test_get_course_modules_success() -> None:
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
     app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
 
-    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+    with patch("app.canvas.router.httpx.AsyncClient") as mock_httpx:
         # Mock Canvas API response
         mock_response = MagicMock()
         mock_response.json.return_value = mock_canvas_modules
@@ -881,7 +881,7 @@ async def test_get_course_modules_empty_course() -> None:
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
     app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
 
-    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+    with patch("app.canvas.router.httpx.AsyncClient") as mock_httpx:
         mock_response = MagicMock()
         mock_response.json.return_value = mock_canvas_modules
         mock_response.raise_for_status.return_value = None
@@ -926,7 +926,7 @@ async def test_get_course_modules_unauthorized() -> None:
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
     app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
 
-    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+    with patch("app.canvas.router.httpx.AsyncClient") as mock_httpx:
         # Mock Canvas API 403 response
         mock_response = MagicMock()
         mock_response.status_code = 403
@@ -1000,7 +1000,7 @@ async def test_get_course_modules_malformed_data() -> None:
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
     app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
 
-    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+    with patch("app.canvas.router.httpx.AsyncClient") as mock_httpx:
         mock_response = MagicMock()
         mock_response.json.return_value = mock_canvas_modules
         mock_response.raise_for_status.return_value = None
@@ -1051,7 +1051,7 @@ async def test_get_course_modules_canvas_token_expired() -> None:
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
     app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
 
-    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+    with patch("app.canvas.router.httpx.AsyncClient") as mock_httpx:
         # Mock Canvas API 401 response
         mock_response = MagicMock()
         mock_response.status_code = 401
@@ -1100,7 +1100,7 @@ async def test_get_course_modules_network_error() -> None:
     app.dependency_overrides[deps.get_current_user] = mock_get_current_user
     app.dependency_overrides[deps.get_canvas_token] = mock_get_canvas_token
 
-    with patch("app.api.routes.canvas.httpx.AsyncClient") as mock_httpx:
+    with patch("app.canvas.router.httpx.AsyncClient") as mock_httpx:
         # Mock network error
         mock_request_error = httpx.RequestError("Connection failed")
 

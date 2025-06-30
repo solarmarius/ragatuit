@@ -5,11 +5,11 @@ from fastapi import HTTPException
 from jose import jwt
 from sqlmodel import Session
 
-from app import crud
+from app.auth.canvas_auth import refresh_canvas_token
 from app.auth.models import User
+from app.auth.service import AuthService
 from app.config import settings
 from app.encryption import token_encryption
-from app.services.canvas_auth import refresh_canvas_token
 
 ALGORITHM = "HS256"
 
@@ -39,7 +39,8 @@ async def ensure_valid_canvas_token(session: Session, user: User) -> str:
             except HTTPException as e:
                 if e.status_code == 401:
                     # Invalid canvas token - clear and force re-login
-                    crud.clear_user_tokens(session, user)
+                    auth_service = AuthService(session)
+                    auth_service.clear_user_tokens(user)
                     raise HTTPException(
                         status_code=401,
                         detail="Canvas session expired, Please re-login.",
@@ -50,4 +51,5 @@ async def ensure_valid_canvas_token(session: Session, user: User) -> str:
                         detail="Canvas temporarily unavailable. Please try again.",
                     )
 
-    return crud.get_decrypted_access_token(user)
+    auth_service = AuthService(session)
+    return auth_service.get_decrypted_access_token(user)

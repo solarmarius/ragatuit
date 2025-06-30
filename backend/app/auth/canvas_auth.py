@@ -3,13 +3,12 @@ from datetime import datetime, timedelta, timezone
 import httpx
 from sqlmodel import Session
 
-from app import crud
 from app.auth.models import User
+from app.auth.service import AuthService
 from app.config import settings
 from app.exceptions import AuthenticationError, ExternalServiceError
 from app.logging_config import get_logger
 from app.retry import retry_on_failure
-from app.services.url_builder import CanvasURLBuilder
 
 logger = get_logger("canvas_auth_service")
 
@@ -45,7 +44,8 @@ async def refresh_canvas_token(user: User, session: Session) -> None:
         )
 
     try:
-        refresh_token = crud.get_decrypted_refresh_token(user)
+        auth_service = AuthService(session)
+        refresh_token = auth_service.get_decrypted_refresh_token(user)
         if not refresh_token:
             logger.error(
                 "token_refresh_failed_decryption_error",
@@ -60,6 +60,8 @@ async def refresh_canvas_token(user: User, session: Session) -> None:
         base_url = str(settings.CANVAS_BASE_URL)
         if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
             base_url = str(settings.CANVAS_MOCK_URL)
+        from app.canvas.url_builder import CanvasURLBuilder
+
         url_builder = CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
 
         token_url = url_builder.oauth_token_url()
@@ -93,8 +95,7 @@ async def refresh_canvas_token(user: User, session: Session) -> None:
                 seconds=token_response["expires_in"]
             )
 
-        crud.update_user_tokens(
-            session=session,
+        auth_service.update_user_tokens(
             user=user,
             access_token=token_response["access_token"],
             expires_at=expires_at,

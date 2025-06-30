@@ -1,6 +1,6 @@
 import pytest
 
-from app.services.url_builder import CanvasURLBuilder
+from app.canvas.url_builder import CanvasURLBuilder
 
 
 @pytest.fixture

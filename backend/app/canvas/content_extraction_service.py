@@ -11,7 +11,8 @@ from app.config import settings
 from app.exceptions import ExternalServiceError
 from app.logging_config import get_logger
 from app.retry import retry_on_failure
-from app.services.url_builder import CanvasURLBuilder
+
+from .url_builder import CanvasURLBuilder
 
 logger = get_logger("content_extraction")
 

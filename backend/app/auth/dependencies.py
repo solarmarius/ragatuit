@@ -67,9 +67,7 @@ def get_current_user(
     """
     token = credentials.credentials
     try:
-        payload = jwt.decode(
-            token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM]
-        )
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
         token_data = TokenPayload(**payload)
     except (InvalidTokenError, ValidationError):
         logger.warning("invalid_jwt_token", error="Token validation failed")
@@ -87,7 +85,9 @@ def get_current_user(
 
     # Get user from database
     auth_service = AuthService(session)
-    user = auth_service.get_user_by_id(token_data.sub)
+    from uuid import UUID
+
+    user = auth_service.get_user_by_id(UUID(token_data.sub))
     if not user:
         logger.warning("user_not_found", user_id=token_data.sub)
         raise HTTPException(

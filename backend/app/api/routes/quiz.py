@@ -6,7 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from sqlmodel import select
 
 from app.api.deps import CanvasToken, CurrentUser
-from app.core.dependencies import ServiceContainer
+from app.canvas.service import CanvasQuizExportService, ContentExtractionService
 from app.crud import (
     create_quiz,
     delete_quiz,
@@ -21,6 +21,7 @@ from app.deps import SessionDep
 from app.exceptions import ServiceError
 from app.logging_config import get_logger
 from app.models import Message, Quiz, QuizCreate
+from app.services.mcq_generation import MCQGenerationService
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
 logger = get_logger("quiz")
@@ -342,9 +343,7 @@ async def extract_content_for_quiz(
 
     # === Slow I/O Operation (occurs outside any transaction) ===
     try:
-        extraction_service = ServiceContainer.get_content_extraction_service(
-            canvas_token, course_id
-        )
+        extraction_service = ContentExtractionService(canvas_token, course_id)
         extracted_content = await extraction_service.extract_content_for_modules(
             module_ids
         )
@@ -472,7 +471,7 @@ async def generate_questions_for_quiz(
 
     # === Slow I/O Operation (occurs outside any transaction) ===
     try:
-        mcq_service = ServiceContainer.get_mcq_generation_service()
+        mcq_service = MCQGenerationService()
         results = await mcq_service.generate_mcqs_for_quiz(
             quiz_id=quiz_id,
             target_question_count=target_question_count,
@@ -954,7 +953,7 @@ async def export_quiz_to_canvas_background(quiz_id: UUID, canvas_token: str) -> 
 
     try:
         # Initialize Canvas export service
-        export_service = ServiceContainer.get_canvas_quiz_export_service(canvas_token)
+        export_service = CanvasQuizExportService(canvas_token)
 
         # Export quiz to Canvas
         result = await export_service.export_quiz_to_canvas(quiz_id)

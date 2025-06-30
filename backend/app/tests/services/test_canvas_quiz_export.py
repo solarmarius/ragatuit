@@ -7,13 +7,13 @@ import httpx
 import pytest
 
 from app.auth.models import User
+from app.canvas.quiz_export_service import CanvasQuizExportService
 from app.exceptions import (
     ExternalServiceError,
     ResourceNotFoundError,
     ValidationError,
 )
 from app.models import Question, Quiz
-from app.services.canvas_quiz_export import CanvasQuizExportService
 
 
 @pytest.fixture

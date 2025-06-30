@@ -145,7 +145,7 @@ def test_create_access_token_different_subjects() -> None:
     import uuid
 
     test_uuid = uuid.uuid4()
-    token3 = create_access_token(test_uuid, expires_delta)
+    token3 = create_access_token(str(test_uuid), expires_delta)
     payload3 = jwt.decode(token3, settings.SECRET_KEY, algorithms=[security.ALGORITHM])
     assert payload3["sub"] == str(test_uuid)
 

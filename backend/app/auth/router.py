@@ -14,7 +14,6 @@ from app.config import settings
 from app.deps import SessionDep
 from app.logging_config import get_logger
 from app.middleware.logging import add_user_to_logs
-from app.services.url_builder import CanvasURLBuilder
 
 from .dependencies import CurrentUser, get_auth_service
 from .schemas import UserCreate
@@ -136,6 +135,8 @@ async def auth_canvas(session: SessionDep, request: Request) -> RedirectResponse
         base_url = str(settings.CANVAS_BASE_URL)
         if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
             base_url = str(settings.CANVAS_MOCK_URL)
+        from app.canvas.url_builder import CanvasURLBuilder
+
         url_builder = CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
 
         token_data = {
@@ -312,6 +313,8 @@ async def logout_canvas(
             base_url = str(settings.CANVAS_BASE_URL)
             if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
                 base_url = str(settings.CANVAS_MOCK_URL)
+            from app.canvas.url_builder import CanvasURLBuilder
+
             url_builder = CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
 
             async with httpx.AsyncClient() as client:
