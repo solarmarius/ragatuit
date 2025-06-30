@@ -1,4 +1,3 @@
-from collections.abc import Generator
 from typing import Annotated
 
 import jwt
@@ -6,128 +5,22 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
-from sqlmodel import Session
 
 from app import security
+from app.auth import CurrentUser, User, get_current_user
 from app.config import settings
-from app.database import get_session
-from app.models import TokenPayload, User
+from app.deps import SessionDep
 from app.security import ensure_valid_canvas_token
 
 reusable_oauth2 = HTTPBearer()
-
-
-def get_db() -> Generator[Session, None, None]:
-    """
-    FastAPI dependency that provides database sessions.
-
-    Creates and manages database sessions for API endpoints using SQLModel/SQLAlchemy.
-    Ensures proper session lifecycle with automatic cleanup and connection management.
-
-    **Yields:**
-        Session: SQLModel database session ready for CRUD operations
-
-    **Lifecycle:**
-    1. Creates new database session from engine connection pool
-    2. Yields session to the requesting endpoint/dependency
-    3. Automatically closes session when request completes (success or error)
-    4. Returns connection to pool for reuse
-
-    **Usage as Dependency:**
-        >>> @router.get("/users/{user_id}")
-        >>> def get_user(user_id: int, session: SessionDep):
-        ...     return session.get(User, user_id)
-
-    **Error Handling:**
-    - Session automatically rolls back on unhandled exceptions
-    - Connection automatically returns to pool on any exit
-    - No manual session management required in endpoints
-
-    **Performance:**
-    - Uses connection pooling for efficient database access
-    - Session per request pattern ensures isolation
-    - Automatic cleanup prevents connection leaks
-
-    **Thread Safety:**
-    Each request gets its own session instance, ensuring thread safety.
-    """
-    with get_session() as session:
-        yield session
-
-
-SessionDep = Annotated[Session, Depends(get_db)]
 TokenDep = Annotated[HTTPAuthorizationCredentials, Depends(reusable_oauth2)]
 
 
-def get_current_user(session: SessionDep, credentials: TokenDep) -> User:
-    """
-    FastAPI dependency that validates JWT tokens and returns the authenticated user.
+# Re-export from auth module for backward compatibility
+# CurrentUser is already defined in auth.dependencies
 
-    Extracts and validates JWT tokens from Authorization headers, then loads the
-    corresponding user from the database. This is the core authentication dependency
-    used by all protected API endpoints.
-
-    **Parameters:**
-        session (SessionDep): Database session from get_db() dependency
-        credentials (TokenDep): HTTP Bearer token from Authorization header
-
-    **Returns:**
-        User: Authenticated user object from database
-
-    **Authentication Flow:**
-    1. Extracts JWT token from 'Authorization: Bearer <token>' header
-    2. Validates token signature using application SECRET_KEY
-    3. Decodes token payload and validates structure (exp, sub fields)
-    4. Looks up user in database using token subject (user UUID)
-    5. Returns user object if found
-
-    **Usage as Dependency:**
-        >>> @router.get("/protected")
-        >>> def protected_endpoint(current_user: CurrentUser):
-        ...     return {"user": current_user.name}
-
-    **Raises:**
-        HTTPException: 403 Forbidden if token is invalid, expired, or malformed
-        HTTPException: 404 Not Found if token is valid but user doesn't exist
-
-    **Token Validation:**
-    - Verifies HMAC-SHA256 signature to prevent tampering
-    - Checks expiration timestamp to prevent stale token usage
-    - Validates token structure and required fields
-    - Ensures user still exists in database
-
-    **Security Considerations:**
-    - Tokens cannot be forged without the SECRET_KEY
-    - Expired tokens are automatically rejected
-    - User deletion invalidates all tokens for that user
-    - No session state - purely token-based authentication
-
-    **Error Scenarios:**
-    - Malformed JWT: 403 Forbidden
-    - Invalid signature: 403 Forbidden
-    - Expired token: 403 Forbidden
-    - Valid token, deleted user: 404 Not Found
-    - Missing Authorization header: Handled by HTTPBearer dependency
-    """
-    try:
-        payload = jwt.decode(
-            credentials.credentials,
-            settings.SECRET_KEY,
-            algorithms=[security.ALGORITHM],
-        )
-        token_data = TokenPayload(**payload)
-    except (InvalidTokenError, ValidationError):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Could not validate credentials",
-        )
-    user = session.get(User, token_data.sub)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user
-
-
-CurrentUser = Annotated[User, Depends(get_current_user)]
+# Re-export CurrentUser from auth module
+__all__ = ["SessionDep", "TokenDep", "CurrentUser", "CanvasToken", "get_canvas_token"]
 
 
 async def get_canvas_token(current_user: CurrentUser, session: SessionDep) -> str:

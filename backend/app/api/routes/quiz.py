@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from sqlmodel import select
 
-from app.api.deps import CanvasToken, CurrentUser, SessionDep
+from app.api.deps import CanvasToken, CurrentUser
 from app.core.dependencies import ServiceContainer
 from app.crud import (
     create_quiz,
@@ -17,6 +17,7 @@ from app.crud import (
     get_user_quizzes,
 )
 from app.database import execute_in_transaction
+from app.deps import SessionDep
 from app.exceptions import ServiceError
 from app.logging_config import get_logger
 from app.models import Message, Quiz, QuizCreate

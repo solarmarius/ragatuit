@@ -1,56 +1,17 @@
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import field_validator
 from sqlalchemy import Column, DateTime, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
 
-
-class UserCreate(SQLModel):
-    canvas_id: int = Field()
-    name: str = Field()
-    access_token: str = Field()
-    refresh_token: str = Field()
+if TYPE_CHECKING:
+    from app.auth.models import User
 
 
-class TokenUpdate(SQLModel):
-    access_token: str = Field(default=None)
-    refresh_token: str = Field(default=None)
-    expires_at: datetime | None = Field(default=None)
-
-
-class User(SQLModel, table=True):
-    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    canvas_id: int = Field(unique=True, index=True)
-    name: str | None = Field(default=None, max_length=255)
-    created_at: datetime | None = Field(
-        default=None,
-        sa_column=Column(
-            DateTime(timezone=True), server_default=func.now(), nullable=True
-        ),
-    )
-    updated_at: datetime | None = Field(
-        default=None,
-        sa_column=Column(
-            DateTime(timezone=True),
-            onupdate=func.now(),
-            nullable=True,
-        ),
-    )
-    access_token: str = Field(description="Canvas access token")
-    refresh_token: str = Field(description="Canvas refresh token")
-    # 1 hour expiration from Canvas
-    expires_at: datetime | None = Field(
-        default_factory=lambda: datetime.now(timezone.utc) + timedelta(hours=1),
-        sa_column=Column(DateTime(timezone=True), nullable=True),
-    )
-    token_type: str = Field(default="Bearer")
-    onboarding_completed: bool = Field(
-        default=False, description="Whether user has completed onboarding"
-    )
-    quizzes: list["Quiz"] = Relationship(back_populates="owner", cascade_delete=True)
+# User models moved to app.auth.models and app.auth.schemas
 
 
 class Quiz(SQLModel, table=True):
@@ -58,7 +19,7 @@ class Quiz(SQLModel, table=True):
     owner_id: uuid.UUID = Field(
         foreign_key="user.id", nullable=False, ondelete="CASCADE", index=True
     )
-    owner: User | None = Relationship(back_populates="quizzes")
+    owner: Optional["User"] = Relationship(back_populates="quizzes")
     canvas_course_id: int = Field(index=True)
     canvas_course_name: str
     selected_modules: dict[str, str] = Field(
@@ -78,21 +39,21 @@ class Quiz(SQLModel, table=True):
         description="Status of LLM generation: pending, processing, completed, failed",
         index=True,
     )
-    extracted_content: dict[str, Any] | None = Field(
+    extracted_content: Optional[dict[str, Any]] = Field(
         default=None, sa_column=Column(JSONB, nullable=True)
     )
-    content_extracted_at: datetime | None = Field(
+    content_extracted_at: Optional[datetime] = Field(
         default=None,
         description="Timestamp when content extraction was completed",
         sa_column=Column(DateTime(timezone=True), nullable=True),
     )
-    created_at: datetime | None = Field(
+    created_at: Optional[datetime] = Field(
         default=None,
         sa_column=Column(
             DateTime(timezone=True), server_default=func.now(), nullable=True
         ),
     )
-    updated_at: datetime | None = Field(
+    updated_at: Optional[datetime] = Field(
         default=None,
         sa_column=Column(
             DateTime(timezone=True),
@@ -100,7 +61,7 @@ class Quiz(SQLModel, table=True):
             nullable=True,
         ),
     )
-    canvas_quiz_id: str | None = Field(
+    canvas_quiz_id: Optional[str] = Field(
         default=None, description="Canvas quiz assignment ID after export"
     )
     export_status: str = Field(
@@ -108,7 +69,7 @@ class Quiz(SQLModel, table=True):
         description="Status of Canvas export: pending, processing, completed, failed",
         index=True,
     )
-    exported_at: datetime | None = Field(
+    exported_at: Optional[datetime] = Field(
         sa_column=Column(DateTime(timezone=True), nullable=True),
         default=None,
         description="Timestamp when quiz was exported to Canvas",
@@ -130,7 +91,7 @@ class Quiz(SQLModel, table=True):
         return v
 
     @field_validator("extracted_content")
-    def validate_extracted_content(cls, v: Any) -> dict[str, Any] | None:
+    def validate_extracted_content(cls, v: Any) -> Optional[dict[str, Any]]:
         """Validate extracted content structure."""
         if v is not None and not isinstance(v, dict):
             raise ValueError("extracted_content must be a dictionary")
@@ -147,18 +108,7 @@ class QuizCreate(SQLModel):
     llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
 
 
-class UserPublic(SQLModel):
-    name: str
-    onboarding_completed: bool
-
-
-class UserUpdateMe(SQLModel):
-    name: str
-    onboarding_completed: bool | None = Field(default=None)
-
-
-class TokenPayload(SQLModel):
-    sub: str | None = None
+# Auth schemas moved to app.auth.schemas
 
 
 # Generic message
@@ -166,16 +116,7 @@ class Message(SQLModel):
     message: str
 
 
-# Request/Response Models
-class CanvasAuthRequest(SQLModel):
-    code: str
-    state: str | None = None
-    canvas_base_url: str
-
-
-class CanvasAuthResponse(SQLModel):
-    access_token: str
-    user: dict[str, Any]
+# Canvas auth schemas moved to app.auth.schemas
 
 
 class CanvasConfigResponse(SQLModel):
@@ -200,7 +141,7 @@ class Question(SQLModel, table=True):
     quiz_id: uuid.UUID = Field(
         foreign_key="quiz.id", nullable=False, ondelete="CASCADE", index=True
     )
-    quiz: Quiz | None = Relationship(back_populates="questions")
+    quiz: Optional[Quiz] = Relationship(back_populates="questions")
     question_text: str = Field(min_length=1, max_length=2000)
     option_a: str = Field(min_length=1, max_length=500)
     option_b: str = Field(min_length=1, max_length=500)
@@ -210,18 +151,18 @@ class Question(SQLModel, table=True):
     is_approved: bool = Field(
         default=False, description="Whether question is approved", index=True
     )
-    approved_at: datetime | None = Field(
+    approved_at: Optional[datetime] = Field(
         sa_column=Column(DateTime(timezone=True), nullable=True),
         default=None,
         description="Timestamp when question was approved",
     )
-    created_at: datetime | None = Field(
+    created_at: Optional[datetime] = Field(
         default=None,
         sa_column=Column(
             DateTime(timezone=True), server_default=func.now(), nullable=True
         ),
     )
-    updated_at: datetime | None = Field(
+    updated_at: Optional[datetime] = Field(
         default=None,
         sa_column=Column(
             DateTime(timezone=True),
@@ -229,7 +170,7 @@ class Question(SQLModel, table=True):
             nullable=True,
         ),
     )
-    canvas_item_id: str | None = Field(
+    canvas_item_id: Optional[str] = Field(
         default=None, description="Canvas quiz item ID after export"
     )
 
@@ -245,12 +186,12 @@ class QuestionCreate(SQLModel):
 
 
 class QuestionUpdate(SQLModel):
-    question_text: str | None = Field(default=None, min_length=1, max_length=2000)
-    option_a: str | None = Field(default=None, min_length=1, max_length=500)
-    option_b: str | None = Field(default=None, min_length=1, max_length=500)
-    option_c: str | None = Field(default=None, min_length=1, max_length=500)
-    option_d: str | None = Field(default=None, min_length=1, max_length=500)
-    correct_answer: str | None = Field(
+    question_text: Optional[str] = Field(default=None, min_length=1, max_length=2000)
+    option_a: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    option_b: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    option_c: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    option_d: Optional[str] = Field(default=None, min_length=1, max_length=500)
+    correct_answer: Optional[str] = Field(
         default=None, regex=r"^[ABCD]$", description="Must be A, B, C, or D"
     )
 
@@ -265,7 +206,7 @@ class QuestionPublic(SQLModel):
     option_d: str
     correct_answer: str
     is_approved: bool
-    approved_at: datetime | None
-    created_at: datetime | None
-    updated_at: datetime | None
-    canvas_item_id: str | None
+    approved_at: Optional[datetime]
+    created_at: Optional[datetime]
+    updated_at: Optional[datetime]
+    canvas_item_id: Optional[str]

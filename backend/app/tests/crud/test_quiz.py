@@ -3,7 +3,9 @@ import uuid
 from sqlmodel import Session
 
 from app import crud
-from app.models import QuizCreate, UserCreate
+from app.auth.schemas import UserCreate
+from app.auth.service import AuthService
+from app.models import QuizCreate
 
 
 def test_create_quiz(db: Session, user_id: uuid.UUID) -> None:
@@ -161,7 +163,7 @@ def test_get_user_quizzes_user_isolation(db: Session, user_id: uuid.UUID) -> Non
         access_token="second_access_token",
         refresh_token="second_refresh_token",
     )
-    second_user = crud.create_user(session=db, user_create=second_user_in)
+    second_user = AuthService(db).create_user(second_user_in)
 
     # Create quiz for first user
     quiz_in_first = QuizCreate(
@@ -350,7 +352,7 @@ def test_delete_quiz_unauthorized(db: Session, user_id: uuid.UUID) -> None:
         access_token="second_access_token",
         refresh_token="second_refresh_token",
     )
-    second_user = crud.create_user(session=db, user_create=second_user_in)
+    second_user = AuthService(db).create_user(second_user_in)
 
     # Create a quiz owned by the first user
     quiz_in = QuizCreate(
@@ -418,7 +420,7 @@ def test_delete_quiz_multiple_users_isolation(db: Session, user_id: uuid.UUID) -
         access_token="second_access_token",
         refresh_token="second_refresh_token",
     )
-    second_user = crud.create_user(session=db, user_create=second_user_in)
+    second_user = AuthService(db).create_user(second_user_in)
 
     # Create quizzes for both users
     first_quiz_in = QuizCreate(

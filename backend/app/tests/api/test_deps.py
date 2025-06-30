@@ -7,10 +7,14 @@ from jose import jwt
 from sqlmodel import Session
 
 from app import crud
-from app.api.deps import get_canvas_token, get_current_user, get_db
+from app.api.deps import get_canvas_token
+from app.auth import get_current_user
+from app.auth.schemas import UserCreate
+from app.auth.service import AuthService
+from app.auth.utils import create_access_token
 from app.config import settings
-from app.models import UserCreate
-from app.security import ALGORITHM, create_access_token
+from app.deps import get_db
+from app.security import ALGORITHM
 
 
 def test_get_db() -> None:
@@ -37,7 +41,7 @@ def test_get_current_user_valid_token(db: Session) -> None:
         access_token="test_token",
         refresh_token="refresh_token",
     )
-    user = crud.create_user(session=db, user_create=user_in)
+    user = AuthService(db).create_user(user_in)
 
     # Create valid JWT token
     token = create_access_token(
@@ -160,7 +164,7 @@ async def test_get_canvas_token_valid(db: Session) -> None:
         access_token="valid_canvas_token",
         refresh_token="refresh_token",
     )
-    user = crud.create_user(session=db, user_create=user_in)
+    user = AuthService(db).create_user(user_in)
 
     # Set expiry to future
     future_expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
@@ -184,7 +188,7 @@ async def test_get_canvas_token_valid_token(db: Session) -> None:
         access_token="valid_token",
         refresh_token="refresh_token",
     )
-    user = crud.create_user(session=db, user_create=user_in)
+    user = AuthService(db).create_user(user_in)
 
     # Set expiry to far future so no refresh needed
     future_expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=2)

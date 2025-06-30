@@ -4,10 +4,10 @@ import httpx
 from sqlmodel import Session
 
 from app import crud
+from app.auth.models import User
 from app.config import settings
 from app.exceptions import AuthenticationError, ExternalServiceError
 from app.logging_config import get_logger
-from app.models import User
 from app.retry import retry_on_failure
 from app.services.url_builder import CanvasURLBuilder
 

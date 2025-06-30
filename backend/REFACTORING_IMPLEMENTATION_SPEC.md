@@ -7,10 +7,12 @@ This document provides the detailed implementation specification for refactoring
 ## Current State Analysis
 
 ### Monolithic Files
+
 - `app/models.py` (272 lines) - Contains all SQLModel database models and Pydantic schemas
 - `app/crud.py` (537 lines) - Contains all database operations for all models
 
 ### Current Directory Structure
+
 ```
 backend/app/
 ├── api/routes/          # Route handlers
@@ -44,6 +46,7 @@ backend/app/
 ## Target Architecture
 
 ### Domain-Driven Module Structure
+
 ```
 backend/app/
 ├── auth/               # Authentication domain
@@ -112,6 +115,7 @@ backend/app/
 | `app/core/middleware/logging_middleware.py` | `app/middleware/logging.py` | Move to new structure |
 
 **Actions:**
+
 1. Create directories: `auth/`, `quiz/`, `question/`, `canvas/`, `middleware/`
 2. Move core infrastructure files
 3. Update imports in moved files
@@ -122,6 +126,7 @@ backend/app/
 ### Phase 2: Auth Module Migration
 
 **Models to Extract from `models.py`:**
+
 ```python
 # SQLModel
 - User (table=True)
@@ -140,6 +145,7 @@ backend/app/
 ```
 
 **CRUD to Extract from `crud.py`:**
+
 ```python
 - get_user_by_email()
 - get_user_by_canvas_id()
@@ -151,16 +157,20 @@ backend/app/
 ```
 
 **Services to Move:**
+
 - `services/canvas_auth.py` → Merge into `auth/service.py`
 
 **Routes to Move:**
+
 - `api/routes/auth.py` → `auth/router.py`
 
 **Dependencies to Extract:**
+
 - `get_current_user()` from various files → `auth/dependencies.py`
 - OAuth2 scheme setup → `auth/dependencies.py`
 
 **Actions:**
+
 1. Create auth module structure
 2. Extract User model and auth schemas
 3. Create AuthService class combining CRUD and canvas_auth logic
@@ -174,6 +184,7 @@ backend/app/
 ### Phase 3: Canvas Module Migration
 
 **Schemas to Create in `canvas/schemas.py`:**
+
 ```python
 - CanvasCourse
 - CanvasModule
@@ -186,16 +197,20 @@ backend/app/
 ```
 
 **Services to Move:**
+
 - `services/content_extraction.py` → `canvas/service.py` (ContentExtractionService)
 - `services/canvas_quiz_export.py` → `canvas/service.py` (CanvasQuizExportService)
 
 **Routes to Move:**
+
 - `api/routes/canvas.py` → `canvas/router.py`
 
 **Dependencies to Create:**
+
 - Canvas service factories → `canvas/dependencies.py`
 
 **Actions:**
+
 1. Create canvas module structure
 2. Define Canvas-specific schemas
 3. Move content extraction and quiz export services
@@ -210,6 +225,7 @@ backend/app/
 ### Phase 4: Quiz Module Migration
 
 **Models to Extract from `models.py`:**
+
 ```python
 # SQLModel
 - Quiz (table=True)
@@ -224,6 +240,7 @@ backend/app/
 ```
 
 **CRUD to Extract from `crud.py`:**
+
 ```python
 - create_quiz()
 - get_quiz()
@@ -234,9 +251,11 @@ backend/app/
 ```
 
 **Routes to Move:**
+
 - `api/routes/quiz.py` → `quiz/router.py`
 
 **Actions:**
+
 1. Create quiz module structure
 2. Extract Quiz model and schemas
 3. Create QuizService class with CRUD operations
@@ -250,6 +269,7 @@ backend/app/
 ### Phase 5: Question Module Migration
 
 **Models to Extract from `models.py`:**
+
 ```python
 # SQLModel
 - Question (table=True)
@@ -265,6 +285,7 @@ backend/app/
 ```
 
 **CRUD to Extract from `crud.py`:**
+
 ```python
 - create_question()
 - get_question()
@@ -277,15 +298,19 @@ backend/app/
 ```
 
 **Services to Move:**
+
 - `services/mcq_generation.py` → `question/service.py` (MCQGenerationService with LangGraph)
 
 **Routes to Move:**
+
 - `api/routes/questions.py` → `question/router.py`
 
 **Dependencies to Extract:**
+
 - MCQGenerationService dependency → `question/dependencies.py`
 
 **Actions:**
+
 1. Create question module structure
 2. Extract Question model and schemas
 3. Move MCQ generation service (preserve LangGraph workflow)
@@ -300,6 +325,7 @@ backend/app/
 ### Phase 6: Integration & Cleanup
 
 **Files to Delete:**
+
 - `app/models.py` (now empty)
 - `app/crud.py` (now empty)
 - `app/core/` directory (now empty)
@@ -308,12 +334,14 @@ backend/app/
 - `app/core/dependencies.py` (contents distributed)
 
 **Updates Required:**
+
 - `app/main.py` - Update all router imports
 - All test files - Update imports
 - Alembic migrations - Update model imports
 - Any remaining import statements
 
 **Actions:**
+
 1. Update main.py router imports
 2. Delete old empty files and directories
 3. Search and replace all old import paths
@@ -325,6 +353,7 @@ backend/app/
 ### Phase 7: Final Validation
 
 **Validation Steps:**
+
 1. Run full test suite: `bash scripts/test.sh`
 2. Run linting: `bash scripts/lint.sh`
 3. Check type hints: `mypy app`
@@ -336,6 +365,7 @@ backend/app/
 ## Import Path Changes
 
 ### Model Imports
+
 ```python
 # Before
 from app.models import User, Quiz, Question
@@ -347,6 +377,7 @@ from app.question.models import Question
 ```
 
 ### Schema Imports
+
 ```python
 # Before
 from app.models import UserCreate, QuizOut, QuestionUpdate
@@ -358,6 +389,7 @@ from app.question.schemas import QuestionUpdate
 ```
 
 ### Service Imports
+
 ```python
 # Before
 from app.crud import create_user, get_quiz
@@ -370,6 +402,7 @@ from app.question.service import MCQGenerationService
 ```
 
 ### Router Imports
+
 ```python
 # Before
 from app.api.routes import auth, quiz, questions, canvas
@@ -384,6 +417,7 @@ from app.canvas.router import router as canvas_router
 ## Testing Strategy
 
 ### Test Structure Migration
+
 ```
 tests/
 ├── auth/
@@ -405,6 +439,7 @@ tests/
 ```
 
 ### Test Migration Process
+
 1. Copy test file to new location
 2. Update all imports
 3. Run test individually
@@ -414,16 +449,19 @@ tests/
 ## Risk Mitigation
 
 ### Import Cycles
+
 - Use TYPE_CHECKING imports where needed
 - Avoid circular dependencies between modules
 - Use dependency injection for cross-module needs
 
 ### Database Migrations
+
 - Alembic imports must be updated carefully
 - Test migrations after model moves
 - Keep model table names unchanged
 
 ### API Compatibility
+
 - No endpoint URLs should change
 - Request/response schemas must remain identical
 - Maintain backward compatibility
@@ -442,6 +480,7 @@ tests/
 ## Rollback Plan
 
 Each phase creates a single commit, allowing easy rollback:
+
 ```bash
 git revert HEAD  # Rollback last phase
 git revert HEAD~2..HEAD  # Rollback last 2 phases

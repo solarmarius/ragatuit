@@ -8,13 +8,12 @@ from jose import jwt
 from sqlmodel import Session
 
 from app import crud, security
+from app.auth.schemas import UserCreate
+from app.auth.service import AuthService
+from app.auth.utils import create_access_token
 from app.config import settings
-from app.models import UserCreate
-from app.security import (
-    TokenEncryption,
-    create_access_token,
-    ensure_valid_canvas_token,
-)
+from app.encryption import TokenEncryption
+from app.security import ensure_valid_canvas_token
 
 
 def test_encrypt_decrypt_token() -> None:
@@ -182,7 +181,7 @@ async def test_ensure_valid_canvas_token_no_refresh_needed(db: Session) -> None:
         access_token="valid_token",
         refresh_token="refresh_token",
     )
-    user = crud.create_user(session=db, user_create=user_in)
+    user = AuthService(db).create_user(user_in)
 
     # Set expiry manually (simulating database state)
     user.expires_at = future_expiry
@@ -205,7 +204,7 @@ async def test_ensure_valid_canvas_token_refresh_success(db: Session) -> None:
         access_token="old_token",
         refresh_token="refresh_token",
     )
-    user = crud.create_user(session=db, user_create=user_in)
+    user = AuthService(db).create_user(user_in)
     user.expires_at = soon_expiry
     db.add(user)
     db.commit()
@@ -232,7 +231,7 @@ async def test_ensure_valid_canvas_token_401_error(db: Session) -> None:
         access_token="expired_token",
         refresh_token="refresh_token",
     )
-    user = crud.create_user(session=db, user_create=user_in)
+    user = AuthService(db).create_user(user_in)
     user.expires_at = past_expiry
     db.add(user)
     db.commit()
@@ -263,7 +262,7 @@ async def test_ensure_valid_canvas_token_503_error(db: Session) -> None:
         access_token="expired_token",
         refresh_token="refresh_token",
     )
-    user = crud.create_user(session=db, user_create=user_in)
+    user = AuthService(db).create_user(user_in)
     user.expires_at = past_expiry
     db.add(user)
     db.commit()
@@ -290,7 +289,7 @@ async def test_ensure_valid_canvas_token_no_expiry_date(db: Session) -> None:
         access_token="token_no_expiry",
         refresh_token="refresh_token",
     )
-    user = crud.create_user(session=db, user_create=user_in)
+    user = AuthService(db).create_user(user_in)
     # expires_at is None by default
 
     with patch("app.crud.get_decrypted_access_token") as mock_get_token:

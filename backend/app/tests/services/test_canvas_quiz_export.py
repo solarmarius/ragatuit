@@ -6,12 +6,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
+from app.auth.models import User
 from app.exceptions import (
     ExternalServiceError,
     ResourceNotFoundError,
     ValidationError,
 )
-from app.models import Question, Quiz, User
+from app.models import Question, Quiz
 from app.services.canvas_quiz_export import CanvasQuizExportService
 
 

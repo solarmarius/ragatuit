@@ -5,8 +5,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api import deps
+from app.auth.models import User
 from app.main import app
-from app.models import Question, Quiz, User
+from app.models import Question, Quiz
 
 
 @pytest.fixture

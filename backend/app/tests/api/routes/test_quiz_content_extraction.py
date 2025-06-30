@@ -9,8 +9,11 @@ from sqlmodel import Session
 
 from app import crud
 from app.api import deps
+from app.auth.models import User
+from app.auth.schemas import UserCreate
+from app.auth.service import AuthService
 from app.main import app
-from app.models import Quiz, QuizCreate, User, UserCreate
+from app.models import Quiz, QuizCreate
 
 
 @pytest.fixture
@@ -23,7 +26,7 @@ def test_user_and_quiz(db: Session) -> tuple[User, Quiz]:
         access_token="test_access_token",
         refresh_token="test_refresh_token",
     )
-    user = crud.create_user(session=db, user_create=user_in)
+    user = AuthService(db).create_user(user_in)
 
     # Create quiz
     quiz_in = QuizCreate(
@@ -184,7 +187,7 @@ async def test_content_extraction_background_task_success(db: Session) -> None:
         access_token="test_access_token",
         refresh_token="test_refresh_token",
     )
-    user = crud.create_user(session=db, user_create=user_in)
+    user = AuthService(db).create_user(user_in)
 
     # Create quiz
     quiz_in = QuizCreate(
@@ -314,7 +317,7 @@ async def test_content_extraction_background_task_failure(db: Session) -> None:
         access_token="test_access_token",
         refresh_token="test_refresh_token",
     )
-    user = crud.create_user(session=db, user_create=user_in)
+    user = AuthService(db).create_user(user_in)
 
     # Create quiz
     quiz_in = QuizCreate(
@@ -501,7 +504,7 @@ async def test_quiz_content_dict_property(db: Session) -> None:
         access_token="test_access_token",
         refresh_token="test_refresh_token",
     )
-    user = crud.create_user(session=db, user_create=user_in)
+    user = AuthService(db).create_user(user_in)
 
     # Create quiz
     quiz_in = QuizCreate(
@@ -542,7 +545,7 @@ async def test_quiz_content_dict_property_empty(db: Session) -> None:
         access_token="test_access_token",
         refresh_token="test_refresh_token",
     )
-    user = crud.create_user(session=db, user_create=user_in)
+    user = AuthService(db).create_user(user_in)
 
     # Create quiz
     quiz_in = QuizCreate(

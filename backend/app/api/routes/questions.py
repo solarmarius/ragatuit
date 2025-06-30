@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import CurrentUser
 from app.crud import (
     approve_question,
     delete_question,
@@ -11,6 +11,7 @@ from app.crud import (
     get_quiz_by_id,
     update_question,
 )
+from app.deps import SessionDep
 from app.logging_config import get_logger
 from app.models import Message, Question, QuestionPublic, QuestionUpdate
 

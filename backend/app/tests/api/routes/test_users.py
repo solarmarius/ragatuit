@@ -4,8 +4,8 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.api import deps
+from app.auth.models import User
 from app.main import app
-from app.models import User
 
 
 @pytest.mark.asyncio

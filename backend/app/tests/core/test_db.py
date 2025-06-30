@@ -5,13 +5,13 @@ import pytest
 from sqlalchemy import text
 from sqlmodel import Session, select
 
+from app.auth.models import User
 from app.config import settings
 from app.database import (
     check_database_health,
     engine,
     get_session,
 )
-from app.models import User
 
 
 def test_connection_pool_configuration() -> None:

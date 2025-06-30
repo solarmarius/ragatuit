@@ -9,9 +9,10 @@ from sqlalchemy.pool import NullPool, QueuePool
 from sqlmodel import Session, select
 
 from app import crud
+from app.auth.models import User
+from app.auth.schemas import UserCreate
 from app.core.config import settings
 from app.core.logging_config import get_logger
-from app.models import User, UserCreate
 
 logger = get_logger("database")
 

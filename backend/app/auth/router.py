@@ -1,3 +1,7 @@
+"""
+Authentication routes for Canvas OAuth.
+"""
+
 import secrets
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode, urlparse
@@ -6,14 +10,16 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
-from app import crud
-from app.api.deps import CurrentUser, SessionDep
 from app.config import settings
+from app.deps import SessionDep
 from app.logging_config import get_logger
 from app.middleware.logging import add_user_to_logs
-from app.models import UserCreate
-from app.security import create_access_token
 from app.services.url_builder import CanvasURLBuilder
+
+from .dependencies import CurrentUser, get_auth_service
+from .schemas import UserCreate
+from .service import AuthService
+from .utils import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = get_logger("auth")
@@ -186,7 +192,8 @@ async def auth_canvas(session: SessionDep, request: Request) -> RedirectResponse
             expires_in=token_response.get("expires_in", "unknown"),
         )
 
-        user = crud.get_user_by_canvas_id(session=session, canvas_id=canvas_user_id)
+        auth_service = AuthService(session)
+        user = auth_service.get_user_by_canvas_id(canvas_id=canvas_user_id)
 
         if not user:
             # Create new user
@@ -196,7 +203,7 @@ async def auth_canvas(session: SessionDep, request: Request) -> RedirectResponse
                 access_token=token_response["access_token"],
                 refresh_token=token_response["refresh_token"],
             )
-            user = crud.create_user(session, user_create)
+            user = auth_service.create_user(user_create)
 
             logger.info(
                 "new_user_created",
@@ -206,8 +213,7 @@ async def auth_canvas(session: SessionDep, request: Request) -> RedirectResponse
             )
         else:
             # Update existing user tokens
-            user = crud.update_user_tokens(
-                session=session,
+            user = auth_service.update_user_tokens(
                 user=user,
                 access_token=token_response["access_token"],
                 refresh_token=token_response["refresh_token"],
@@ -294,9 +300,11 @@ async def logout_canvas(
         canvas_id=current_user.canvas_id,
     )
 
+    auth_service = AuthService(session)
+
     # Get Canvas access token before clearing it
     try:
-        canvas_access_token = crud.get_decrypted_access_token(current_user)
+        canvas_access_token = auth_service.get_decrypted_access_token(current_user)
 
         # Revoke token on Canvas side first
         if canvas_access_token:
@@ -343,7 +351,7 @@ async def logout_canvas(
         )
 
     # Clear tokens from our database
-    crud.clear_user_tokens(session, current_user)
+    auth_service.clear_user_tokens(current_user)
 
     logger.info(
         "logout_completed",

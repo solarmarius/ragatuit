@@ -5,9 +5,10 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.api import deps
+from app.auth.models import User
+from app.auth.service import AuthService
 from app.config import settings
 from app.main import app
-from app.models import User
 
 
 @pytest.mark.asyncio
@@ -27,9 +28,9 @@ async def test_login_canvas() -> None:
 
 @pytest.mark.asyncio
 @patch("app.api.routes.auth.httpx.AsyncClient")
-@patch("app.api.routes.auth.crud")
+@patch("app.auth.router.AuthService")
 async def test_auth_canvas_callback_new_user(
-    mock_crud: MagicMock, mock_httpx: MagicMock
+    mock_auth_service_class: MagicMock, mock_httpx: MagicMock
 ) -> None:
     """Test Canvas callback for new user"""
     # Mock Canvas token response
@@ -48,10 +49,12 @@ async def test_auth_canvas_callback_new_user(
     mock_client.post.return_value = mock_response
     mock_httpx.return_value.__aenter__.return_value = mock_client
 
-    # Mock database operations
-    mock_crud.get_user_by_canvas_id.return_value = None
+    # Mock AuthService instance
+    mock_auth_service = MagicMock()
+    mock_auth_service.get_user_by_canvas_id.return_value = None
     mock_user = User(id=1, canvas_id="123", name="Test User")
-    mock_crud.create_user.return_value = mock_user
+    mock_auth_service.create_user.return_value = mock_user
+    mock_auth_service_class.return_value = mock_auth_service
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test", follow_redirects=False
@@ -67,14 +70,14 @@ async def test_auth_canvas_callback_new_user(
     )
 
     # Verify create_user was called
-    mock_crud.create_user.assert_called_once()
+    mock_auth_service.create_user.assert_called_once()
 
 
 @pytest.mark.asyncio
 @patch("app.api.routes.auth.httpx.AsyncClient")
-@patch("app.api.routes.auth.crud")
+@patch("app.auth.router.AuthService")
 async def test_auth_canvas_callback_existing_user(
-    mock_crud: MagicMock, mock_httpx: MagicMock
+    mock_auth_service_class: MagicMock, mock_httpx: MagicMock
 ) -> None:
     """Test Canvas callback for existing user"""
     # Mock Canvas token response
@@ -93,10 +96,12 @@ async def test_auth_canvas_callback_existing_user(
     mock_client.post.return_value = mock_response
     mock_httpx.return_value.__aenter__.return_value = mock_client
 
-    # Mock existing user
+    # Mock AuthService instance
+    mock_auth_service = MagicMock()
     mock_user = User(id=1, canvas_id="123", name="Test User")
-    mock_crud.get_user_by_canvas_id.return_value = mock_user
-    mock_crud.update_user_tokens.return_value = mock_user
+    mock_auth_service.get_user_by_canvas_id.return_value = mock_user
+    mock_auth_service.update_user_tokens.return_value = mock_user
+    mock_auth_service_class.return_value = mock_auth_service
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test", follow_redirects=False
@@ -112,7 +117,7 @@ async def test_auth_canvas_callback_existing_user(
     )
 
     # Verify update_user_tokens was called
-    mock_crud.update_user_tokens.assert_called_once()
+    mock_auth_service.update_user_tokens.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -167,11 +172,16 @@ async def test_auth_canvas_callback_missing_code() -> None:
 
 
 @pytest.mark.asyncio
-@patch("app.api.routes.auth.crud")
-async def test_logout_canvas(mock_crud: MagicMock) -> None:
+@patch("app.auth.router.AuthService")
+async def test_logout_canvas(mock_auth_service_class: MagicMock) -> None:
     """Test Canvas logout"""
     # Mock authenticated user
     mock_user = User(id=1, canvas_id="123", name="Test User")
+
+    # Mock AuthService instance
+    mock_auth_service = MagicMock()
+    mock_auth_service.get_decrypted_access_token.return_value = "test_token"
+    mock_auth_service_class.return_value = mock_auth_service
 
     # Override the dependency
     def mock_get_current_user() -> User:
@@ -187,7 +197,7 @@ async def test_logout_canvas(mock_crud: MagicMock) -> None:
 
         assert response.status_code == 200
         assert "disconnected successfully" in response.json()["message"]
-        mock_crud.clear_user_tokens.assert_called_once()
+        mock_auth_service.clear_user_tokens.assert_called_once()
     finally:
         # Clean up dependency override
         app.dependency_overrides.clear()

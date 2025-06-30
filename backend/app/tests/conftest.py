@@ -8,9 +8,10 @@ from sqlalchemy import text
 from sqlmodel import Session, SQLModel, create_engine
 
 from app import crud
+from app.auth.schemas import UserCreate
+from app.auth.service import AuthService
 from app.config import settings
 from app.main import app
-from app.models import UserCreate
 
 
 def create_test_database() -> None:
@@ -100,7 +101,7 @@ def user_id(db: Session) -> uuid.UUID:
         access_token="test_access_token",
         refresh_token="test_refresh_token",
     )
-    user = crud.create_user(session=db, user_create=user_in)
+    user = AuthService(db).create_user(user_in)
     return user.id
 
 
