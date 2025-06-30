@@ -6,6 +6,7 @@ from sqlmodel import select
 from app.api.deps import CanvasToken, CurrentUser, SessionDep
 from app.core.db import get_async_session
 from app.core.dependencies import ServiceContainer
+from app.core.exceptions import ServiceError
 from app.core.logging_config import get_logger
 from app.crud import (
     create_quiz,
@@ -265,6 +266,9 @@ def get_user_quizzes_endpoint(
 
         return quizzes
 
+    except ServiceError:
+        # Service errors are automatically handled by global handlers
+        raise
     except Exception as e:
         logger.error(
             "user_quizzes_retrieval_failed",
@@ -357,9 +361,29 @@ async def extract_content_for_quiz(
                     llm_temperature=llm_temperature,
                 )
 
+        except ServiceError as e:
+            logger.error(
+                "content_extraction_service_error",
+                quiz_id=str(quiz_id),
+                course_id=course_id,
+                error=str(e),
+            )
+            try:
+                async with get_async_session() as error_session:
+                    quiz = await get_quiz_for_update(error_session, quiz_id)
+                    if quiz:
+                        await update_quiz_content_extraction_status(
+                            error_session, quiz, "failed"
+                        )
+            except Exception as update_error:
+                logger.error(
+                    "content_extraction_status_update_failed",
+                    quiz_id=str(quiz_id),
+                    error=str(update_error),
+                )
         except Exception as e:
             logger.error(
-                "content_extraction_failed",
+                "content_extraction_unexpected_error",
                 quiz_id=str(quiz_id),
                 course_id=course_id,
                 error=str(e),

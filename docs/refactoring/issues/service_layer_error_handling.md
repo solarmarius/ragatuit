@@ -985,16 +985,19 @@ def record_error_metrics(error: RagUITException, operation: str):
 ## Migration Strategy
 
 ### Phase 1: Add Error Infrastructure
+
 1. Create exception hierarchy
 2. Implement error handler
 3. Add error middleware
 
 ### Phase 2: Update Services
+
 1. Update one service at a time
 2. Replace generic exceptions
 3. Add retry logic
 
 ### Phase 3: Update API Layer
+
 1. Update error responses
 2. Add error documentation
 3. Update client handling

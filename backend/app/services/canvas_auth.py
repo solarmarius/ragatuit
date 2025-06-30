@@ -1,18 +1,20 @@
 from datetime import datetime, timedelta, timezone
 
 import httpx
-from fastapi import HTTPException, status
 from sqlmodel import Session
 
 from app import crud
 from app.core.config import settings
+from app.core.exceptions import AuthenticationError, ExternalServiceError
 from app.core.logging_config import get_logger
+from app.core.retry import retry_on_failure
 from app.models import User
 from app.services.url_builder import CanvasURLBuilder
 
 logger = get_logger("canvas_auth_service")
 
 
+@retry_on_failure(max_attempts=2, initial_delay=1.0)
 async def refresh_canvas_token(user: User, session: Session) -> None:
     """
     Refresh Canvas OAuth token for a user.
@@ -22,7 +24,9 @@ async def refresh_canvas_token(user: User, session: Session) -> None:
         session: Database session
 
     Raises:
-        HTTPException: If refresh fails
+        AuthenticationError: If refresh token is missing or invalid
+        ExternalServiceError: If Canvas API call fails
+        ConfigurationError: If Canvas configuration is invalid
     """
     logger.info(
         "canvas_token_refresh_initiated",
@@ -36,9 +40,8 @@ async def refresh_canvas_token(user: User, session: Session) -> None:
             user_id=str(user.id),
             canvas_id=user.canvas_id,
         )
-        raise HTTPException(
-            status_code=401,
-            detail="No refresh token found. Please re-login via /auth/login/canvas",
+        raise AuthenticationError(
+            "No refresh token found. Please re-login via /auth/login/canvas"
         )
 
     try:
@@ -49,9 +52,8 @@ async def refresh_canvas_token(user: User, session: Session) -> None:
                 user_id=str(user.id),
                 canvas_id=user.canvas_id,
             )
-            raise HTTPException(
-                status_code=401,
-                detail="Refresh token decryption failed. Please re-login via /auth/login/canvas",
+            raise AuthenticationError(
+                "Refresh token decryption failed. Please re-login via /auth/login/canvas"
             )
 
         # Initialize URL builder
@@ -74,10 +76,16 @@ async def refresh_canvas_token(user: User, session: Session) -> None:
                 response.raise_for_status()
                 token_response = response.json()
             except httpx.HTTPStatusError as e:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Canvas token refresh error: {e.response.text}",
-                )
+                if e.response.status_code == 401:
+                    raise AuthenticationError(
+                        "Invalid refresh token. Please re-login via /auth/login/canvas"
+                    )
+                else:
+                    raise ExternalServiceError(
+                        "canvas",
+                        f"Token refresh failed: {e.response.text}",
+                        e.response.status_code,
+                    )
 
         expires_at = None
         if "expires_in" in token_response:
@@ -99,16 +107,6 @@ async def refresh_canvas_token(user: User, session: Session) -> None:
             expires_at=expires_at.isoformat() if expires_at else None,
         )
 
-    except Exception as e:
-        logger.error(
-            "token_refresh_failed",
-            user_id=str(user.id),
-            canvas_id=user.canvas_id,
-            error=str(e),
-            error_type=type(e).__name__,
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Token refresh failed: {str(e)}",
-        )
+    except Exception:
+        # Let the error handler decorator handle unexpected exceptions
+        raise

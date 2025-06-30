@@ -1,10 +1,16 @@
 import sentry_sdk
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
 from app.api.main import api_router
 from app.core.config import settings
+from app.core.exceptions import ServiceError
+from app.core.global_exception_handler import (
+    general_exception_handler,
+    service_error_handler,
+)
 from app.core.logging_config import configure_logging, get_logger
 from app.core.middleware.logging_middleware import LoggingMiddleware
 
@@ -47,6 +53,20 @@ if settings.all_cors_origins:
         allow_headers=["*"],
     )
     logger.info("cors_middleware_added", origins=settings.all_cors_origins)
+
+
+# Add global exception handlers
+@app.exception_handler(ServiceError)
+async def handle_service_error(request: Request, exc: ServiceError) -> JSONResponse:
+    return await service_error_handler(request, exc)
+
+
+@app.exception_handler(Exception)
+async def handle_general_error(request: Request, exc: Exception) -> JSONResponse:
+    return await general_exception_handler(request, exc)
+
+
+logger.info("global_exception_handlers_added")
 
 app.include_router(api_router, prefix=settings.API_V1_STR)
 logger.info("api_router_included", prefix=settings.API_V1_STR)

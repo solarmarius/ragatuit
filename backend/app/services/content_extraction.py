@@ -8,7 +8,9 @@ import pypdf
 from bs4 import BeautifulSoup, Comment
 
 from app.core.config import settings
+from app.core.exceptions import ExternalServiceError
 from app.core.logging_config import get_logger
+from app.core.retry import retry_on_failure
 from app.services.url_builder import CanvasURLBuilder
 
 logger = get_logger("content_extraction")
@@ -267,6 +269,7 @@ class ContentExtractionService:
 
         return extracted_content
 
+    @retry_on_failure(max_attempts=3, initial_delay=1.0)
     async def _fetch_module_items(self, module_id: int) -> list[dict[str, Any]]:
         """Fetch items from a Canvas module."""
         url = self.url_builder.module_items(self.course_id, module_id)
@@ -282,14 +285,24 @@ class ContentExtractionService:
                 data = result["data"]
                 return data if isinstance(data, list) else []
             return []
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                logger.warning(
+                    "module_not_found",
+                    course_id=self.course_id,
+                    module_id=module_id,
+                )
+                return []  # Empty list for missing modules
+            else:
+                raise ExternalServiceError(
+                    "canvas",
+                    f"Failed to fetch module {module_id} items",
+                    e.response.status_code,
+                )
         except Exception as e:
-            logger.error(
-                "fetch_module_items_failed",
-                course_id=self.course_id,
-                module_id=module_id,
-                error=str(e),
+            raise ExternalServiceError(
+                "canvas", f"Failed to fetch module {module_id} items: {str(e)}"
             )
-            return []
 
     async def _extract_page_content(
         self, page_item: dict[str, Any]
@@ -365,6 +378,7 @@ class ContentExtractionService:
             )
             return None
 
+    @retry_on_failure(max_attempts=2, initial_delay=0.5)
     async def _fetch_page_content(self, page_url: str) -> dict[str, Any]:
         """Fetch content of a specific Canvas page."""
         url = self.url_builder.pages(self.course_id, page_url)
@@ -376,14 +390,24 @@ class ContentExtractionService:
         try:
             result = await self._make_request_with_retry(url, headers)
             return result if isinstance(result, dict) else {}
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                logger.warning(
+                    "page_not_found",
+                    course_id=self.course_id,
+                    page_url=page_url,
+                )
+                return {}  # Empty dict for missing pages
+            else:
+                raise ExternalServiceError(
+                    "canvas",
+                    f"Failed to fetch page content: {page_url}",
+                    e.response.status_code,
+                )
         except Exception as e:
-            logger.error(
-                "fetch_page_content_failed",
-                course_id=self.course_id,
-                page_url=page_url,
-                error=str(e),
+            raise ExternalServiceError(
+                "canvas", f"Failed to fetch page content: {str(e)}"
             )
-            return {}
 
     async def _extract_file_content(
         self, file_item: dict[str, Any]

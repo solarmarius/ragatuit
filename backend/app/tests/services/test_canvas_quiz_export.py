@@ -6,6 +6,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
+from app.core.exceptions import (
+    ExternalServiceError,
+    ResourceNotFoundError,
+    ValidationError,
+)
 from app.models import Question, Quiz, User
 from app.services.canvas_quiz_export import CanvasQuizExportService
 
@@ -223,12 +228,15 @@ class TestCanvasQuizExportService:
                 return_value=mock_response
             )
 
-            with pytest.raises(httpx.HTTPStatusError):
+            with pytest.raises(ExternalServiceError) as exc_info:
                 await export_service.create_canvas_quiz(
                     course_id=37823,
                     title="Test Quiz",
                     total_points=10,
                 )
+
+            assert exc_info.value.status_code == 500
+            assert "canvas service error" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_create_quiz_items_success(
@@ -303,7 +311,7 @@ class TestCanvasQuizExportService:
             assert results[0]["item_id"] == "item_1"
 
             assert results[1]["success"] is False
-            assert "HTTP 400" in results[1]["error"]
+            assert "Canvas API error: 400" in results[1]["error"]
 
             assert results[2]["success"] is True
             assert results[2]["item_id"] == "item_3"
@@ -425,8 +433,11 @@ class TestCanvasQuizExportService:
             mock_session_class.return_value.__aenter__.return_value = mock_session
             mock_get_quiz.return_value = None
 
-            with pytest.raises(ValueError, match=f"Quiz {quiz_id} not found"):
+            with pytest.raises(ResourceNotFoundError) as exc_info:
                 await export_service.export_quiz_to_canvas(quiz_id)
+
+            assert exc_info.value.status_code == 404
+            assert str(quiz_id) in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_export_quiz_no_approved_questions(
@@ -449,8 +460,11 @@ class TestCanvasQuizExportService:
             mock_get_quiz.return_value = mock_quiz
             mock_get_questions.return_value = []
 
-            with pytest.raises(ValueError, match="has no approved questions to export"):
+            with pytest.raises(ValidationError) as exc_info:
                 await export_service.export_quiz_to_canvas(mock_quiz.id)
+
+            assert exc_info.value.status_code == 400
+            assert "no approved questions" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_export_quiz_canvas_error_updates_status(

@@ -11,6 +11,7 @@ from pydantic import SecretStr
 
 from app.core.config import settings
 from app.core.db import get_async_session
+from app.core.exceptions import ValidationError
 from app.core.logging_config import get_logger
 from app.crud import get_content_from_quiz
 from app.models import Question, QuestionCreate
@@ -532,6 +533,13 @@ Generate exactly ONE question based on this content."""
         Returns:
             Dict containing generation results and statistics
         """
+        # Validate input parameters
+        if target_question_count <= 0 or target_question_count > 100:
+            raise ValidationError("target_question_count must be between 1 and 100")
+
+        if not (0.0 <= llm_temperature <= 2.0):
+            raise ValidationError("llm_temperature must be between 0.0 and 2.0")
+
         logger.info(
             "mcq_generation_workflow_started",
             quiz_id=str(quiz_id),

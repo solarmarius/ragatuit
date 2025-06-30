@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from pydantic import validator
+from pydantic import field_validator
 from sqlalchemy import Column, DateTime, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, Relationship, SQLModel
@@ -118,7 +118,7 @@ class Quiz(SQLModel, table=True):
     )
 
     # Pydantic validators for structure
-    @validator("selected_modules")
+    @field_validator("selected_modules")
     def validate_selected_modules(cls, v: Any) -> dict[str, str]:
         """Ensure selected_modules has correct structure."""
         if not isinstance(v, dict):
@@ -129,7 +129,7 @@ class Quiz(SQLModel, table=True):
                 raise ValueError(f"Module name must be string, got {type(value)}")
         return v
 
-    @validator("extracted_content")
+    @field_validator("extracted_content")
     def validate_extracted_content(cls, v: Any) -> dict[str, Any] | None:
         """Validate extracted content structure."""
         if v is not None and not isinstance(v, dict):

@@ -3,9 +3,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
-from fastapi import HTTPException
 from sqlmodel import Session
 
+from app.core.exceptions import AuthenticationError, ExternalServiceError
 from app.models import User
 from app.services.canvas_auth import refresh_canvas_token
 
@@ -71,11 +71,11 @@ async def test_refresh_canvas_token_no_refresh_token() -> None:
         refresh_token="",  # No refresh token
     )
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(AuthenticationError) as exc_info:
         await refresh_canvas_token(mock_user, mock_session)
 
     assert exc_info.value.status_code == 401
-    assert "No refresh token found" in exc_info.value.detail
+    assert "No refresh token found" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
@@ -91,11 +91,11 @@ async def test_refresh_canvas_token_decryption_fails(mock_crud: MagicMock) -> No
     )
     mock_crud.get_decrypted_refresh_token.return_value = None  # Decryption failed
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(AuthenticationError) as exc_info:
         await refresh_canvas_token(mock_user, mock_session)
 
-    assert exc_info.value.status_code == 400
-    assert "Token refresh failed" in exc_info.value.detail
+    assert exc_info.value.status_code == 401
+    assert "Refresh token decryption failed" in str(exc_info.value)
 
 
 @pytest.mark.asyncio
@@ -109,17 +109,21 @@ async def test_refresh_canvas_token_canvas_error(
     mock_crud.get_decrypted_refresh_token.return_value = "valid_refresh_token"
 
     # Mock Canvas error response
+    mock_response = MagicMock()
+    mock_response.status_code = 400
+    mock_response.text = "Invalid request"
+
     mock_client = AsyncMock()
     mock_client.post.side_effect = httpx.HTTPStatusError(
-        "Bad Request", request=MagicMock(), response=MagicMock()
+        "Bad Request", request=MagicMock(), response=mock_response
     )
     mock_httpx.return_value.__aenter__.return_value = mock_client
 
-    with pytest.raises(HTTPException) as exc_info:
+    with pytest.raises(ExternalServiceError) as exc_info:
         await refresh_canvas_token(mock_user, mock_session)
 
     assert exc_info.value.status_code == 400
-    assert "Canvas token refresh error" in exc_info.value.detail
+    assert "Token refresh failed" in str(exc_info.value)
 
 
 @pytest.mark.asyncio

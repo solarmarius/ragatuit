@@ -162,7 +162,7 @@ This roadmap provides a structured approach to refactoring the Rag@UiT FastAPI b
 - **Why Now**: Unblocks proper architecture
 - **Deliverable**: Clean module dependencies
 
-### 3.2 Dependency Injection Pattern (3 days)
+### 3.2 Dependency Injection Pattern (3 days) OK
 
 - **Issue**: `dependency_injection.md`
 - **Priority**: Critical

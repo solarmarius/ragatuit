@@ -6,7 +6,13 @@ import httpx
 
 from app.core.config import settings
 from app.core.db import get_async_session
+from app.core.exceptions import (
+    ExternalServiceError,
+    ResourceNotFoundError,
+    ValidationError,
+)
 from app.core.logging_config import get_logger
+from app.core.retry import retry_on_failure
 from app.crud import get_approved_questions_by_quiz_id_async, get_quiz_for_update
 from app.models import Question
 from app.services.url_builder import CanvasURLBuilder
@@ -60,7 +66,7 @@ class CanvasQuizExportService:
                         "canvas_quiz_export_quiz_not_found",
                         quiz_id=str(quiz_id),
                     )
-                    raise ValueError(f"Quiz {quiz_id} not found")
+                    raise ResourceNotFoundError(f"Quiz {quiz_id}")
 
                 if quiz.export_status == "completed" and quiz.canvas_quiz_id:
                     logger.warning(
@@ -97,9 +103,7 @@ class CanvasQuizExportService:
                         "canvas_quiz_export_no_approved_questions",
                         quiz_id=str(quiz_id),
                     )
-                    raise ValueError(
-                        f"Quiz {quiz_id} has no approved questions to export"
-                    )
+                    raise ValidationError("Quiz has no approved questions to export")
 
                 question_data = [
                     {
@@ -203,6 +207,7 @@ class CanvasQuizExportService:
             )
             raise
 
+    @retry_on_failure(max_attempts=3, initial_delay=2.0)
     async def create_canvas_quiz(
         self, course_id: int, title: str, total_points: int
     ) -> dict[str, Any]:
@@ -269,7 +274,11 @@ class CanvasQuizExportService:
                     status_code=e.response.status_code,
                     response_text=e.response.text,
                 )
-                raise
+                raise ExternalServiceError(
+                    "canvas",
+                    f"Failed to create Canvas quiz: {title}",
+                    e.response.status_code,
+                )
 
     async def create_quiz_items(
         self, course_id: int, quiz_id: str, questions: list[dict[str, Any]]
@@ -339,11 +348,12 @@ class CanvasQuizExportService:
                         status_code=e.response.status_code,
                         response_text=e.response.text,
                     )
+                    # Continue with other questions even if one fails
                     results.append(
                         {
                             "success": False,
                             "question_id": question["id"],
-                            "error": f"HTTP {e.response.status_code}: {e.response.text}",
+                            "error": f"Canvas API error: {e.response.status_code}",
                             "position": i + 1,
                         }
                     )
