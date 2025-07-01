@@ -1,25 +1,30 @@
-from datetime import datetime, timezone
-from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
-from sqlmodel import select
 
 from src.auth.dependencies import CurrentUser
 from src.canvas.dependencies import CanvasToken
-from src.canvas.flows import (
-    export_quiz_to_canvas_flow,
-    extract_content_for_modules,
-    get_content_summary,
-)
-from src.database import SessionDep, execute_in_transaction
+from src.database import SessionDep
 from src.exceptions import ServiceError
 from src.logging_config import get_logger
-from src.question.mcq_generation_service import MCQGenerationService
 
+from .constants import ERROR_MESSAGES, SUCCESS_MESSAGES
+from .dependencies import (
+    QuizOwnership,
+    QuizOwnershipWithLock,
+    QuizServiceDep,
+    validate_content_extraction_ready,
+    validate_export_ready,
+    validate_question_generation_ready,
+    validate_quiz_has_approved_questions,
+)
+from .flows import (
+    quiz_content_extraction_flow,
+    quiz_export_background_flow,
+    quiz_question_generation_flow,
+)
 from .models import Quiz
 from .schemas import QuizCreate
-from .service import QuizService
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
 logger = get_logger("quiz")
@@ -29,7 +34,7 @@ logger = get_logger("quiz")
 async def create_new_quiz(
     quiz_data: QuizCreate,
     current_user: CurrentUser,
-    session: SessionDep,
+    quiz_service: QuizServiceDep,
     canvas_token: CanvasToken,
     background_tasks: BackgroundTasks,
 ) -> Quiz:
@@ -82,12 +87,11 @@ async def create_new_quiz(
     )
 
     try:
-        quiz_service = QuizService(session)
         quiz = quiz_service.create_quiz(quiz_data, current_user.id)
 
         # Trigger content extraction in the background
         background_tasks.add_task(
-            extract_content_for_quiz,
+            quiz_content_extraction_flow,
             quiz.id,
             quiz_data.canvas_course_id,
             [int(module_id) for module_id in quiz_data.selected_modules.keys()],
@@ -113,17 +117,11 @@ async def create_new_quiz(
             error_type=type(e).__name__,
             exc_info=True,
         )
-        raise HTTPException(
-            status_code=500, detail="Failed to create quiz. Please try again."
-        )
+        raise HTTPException(status_code=500, detail=ERROR_MESSAGES["creation_failed"])
 
 
 @router.get("/{quiz_id}", response_model=Quiz)
-def get_quiz(
-    quiz_id: UUID,
-    current_user: CurrentUser,
-    session: SessionDep,
-) -> Quiz:
+def get_quiz(quiz: QuizOwnership) -> Quiz:
     """
     Retrieve a quiz by its ID.
 
@@ -160,63 +158,13 @@ def get_quiz(
         }
         ```
     """
-    logger.info(
-        "quiz_retrieval_initiated",
-        user_id=str(current_user.id),
-        quiz_id=str(quiz_id),
-    )
-
-    try:
-        quiz_service = QuizService(session)
-        quiz = quiz_service.get_quiz_by_id(quiz_id)
-
-        if not quiz:
-            logger.warning(
-                "quiz_not_found",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-            )
-            raise HTTPException(status_code=404, detail="Quiz not found")
-
-        # Verify ownership
-        if quiz.owner_id != current_user.id:
-            logger.warning(
-                "quiz_access_denied",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-                quiz_owner_id=str(quiz.owner_id),
-            )
-            raise HTTPException(status_code=404, detail="Quiz not found")
-
-        logger.info(
-            "quiz_retrieval_completed",
-            user_id=str(current_user.id),
-            quiz_id=str(quiz_id),
-        )
-
-        return quiz
-
-    except HTTPException:
-        # Re-raise HTTP exceptions as-is
-        raise
-    except Exception as e:
-        logger.error(
-            "quiz_retrieval_failed",
-            user_id=str(current_user.id),
-            quiz_id=str(quiz_id),
-            error=str(e),
-            error_type=type(e).__name__,
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=500, detail="Failed to retrieve quiz. Please try again."
-        )
+    return quiz
 
 
 @router.get("/", response_model=list[Quiz])
 def get_user_quizzes_endpoint(
     current_user: CurrentUser,
-    session: SessionDep,
+    quiz_service: QuizServiceDep,
 ) -> list[Quiz]:
     """
     Retrieve all quizzes created by the authenticated user.
@@ -258,7 +206,6 @@ def get_user_quizzes_endpoint(
     )
 
     try:
-        quiz_service = QuizService(session)
         quizzes = quiz_service.get_user_quizzes(current_user.id)
 
         logger.info(
@@ -280,266 +227,14 @@ def get_user_quizzes_endpoint(
             error_type=type(e).__name__,
             exc_info=True,
         )
-        raise HTTPException(
-            status_code=500, detail="Failed to retrieve quizzes. Please try again."
-        )
-
-
-async def extract_content_for_quiz(
-    quiz_id: UUID, course_id: int, module_ids: list[int], canvas_token: str
-) -> None:
-    """
-    Orchestrates the content extraction task using a robust two-transaction approach.
-
-    Transaction 1: Reserve the job (very fast)
-    I/O Operation: Extract content from Canvas (outside transaction)
-    Transaction 2: Save the result (very fast)
-    """
-    logger.info(
-        "content_extraction_started",
-        quiz_id=str(quiz_id),
-        course_id=course_id,
-        module_count=len(module_ids),
-    )
-
-    # === Transaction 1: Reserve the Job (very fast) ===
-    async def _reserve_job(session: Any, quiz_id: UUID) -> dict[str, Any] | None:
-        """Reserve the extraction job and return quiz settings if successful."""
-        quiz_service = QuizService(session)
-        quiz = await quiz_service.get_quiz_for_update(session, quiz_id)
-
-        if not quiz:
-            logger.error("content_extraction_quiz_not_found", quiz_id=str(quiz_id))
-            return None
-
-        if quiz.content_extraction_status in ["processing", "completed"]:
-            logger.info(
-                "content_extraction_job_already_taken",
-                quiz_id=str(quiz_id),
-                current_status=quiz.content_extraction_status,
-            )
-            return None  # Job already taken or completed
-
-        # Reserve the job
-        quiz.content_extraction_status = "processing"
-        await session.flush()  # Make status visible immediately
-
-        # Return quiz settings for later use
-        return {
-            "target_questions": quiz.question_count,
-            "llm_model": quiz.llm_model,
-            "llm_temperature": quiz.llm_temperature,
-        }
-
-    quiz_settings = await execute_in_transaction(
-        _reserve_job, quiz_id, isolation_level="REPEATABLE READ", retries=3
-    )
-
-    if not quiz_settings:
-        logger.info(
-            "content_extraction_skipped",
-            quiz_id=str(quiz_id),
-            reason="job_already_running_or_complete",
-        )
-        return
-
-    # === Slow I/O Operation (occurs outside any transaction) ===
-    try:
-        # Use functional content extraction flows
-        extracted_content = await extract_content_for_modules(
-            canvas_token, course_id, module_ids
-        )
-        content_summary = get_content_summary(extracted_content)
-
-        logger.info(
-            "content_extraction_completed",
-            quiz_id=str(quiz_id),
-            course_id=course_id,
-            modules_processed=content_summary["modules_processed"],
-            total_pages=content_summary["total_pages"],
-            total_word_count=content_summary["total_word_count"],
-        )
-
-        final_status = "completed"
-
-    except Exception as e:
-        logger.error(
-            "content_extraction_failed_during_api_call",
-            quiz_id=str(quiz_id),
-            course_id=course_id,
-            error=str(e),
-            error_type=type(e).__name__,
-            exc_info=True,
-        )
-        extracted_content = None
-        final_status = "failed"
-
-    # === Transaction 2: Save the Result (very fast) ===
-    async def _save_result(
-        session: Any,
-        quiz_id: UUID,
-        content: dict[str, Any] | None,
-        status: str,
-    ) -> None:
-        """Save the extraction result to the quiz."""
-        quiz_service = QuizService(session)
-        quiz = await quiz_service.get_quiz_for_update(session, quiz_id)
-        if not quiz:
-            logger.error(
-                "content_extraction_quiz_not_found_during_save", quiz_id=str(quiz_id)
-            )
-            return
-
-        quiz.content_extraction_status = status
-        if status == "completed" and content is not None:
-            quiz.extracted_content = content
-            quiz.content_extracted_at = datetime.now(timezone.utc)
-
-    await execute_in_transaction(
-        _save_result,
-        quiz_id,
-        extracted_content,
-        final_status,
-        isolation_level="REPEATABLE READ",
-        retries=3,
-    )
-
-    # If extraction was successful, trigger question generation
-    if final_status == "completed" and quiz_settings:
-        logger.info(
-            "auto_triggering_question_generation",
-            quiz_id=str(quiz_id),
-            target_questions=quiz_settings["target_questions"],
-            llm_model=quiz_settings["llm_model"],
-        )
-        await generate_questions_for_quiz(
-            quiz_id=quiz_id,
-            target_question_count=quiz_settings["target_questions"],
-            llm_model=quiz_settings["llm_model"],
-            llm_temperature=quiz_settings["llm_temperature"],
-        )
-
-
-async def generate_questions_for_quiz(
-    quiz_id: UUID, target_question_count: int, llm_model: str, llm_temperature: float
-) -> None:
-    """
-    Orchestrates the question generation task using a robust two-transaction approach.
-
-    Transaction 1: Reserve the job (very fast)
-    I/O Operation: Generate questions via LLM (outside transaction)
-    Transaction 2: Save the result (very fast)
-    """
-    logger.info(
-        "question_generation_started",
-        quiz_id=str(quiz_id),
-        target_questions=target_question_count,
-        llm_model=llm_model,
-        llm_temperature=llm_temperature,
-    )
-
-    # === Transaction 1: Reserve the Job (very fast) ===
-    async def _reserve_generation_job(session: Any, quiz_id: UUID) -> bool:
-        """Reserve the question generation job."""
-        quiz_service = QuizService(session)
-        quiz = await quiz_service.get_quiz_for_update(session, quiz_id)
-
-        if not quiz:
-            logger.error("question_generation_quiz_not_found", quiz_id=str(quiz_id))
-            return False
-
-        if quiz.llm_generation_status in ["processing", "completed"]:
-            logger.info(
-                "question_generation_job_already_taken",
-                quiz_id=str(quiz_id),
-                current_status=quiz.llm_generation_status,
-            )
-            return False  # Job already taken or completed
-
-        # Reserve the job
-        quiz.llm_generation_status = "processing"
-        await session.flush()  # Make status visible immediately
-        return True
-
-    should_proceed = await execute_in_transaction(
-        _reserve_generation_job, quiz_id, isolation_level="REPEATABLE READ", retries=3
-    )
-
-    if not should_proceed:
-        logger.info(
-            "question_generation_skipped",
-            quiz_id=str(quiz_id),
-            reason="job_already_running_or_complete",
-        )
-        return
-
-    # === Slow I/O Operation (occurs outside any transaction) ===
-    try:
-        mcq_service = MCQGenerationService()
-        results = await mcq_service.generate_mcqs_for_quiz(
-            quiz_id=quiz_id,
-            target_question_count=target_question_count,
-            llm_model=llm_model,
-            llm_temperature=llm_temperature,
-        )
-
-        if results["success"]:
-            final_status = "completed"
-            logger.info(
-                "question_generation_completed",
-                quiz_id=str(quiz_id),
-                questions_generated=results["questions_generated"],
-                target_questions=target_question_count,
-            )
-        else:
-            final_status = "failed"
-            logger.error(
-                "question_generation_failed_during_llm_call",
-                quiz_id=str(quiz_id),
-                error_message=results["error_message"],
-            )
-
-    except Exception as e:
-        logger.error(
-            "question_generation_failed_during_llm_call",
-            quiz_id=str(quiz_id),
-            error=str(e),
-            error_type=type(e).__name__,
-            exc_info=True,
-        )
-        final_status = "failed"
-
-    # === Transaction 2: Save the Result (very fast) ===
-    async def _save_generation_result(
-        session: Any,
-        quiz_id: UUID,
-        status: str,
-    ) -> None:
-        """Save the generation result to the quiz."""
-        quiz_service = QuizService(session)
-        quiz = await quiz_service.get_quiz_for_update(session, quiz_id)
-        if not quiz:
-            logger.error(
-                "question_generation_quiz_not_found_during_save", quiz_id=str(quiz_id)
-            )
-            return
-
-        quiz.llm_generation_status = status
-
-    await execute_in_transaction(
-        _save_generation_result,
-        quiz_id,
-        final_status,
-        isolation_level="REPEATABLE READ",
-        retries=3,
-    )
+        raise HTTPException(status_code=500, detail=ERROR_MESSAGES["retrieval_failed"])
 
 
 @router.post("/{quiz_id}/extract-content")
 async def trigger_content_extraction(
-    quiz_id: UUID,
+    quiz: QuizOwnershipWithLock,
     current_user: CurrentUser,
-    session: SessionDep,
+    quiz_service: QuizServiceDep,
     canvas_token: CanvasToken,
     background_tasks: BackgroundTasks,
 ) -> dict[str, str]:
@@ -560,91 +255,61 @@ async def trigger_content_extraction(
 
     **Raises:**
         HTTPException: 404 if quiz not found or user doesn't own it
+        HTTPException: 409 if extraction already in progress
         HTTPException: 500 if unable to trigger extraction
     """
     logger.info(
         "manual_content_extraction_triggered",
         user_id=str(current_user.id),
-        quiz_id=str(quiz_id),
+        quiz_id=str(quiz.id),
     )
 
     try:
-        # Get the quiz and verify ownership with locking
-        stmt = select(Quiz).where(Quiz.id == quiz_id).with_for_update()
-        quiz = session.exec(stmt).first()
+        # Validate quiz status
+        validate_content_extraction_ready(quiz)
 
-        if not quiz:
-            logger.warning(
-                "manual_extraction_quiz_not_found",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-            )
-            raise HTTPException(status_code=404, detail="Quiz not found")
-
-        if quiz.owner_id != current_user.id:
-            logger.warning(
-                "manual_extraction_access_denied",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-                quiz_owner_id=str(quiz.owner_id),
-            )
-            raise HTTPException(status_code=404, detail="Quiz not found")
-
-        # Check if extraction is already in progress
-        if quiz.content_extraction_status == "processing":
-            logger.warning(
-                "manual_extraction_already_in_progress",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-                current_status=quiz.content_extraction_status,
-            )
-            raise HTTPException(
-                status_code=409, detail="Content extraction is already in progress"
-            )
-
-        # Reset extraction status to pending
-        quiz.content_extraction_status = "pending"
-        quiz.extracted_content = None
-        quiz.content_extracted_at = None
-        session.add(quiz)
-        session.commit()
-
-        # Get selected modules from the quiz
-        selected_modules = quiz.selected_modules
-        module_ids = [int(module_id) for module_id in selected_modules.keys()]
+        # Prepare extraction using service layer
+        extraction_params = quiz_service.prepare_content_extraction(
+            quiz.id, current_user.id
+        )
 
         # Trigger content extraction in the background
         background_tasks.add_task(
-            extract_content_for_quiz,
-            quiz_id,
-            quiz.canvas_course_id,
-            module_ids,
+            quiz_content_extraction_flow,
+            quiz.id,
+            extraction_params["course_id"],
+            extraction_params["module_ids"],
             canvas_token,
         )
 
         logger.info(
             "manual_content_extraction_started",
             user_id=str(current_user.id),
-            quiz_id=str(quiz_id),
-            module_count=len(module_ids),
+            quiz_id=str(quiz.id),
+            module_count=len(extraction_params["module_ids"]),
         )
 
-        return {"message": "Content extraction started"}
+        return {"message": SUCCESS_MESSAGES["content_extraction_started"]}
 
-    except HTTPException:
-        # Re-raise HTTP exceptions as-is
-        raise
+    except ValueError as e:
+        logger.warning(
+            "manual_extraction_validation_failed",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz.id),
+            error=str(e),
+        )
+        raise HTTPException(status_code=409, detail=str(e))
     except Exception as e:
         logger.error(
             "manual_content_extraction_failed",
             user_id=str(current_user.id),
-            quiz_id=str(quiz_id),
+            quiz_id=str(quiz.id),
             error=str(e),
             error_type=type(e).__name__,
             exc_info=True,
         )
         raise HTTPException(
-            status_code=500, detail="Failed to trigger content extraction"
+            status_code=500, detail=ERROR_MESSAGES["extraction_trigger_failed"]
         )
 
 
@@ -652,7 +317,7 @@ async def trigger_content_extraction(
 def delete_quiz_endpoint(
     quiz_id: UUID,
     current_user: CurrentUser,
-    session: SessionDep,
+    quiz_service: QuizServiceDep,
 ) -> None:
     """
     Delete a quiz by its ID.
@@ -707,7 +372,6 @@ def delete_quiz_endpoint(
     )
 
     try:
-        quiz_service = QuizService(session)
         success = quiz_service.delete_quiz(quiz_id, current_user.id)
 
         if not success:
@@ -716,7 +380,9 @@ def delete_quiz_endpoint(
                 user_id=str(current_user.id),
                 quiz_id=str(quiz_id),
             )
-            raise HTTPException(status_code=404, detail="Quiz not found")
+            raise HTTPException(
+                status_code=404, detail=ERROR_MESSAGES["quiz_not_found"]
+            )
 
         logger.info(
             "quiz_deletion_completed",
@@ -736,16 +402,14 @@ def delete_quiz_endpoint(
             error_type=type(e).__name__,
             exc_info=True,
         )
-        raise HTTPException(
-            status_code=500, detail="Failed to delete quiz. Please try again."
-        )
+        raise HTTPException(status_code=500, detail=ERROR_MESSAGES["deletion_failed"])
 
 
 @router.post("/{quiz_id}/generate-questions")
 async def trigger_question_generation(
-    quiz_id: UUID,
+    quiz: QuizOwnership,
     current_user: CurrentUser,
-    session: SessionDep,
+    quiz_service: QuizServiceDep,
     background_tasks: BackgroundTasks,
 ) -> dict[str, str]:
     """
@@ -772,100 +436,69 @@ async def trigger_question_generation(
     logger.info(
         "manual_question_generation_triggered",
         user_id=str(current_user.id),
-        quiz_id=str(quiz_id),
+        quiz_id=str(quiz.id),
     )
 
     try:
-        # Get the quiz and verify ownership
-        quiz_service = QuizService(session)
-        quiz = quiz_service.get_quiz_by_id(quiz_id)
+        # Validate quiz status
+        validate_question_generation_ready(quiz)
 
-        if not quiz:
-            logger.warning(
-                "manual_generation_quiz_not_found",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-            )
-            raise HTTPException(status_code=404, detail="Quiz not found")
-
-        if quiz.owner_id != current_user.id:
-            logger.warning(
-                "manual_generation_access_denied",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-                quiz_owner_id=str(quiz.owner_id),
-            )
-            raise HTTPException(status_code=404, detail="Quiz not found")
-
-        # Check if content extraction is completed
-        if quiz.content_extraction_status != "completed":
-            logger.warning(
-                "manual_generation_content_not_ready",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-                content_status=quiz.content_extraction_status,
-            )
-            raise HTTPException(
-                status_code=400,
-                detail="Content extraction must be completed before generating questions",
-            )
-
-        # Check if question generation is already in progress
-        if quiz.llm_generation_status == "processing":
-            logger.warning(
-                "manual_generation_already_in_progress",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-                current_status=quiz.llm_generation_status,
-            )
-            raise HTTPException(
-                status_code=409, detail="Question generation is already in progress"
-            )
-
-        # Reset generation status to pending
-        quiz.llm_generation_status = "pending"
-        session.add(quiz)
-        session.commit()
+        # Prepare generation using service layer
+        generation_params = quiz_service.prepare_question_generation(
+            quiz.id, current_user.id
+        )
 
         # Trigger question generation in the background
         background_tasks.add_task(
-            generate_questions_for_quiz,
-            quiz_id,
-            quiz.question_count,
-            quiz.llm_model,
-            quiz.llm_temperature,
+            quiz_question_generation_flow,
+            quiz.id,
+            generation_params["question_count"],
+            generation_params["llm_model"],
+            generation_params["llm_temperature"],
         )
 
         logger.info(
             "manual_question_generation_started",
             user_id=str(current_user.id),
-            quiz_id=str(quiz_id),
-            question_count=quiz.question_count,
-            llm_model=quiz.llm_model,
+            quiz_id=str(quiz.id),
+            question_count=generation_params["question_count"],
+            llm_model=generation_params["llm_model"],
         )
 
-        return {"message": "Question generation started"}
+        return {"message": SUCCESS_MESSAGES["question_generation_started"]}
 
-    except HTTPException:
-        # Re-raise HTTP exceptions as-is
-        raise
+    except ValueError as e:
+        logger.warning(
+            "manual_generation_validation_failed",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz.id),
+            error=str(e),
+        )
+
+        # Map ValueError to appropriate HTTP status
+        if "Content extraction must be completed" in str(e):
+            status_code = 400
+        else:
+            status_code = 409
+
+        raise HTTPException(status_code=status_code, detail=str(e))
     except Exception as e:
         logger.error(
             "manual_question_generation_failed",
             user_id=str(current_user.id),
-            quiz_id=str(quiz_id),
+            quiz_id=str(quiz.id),
             error=str(e),
             error_type=type(e).__name__,
             exc_info=True,
         )
         raise HTTPException(
-            status_code=500, detail="Failed to trigger question generation"
+            status_code=500, detail=ERROR_MESSAGES["generation_trigger_failed"]
         )
 
 
 @router.get("/{quiz_id}/questions/stats")
 def get_quiz_question_stats(
-    quiz_id: UUID,
+    quiz: QuizOwnership,
     current_user: CurrentUser,
     session: SessionDep,
 ) -> dict[str, int]:
@@ -890,101 +523,44 @@ def get_quiz_question_stats(
     logger.info(
         "question_stats_retrieval_initiated",
         user_id=str(current_user.id),
-        quiz_id=str(quiz_id),
+        quiz_id=str(quiz.id),
     )
 
     try:
-        # Verify quiz exists and user owns it
-        quiz_service = QuizService(session)
-        quiz = quiz_service.get_quiz_by_id(quiz_id)
-        if not quiz:
-            logger.warning(
-                "question_stats_quiz_not_found",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-            )
-            raise HTTPException(status_code=404, detail="Quiz not found")
-
-        if quiz.owner_id != current_user.id:
-            logger.warning(
-                "question_stats_access_denied",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-                quiz_owner_id=str(quiz.owner_id),
-            )
-            raise HTTPException(status_code=404, detail="Quiz not found")
-
         # Get question counts
         from src.question.service import QuestionService
 
         question_service = QuestionService(session)
-        stats = question_service.get_question_counts_by_quiz_id(quiz_id)
+        stats = question_service.get_question_counts_by_quiz_id(quiz.id)
 
         logger.info(
             "question_stats_retrieval_completed",
             user_id=str(current_user.id),
-            quiz_id=str(quiz_id),
+            quiz_id=str(quiz.id),
             total_questions=stats["total"],
             approved_questions=stats["approved"],
         )
 
         return stats
 
-    except HTTPException:
-        # Re-raise HTTP exceptions as-is
-        raise
     except Exception as e:
         logger.error(
             "question_stats_retrieval_failed",
             user_id=str(current_user.id),
-            quiz_id=str(quiz_id),
+            quiz_id=str(quiz.id),
             error=str(e),
             error_type=type(e).__name__,
             exc_info=True,
         )
         raise HTTPException(
             status_code=500,
-            detail="Failed to retrieve question stats. Please try again.",
-        )
-
-
-async def export_quiz_to_canvas_background(quiz_id: UUID, canvas_token: str) -> None:
-    """
-    Background task to export a quiz to Canvas LMS.
-
-    Simple wrapper around the main export flow which now handles
-    proper transaction management for background task compatibility.
-    """
-    logger.info(
-        "canvas_export_background_task_started",
-        quiz_id=str(quiz_id),
-    )
-
-    try:
-        # Use the main export flow which now properly handles transactions
-        result = await export_quiz_to_canvas_flow(quiz_id, canvas_token)
-
-        logger.info(
-            "canvas_export_background_task_completed",
-            quiz_id=str(quiz_id),
-            success=result.get("success", False),
-            canvas_quiz_id=result.get("canvas_quiz_id"),
-            exported_questions=result.get("exported_questions", 0),
-        )
-
-    except Exception as e:
-        logger.error(
-            "canvas_export_background_task_failed",
-            quiz_id=str(quiz_id),
-            error=str(e),
-            error_type=type(e).__name__,
-            exc_info=True,
+            detail=ERROR_MESSAGES["stats_retrieval_failed"],
         )
 
 
 @router.post("/{quiz_id}/export")
 async def export_quiz_to_canvas(
-    quiz_id: UUID,
+    quiz: QuizOwnership,
     current_user: CurrentUser,
     session: SessionDep,
     canvas_token: CanvasToken,
@@ -1026,96 +602,51 @@ async def export_quiz_to_canvas(
     logger.info(
         "quiz_export_endpoint_called",
         user_id=str(current_user.id),
-        quiz_id=str(quiz_id),
+        quiz_id=str(quiz.id),
     )
 
     try:
-        # Verify quiz exists and user owns it
-        quiz_service = QuizService(session)
-        quiz = quiz_service.get_quiz_by_id(quiz_id)
-        if not quiz:
-            logger.warning(
-                "quiz_export_quiz_not_found",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-            )
-            raise HTTPException(status_code=404, detail="Quiz not found")
+        # Validate quiz status for export
+        validate_export_ready(quiz)
 
-        if quiz.owner_id != current_user.id:
-            logger.warning(
-                "quiz_export_access_denied",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-                quiz_owner_id=str(quiz.owner_id),
-            )
-            raise HTTPException(status_code=404, detail="Quiz not found")
-
-        # Check if already exported
-        if quiz.export_status == "completed" and quiz.canvas_quiz_id:
-            logger.warning(
-                "quiz_export_already_completed",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-                canvas_quiz_id=quiz.canvas_quiz_id,
-            )
-            raise HTTPException(
-                status_code=409, detail="Quiz has already been exported to Canvas"
-            )
-
-        # Check if export is already in progress
-        if quiz.export_status == "processing":
-            logger.warning(
-                "quiz_export_already_in_progress",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-            )
-            raise HTTPException(
-                status_code=409, detail="Quiz export is already in progress"
-            )
-
-        # Check if quiz has approved questions
-        from src.question.service import QuestionService
-
-        question_service = QuestionService(session)
-        approved_questions = question_service.get_approved_questions_by_quiz_id(quiz_id)
-        if not approved_questions:
-            logger.warning(
-                "quiz_export_no_approved_questions",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-            )
-            raise HTTPException(
-                status_code=400, detail="Quiz has no approved questions to export"
-            )
+        # Validate quiz has approved questions
+        validate_quiz_has_approved_questions(quiz, session)
 
         # Trigger background export
         background_tasks.add_task(
-            export_quiz_to_canvas_background,
-            quiz_id,
+            quiz_export_background_flow,
+            quiz.id,
             canvas_token,
         )
 
         logger.info(
             "quiz_export_background_task_triggered",
             user_id=str(current_user.id),
-            quiz_id=str(quiz_id),
-            approved_questions_count=len(approved_questions),
+            quiz_id=str(quiz.id),
         )
 
-        return {"message": "Quiz export started"}
+        return {"message": SUCCESS_MESSAGES["export_started"]}
 
+    except ValueError as e:
+        logger.warning(
+            "quiz_export_validation_failed",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz.id),
+            error=str(e),
+        )
+        raise HTTPException(status_code=409, detail=str(e))
     except HTTPException:
-        # Re-raise HTTP exceptions as-is
+        # Re-raise HTTP exceptions as-is (from validate_quiz_has_approved_questions)
         raise
     except Exception as e:
         logger.error(
             "quiz_export_endpoint_failed",
             user_id=str(current_user.id),
-            quiz_id=str(quiz_id),
+            quiz_id=str(quiz.id),
             error=str(e),
             error_type=type(e).__name__,
             exc_info=True,
         )
         raise HTTPException(
-            status_code=500, detail="Failed to start quiz export. Please try again."
+            status_code=500, detail=ERROR_MESSAGES["export_trigger_failed"]
         )

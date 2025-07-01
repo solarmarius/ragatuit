@@ -1,10 +1,20 @@
 """Quiz schemas for validation and serialization."""
 
 from datetime import datetime
+from enum import Enum
 from typing import Any
 from uuid import UUID
 
 from sqlmodel import Field, SQLModel
+
+
+class Status(str, Enum):
+    """Status values for quiz operations."""
+
+    PENDING = "pending"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 class QuizCreate(SQLModel):
@@ -71,3 +81,50 @@ class QuizExportUpdate(SQLModel):
     export_status: str
     canvas_quiz_id: str | None = None
     exported_at: datetime | None = None
+
+
+# Flow operation schemas
+class QuizContentExtractionData(SQLModel):
+    """Typed data for content extraction flow operations."""
+
+    quiz_id: UUID
+    course_id: int
+    module_ids: list[int]
+    canvas_token: str
+
+
+class QuizQuestionGenerationData(SQLModel):
+    """Typed data for question generation flow operations."""
+
+    quiz_id: UUID
+    target_question_count: int
+    llm_model: str
+    llm_temperature: float
+
+
+class QuizExportData(SQLModel):
+    """Typed data for quiz export flow operations."""
+
+    quiz_id: UUID
+    canvas_token: str
+
+
+class QuizOperationResult(SQLModel):
+    """Standardized result for quiz operations."""
+
+    success: bool
+    message: str
+    quiz_id: UUID | None = None
+    operation_type: str | None = None
+    error_details: dict[str, Any] | None = None
+    timestamp: datetime | None = None
+
+
+class QuizOperationStatus(SQLModel):
+    """Status information for ongoing quiz operations."""
+
+    quiz_id: UUID
+    content_extraction_status: Status
+    llm_generation_status: Status
+    export_status: Status
+    last_updated: datetime | None = None

@@ -11,7 +11,7 @@ from src.exceptions import ResourceNotFoundError
 from src.logging_config import get_logger
 
 from .models import Quiz
-from .schemas import QuizCreate
+from .schemas import QuizCreate, Status
 
 logger = get_logger("quiz_service")
 
@@ -259,3 +259,155 @@ class QuizService:
         self.session.refresh(quiz)
 
         return quiz
+
+    def verify_quiz_ownership(self, quiz_id: UUID, user_id: UUID) -> Quiz:
+        """
+        Verify that a user owns a quiz.
+
+        Args:
+            quiz_id: Quiz ID
+            user_id: User ID to verify ownership
+
+        Returns:
+            Quiz instance if ownership verified
+
+        Raises:
+            ResourceNotFoundError: If quiz not found or user doesn't own it
+        """
+        quiz = self.session.get(Quiz, quiz_id)
+        if not quiz or quiz.owner_id != user_id:
+            raise ResourceNotFoundError("Quiz")
+        return quiz
+
+    def validate_quiz_for_content_extraction(
+        self, quiz_id: UUID, user_id: UUID
+    ) -> Quiz:
+        """
+        Validate quiz is ready for content extraction.
+
+        Args:
+            quiz_id: Quiz ID
+            user_id: User ID (must be owner)
+
+        Returns:
+            Quiz instance if validation passes
+
+        Raises:
+            ResourceNotFoundError: If quiz not found or user doesn't own it
+            ValueError: If quiz status doesn't allow extraction
+        """
+        quiz = self.verify_quiz_ownership(quiz_id, user_id)
+
+        if quiz.content_extraction_status == Status.PROCESSING:
+            raise ValueError("Content extraction is already in progress")
+
+        return quiz
+
+    def validate_quiz_for_question_generation(
+        self, quiz_id: UUID, user_id: UUID
+    ) -> Quiz:
+        """
+        Validate quiz is ready for question generation.
+
+        Args:
+            quiz_id: Quiz ID
+            user_id: User ID (must be owner)
+
+        Returns:
+            Quiz instance if validation passes
+
+        Raises:
+            ResourceNotFoundError: If quiz not found or user doesn't own it
+            ValueError: If quiz status doesn't allow generation
+        """
+        quiz = self.verify_quiz_ownership(quiz_id, user_id)
+
+        if quiz.content_extraction_status != Status.COMPLETED:
+            raise ValueError(
+                "Content extraction must be completed before generating questions"
+            )
+
+        if quiz.llm_generation_status == Status.PROCESSING:
+            raise ValueError("Question generation is already in progress")
+
+        return quiz
+
+    def validate_quiz_for_export(self, quiz_id: UUID, user_id: UUID) -> Quiz:
+        """
+        Validate quiz is ready for Canvas export.
+
+        Args:
+            quiz_id: Quiz ID
+            user_id: User ID (must be owner)
+
+        Returns:
+            Quiz instance if validation passes
+
+        Raises:
+            ResourceNotFoundError: If quiz not found or user doesn't own it
+            ValueError: If quiz status doesn't allow export
+        """
+        quiz = self.verify_quiz_ownership(quiz_id, user_id)
+
+        if quiz.export_status == Status.COMPLETED and quiz.canvas_quiz_id:
+            raise ValueError("Quiz has already been exported to Canvas")
+
+        if quiz.export_status == Status.PROCESSING:
+            raise ValueError("Quiz export is already in progress")
+
+        return quiz
+
+    def prepare_content_extraction(
+        self, quiz_id: UUID, user_id: UUID
+    ) -> dict[str, Any]:
+        """
+        Prepare quiz for content extraction and return module data.
+
+        Args:
+            quiz_id: Quiz ID
+            user_id: User ID (must be owner)
+
+        Returns:
+            Dict with course_id and module_ids for extraction
+        """
+        quiz = self.validate_quiz_for_content_extraction(quiz_id, user_id)
+
+        # Reset extraction status to pending
+        quiz.content_extraction_status = Status.PENDING
+        quiz.extracted_content = None
+        quiz.content_extracted_at = None
+        self.session.add(quiz)
+        self.session.commit()
+
+        # Return extraction parameters
+        module_ids = [int(module_id) for module_id in quiz.selected_modules.keys()]
+        return {
+            "course_id": quiz.canvas_course_id,
+            "module_ids": module_ids,
+        }
+
+    def prepare_question_generation(
+        self, quiz_id: UUID, user_id: UUID
+    ) -> dict[str, Any]:
+        """
+        Prepare quiz for question generation and return generation parameters.
+
+        Args:
+            quiz_id: Quiz ID
+            user_id: User ID (must be owner)
+
+        Returns:
+            Dict with generation parameters
+        """
+        quiz = self.validate_quiz_for_question_generation(quiz_id, user_id)
+
+        # Reset generation status to pending
+        quiz.llm_generation_status = Status.PENDING
+        self.session.add(quiz)
+        self.session.commit()
+
+        return {
+            "question_count": quiz.question_count,
+            "llm_model": quiz.llm_model,
+            "llm_temperature": quiz.llm_temperature,
+        }
