@@ -12,7 +12,6 @@ from src.logging_config import get_logger
 from src.retry import retry_on_failure
 
 # Import services from local module
-from .quiz_export_service import CanvasQuizExportService
 from .url_builder import CanvasURLBuilder
 
 logger = get_logger("canvas_service")
@@ -203,11 +202,269 @@ async def download_canvas_file_content(download_url: str) -> bytes:
         return b""
 
 
+# Quiz Export Canvas API Functions
+
+
+@retry_on_failure(max_attempts=3, initial_delay=2.0)
+async def create_canvas_quiz(
+    canvas_token: str, course_id: int, title: str, total_points: int
+) -> dict[str, Any]:
+    """
+    Create a new quiz in Canvas using the New Quizzes API.
+
+    Pure function for Canvas API interaction.
+
+    Args:
+        canvas_token: Canvas API authentication token
+        course_id: Canvas course ID
+        title: Quiz title
+        total_points: Total points for the quiz
+
+    Returns:
+        Canvas quiz object with assignment_id
+
+    Raises:
+        ExternalServiceError: If Canvas API call fails
+    """
+    logger.info(
+        "canvas_quiz_creation_started",
+        course_id=course_id,
+        title=title,
+        total_points=total_points,
+    )
+
+    url_builder = _get_canvas_url_builder()
+    headers = _get_canvas_headers(canvas_token)
+    headers["Content-Type"] = "application/json"
+
+    quiz_data = {
+        "title": title,
+        "points_possible": total_points,
+        "quiz_settings": {
+            "shuffle_questions": True,
+            "shuffle_answers": True,
+            "time_limit": 60,  # 60 minutes default
+            "multiple_attempts": False,
+            "scoring_policy": "keep_highest",
+        },
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=settings.CANVAS_API_TIMEOUT) as client:
+            response = await client.post(
+                url_builder.quiz_api_quizzes(course_id),
+                headers=headers,
+                json=quiz_data,
+            )
+            response.raise_for_status()
+            canvas_quiz: dict[str, Any] = response.json()
+
+            logger.info(
+                "canvas_quiz_creation_completed",
+                course_id=course_id,
+                title=title,
+                canvas_quiz_id=canvas_quiz.get("id"),
+            )
+
+            return canvas_quiz
+
+    except httpx.HTTPStatusError as e:
+        logger.error(
+            "canvas_quiz_creation_failed",
+            course_id=course_id,
+            title=title,
+            status_code=e.response.status_code,
+            response_text=e.response.text,
+        )
+        raise ExternalServiceError(
+            "canvas",
+            f"Failed to create Canvas quiz: {title}",
+            e.response.status_code,
+        )
+
+
+async def create_canvas_quiz_items(
+    canvas_token: str, course_id: int, quiz_id: str, questions: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """
+    Create quiz items (questions) in Canvas for the given quiz.
+
+    Pure function for Canvas API batch operations.
+
+    Args:
+        canvas_token: Canvas API authentication token
+        course_id: Canvas course ID
+        quiz_id: Canvas quiz assignment ID
+        questions: List of question dictionaries to create
+
+    Returns:
+        List of results for each question creation attempt
+    """
+    logger.info(
+        "canvas_quiz_items_creation_started",
+        course_id=course_id,
+        canvas_quiz_id=quiz_id,
+        questions_count=len(questions),
+    )
+
+    url_builder = _get_canvas_url_builder()
+    headers = _get_canvas_headers(canvas_token)
+    headers["Content-Type"] = "application/json"
+
+    results = []
+
+    async with httpx.AsyncClient(timeout=settings.CANVAS_API_TIMEOUT) as client:
+        for i, question in enumerate(questions):
+            try:
+                # Convert question to Canvas New Quiz item format
+                item_data = convert_question_to_canvas_format(question, i + 1)
+
+                response = await client.post(
+                    url_builder.quiz_api_items(course_id, quiz_id),
+                    headers=headers,
+                    json=item_data,
+                )
+                response.raise_for_status()
+                item_response = response.json()
+
+                results.append(
+                    {
+                        "success": True,
+                        "question_id": question["id"],
+                        "item_id": item_response.get("id"),
+                        "position": i + 1,
+                    }
+                )
+
+                logger.info(
+                    "canvas_quiz_item_created",
+                    course_id=course_id,
+                    canvas_quiz_id=quiz_id,
+                    question_id=str(question["id"]),
+                    canvas_item_id=item_response.get("id"),
+                    position=i + 1,
+                )
+
+            except httpx.HTTPStatusError as e:
+                logger.error(
+                    "canvas_quiz_item_creation_failed",
+                    course_id=course_id,
+                    canvas_quiz_id=quiz_id,
+                    question_id=str(question["id"]),
+                    position=i + 1,
+                    status_code=e.response.status_code,
+                    response_text=e.response.text,
+                )
+                # Continue with other questions even if one fails
+                results.append(
+                    {
+                        "success": False,
+                        "question_id": question["id"],
+                        "error": f"Canvas API error: {e.response.status_code}",
+                        "position": i + 1,
+                    }
+                )
+
+            except Exception as e:
+                logger.error(
+                    "canvas_quiz_item_creation_error",
+                    course_id=course_id,
+                    canvas_quiz_id=quiz_id,
+                    question_id=str(question["id"]),
+                    position=i + 1,
+                    error=str(e),
+                    error_type=type(e).__name__,
+                )
+                results.append(
+                    {
+                        "success": False,
+                        "question_id": question["id"],
+                        "error": str(e),
+                        "position": i + 1,
+                    }
+                )
+
+    successful_items = len([r for r in results if r["success"]])
+    logger.info(
+        "canvas_quiz_items_creation_completed",
+        course_id=course_id,
+        canvas_quiz_id=quiz_id,
+        total_questions=len(questions),
+        successful_items=successful_items,
+        failed_items=len(questions) - successful_items,
+    )
+
+    return results
+
+
+def convert_question_to_canvas_format(
+    question: dict[str, Any], position: int
+) -> dict[str, Any]:
+    """
+    Convert a question dictionary to Canvas New Quiz item format.
+
+    Pure function for data transformation.
+
+    Args:
+        question: Question dictionary with question data
+        position: Position of the question in the quiz
+
+    Returns:
+        Canvas quiz item data structure
+    """
+    from datetime import datetime, timezone
+
+    # Map correct answer letter to choice index
+    correct_answer_map = {"A": 0, "B": 1, "C": 2, "D": 3}
+    correct_index = correct_answer_map.get(question["correct_answer"], 0)
+
+    choices = [
+        {
+            "id": f"choice_{i + 1}",
+            "position": i + 1,
+            "item_body": f"<p>{choice}</p>",
+        }
+        for i, choice in enumerate(
+            [
+                question["option_a"],
+                question["option_b"],
+                question["option_c"],
+                question["option_d"],
+            ]
+        )
+    ]
+
+    item_id = f"item_{question['id']}"
+
+    return {
+        "item": {
+            "id": item_id,
+            "entry_type": "Item",
+            "entry_id": item_id,
+            "position": position,
+            "item_type": "Question",
+            "properties": {"shuffle_answers": True},
+            "points_possible": 1,  # 1 point per question
+            "entry": {
+                "interaction_type_slug": "choice",
+                "item_body": f"<p>{question['question_text']}</p>",
+                "interaction_data": {"choices": choices},
+                "scoring_algorithm": "Equivalence",
+                "scoring_data": {"value": f"choice_{correct_index + 1}"},
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+        }
+    }
+
+
 # Re-export for public API
 __all__ = [
-    "CanvasQuizExportService",
     "fetch_canvas_module_items",
     "fetch_canvas_page_content",
     "fetch_canvas_file_info",
     "download_canvas_file_content",
+    "create_canvas_quiz",
+    "create_canvas_quiz_items",
+    "convert_question_to_canvas_format",
 ]

@@ -2,7 +2,11 @@
 
 # Import router separately to avoid circular imports
 from . import router
-from .flows import extract_content_for_modules, get_content_summary
+from .flows import (
+    export_quiz_to_canvas_flow,
+    extract_content_for_modules,
+    get_content_summary,
+)
 from .schemas import (
     CanvasCourse,
     CanvasFile,
@@ -13,7 +17,6 @@ from .schemas import (
     QuizExportRequest,
     QuizExportResponse,
 )
-from .service import CanvasQuizExportService
 from .url_builder import CanvasURLBuilder
 
 __all__ = [
@@ -28,6 +31,6 @@ __all__ = [
     "QuizExportResponse",
     "extract_content_for_modules",
     "get_content_summary",
-    "CanvasQuizExportService",
+    "export_quiz_to_canvas_flow",
     "CanvasURLBuilder",
 ]

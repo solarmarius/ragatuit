@@ -7,8 +7,11 @@ from sqlmodel import select
 
 from src.auth.dependencies import CurrentUser
 from src.canvas.dependencies import CanvasToken
-from src.canvas.flows import extract_content_for_modules, get_content_summary
-from src.canvas.service import CanvasQuizExportService
+from src.canvas.flows import (
+    export_quiz_to_canvas_flow,
+    extract_content_for_modules,
+    get_content_summary,
+)
 from src.database import SessionDep, execute_in_transaction
 from src.exceptions import ServiceError
 from src.logging_config import get_logger
@@ -949,8 +952,8 @@ async def export_quiz_to_canvas_background(quiz_id: UUID, canvas_token: str) -> 
     """
     Background task to export a quiz to Canvas LMS.
 
-    This function runs asynchronously after the export endpoint is called.
-    It handles the complete Canvas quiz creation and question export process.
+    Simple wrapper around the main export flow which now handles
+    proper transaction management for background task compatibility.
     """
     logger.info(
         "canvas_export_background_task_started",
@@ -958,11 +961,8 @@ async def export_quiz_to_canvas_background(quiz_id: UUID, canvas_token: str) -> 
     )
 
     try:
-        # Initialize Canvas export service
-        export_service = CanvasQuizExportService(canvas_token)
-
-        # Export quiz to Canvas
-        result = await export_service.export_quiz_to_canvas(quiz_id)
+        # Use the main export flow which now properly handles transactions
+        result = await export_quiz_to_canvas_flow(quiz_id, canvas_token)
 
         logger.info(
             "canvas_export_background_task_completed",
