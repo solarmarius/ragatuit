@@ -300,7 +300,7 @@ def init_db(session: Session) -> None:
     # Import locally to avoid circular dependency
     from src.auth.models import User
     from src.auth.schemas import UserCreate
-    from src.auth.service import AuthService
+    from src.auth.service import create_user
 
     user = session.exec(select(User).where(User.canvas_id == 1111)).first()
     if not user:
@@ -310,8 +310,7 @@ def init_db(session: Session) -> None:
             access_token="test_token",
             refresh_token="refresh_test_token",
         )
-        auth_service = AuthService(session)
-        user = auth_service.create_user(user_in)
+        user = create_user(session, user_in)
 
 
 # FastAPI Dependencies

@@ -16,17 +16,12 @@ from src.logging_config import get_logger
 
 from .models import User
 from .schemas import TokenPayload
-from .service import AuthService
+from .service import get_user_by_id
 
 logger = get_logger("auth_dependencies")
 
 # OAuth2 scheme for bearer token
 reusable_oauth2 = HTTPBearer()
-
-
-def get_auth_service(session: SessionDep) -> AuthService:
-    """Get auth service instance."""
-    return AuthService(session)
 
 
 def get_current_user(
@@ -83,10 +78,9 @@ def get_current_user(
         )
 
     # Get user from database
-    auth_service = AuthService(session)
     from uuid import UUID
 
-    user = auth_service.get_user_by_id(UUID(token_data.sub))
+    user = get_user_by_id(session, UUID(token_data.sub))
     if not user:
         logger.warning("user_not_found", user_id=token_data.sub)
         raise HTTPException(

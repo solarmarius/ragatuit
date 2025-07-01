@@ -1,6 +1,6 @@
 """Authentication module for Canvas OAuth and user management."""
 
-from .dependencies import CurrentUser, get_auth_service, get_current_user
+from .dependencies import CurrentUser, get_current_user
 from .models import User
 from .router import router, users_router
 from .schemas import (
@@ -11,7 +11,6 @@ from .schemas import (
     UserPublic,
     UserUpdateMe,
 )
-from .service import AuthService
 from .utils import create_access_token
 
 __all__ = [
@@ -24,9 +23,7 @@ __all__ = [
     "TokenPayload",
     "CanvasAuthRequest",
     "CanvasAuthResponse",
-    "AuthService",
     "CurrentUser",
     "get_current_user",
-    "get_auth_service",
     "create_access_token",
 ]

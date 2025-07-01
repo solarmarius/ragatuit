@@ -5,7 +5,12 @@ from fastapi import HTTPException
 from sqlmodel import Session
 
 from src.auth.models import User
-from src.auth.service import AuthService
+from src.auth.service import (
+    clear_user_tokens,
+    get_decrypted_access_token,
+    get_decrypted_refresh_token,
+    update_user_tokens,
+)
 from src.config import settings
 from src.exceptions import AuthenticationError, ExternalServiceError
 from src.logging_config import get_logger
@@ -49,8 +54,7 @@ async def refresh_canvas_token(user: User, session: Session) -> None:
         )
 
     try:
-        auth_service = AuthService(session)
-        refresh_token = auth_service.get_decrypted_refresh_token(user)
+        refresh_token = get_decrypted_refresh_token(user)
         if not refresh_token:
             logger.error(
                 "token_refresh_failed_decryption_error",
@@ -100,7 +104,8 @@ async def refresh_canvas_token(user: User, session: Session) -> None:
                 seconds=token_response["expires_in"]
             )
 
-        auth_service.update_user_tokens(
+        update_user_tokens(
+            session,
             user=user,
             access_token=token_response["access_token"],
             expires_at=expires_at,
@@ -140,8 +145,7 @@ async def ensure_valid_canvas_token(session: Session, user: User) -> str:
             except HTTPException as e:
                 if e.status_code == 401:
                     # Invalid canvas token - clear and force re-login
-                    auth_service = AuthService(session)
-                    auth_service.clear_user_tokens(user)
+                    clear_user_tokens(session, user)
                     raise HTTPException(
                         status_code=401,
                         detail="Canvas session expired, Please re-login.",
@@ -152,5 +156,4 @@ async def ensure_valid_canvas_token(session: Session, user: User) -> str:
                         detail="Canvas temporarily unavailable. Please try again.",
                     )
 
-    auth_service = AuthService(session)
-    return auth_service.get_decrypted_access_token(user)
+    return get_decrypted_access_token(user)
