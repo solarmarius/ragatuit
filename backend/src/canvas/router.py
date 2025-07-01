@@ -7,11 +7,11 @@ from typing import Any
 import httpx
 from fastapi import APIRouter, HTTPException
 
-from src.api.deps import CanvasToken
 from src.auth.dependencies import CurrentUser
 from src.config import settings
 from src.logging_config import get_logger
 
+from .dependencies import CanvasToken
 from .schemas import CanvasCourse, CanvasModule
 from .url_builder import CanvasURLBuilder
 

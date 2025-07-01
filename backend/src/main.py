@@ -8,7 +8,7 @@ from starlette.middleware.cors import CORSMiddleware
 import src.auth.models  # noqa
 import src.question.models  # noqa
 import src.quiz.models  # noqa
-from src.api.main import api_router
+from src.api import api_router
 from src.config import settings
 from src.exceptions import (
     ServiceError,

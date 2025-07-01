@@ -2,7 +2,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
 
-from src.api.deps import CurrentUser
+from src.auth.dependencies import CurrentUser
 from src.common import Message
 from src.deps import SessionDep
 from src.logging_config import get_logger

@@ -5,8 +5,8 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 from sqlmodel import select
 
-from src.api.deps import CanvasToken
 from src.auth.dependencies import CurrentUser
+from src.canvas.dependencies import CanvasToken
 from src.canvas.service import CanvasQuizExportService, ContentExtractionService
 from src.common import Message
 from src.database import execute_in_transaction
