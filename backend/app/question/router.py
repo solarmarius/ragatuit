@@ -3,9 +3,9 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 
 from app.api.deps import CurrentUser
+from app.common import Message
 from app.deps import SessionDep
 from app.logging_config import get_logger
-from app.common import Message
 
 from .models import Question
 from .schemas import QuestionPublic, QuestionUpdate

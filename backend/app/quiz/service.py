@@ -122,9 +122,8 @@ class QuizService:
             return True
         return False
 
-    async def get_quiz_for_update(
-        self, session: AsyncSession, quiz_id: UUID
-    ) -> Quiz | None:
+    @staticmethod
+    async def get_quiz_for_update(session: AsyncSession, quiz_id: UUID) -> Quiz | None:
         """
         Get quiz for update with row lock.
 
@@ -140,8 +139,9 @@ class QuizService:
         )
         return result.scalar_one_or_none()
 
+    @staticmethod
     async def get_content_from_quiz(
-        self, session: AsyncSession, quiz_id: UUID
+        session: AsyncSession, quiz_id: UUID
     ) -> dict[str, Any] | None:
         """
         Get extracted content from quiz.

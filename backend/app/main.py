@@ -4,6 +4,10 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
 
+# Import all models to ensure SQLAlchemy can resolve relationships
+import app.auth.models  # noqa
+import app.question.models  # noqa
+import app.quiz.models  # noqa
 from app.api.main import api_router
 from app.config import settings
 from app.exceptions import (

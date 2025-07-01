@@ -12,7 +12,7 @@ from pydantic import ValidationError
 from sqlmodel import Session
 
 from app.config import settings
-from app.database import get_session
+from app.deps import get_db
 from app.logging_config import get_logger
 
 from .models import User
@@ -25,13 +25,13 @@ logger = get_logger("auth_dependencies")
 reusable_oauth2 = HTTPBearer()
 
 
-def get_auth_service(session: Session = Depends(get_session)) -> AuthService:
+def get_auth_service(session: Session = Depends(get_db)) -> AuthService:
     """Get auth service instance."""
     return AuthService(session)
 
 
 def get_current_user(
-    session: Annotated[Session, Depends(get_session)],
+    session: Annotated[Session, Depends(get_db)],
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(reusable_oauth2)],
 ) -> User:
     """

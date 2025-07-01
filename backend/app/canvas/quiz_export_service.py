@@ -61,8 +61,7 @@ class CanvasQuizExportService:
             async with get_async_session() as session:
                 from app.quiz.service import QuizService
 
-                quiz_service = QuizService(session)
-                quiz = await quiz_service.get_quiz_for_update(session, quiz_id)
+                quiz = await QuizService.get_quiz_for_update(session, quiz_id)
 
                 if not quiz:
                     logger.error(
@@ -99,9 +98,10 @@ class CanvasQuizExportService:
 
                 from app.question.service import QuestionService
 
-                question_service = QuestionService(session)
-                approved_questions = await question_service.get_approved_questions_by_quiz_id_async(
-                    session, quiz_id
+                approved_questions = (
+                    await QuestionService.get_approved_questions_by_quiz_id_async(
+                        session, quiz_id
+                    )
                 )
 
                 if not approved_questions:
@@ -159,8 +159,7 @@ class CanvasQuizExportService:
             async with get_async_session() as session:
                 from app.quiz.service import QuizService
 
-                quiz_service = QuizService(session)
-                quiz = await quiz_service.get_quiz_for_update(session, quiz_id)
+                quiz = await QuizService.get_quiz_for_update(session, quiz_id)
 
                 if quiz:
                     quiz.canvas_quiz_id = canvas_quiz_id
@@ -198,8 +197,7 @@ class CanvasQuizExportService:
                 async with get_async_session() as error_session:
                     from app.quiz.service import QuizService
 
-                    quiz_service = QuizService(error_session)
-                    quiz = await quiz_service.get_quiz_for_update(error_session, quiz_id)
+                    quiz = await QuizService.get_quiz_for_update(error_session, quiz_id)
                     if quiz:
                         quiz.export_status = "failed"
                         await error_session.commit()

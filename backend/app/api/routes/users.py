@@ -4,8 +4,8 @@ from fastapi import APIRouter
 
 from app.api.deps import CurrentUser
 from app.auth.schemas import UserPublic, UserUpdateMe
-from app.deps import SessionDep
 from app.common import Message
+from app.deps import SessionDep
 
 router = APIRouter(prefix="/users", tags=["users"])
 

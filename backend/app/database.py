@@ -8,9 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engin
 from sqlalchemy.pool import NullPool, QueuePool
 from sqlmodel import Session, select
 
-from app.auth.models import User
-from app.auth.schemas import UserCreate
-from app.auth.service import AuthService
+# Auth imports moved to avoid circular dependency
 from app.config import settings
 from app.logging_config import get_logger
 
@@ -122,7 +120,7 @@ def get_session() -> Generator[Session, None, None]:
 
     Example:
         with get_session() as session:
-            user = session.get(User, user_id)
+            result = session.get(SomeModel, some_id)
     """
     session = Session(engine)
     try:
@@ -147,7 +145,7 @@ async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
 
     Example:
         async with get_async_session() as session:
-            result = await session.execute(select(User))
+            result = await session.execute(select(SomeModel))
     """
     async with AsyncSession(async_engine) as session:
         try:
@@ -328,6 +326,11 @@ def init_db(session: Session) -> None:
     Args:
         session: Database session to use for operations
     """
+    # Import locally to avoid circular dependency
+    from app.auth.models import User
+    from app.auth.schemas import UserCreate
+    from app.auth.service import AuthService
+
     user = session.exec(select(User).where(User.canvas_id == 1111)).first()
     if not user:
         user_in = UserCreate(

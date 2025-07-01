@@ -146,8 +146,9 @@ Generate exactly ONE question based on this content."""
             async with get_async_session() as session:
                 from app.quiz.service import QuizService
 
-                quiz_service = QuizService(session)
-                content_dict = await quiz_service.get_content_from_quiz(session, state["quiz_id"])
+                content_dict = await QuizService.get_content_from_quiz(
+                    session, state["quiz_id"]
+                )
 
                 if not content_dict:
                     raise ValueError("No extracted content found for quiz")

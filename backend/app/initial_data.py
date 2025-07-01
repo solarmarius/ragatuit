@@ -1,5 +1,9 @@
 import logging
 
+# Import all models to ensure SQLAlchemy can resolve relationships
+import app.auth.models  # noqa
+import app.question.models  # noqa
+import app.quiz.models  # noqa
 from app.database import get_session, init_db
 
 logging.basicConfig(level=logging.INFO)

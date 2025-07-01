@@ -8,11 +8,11 @@ from sqlmodel import select
 from app.api.deps import CanvasToken
 from app.auth.dependencies import CurrentUser
 from app.canvas.service import CanvasQuizExportService, ContentExtractionService
+from app.common import Message
 from app.database import execute_in_transaction
 from app.deps import SessionDep
 from app.exceptions import ServiceError
 from app.logging_config import get_logger
-from app.common import Message
 from app.question.mcq_generation_service import MCQGenerationService
 
 from .models import Quiz

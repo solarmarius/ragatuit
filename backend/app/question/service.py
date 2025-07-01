@@ -199,8 +199,9 @@ class QuestionService:
         )
         return list(self.session.exec(statement).all())
 
+    @staticmethod
     async def get_approved_questions_by_quiz_id_async(
-        self, session: AsyncSession, quiz_id: UUID
+        session: AsyncSession, quiz_id: UUID
     ) -> list[Question]:
         """
         Get all approved questions for a quiz asynchronously.
