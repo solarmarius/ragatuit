@@ -16,7 +16,7 @@ from src.exceptions import (
     service_error_handler,
 )
 from src.logging_config import configure_logging, get_logger
-from src.middleware.logging import LoggingMiddleware
+from src.middleware import LoggingMiddleware
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:

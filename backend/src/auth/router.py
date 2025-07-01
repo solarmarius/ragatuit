@@ -13,7 +13,7 @@ from fastapi.responses import RedirectResponse
 from src.config import settings
 from src.database import SessionDep
 from src.logging_config import get_logger
-from src.middleware.logging import add_user_to_logs
+from src.middleware import add_user_to_logs
 
 from .dependencies import CurrentUser
 from .schemas import UserCreate, UserPublic, UserUpdateMe
