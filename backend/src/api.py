@@ -5,6 +5,7 @@ Main API router setup and utility endpoints.
 from fastapi import APIRouter
 
 from src.auth import router as auth_router
+from src.auth import users_router
 from src.canvas.router import router as canvas_router
 from src.question.router import router as question_router
 from src.quiz.router import router as quiz_router
@@ -14,6 +15,9 @@ api_router = APIRouter()
 
 # Include all module routers
 api_router.include_router(auth_router)
+api_router.include_router(
+    users_router
+)  # User management endpoints without /auth prefix
 api_router.include_router(canvas_router)
 api_router.include_router(quiz_router)
 api_router.include_router(question_router)

@@ -21,6 +21,9 @@ from .service import AuthService
 from .utils import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# Create a separate router for user management endpoints (to maintain /api/v1/users/me path)
+users_router = APIRouter(tags=["users"])
 logger = get_logger("auth")
 
 
@@ -365,10 +368,7 @@ async def logout_canvas(
     return {"message": "Canvas account disconnected successfully"}
 
 
-# User management endpoints (moved from api/routes/users.py)
-
-
-@router.get("/users/me", response_model=UserPublic)
+@users_router.get("/users/me", response_model=UserPublic)
 def read_user_me(current_user: CurrentUser) -> CurrentUser:
     """
     Get current user profile information.
@@ -411,7 +411,7 @@ def read_user_me(current_user: CurrentUser) -> CurrentUser:
     return current_user
 
 
-@router.patch("/users/me", response_model=UserPublic)
+@users_router.patch("/users/me", response_model=UserPublic)
 def update_user_me(
     *, session: SessionDep, user_in: UserUpdateMe, current_user: CurrentUser
 ) -> CurrentUser:
@@ -473,7 +473,7 @@ def update_user_me(
     return current_user
 
 
-@router.delete("/users/me", response_model=None)
+@users_router.delete("/users/me", response_model=None)
 def delete_user_me(session: SessionDep, current_user: CurrentUser) -> None:
     """
     Permanently delete current user account and all associated data.
