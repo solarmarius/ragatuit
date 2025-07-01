@@ -12,7 +12,6 @@ from .constants import ERROR_MESSAGES, SUCCESS_MESSAGES
 from .dependencies import (
     QuizOwnership,
     QuizOwnershipWithLock,
-    QuizServiceDep,
     validate_content_extraction_ready,
     validate_export_ready,
     validate_question_generation_ready,
@@ -25,6 +24,13 @@ from .flows import (
 )
 from .models import Quiz
 from .schemas import QuizCreate
+from .service import (
+    create_quiz,
+    delete_quiz,
+    get_user_quizzes,
+    prepare_content_extraction,
+    prepare_question_generation,
+)
 
 router = APIRouter(prefix="/quiz", tags=["quiz"])
 logger = get_logger("quiz")
@@ -34,7 +40,7 @@ logger = get_logger("quiz")
 async def create_new_quiz(
     quiz_data: QuizCreate,
     current_user: CurrentUser,
-    quiz_service: QuizServiceDep,
+    session: SessionDep,
     canvas_token: CanvasToken,
     background_tasks: BackgroundTasks,
 ) -> Quiz:
@@ -87,7 +93,7 @@ async def create_new_quiz(
     )
 
     try:
-        quiz = quiz_service.create_quiz(quiz_data, current_user.id)
+        quiz = create_quiz(session, quiz_data, current_user.id)
 
         # Trigger content extraction in the background
         background_tasks.add_task(
@@ -164,7 +170,7 @@ def get_quiz(quiz: QuizOwnership) -> Quiz:
 @router.get("/", response_model=list[Quiz])
 def get_user_quizzes_endpoint(
     current_user: CurrentUser,
-    quiz_service: QuizServiceDep,
+    session: SessionDep,
 ) -> list[Quiz]:
     """
     Retrieve all quizzes created by the authenticated user.
@@ -206,7 +212,7 @@ def get_user_quizzes_endpoint(
     )
 
     try:
-        quizzes = quiz_service.get_user_quizzes(current_user.id)
+        quizzes = get_user_quizzes(session, current_user.id)
 
         logger.info(
             "user_quizzes_retrieval_completed",
@@ -234,7 +240,7 @@ def get_user_quizzes_endpoint(
 async def trigger_content_extraction(
     quiz: QuizOwnershipWithLock,
     current_user: CurrentUser,
-    quiz_service: QuizServiceDep,
+    session: SessionDep,
     canvas_token: CanvasToken,
     background_tasks: BackgroundTasks,
 ) -> dict[str, str]:
@@ -269,8 +275,8 @@ async def trigger_content_extraction(
         validate_content_extraction_ready(quiz)
 
         # Prepare extraction using service layer
-        extraction_params = quiz_service.prepare_content_extraction(
-            quiz.id, current_user.id
+        extraction_params = prepare_content_extraction(
+            session, quiz.id, current_user.id
         )
 
         # Trigger content extraction in the background
@@ -317,7 +323,7 @@ async def trigger_content_extraction(
 def delete_quiz_endpoint(
     quiz_id: UUID,
     current_user: CurrentUser,
-    quiz_service: QuizServiceDep,
+    session: SessionDep,
 ) -> None:
     """
     Delete a quiz by its ID.
@@ -372,7 +378,7 @@ def delete_quiz_endpoint(
     )
 
     try:
-        success = quiz_service.delete_quiz(quiz_id, current_user.id)
+        success = delete_quiz(session, quiz_id, current_user.id)
 
         if not success:
             logger.warning(
@@ -409,7 +415,7 @@ def delete_quiz_endpoint(
 async def trigger_question_generation(
     quiz: QuizOwnership,
     current_user: CurrentUser,
-    quiz_service: QuizServiceDep,
+    session: SessionDep,
     background_tasks: BackgroundTasks,
 ) -> dict[str, str]:
     """
@@ -444,8 +450,8 @@ async def trigger_question_generation(
         validate_question_generation_ready(quiz)
 
         # Prepare generation using service layer
-        generation_params = quiz_service.prepare_question_generation(
-            quiz.id, current_user.id
+        generation_params = prepare_question_generation(
+            session, quiz.id, current_user.id
         )
 
         # Trigger question generation in the background

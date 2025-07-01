@@ -50,11 +50,10 @@ def get_quiz_questions(
 
     try:
         # Import QuizService locally to avoid circular imports
-        from src.quiz.service import QuizService
+        from src.quiz.service import get_quiz_by_id
 
         # Verify quiz exists and user owns it
-        quiz_service = QuizService(session)
-        quiz = quiz_service.get_quiz_by_id(quiz_id)
+        quiz = get_quiz_by_id(session, quiz_id)
         if not quiz:
             logger.warning(
                 "quiz_questions_quiz_not_found",
@@ -137,11 +136,10 @@ def get_question(
 
     try:
         # Import QuizService locally to avoid circular imports
-        from src.quiz.service import QuizService
+        from src.quiz.service import get_quiz_by_id
 
         # Verify quiz exists and user owns it
-        quiz_service = QuizService(session)
-        quiz = quiz_service.get_quiz_by_id(quiz_id)
+        quiz = get_quiz_by_id(session, quiz_id)
         if not quiz:
             logger.warning(
                 "question_quiz_not_found",
@@ -250,11 +248,10 @@ def update_quiz_question(
 
     try:
         # Import QuizService locally to avoid circular imports
-        from src.quiz.service import QuizService
+        from src.quiz.service import get_quiz_by_id
 
         # Verify quiz exists and user owns it
-        quiz_service = QuizService(session)
-        quiz = quiz_service.get_quiz_by_id(quiz_id)
+        quiz = get_quiz_by_id(session, quiz_id)
         if not quiz:
             logger.warning(
                 "question_update_quiz_not_found",
@@ -366,11 +363,10 @@ def approve_quiz_question(
 
     try:
         # Import QuizService locally to avoid circular imports
-        from src.quiz.service import QuizService
+        from src.quiz.service import get_quiz_by_id
 
         # Verify quiz exists and user owns it
-        quiz_service = QuizService(session)
-        quiz = quiz_service.get_quiz_by_id(quiz_id)
+        quiz = get_quiz_by_id(session, quiz_id)
         if not quiz:
             logger.warning(
                 "question_approval_quiz_not_found",
@@ -479,11 +475,10 @@ def delete_quiz_question(
 
     try:
         # Import QuizService locally to avoid circular imports
-        from src.quiz.service import QuizService
+        from src.quiz.service import get_quiz_by_id
 
         # Verify quiz exists and user owns it
-        quiz_service = QuizService(session)
-        quiz = quiz_service.get_quiz_by_id(quiz_id)
+        quiz = get_quiz_by_id(session, quiz_id)
         if not quiz:
             logger.warning(
                 "question_deletion_quiz_not_found",

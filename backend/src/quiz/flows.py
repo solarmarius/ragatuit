@@ -20,7 +20,7 @@ from src.database import execute_in_transaction
 from src.logging_config import get_logger
 from src.question.mcq_generation_service import MCQGenerationService
 
-from .service import QuizService
+from .service import get_quiz_for_update
 
 logger = get_logger("quiz_flows")
 
@@ -51,8 +51,7 @@ async def quiz_content_extraction_flow(
     # === Transaction 1: Reserve the Job (very fast) ===
     async def _reserve_job(session: Any, quiz_id: UUID) -> dict[str, Any] | None:
         """Reserve the extraction job and return quiz settings if successful."""
-        quiz_service = QuizService(session)
-        quiz = await quiz_service.get_quiz_for_update(session, quiz_id)
+        quiz = await get_quiz_for_update(session, quiz_id)
 
         if not quiz:
             logger.error("content_extraction_quiz_not_found", quiz_id=str(quiz_id))
@@ -128,8 +127,7 @@ async def quiz_content_extraction_flow(
         status: str,
     ) -> None:
         """Save the extraction result to the quiz."""
-        quiz_service = QuizService(session)
-        quiz = await quiz_service.get_quiz_for_update(session, quiz_id)
+        quiz = await get_quiz_for_update(session, quiz_id)
         if not quiz:
             logger.error(
                 "content_extraction_quiz_not_found_during_save", quiz_id=str(quiz_id)
@@ -193,8 +191,7 @@ async def quiz_question_generation_flow(
     # === Transaction 1: Reserve the Job (very fast) ===
     async def _reserve_generation_job(session: Any, quiz_id: UUID) -> bool:
         """Reserve the question generation job."""
-        quiz_service = QuizService(session)
-        quiz = await quiz_service.get_quiz_for_update(session, quiz_id)
+        quiz = await get_quiz_for_update(session, quiz_id)
 
         if not quiz:
             logger.error("question_generation_quiz_not_found", quiz_id=str(quiz_id))
@@ -268,8 +265,7 @@ async def quiz_question_generation_flow(
         status: str,
     ) -> None:
         """Save the generation result to the quiz."""
-        quiz_service = QuizService(session)
-        quiz = await quiz_service.get_quiz_for_update(session, quiz_id)
+        quiz = await get_quiz_for_update(session, quiz_id)
         if not quiz:
             logger.error(
                 "question_generation_quiz_not_found_during_save", quiz_id=str(quiz_id)

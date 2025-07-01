@@ -11,20 +11,15 @@ from src.database import SessionDep
 from src.logging_config import get_logger
 
 from .models import Quiz
-from .service import QuizService
+from .service import get_quiz_by_id
 
 logger = get_logger("quiz_dependencies")
-
-
-def get_quiz_service(session: SessionDep) -> QuizService:
-    """Get QuizService instance."""
-    return QuizService(session)
 
 
 def verify_quiz_ownership(
     quiz_id: UUID,
     current_user: CurrentUser,
-    quiz_service: Annotated[QuizService, Depends(get_quiz_service)],
+    session: SessionDep,
 ) -> Quiz:
     """
     Verify that the current user owns the specified quiz.
@@ -32,7 +27,7 @@ def verify_quiz_ownership(
     Args:
         quiz_id: UUID of the quiz to verify
         current_user: Current authenticated user
-        quiz_service: Quiz service instance
+        session: Database session
 
     Returns:
         Quiz object if verification succeeds
@@ -40,7 +35,7 @@ def verify_quiz_ownership(
     Raises:
         HTTPException: 404 if quiz not found or user doesn't own it
     """
-    quiz = quiz_service.get_quiz_by_id(quiz_id)
+    quiz = get_quiz_by_id(session, quiz_id)
 
     if not quiz:
         logger.warning(
@@ -221,4 +216,3 @@ def validate_quiz_has_approved_questions(
 # Type aliases for common dependency combinations
 QuizOwnership = Annotated[Quiz, Depends(verify_quiz_ownership)]
 QuizOwnershipWithLock = Annotated[Quiz, Depends(verify_quiz_ownership_with_lock)]
-QuizServiceDep = Annotated[QuizService, Depends(get_quiz_service)]

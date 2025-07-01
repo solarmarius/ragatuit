@@ -633,9 +633,9 @@ async def validate_quiz_for_export_flow(session: Any, quiz_id: UUID) -> QuizExpo
         ResourceNotFoundError: If quiz not found
         ValidationError: If quiz invalid for export
     """
-    from src.quiz.service import QuizService
+    from src.quiz.service import get_quiz_for_update
 
-    quiz = await QuizService.get_quiz_for_update(session, quiz_id)
+    quiz = await get_quiz_for_update(session, quiz_id)
     if not quiz:
         logger.error("canvas_quiz_export_quiz_not_found", quiz_id=str(quiz_id))
         raise ResourceNotFoundError(f"Quiz {quiz_id}")
@@ -817,9 +817,9 @@ async def finalize_quiz_export_flow(
     """
     # Update quiz export status
     from src.question.models import Question
-    from src.quiz.service import QuizService
+    from src.quiz.service import get_quiz_for_update
 
-    quiz = await QuizService.get_quiz_for_update(session, quiz_id)
+    quiz = await get_quiz_for_update(session, quiz_id)
     if quiz:
         quiz.canvas_quiz_id = canvas_quiz_id
         quiz.export_status = "completed"
@@ -853,9 +853,9 @@ async def update_quiz_export_status(session: Any, quiz_id: UUID, status: str) ->
         quiz_id: UUID of the quiz
         status: New export status
     """
-    from src.quiz.service import QuizService
+    from src.quiz.service import get_quiz_for_update
 
-    quiz = await QuizService.get_quiz_for_update(session, quiz_id)
+    quiz = await get_quiz_for_update(session, quiz_id)
     if quiz:
         quiz.export_status = status
         await session.commit()

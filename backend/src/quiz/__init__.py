@@ -20,7 +20,15 @@ from .schemas import (
     QuizUpdate,
     Status,
 )
-from .service import QuizService
+from .service import (
+    create_quiz,
+    delete_quiz,
+    get_quiz_by_id,
+    get_user_quizzes,
+    prepare_content_extraction,
+    prepare_question_generation,
+    verify_quiz_ownership,
+)
 
 __all__ = [
     "router",
@@ -28,7 +36,6 @@ __all__ = [
     "QuizCreate",
     "QuizPublic",
     "QuizUpdate",
-    "QuizService",
     "Status",
     "QuizContentExtractionData",
     "QuizQuestionGenerationData",
@@ -40,4 +47,11 @@ __all__ = [
     "quiz_export_background_flow",
     "ERROR_MESSAGES",
     "SUCCESS_MESSAGES",
+    "create_quiz",
+    "delete_quiz",
+    "get_quiz_by_id",
+    "get_user_quizzes",
+    "prepare_content_extraction",
+    "prepare_question_generation",
+    "verify_quiz_ownership",
 ]
