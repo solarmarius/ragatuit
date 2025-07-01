@@ -13,9 +13,9 @@ from src.exceptions import AuthenticationError, ExternalServiceError
 from src.logging_config import get_logger
 from src.retry import retry_on_failure
 
-from .encryption import token_encryption
 from .models import User
 from .schemas import UserCreate
+from .utils import decrypt_token, encrypt_token
 
 logger = get_logger("auth_service")
 
@@ -81,12 +81,8 @@ class AuthService:
             update={
                 "canvas_id": user_create.canvas_id,
                 "name": user_create.name,
-                "access_token": token_encryption.encrypt_token(
-                    user_create.access_token
-                ),
-                "refresh_token": token_encryption.encrypt_token(
-                    user_create.refresh_token
-                ),
+                "access_token": encrypt_token(user_create.access_token),
+                "refresh_token": encrypt_token(user_create.refresh_token),
             },
         )
         self.session.add(db_obj)
@@ -103,9 +99,9 @@ class AuthService:
     ) -> User:
         """Update user's Canvas tokens"""
         # Encrypt tokens
-        user.access_token = token_encryption.encrypt_token(access_token)
+        user.access_token = encrypt_token(access_token)
         if refresh_token:
-            user.refresh_token = token_encryption.encrypt_token(refresh_token)
+            user.refresh_token = encrypt_token(refresh_token)
 
         user.expires_at = expires_at
         self.session.add(user)
@@ -197,11 +193,11 @@ class AuthService:
 
     def get_decrypted_access_token(self, user: User) -> str:
         """Get decrypted access token"""
-        return token_encryption.decrypt_token(user.access_token)
+        return decrypt_token(user.access_token)
 
     def get_decrypted_refresh_token(self, user: User) -> str:
         """Get decrypted refresh token"""
-        return token_encryption.decrypt_token(user.refresh_token)
+        return decrypt_token(user.refresh_token)
 
 
 # Canvas OAuth functions (from canvas_auth.py)
