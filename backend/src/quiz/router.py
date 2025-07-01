@@ -7,7 +7,8 @@ from sqlmodel import select
 
 from src.auth.dependencies import CurrentUser
 from src.canvas.dependencies import CanvasToken
-from src.canvas.service import CanvasQuizExportService, ContentExtractionService
+from src.canvas.flows import extract_content_for_modules, get_content_summary
+from src.canvas.service import CanvasQuizExportService
 from src.database import SessionDep, execute_in_transaction
 from src.exceptions import ServiceError
 from src.logging_config import get_logger
@@ -341,11 +342,11 @@ async def extract_content_for_quiz(
 
     # === Slow I/O Operation (occurs outside any transaction) ===
     try:
-        extraction_service = ContentExtractionService(canvas_token, course_id)
-        extracted_content = await extraction_service.extract_content_for_modules(
-            module_ids
+        # Use functional content extraction flows
+        extracted_content = await extract_content_for_modules(
+            canvas_token, course_id, module_ids
         )
-        content_summary = extraction_service.get_content_summary(extracted_content)
+        content_summary = get_content_summary(extracted_content)
 
         logger.info(
             "content_extraction_completed",

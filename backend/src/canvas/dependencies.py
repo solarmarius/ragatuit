@@ -10,7 +10,7 @@ from src.auth.dependencies import CurrentUser
 from src.database import SessionDep
 
 from .security import ensure_valid_canvas_token
-from .service import CanvasQuizExportService, ContentExtractionService
+from .service import CanvasQuizExportService
 
 
 async def get_canvas_token(current_user: CurrentUser, session: SessionDep) -> str:
@@ -68,23 +68,6 @@ async def get_canvas_token(current_user: CurrentUser, session: SessionDep) -> st
 CanvasToken = Annotated[str, Depends(get_canvas_token)]
 
 
-def get_content_extraction_service(
-    canvas_token: CanvasToken,
-    course_id: int,
-) -> ContentExtractionService:
-    """
-    Factory function to create ContentExtractionService.
-
-    Args:
-        canvas_token: Valid Canvas API token
-        course_id: Canvas course ID
-
-    Returns:
-        ContentExtractionService instance
-    """
-    return ContentExtractionService(canvas_token, course_id)
-
-
 def get_quiz_export_service(
     canvas_token: CanvasToken,
 ) -> CanvasQuizExportService:
@@ -101,9 +84,6 @@ def get_quiz_export_service(
 
 
 # Type annotations for dependency injection
-ContentExtractionServiceDep = Annotated[
-    ContentExtractionService, Depends(get_content_extraction_service)
-]
 QuizExportServiceDep = Annotated[
     CanvasQuizExportService, Depends(get_quiz_export_service)
 ]
