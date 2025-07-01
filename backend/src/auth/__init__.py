@@ -11,7 +11,7 @@ from .schemas import (
     UserPublic,
     UserUpdateMe,
 )
-from .service import AuthService, refresh_canvas_token
+from .service import AuthService
 from .utils import create_access_token
 
 __all__ = [
@@ -29,5 +29,4 @@ __all__ = [
     "get_current_user",
     "get_auth_service",
     "create_access_token",
-    "refresh_canvas_token",
 ]

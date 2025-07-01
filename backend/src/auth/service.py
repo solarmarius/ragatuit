@@ -2,16 +2,12 @@
 Authentication service layer combining user CRUD and Canvas OAuth operations.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 from uuid import UUID
 
-import httpx
 from sqlmodel import Session, select
 
-from src.config import settings
-from src.exceptions import AuthenticationError, ExternalServiceError
 from src.logging_config import get_logger
-from src.retry import retry_on_failure
 
 from .models import User
 from .schemas import UserCreate
@@ -198,102 +194,3 @@ class AuthService:
     def get_decrypted_refresh_token(self, user: User) -> str:
         """Get decrypted refresh token"""
         return decrypt_token(user.refresh_token)
-
-
-# Canvas OAuth functions (from canvas_auth.py)
-@retry_on_failure(max_attempts=2, initial_delay=1.0)
-async def refresh_canvas_token(user: User, session: Session) -> None:
-    """
-    Refresh Canvas access token using the refresh token.
-
-    Args:
-        user: User object with encrypted tokens
-        session: Database session
-
-    Raises:
-        AuthenticationError: When refresh fails (401, 403)
-        ExternalServiceError: When Canvas is unavailable
-    """
-    logger.info(
-        "canvas_token_refresh_initiated", user_id=user.id, canvas_id=user.canvas_id
-    )
-
-    # Decrypt refresh token
-    auth_service = AuthService(session)
-    refresh_token = auth_service.get_decrypted_refresh_token(user)
-
-    # Prepare refresh request
-    from src.canvas.url_builder import CanvasURLBuilder
-
-    url_builder = CanvasURLBuilder(str(settings.CANVAS_BASE_URL))
-    refresh_url = url_builder.oauth_token_url()
-
-    refresh_data = {
-        "grant_type": "refresh_token",
-        "refresh_token": refresh_token,
-        "client_id": settings.CANVAS_CLIENT_ID,
-        "client_secret": settings.CANVAS_CLIENT_SECRET,
-    }
-
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(refresh_url, data=refresh_data)
-
-        if response.status_code == 200:
-            token_data = response.json()
-            new_access_token = token_data["access_token"]
-
-            # Canvas sometimes returns new refresh token
-            new_refresh_token = token_data.get("refresh_token", refresh_token)
-
-            # Calculate expiration (Canvas tokens expire in 1 hour)
-            expires_at = datetime.now(timezone.utc) + timedelta(
-                seconds=token_data.get("expires_in", 3600)
-            )
-
-            # Update user tokens in database
-            auth_service.update_user_tokens(
-                user=user,
-                access_token=new_access_token,
-                refresh_token=new_refresh_token,
-                expires_at=expires_at,
-            )
-
-            logger.info(
-                "canvas_token_refresh_success",
-                user_id=user.id,
-                expires_at=expires_at.isoformat(),
-            )
-
-        elif response.status_code in [401, 403]:
-            logger.error(
-                "canvas_token_refresh_auth_failed",
-                user_id=user.id,
-                status_code=response.status_code,
-            )
-            # Clear invalid tokens
-            auth_service.clear_user_tokens(user)
-            raise AuthenticationError(
-                "Canvas token refresh failed - please login again"
-            )
-        else:
-            logger.error(
-                "canvas_token_refresh_failed",
-                user_id=user.id,
-                status_code=response.status_code,
-                response_text=response.text,
-            )
-            raise ExternalServiceError(
-                "Canvas",
-                f"Token refresh failed with status {response.status_code}",
-                response.status_code,
-            )
-
-    except httpx.RequestError as e:
-        logger.error(
-            "canvas_token_refresh_request_error",
-            user_id=user.id,
-            error=str(e),
-            exc_info=True,
-        )
-        raise ExternalServiceError("Canvas", f"Request failed: {str(e)}", 503)
