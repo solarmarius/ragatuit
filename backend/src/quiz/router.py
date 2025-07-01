@@ -8,8 +8,7 @@ from sqlmodel import select
 from src.auth.dependencies import CurrentUser
 from src.canvas.dependencies import CanvasToken
 from src.canvas.service import CanvasQuizExportService, ContentExtractionService
-from src.database import execute_in_transaction
-from src.deps import SessionDep
+from src.database import SessionDep, execute_in_transaction
 from src.exceptions import ServiceError
 from src.logging_config import get_logger
 from src.question.mcq_generation_service import MCQGenerationService

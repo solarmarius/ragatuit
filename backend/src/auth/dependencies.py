@@ -9,10 +9,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import jwt
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
-from sqlmodel import Session
 
 from src.config import settings
-from src.deps import get_db
+from src.database import SessionDep
 from src.logging_config import get_logger
 
 from .models import User
@@ -25,13 +24,13 @@ logger = get_logger("auth_dependencies")
 reusable_oauth2 = HTTPBearer()
 
 
-def get_auth_service(session: Session = Depends(get_db)) -> AuthService:
+def get_auth_service(session: SessionDep) -> AuthService:
     """Get auth service instance."""
     return AuthService(session)
 
 
 def get_current_user(
-    session: Annotated[Session, Depends(get_db)],
+    session: SessionDep,
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(reusable_oauth2)],
 ) -> User:
     """

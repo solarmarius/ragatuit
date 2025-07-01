@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 
 from src.auth.dependencies import CurrentUser
-from src.deps import SessionDep
+from src.database import SessionDep
 from src.logging_config import get_logger
 
 from .models import Question

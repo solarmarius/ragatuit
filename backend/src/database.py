@@ -1,8 +1,9 @@
 import asyncio
 from collections.abc import AsyncGenerator, Generator
 from contextlib import asynccontextmanager, contextmanager
-from typing import Any
+from typing import Annotated, Any
 
+from fastapi import Depends
 from sqlalchemy import Engine, create_engine, event, text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool, QueuePool
@@ -286,36 +287,6 @@ async def execute_in_transaction(
         return await task_func(session, *args, **kwargs)
 
 
-# Health check function
-def check_database_health() -> dict[str, Any]:
-    """
-    Check database connection pool health.
-
-    Returns:
-        dict: Health metrics including pool stats
-    """
-    try:
-        # Test connection
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-
-        pool = engine.pool
-        pool_size = getattr(pool, "size", lambda: 0)()
-        checked_out = getattr(pool, "checkedout", lambda: 0)()
-        overflow = getattr(pool, "overflow", lambda: 0)()
-        return {
-            "status": "healthy",
-            "pool_size": pool_size,
-            "checked_out_connections": checked_out,
-            "overflow": overflow,
-            "total": pool_size + overflow,
-            "available": pool_size - checked_out,
-        }
-    except Exception as e:
-        logger.error("database_health_check_failed", error=str(e))
-        return {"status": "unhealthy", "error": str(e)}
-
-
 def init_db(session: Session) -> None:
     """
     Initialize database with any required initial data.
@@ -341,3 +312,26 @@ def init_db(session: Session) -> None:
         )
         auth_service = AuthService(session)
         user = auth_service.create_user(user_in)
+
+
+# FastAPI Dependencies
+def get_session_dep() -> Generator[Session, None, None]:
+    """
+    FastAPI dependency to get database session with auto-commit/rollback.
+
+    Uses the get_session() context manager to provide proper transaction
+    management with automatic commit on success and rollback on exceptions.
+
+    Yields a SQLModel Session that automatically closes after the request.
+    This ensures proper connection handling and prevents connection leaks.
+
+    Usage:
+        @app.get("/items")
+        def get_items(session: SessionDep):
+            return session.exec(select(Item)).all()
+    """
+    with get_session() as session:
+        yield session
+
+
+SessionDep = Annotated[Session, Depends(get_session_dep)]
