@@ -3,7 +3,6 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 
 from src.auth.dependencies import CurrentUser
-from src.common import Message
 from src.deps import SessionDep
 from src.logging_config import get_logger
 
@@ -442,13 +441,13 @@ def approve_quiz_question(
         )
 
 
-@router.delete("/{quiz_id}/questions/{question_id}", response_model=Message)
+@router.delete("/{quiz_id}/questions/{question_id}", response_model=None)
 def delete_quiz_question(
     quiz_id: UUID,
     question_id: UUID,
     current_user: CurrentUser,
     session: SessionDep,
-) -> Message:
+) -> None:
     """
     Delete a question from the quiz.
 
@@ -519,8 +518,6 @@ def delete_quiz_question(
             quiz_id=str(quiz_id),
             question_id=str(question_id),
         )
-
-        return Message(message="Question deleted successfully")
 
     except HTTPException:
         # Re-raise HTTP exceptions as-is

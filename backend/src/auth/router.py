@@ -10,7 +10,6 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
-from src.common import Message
 from src.config import settings
 from src.deps import SessionDep
 from src.logging_config import get_logger
@@ -474,8 +473,8 @@ def update_user_me(
     return current_user
 
 
-@router.delete("/users/me", response_model=Message)
-def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Message:
+@router.delete("/users/me", response_model=None)
+def delete_user_me(session: SessionDep, current_user: CurrentUser) -> None:
     """
     Permanently delete current user account and all associated data.
 
@@ -536,4 +535,3 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Message:
     """
     session.delete(current_user)
     session.commit()
-    return Message(message="User deleted successfully")

@@ -8,7 +8,6 @@ from sqlmodel import select
 from src.auth.dependencies import CurrentUser
 from src.canvas.dependencies import CanvasToken
 from src.canvas.service import CanvasQuizExportService, ContentExtractionService
-from src.common import Message
 from src.database import execute_in_transaction
 from src.deps import SessionDep
 from src.exceptions import ServiceError
@@ -646,12 +645,12 @@ async def trigger_content_extraction(
         )
 
 
-@router.delete("/{quiz_id}", response_model=Message)
+@router.delete("/{quiz_id}", response_model=None)
 def delete_quiz_endpoint(
     quiz_id: UUID,
     current_user: CurrentUser,
     session: SessionDep,
-) -> Message:
+) -> None:
     """
     Delete a quiz by its ID.
 
@@ -721,8 +720,6 @@ def delete_quiz_endpoint(
             user_id=str(current_user.id),
             quiz_id=str(quiz_id),
         )
-
-        return Message(message="Quiz deleted successfully")
 
     except HTTPException:
         # Re-raise HTTP exceptions as-is
