@@ -74,13 +74,6 @@ class Settings(BaseSettings):
     CANVAS_MOCK_URL: HttpUrl | None = None
     USE_CANVAS_MOCK: bool = False
 
-    # Content extraction limits
-    MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB per file
-    MAX_TOTAL_CONTENT_SIZE: int = 50 * 1024 * 1024  # 50MB total per quiz
-    MAX_PAGES_PER_MODULE: int = 100  # Maximum pages per module
-    MAX_CONTENT_LENGTH: int = 500_000  # Maximum content length per page
-    MIN_CONTENT_LENGTH: int = 50  # Minimum content length
-
     # API rate limiting
     CANVAS_API_RATE_LIMIT: int = 10  # Requests per second
     CANVAS_API_TIMEOUT: float = 30.0  # Request timeout in seconds

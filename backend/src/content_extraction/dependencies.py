@@ -1,13 +1,15 @@
 """Function composition and dependencies for content extraction."""
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 from .models import ProcessedContent, RawContent
 from .service import create_processor_selector, process_content_batch
 from .validators import create_content_validator
 
 
-def get_content_processor() -> Callable:
+def get_content_processor() -> (
+    Callable[[list[RawContent]], Awaitable[list[ProcessedContent]]]
+):
     """
     Create configured content processor function for batch processing.
 
@@ -38,7 +40,9 @@ def get_content_processor() -> Callable:
     return process_contents
 
 
-def get_single_content_processor() -> Callable:
+def get_single_content_processor() -> (
+    Callable[[RawContent], Awaitable[ProcessedContent | None]]
+):
     """
     Create single content processor function.
 
@@ -75,7 +79,9 @@ def get_single_content_processor() -> Callable:
     return process_single_content
 
 
-def get_processor_for_type(content_type: str) -> Callable:
+def get_processor_for_type(
+    content_type: str,
+) -> Callable[[RawContent], ProcessedContent | None]:
     """
     Get processor function for specific content type.
 

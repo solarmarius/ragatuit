@@ -2,8 +2,14 @@
 
 from collections.abc import Callable
 
-from .config import settings
-from .constants import CONTENT_TYPE_MAPPINGS, SUPPORTED_CONTENT_TYPES
+from .constants import (
+    CONTENT_TYPE_MAPPINGS,
+    MAX_CONTENT_LENGTH,
+    MAX_CONTENT_SIZE,
+    MIN_CONTENT_LENGTH,
+    SUPPORTED_CONTENT_TYPES,
+    SUPPORTED_FORMATS,
+)
 from .models import RawContent
 
 
@@ -17,7 +23,7 @@ def is_valid_content_size(raw_content: RawContent) -> bool:
     Returns:
         True if content size is acceptable
     """
-    return len(raw_content.content) <= settings.MAX_CONTENT_SIZE
+    return len(raw_content.content) <= MAX_CONTENT_SIZE
 
 
 def is_valid_content_length(text: str) -> bool:
@@ -31,7 +37,7 @@ def is_valid_content_length(text: str) -> bool:
         True if text length is within acceptable range
     """
     text_length = len(text.strip())
-    return settings.MIN_CONTENT_LENGTH <= text_length <= settings.MAX_CONTENT_LENGTH
+    return MIN_CONTENT_LENGTH <= text_length <= MAX_CONTENT_LENGTH
 
 
 def is_supported_content_type(content_type: str) -> bool:
@@ -50,7 +56,7 @@ def is_supported_content_type(content_type: str) -> bool:
     )
     return (
         content_type.lower() in SUPPORTED_CONTENT_TYPES
-        or normalized_type in settings.SUPPORTED_FORMATS
+        or normalized_type in SUPPORTED_FORMATS
     )
 
 

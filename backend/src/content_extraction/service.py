@@ -219,7 +219,7 @@ async def create_processing_summary(
         ProcessingSummary with statistics
     """
     # Count content types processed
-    content_types_processed = {}
+    content_types_processed: dict[str, int] = {}
     for content in processed_contents:
         original_type = content.processing_metadata.get("original_type", "unknown")
         content_types_processed[original_type] = (

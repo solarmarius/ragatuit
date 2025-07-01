@@ -1,7 +1,21 @@
 """Constants for content extraction domain."""
 
+# Content extraction size and processing limits
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB per file
+MAX_TOTAL_CONTENT_SIZE = 50 * 1024 * 1024  # 50MB total per quiz
+MAX_PAGES_PER_MODULE = 100  # Maximum pages per module
+MAX_CONTENT_LENGTH = 500_000  # Maximum content length per page
+MIN_CONTENT_LENGTH = 50  # Minimum content length
+MAX_CONTENT_SIZE = 5 * 1024 * 1024  # 5MB per item (for validation)
+
+# Processing configuration
+PROCESSING_TIMEOUT = 30  # seconds
+MAX_WORDS_PER_CONTENT = 10000  # Max words in single content item
+MIN_WORDS_PER_CONTENT = 10  # Min words in single content item
+
 # Supported content types
 SUPPORTED_CONTENT_TYPES = ["text/html", "application/pdf", "text/plain"]
+SUPPORTED_FORMATS = ["html", "pdf", "text"]
 
 
 # Processing status
@@ -22,9 +36,8 @@ CONTENT_TYPE_MAPPINGS = {
     "text": "text",  # Direct format
 }
 
-# Size limits (duplicated from config for easy access)
-MAX_PAGE_CONTENT_SIZE = 1024 * 1024  # 1MB
-MAX_TOTAL_CONTENT_SIZE = 50 * 1024 * 1024  # 50MB
+# Legacy constant for backwards compatibility
+MAX_PAGE_CONTENT_SIZE = MAX_CONTENT_SIZE  # Alias for MAX_CONTENT_SIZE
 
 # Supported file extensions for PDF
 SUPPORTED_PDF_EXTENSIONS = [".pdf"]

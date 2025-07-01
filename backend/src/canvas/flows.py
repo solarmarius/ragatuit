@@ -8,11 +8,15 @@ composition of Canvas API functions and content processing domain functions.
 from datetime import datetime
 from typing import Any
 
-from src.config import settings
 from src.content_extraction import (
     ProcessedContent,
     RawContent,
     get_content_processor,
+)
+from src.content_extraction.constants import (
+    MAX_FILE_SIZE,
+    MAX_PAGES_PER_MODULE,
+    MAX_TOTAL_CONTENT_SIZE,
 )
 from src.logging_config import get_logger
 
@@ -52,7 +56,7 @@ async def extract_content_for_modules(
     """
     extracted_content: dict[str, list[dict[str, str]]] = {}
     total_content_size = 0
-    max_total_content_size = settings.MAX_TOTAL_CONTENT_SIZE
+    max_total_content_size = MAX_TOTAL_CONTENT_SIZE
 
     for module_id in module_ids:
         logger.info(
@@ -127,7 +131,7 @@ async def process_module_content(
     ]
 
     # Apply per-module content limits
-    max_pages_per_module = settings.MAX_PAGES_PER_MODULE
+    max_pages_per_module = MAX_PAGES_PER_MODULE
     if len(content_items) > max_pages_per_module:
         logger.warning(
             "content_extraction_items_limited",
@@ -451,7 +455,8 @@ async def process_raw_content_batch(
     """Process a batch of RawContent using the content extraction domain."""
     # Get configured content processor
     process_contents = get_content_processor()
-    return await process_contents(raw_contents)
+    result: list[ProcessedContent] = await process_contents(raw_contents)
+    return result
 
 
 # Validation utilities
@@ -473,15 +478,14 @@ def is_file_size_allowed(
 ) -> bool:
     """Check if file size is within allowed limits."""
     file_size = file_info.get("size", 0)
-    max_file_size = settings.MAX_FILE_SIZE
 
-    if file_size > max_file_size:
+    if file_size > MAX_FILE_SIZE:
         logger.warning(
             "file_extraction_size_limit",
             course_id=course_id,
             file_id=file_id,
             file_size=file_size,
-            limit=max_file_size,
+            limit=MAX_FILE_SIZE,
         )
         return False
 

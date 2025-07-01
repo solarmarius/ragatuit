@@ -7,8 +7,12 @@ from typing import Any
 import pypdf
 from bs4 import BeautifulSoup, Comment
 
-from .config import settings
-from .constants import CANVAS_UI_SELECTORS, HTML_ELEMENTS_TO_REMOVE
+from .constants import (
+    CANVAS_UI_SELECTORS,
+    HTML_ELEMENTS_TO_REMOVE,
+    MAX_CONTENT_LENGTH,
+    MIN_CONTENT_LENGTH,
+)
 
 
 def clean_html_content(html_content: str) -> str:
@@ -73,8 +77,8 @@ def normalize_text(text: str) -> str:
         return ""
 
     # Limit text size to prevent ReDoS attacks
-    if len(text) > settings.MAX_CONTENT_LENGTH:
-        text = text[: settings.MAX_CONTENT_LENGTH]
+    if len(text) > MAX_CONTENT_LENGTH:
+        text = text[:MAX_CONTENT_LENGTH]
 
     # Replace multiple whitespace characters with single spaces (safe regex)
     text = re.sub(r"\s+", " ", text)
@@ -193,7 +197,7 @@ def validate_text_content(text: str) -> bool:
         return False
 
     text_length = len(text.strip())
-    return settings.MIN_CONTENT_LENGTH <= text_length <= settings.MAX_CONTENT_LENGTH
+    return MIN_CONTENT_LENGTH <= text_length <= MAX_CONTENT_LENGTH
 
 
 def create_processing_metadata(
