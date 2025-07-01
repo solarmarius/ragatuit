@@ -9,11 +9,11 @@ import httpx
 from sqlmodel import Session, select
 
 from src.config import settings
-from src.encryption import token_encryption
 from src.exceptions import AuthenticationError, ExternalServiceError
 from src.logging_config import get_logger
 from src.retry import retry_on_failure
 
+from .encryption import token_encryption
 from .models import User
 from .schemas import UserCreate
 

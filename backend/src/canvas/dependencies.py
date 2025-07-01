@@ -8,8 +8,8 @@ from fastapi import Depends
 
 from src.auth.dependencies import CurrentUser
 from src.database import SessionDep
-from src.security import ensure_valid_canvas_token
 
+from .security import ensure_valid_canvas_token
 from .service import CanvasQuizExportService, ContentExtractionService
 
 
