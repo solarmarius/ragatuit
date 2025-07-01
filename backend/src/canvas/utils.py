@@ -5,53 +5,9 @@ Utility functions for Canvas module.
 import re
 from typing import Any
 
-from bs4 import BeautifulSoup, Comment
-
 from src.logging_config import get_logger
 
 logger = get_logger("canvas_utils")
-
-
-def clean_html_content(html_content: str, max_length: int | None = None) -> str:
-    """
-    Clean HTML content and extract text.
-
-    Args:
-        html_content: Raw HTML content
-        max_length: Maximum length of returned text (None for no limit)
-
-    Returns:
-        Cleaned text content
-    """
-    try:
-        # Parse HTML
-        soup = BeautifulSoup(html_content, "html.parser")
-
-        # Remove script and style elements
-        for script in soup(["script", "style"]):
-            script.decompose()
-
-        # Remove comments
-        for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
-            comment.extract()
-
-        # Get text
-        text = soup.get_text()
-
-        # Clean up whitespace
-        lines = (line.strip() for line in text.splitlines())
-        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-        text = " ".join(chunk for chunk in chunks if chunk)
-
-        # Apply length limit if specified
-        if max_length and len(text) > max_length:
-            text = text[:max_length] + "..."
-
-        return text
-
-    except Exception as e:
-        logger.error(f"Error cleaning HTML content: {e}")
-        return html_content  # Return original if cleaning fails
 
 
 def validate_canvas_token(token: str) -> bool:

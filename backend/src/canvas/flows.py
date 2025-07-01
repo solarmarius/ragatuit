@@ -11,7 +11,6 @@ from typing import Any
 from uuid import UUID
 
 from src.content_extraction import (
-    ProcessedContent,
     RawContent,
     get_content_processor,
 )
@@ -22,6 +21,9 @@ from src.content_extraction.constants import (
 )
 from src.exceptions import ResourceNotFoundError, ValidationError
 from src.logging_config import get_logger
+
+# Import the new typed models
+from .schemas import CanvasItemExportResult, QuestionData, QuizExportData
 
 # QuizService imported locally to avoid circular imports
 from .service import (
@@ -264,10 +266,20 @@ async def extract_page_content_flow(
             return None
 
         # Step 2: Convert to RawContent for domain processing
-        raw_content = convert_page_to_raw_content(page_data, course_id, page_url)
+        raw_content = RawContent(
+            content=page_data.get("body", ""),
+            content_type="html",
+            title=page_data.get("title", "Untitled Page"),
+            metadata={
+                "source": "canvas_page",
+                "page_url": page_url,
+                "course_id": course_id,
+            },
+        )
 
         # Step 3: Process using content extraction domain
-        processed_contents = await process_raw_content_batch([raw_content])
+        process_contents = get_content_processor()
+        processed_contents = await process_contents([raw_content])
         if not processed_contents:
             logger.info(
                 "content_extraction_page_processing_failed",
@@ -277,7 +289,12 @@ async def extract_page_content_flow(
             return None
 
         # Step 4: Convert back to legacy API format
-        return convert_processed_to_legacy_format(processed_contents[0], "page")
+        processed = processed_contents[0]
+        return {
+            "title": processed.title,
+            "content": processed.content,
+            "type": "page",
+        }
 
     except Exception as e:
         logger.warning(
@@ -356,12 +373,37 @@ async def extract_file_content_flow(
             return None
 
         # Step 4: Convert to RawContent for domain processing
-        raw_content = convert_file_to_raw_content(
-            file_content, file_info, file_item, course_id, file_id
+        content_type = file_info.get("content-type", "")
+
+        # Determine content type for processing
+        if "pdf" in content_type.lower() or "application/pdf" in content_type:
+            processing_type = "pdf"
+        else:
+            processing_type = "text"
+
+        # Convert bytes to string for RawContent model compatibility
+        content_str = (
+            file_content.decode("latin-1")
+            if isinstance(file_content, bytes)
+            else str(file_content)
+        )
+
+        raw_content = RawContent(
+            content=content_str,
+            content_type=processing_type,
+            title=file_info.get("display_name", file_item.get("title", "Untitled")),
+            metadata={
+                "source": "canvas_file",
+                "file_id": file_id,
+                "course_id": course_id,
+                "original_content_type": content_type,
+                "file_size": file_info.get("size", 0),
+            },
         )
 
         # Step 5: Process using content extraction domain
-        processed_contents = await process_raw_content_batch([raw_content])
+        process_contents = get_content_processor()
+        processed_contents = await process_contents([raw_content])
         if not processed_contents:
             logger.info(
                 "file_extraction_processing_failed",
@@ -371,9 +413,13 @@ async def extract_file_content_flow(
             return None
 
         # Step 6: Convert back to legacy API format
-        content_type = file_info.get("content-type", "")
-        result = convert_processed_to_legacy_format(processed_contents[0], "file")
-        result["content_type"] = content_type  # Add file-specific field
+        processed = processed_contents[0]
+        result = {
+            "title": processed.title,
+            "content": processed.content,
+            "type": "file",
+            "content_type": content_type,  # Add file-specific field
+        }
         return result
 
     except Exception as e:
@@ -385,84 +431,6 @@ async def extract_file_content_flow(
             exc_info=True,
         )
         return None
-
-
-# Data conversion utilities
-
-
-def convert_page_to_raw_content(
-    page_data: dict[str, Any], course_id: int, page_url: str
-) -> RawContent:
-    """Convert Canvas page data to RawContent for domain processing."""
-    return RawContent(
-        content=page_data.get("body", ""),
-        content_type="html",
-        title=page_data.get("title", "Untitled Page"),
-        metadata={
-            "source": "canvas_page",
-            "page_url": page_url,
-            "course_id": course_id,
-        },
-    )
-
-
-def convert_file_to_raw_content(
-    file_content: bytes,
-    file_info: dict[str, Any],
-    file_item: dict[str, Any],
-    course_id: int,
-    file_id: int,
-) -> RawContent:
-    """Convert Canvas file data to RawContent for domain processing."""
-    content_type = file_info.get("content-type", "")
-
-    # Determine content type for processing
-    if "pdf" in content_type.lower() or "application/pdf" in content_type:
-        processing_type = "pdf"
-    else:
-        processing_type = "text"
-
-    # Convert bytes to string for RawContent model compatibility
-    # The PDF processor will convert back to bytes using latin-1 encoding
-    content_str = (
-        file_content.decode("latin-1")
-        if isinstance(file_content, bytes)
-        else str(file_content)
-    )
-
-    return RawContent(
-        content=content_str,
-        content_type=processing_type,
-        title=file_info.get("display_name", file_item.get("title", "Untitled")),
-        metadata={
-            "source": "canvas_file",
-            "file_id": file_id,
-            "course_id": course_id,
-            "original_content_type": content_type,
-            "file_size": file_info.get("size", 0),
-        },
-    )
-
-
-def convert_processed_to_legacy_format(
-    processed_content: ProcessedContent, item_type: str
-) -> dict[str, str]:
-    """Convert ProcessedContent back to legacy API format."""
-    return {
-        "title": processed_content.title,
-        "content": processed_content.content,
-        "type": item_type,
-    }
-
-
-async def process_raw_content_batch(
-    raw_contents: list[RawContent],
-) -> list[ProcessedContent]:
-    """Process a batch of RawContent using the content extraction domain."""
-    # Get configured content processor
-    process_contents = get_content_processor()
-    result: list[ProcessedContent] = await process_contents(raw_contents)
-    return result
 
 
 # Validation utilities
@@ -561,7 +529,7 @@ async def export_quiz_to_canvas_flow(
     # === Transaction 1: Validate and Reserve ===
     async def _validate_and_reserve(
         session: Any, quiz_id: UUID
-    ) -> dict[str, Any] | None:
+    ) -> QuizExportData | None:
         return await validate_quiz_for_export_flow(session, quiz_id)
 
     from src.database import execute_in_transaction
@@ -574,10 +542,10 @@ async def export_quiz_to_canvas_flow(
         raise RuntimeError("Failed to validate quiz for export")
 
     # Handle already exported case
-    if quiz_data.get("already_exported"):
+    if quiz_data.already_exported:
         return {
             "success": True,
-            "canvas_quiz_id": quiz_data["canvas_quiz_id"],
+            "canvas_quiz_id": quiz_data.canvas_quiz_id,
             "exported_questions": 0,
             "message": "Quiz already exported to Canvas",
             "already_exported": True,
@@ -588,17 +556,17 @@ async def export_quiz_to_canvas_flow(
         # Create Canvas quiz
         canvas_quiz = await create_canvas_quiz_flow(
             canvas_token=canvas_token,
-            course_id=quiz_data["course_id"],
-            title=quiz_data["title"],
-            total_points=len(quiz_data["questions"]),
+            course_id=quiz_data.course_id,
+            title=quiz_data.title,
+            total_points=len(quiz_data.questions),
         )
 
         # Export questions to Canvas
         exported_items = await export_questions_batch_flow(
             canvas_token=canvas_token,
-            course_id=quiz_data["course_id"],
+            course_id=quiz_data.course_id,
             quiz_id=canvas_quiz["id"],
-            questions=quiz_data["questions"],
+            questions=quiz_data.questions,
         )
 
         # === Transaction 2: Save Results ===
@@ -607,7 +575,7 @@ async def export_quiz_to_canvas_flow(
                 session=session,
                 quiz_id=quiz_id,
                 canvas_quiz_id=canvas_quiz["id"],
-                questions=quiz_data["questions"],
+                questions=quiz_data.questions,
                 exported_items=exported_items,
             )
 
@@ -650,7 +618,7 @@ async def export_quiz_to_canvas_flow(
         raise
 
 
-async def validate_quiz_for_export_flow(session: Any, quiz_id: UUID) -> dict[str, Any]:
+async def validate_quiz_for_export_flow(session: Any, quiz_id: UUID) -> QuizExportData:
     """
     Validation flow for quiz export prerequisites.
 
@@ -659,7 +627,7 @@ async def validate_quiz_for_export_flow(session: Any, quiz_id: UUID) -> dict[str
         quiz_id: UUID of the quiz to validate
 
     Returns:
-        Quiz data dictionary with course_id, title, and questions
+        QuizExportData with course_id, title, and questions
 
     Raises:
         ResourceNotFoundError: If quiz not found
@@ -685,10 +653,13 @@ async def validate_quiz_for_export_flow(session: Any, quiz_id: UUID) -> dict[str
             quiz_id=str(quiz_id),
             canvas_quiz_id=quiz_canvas_quiz_id,
         )
-        return {
-            "already_exported": True,
-            "canvas_quiz_id": quiz_canvas_quiz_id,
-        }
+        return QuizExportData(
+            course_id=quiz_course_id,
+            title=quiz_title,
+            questions=[],
+            already_exported=True,
+            canvas_quiz_id=quiz_canvas_quiz_id,
+        )
 
     # Check if currently processing
     if quiz_export_status == "processing":
@@ -715,15 +686,15 @@ async def validate_quiz_for_export_flow(session: Any, quiz_id: UUID) -> dict[str
 
     # Prepare question data - extract all attributes within session context
     question_data = [
-        {
-            "id": question.id,
-            "question_text": question.question_text,
-            "option_a": question.option_a,
-            "option_b": question.option_b,
-            "option_c": question.option_c,
-            "option_d": question.option_d,
-            "correct_answer": question.correct_answer,
-        }
+        QuestionData(
+            id=question.id,
+            question_text=question.question_text,
+            option_a=question.option_a,
+            option_b=question.option_b,
+            option_c=question.option_c,
+            option_d=question.option_d,
+            correct_answer=question.correct_answer,
+        )
         for question in approved_questions
     ]
 
@@ -738,12 +709,12 @@ async def validate_quiz_for_export_flow(session: Any, quiz_id: UUID) -> dict[str
         approved_questions_count=len(question_data),
     )
 
-    return {
-        "course_id": quiz_course_id,
-        "title": quiz_title,
-        "questions": question_data,
-        "already_exported": False,
-    }
+    return QuizExportData(
+        course_id=quiz_course_id,
+        title=quiz_title,
+        questions=question_data,
+        already_exported=False,
+    )
 
 
 async def create_canvas_quiz_flow(
@@ -778,8 +749,8 @@ async def create_canvas_quiz_flow(
 
 
 async def export_questions_batch_flow(
-    canvas_token: str, course_id: int, quiz_id: str, questions: list[dict[str, Any]]
-) -> list[dict[str, Any]]:
+    canvas_token: str, course_id: int, quiz_id: str, questions: list[QuestionData]
+) -> list[CanvasItemExportResult]:
     """
     Flow for exporting questions to Canvas in batch.
 
@@ -787,16 +758,31 @@ async def export_questions_batch_flow(
         canvas_token: Canvas API authentication token
         course_id: Canvas course ID
         quiz_id: Canvas quiz ID
-        questions: List of question dictionaries
+        questions: List of QuestionData objects
 
     Returns:
-        List of export results for each question
+        List of CanvasItemExportResult for each question
     """
-    exported_items = await create_canvas_quiz_items(
-        canvas_token, course_id, quiz_id, questions
+    # Convert QuestionData to dict format for Canvas service
+    questions_dict = [question.model_dump() for question in questions]
+
+    raw_exported_items = await create_canvas_quiz_items(
+        canvas_token, course_id, quiz_id, questions_dict
     )
 
-    successful_items = len([r for r in exported_items if r["success"]])
+    # Convert to typed models
+    exported_items = [
+        CanvasItemExportResult(
+            success=item["success"],
+            question_id=item["question_id"],
+            item_id=item.get("item_id"),
+            position=item["position"],
+            error=item.get("error"),
+        )
+        for item in raw_exported_items
+    ]
+
+    successful_items = len([r for r in exported_items if r.success])
     logger.info(
         "canvas_questions_batch_exported",
         course_id=course_id,
@@ -813,8 +799,8 @@ async def finalize_quiz_export_flow(
     session: Any,
     quiz_id: UUID,
     canvas_quiz_id: str,
-    questions: list[dict[str, Any]],
-    exported_items: list[dict[str, Any]],
+    questions: list[QuestionData],
+    exported_items: list[CanvasItemExportResult],
 ) -> dict[str, Any]:
     """
     Flow for finalizing quiz export and updating database.
@@ -823,8 +809,8 @@ async def finalize_quiz_export_flow(
         session: Database session
         quiz_id: UUID of the original quiz
         canvas_quiz_id: Canvas quiz ID
-        questions: Original question data
-        exported_items: Export results from Canvas
+        questions: Original QuestionData list
+        exported_items: CanvasItemExportResult list from Canvas
 
     Returns:
         Final export result summary
@@ -840,15 +826,15 @@ async def finalize_quiz_export_flow(
         quiz.exported_at = datetime.now(timezone.utc)
 
         # Update individual question Canvas IDs
-        for question_dict, item_result in zip(questions, exported_items, strict=False):
-            if item_result["success"]:
-                question_obj = await session.get(Question, question_dict["id"])
+        for question_data, item_result in zip(questions, exported_items, strict=False):
+            if item_result.success:
+                question_obj = await session.get(Question, question_data.id)
                 if question_obj:
-                    question_obj.canvas_item_id = item_result["item_id"]
+                    question_obj.canvas_item_id = item_result.item_id
 
         # Note: session.commit() will be handled by execute_in_transaction()
 
-    successful_exports = len([r for r in exported_items if r["success"]])
+    successful_exports = len([r for r in exported_items if r.success])
 
     return {
         "success": True,

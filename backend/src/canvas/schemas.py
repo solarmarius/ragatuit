@@ -3,8 +3,11 @@ Pydantic schemas for Canvas LMS integration.
 """
 
 from typing import Any
+from uuid import UUID
 
 from sqlmodel import Field, SQLModel
+
+from src.content_extraction.models import ProcessedContent
 
 
 # Canvas entity schemas
@@ -114,3 +117,50 @@ class CanvasConfigResponse(SQLModel):
     client_id: str
     redirect_uri: str
     scope: str
+
+
+# Internal flow data models for type safety
+
+
+class QuestionData(SQLModel):
+    """Typed question data for export operations."""
+
+    id: UUID
+    question_text: str
+    option_a: str
+    option_b: str
+    option_c: str
+    option_d: str
+    correct_answer: str
+
+
+class QuizExportData(SQLModel):
+    """Typed data for quiz export flow operations."""
+
+    course_id: int
+    title: str
+    questions: list[QuestionData]
+    already_exported: bool = False
+    canvas_quiz_id: str | None = None
+
+
+class ContentExtractionResult(SQLModel):
+    """Typed content extraction result from Canvas modules."""
+
+    module_contents: dict[str, list[ProcessedContent]]
+    total_content_size: int
+    modules_processed: int
+    total_word_count: int
+    total_pages: int
+    average_words_per_page: int
+    extracted_at: str  # ISO timestamp
+
+
+class CanvasItemExportResult(SQLModel):
+    """Result of exporting a single Canvas quiz item."""
+
+    success: bool
+    question_id: UUID
+    item_id: str | None = None
+    position: int
+    error: str | None = None
