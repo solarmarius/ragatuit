@@ -29,15 +29,15 @@ repos:
     hooks:
       - id: mypy
         name: mypy
-        entry: bash -c 'cd backend && source .venv/bin/activate && mypy app'
+        entry: bash -c 'cd backend && source .venv/bin/activate && mypy src'
         language: system
         files: ^backend/.*\.py$
         args: [--ignore-missing-imports, --disallow-untyped-defs]
-      - id: ruff-check-app
+      - id: ruff-check-
         name: ruff-check-app
-        entry: bash -c 'cd backend && source .venv/bin/activate && ruff check app'
+        entry: bash -c 'cd backend && source .venv/bin/activate && ruff check src'
         language: system
-        files: ^backend/app/.*\.py$
+        files: ^backend/src/.*\.py$
         pass_filenames: false
 
 ci:

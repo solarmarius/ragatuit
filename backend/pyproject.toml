@@ -1,5 +1,5 @@
 [project]
-name = "app"
+name = "ragatuit-backend"
 version = "0.1.0"
 description = ""
 requires-python = ">=3.10,<4.0"
@@ -52,6 +52,9 @@ dev-dependencies = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
 
 [tool.mypy]
 strict = true
