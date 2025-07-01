@@ -671,10 +671,14 @@ async def validate_quiz_for_export_flow(session: Any, quiz_id: UUID) -> QuizExpo
         raise ValidationError("Quiz export is already in progress")
 
     # Get approved questions
-    from src.question.service import QuestionService
+    from src.question.di import get_container
+    from src.question.services import QuestionPersistenceService
 
-    approved_questions = await QuestionService.get_approved_questions_by_quiz_id_async(
-        session, quiz_id
+    container = get_container()
+    persistence_service = container.resolve(QuestionPersistenceService)
+
+    approved_questions = await persistence_service.get_questions_by_quiz(
+        quiz_id=quiz_id, approved_only=True
     )
 
     if not approved_questions:
@@ -685,18 +689,32 @@ async def validate_quiz_for_export_flow(session: Any, quiz_id: UUID) -> QuizExpo
         raise ValidationError("Quiz has no approved questions to export")
 
     # Prepare question data - extract all attributes within session context
-    question_data = [
-        QuestionData(
-            id=question.id,
-            question_text=question.question_text,
-            option_a=question.option_a,
-            option_b=question.option_b,
-            option_c=question.option_c,
-            option_d=question.option_d,
-            correct_answer=question.correct_answer,
-        )
-        for question in approved_questions
-    ]
+    # Import question type registry to handle polymorphic questions
+    from src.question.types import QuestionType, get_question_type_registry
+
+    question_registry = get_question_type_registry()
+    question_data = []
+
+    for question in approved_questions:
+        # Only handle multiple choice questions for now
+        if question.question_type == QuestionType.MULTIPLE_CHOICE:
+            # Get typed data using the registry
+            typed_data = question.get_typed_data(question_registry)
+            # Cast to MultipleChoiceData to access MCQ-specific attributes
+            from src.question.types.mcq import MultipleChoiceData
+
+            if isinstance(typed_data, MultipleChoiceData):
+                question_data.append(
+                    QuestionData(
+                        id=question.id,
+                        question_text=typed_data.question_text,
+                        option_a=typed_data.option_a,
+                        option_b=typed_data.option_b,
+                        option_c=typed_data.option_c,
+                        option_d=typed_data.option_d,
+                        correct_answer=typed_data.correct_answer,
+                    )
+                )
 
     # Mark as processing
     quiz.export_status = "processing"

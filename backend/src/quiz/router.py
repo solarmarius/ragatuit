@@ -503,10 +503,10 @@ async def trigger_question_generation(
 
 
 @router.get("/{quiz_id}/questions/stats")
-def get_quiz_question_stats(
+async def get_quiz_question_stats(
     quiz: QuizOwnership,
     current_user: CurrentUser,
-    session: SessionDep,
+    session: SessionDep,  # noqa: ARG001
 ) -> dict[str, int]:
     """
     Get question statistics for a quiz.
@@ -534,10 +534,18 @@ def get_quiz_question_stats(
 
     try:
         # Get question counts
-        from src.question.service import QuestionService
+        from src.question.di import get_container
+        from src.question.services import QuestionPersistenceService
 
-        question_service = QuestionService(session)
-        stats = question_service.get_question_counts_by_quiz_id(quiz.id)
+        container = get_container()
+        persistence_service = container.resolve(QuestionPersistenceService)
+        full_stats = await persistence_service.get_question_statistics(quiz_id=quiz.id)
+
+        # Convert to expected format for backward compatibility
+        stats = {
+            "total": full_stats["total_questions"],
+            "approved": full_stats["approved_questions"],
+        }
 
         logger.info(
             "question_stats_retrieval_completed",
@@ -616,7 +624,7 @@ async def export_quiz_to_canvas(
         validate_export_ready(quiz)
 
         # Validate quiz has approved questions
-        validate_quiz_has_approved_questions(quiz, session)
+        await validate_quiz_has_approved_questions(quiz, session)
 
         # Trigger background export
         background_tasks.add_task(

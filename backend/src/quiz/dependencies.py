@@ -184,9 +184,9 @@ def validate_export_ready(quiz: Quiz) -> None:
         )
 
 
-def validate_quiz_has_approved_questions(
+async def validate_quiz_has_approved_questions(
     quiz: Quiz,
-    session: SessionDep,
+    session: SessionDep,  # noqa: ARG001
 ) -> None:
     """
     Validate that quiz has approved questions for export.
@@ -198,10 +198,14 @@ def validate_quiz_has_approved_questions(
     Raises:
         HTTPException: 400 if no approved questions found
     """
-    from src.question.service import QuestionService
+    from src.question.di import get_container
+    from src.question.services import QuestionPersistenceService
 
-    question_service = QuestionService(session)
-    approved_questions = question_service.get_approved_questions_by_quiz_id(quiz.id)
+    container = get_container()
+    persistence_service = container.resolve(QuestionPersistenceService)
+    approved_questions = await persistence_service.get_questions_by_quiz(
+        quiz_id=quiz.id, approved_only=True
+    )
 
     if not approved_questions:
         logger.warning(

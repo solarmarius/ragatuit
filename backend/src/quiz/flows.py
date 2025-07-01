@@ -18,7 +18,9 @@ from src.canvas.flows import (
 )
 from src.database import execute_in_transaction
 from src.logging_config import get_logger
-from src.question.mcq_generation_service import MCQGenerationService
+from src.question.di import get_container
+from src.question.services import GenerationOrchestrationService
+from src.question.types import GenerationParameters, QuestionType
 
 from .service import get_quiz_for_update
 
@@ -165,13 +167,17 @@ async def quiz_content_extraction_flow(
 
 
 async def quiz_question_generation_flow(
-    quiz_id: UUID, target_question_count: int, llm_model: str, llm_temperature: float
+    quiz_id: UUID,
+    target_question_count: int,
+    llm_model: str,
+    llm_temperature: float,
+    question_type: QuestionType = QuestionType.MULTIPLE_CHOICE,
 ) -> None:
     """
-    Orchestrates the question generation task using a robust two-transaction approach.
+    Orchestrates the question generation task using the new modular system.
 
     Transaction 1: Reserve the job (very fast)
-    I/O Operation: Generate questions via LLM (outside transaction)
+    I/O Operation: Generate questions via new modular architecture (outside transaction)
     Transaction 2: Save the result (very fast)
 
     Args:
@@ -179,6 +185,7 @@ async def quiz_question_generation_flow(
         target_question_count: Number of questions to generate
         llm_model: LLM model to use for generation
         llm_temperature: Temperature setting for LLM
+        question_type: Type of questions to generate
     """
     logger.info(
         "question_generation_started",
@@ -186,6 +193,7 @@ async def quiz_question_generation_flow(
         target_questions=target_question_count,
         llm_model=llm_model,
         llm_temperature=llm_temperature,
+        question_type=question_type.value,
     )
 
     # === Transaction 1: Reserve the Job (very fast) ===
@@ -224,28 +232,39 @@ async def quiz_question_generation_flow(
 
     # === Slow I/O Operation (occurs outside any transaction) ===
     try:
-        mcq_service = MCQGenerationService()
-        results = await mcq_service.generate_mcqs_for_quiz(
+        # Use dependency injection to get generation service
+        container = get_container()
+        generation_service = container.resolve(GenerationOrchestrationService)
+
+        # Create generation parameters
+        generation_parameters = GenerationParameters(target_count=target_question_count)
+
+        # Generate questions using new modular system
+        result = await generation_service.generate_questions(
             quiz_id=quiz_id,
-            target_question_count=target_question_count,
-            llm_model=llm_model,
-            llm_temperature=llm_temperature,
+            question_type=question_type,
+            generation_parameters=generation_parameters,
+            provider_name=None,  # Use default provider
+            workflow_name=None,  # Use default workflow
+            template_name=None,  # Use default template
         )
 
-        if results["success"]:
+        if result.success:
             final_status = "completed"
             logger.info(
                 "question_generation_completed",
                 quiz_id=str(quiz_id),
-                questions_generated=results["questions_generated"],
+                questions_generated=result.questions_generated,
                 target_questions=target_question_count,
+                question_type=question_type.value,
             )
         else:
             final_status = "failed"
             logger.error(
                 "question_generation_failed_during_llm_call",
                 quiz_id=str(quiz_id),
-                error_message=results["error_message"],
+                error_message=result.error_message,
+                question_type=question_type.value,
             )
 
     except Exception as e:
@@ -254,6 +273,7 @@ async def quiz_question_generation_flow(
             quiz_id=str(quiz_id),
             error=str(e),
             error_type=type(e).__name__,
+            question_type=question_type.value,
             exc_info=True,
         )
         final_status = "failed"

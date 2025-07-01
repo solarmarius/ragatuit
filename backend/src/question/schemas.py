@@ -1,49 +1,111 @@
-"""Question schemas for validation and serialization."""
+"""Question schemas for validation and serialization with polymorphic support."""
 
 import uuid
 from datetime import datetime
+from typing import Any
 
-from sqlmodel import Field, SQLModel
+from pydantic import BaseModel, Field
+
+from .types import QuestionDifficulty, QuestionType
 
 
-class QuestionCreate(SQLModel):
+class QuestionCreateRequest(BaseModel):
     """Schema for creating a new question."""
 
     quiz_id: uuid.UUID
-    question_text: str = Field(min_length=1, max_length=2000)
-    option_a: str = Field(min_length=1, max_length=500)
-    option_b: str = Field(min_length=1, max_length=500)
-    option_c: str = Field(min_length=1, max_length=500)
-    option_d: str = Field(min_length=1, max_length=500)
-    correct_answer: str = Field(regex=r"^[ABCD]$", description="Must be A, B, C, or D")
+    question_type: QuestionType
+    question_data: dict[str, Any] = Field(description="Question type-specific data")
+    difficulty: QuestionDifficulty | None = None
+    tags: list[str] | None = None
+
+    class Config:
+        use_enum_values = True
 
 
-class QuestionUpdate(SQLModel):
+class QuestionUpdateRequest(BaseModel):
     """Schema for updating a question."""
 
-    question_text: str | None = Field(default=None, min_length=1, max_length=2000)
-    option_a: str | None = Field(default=None, min_length=1, max_length=500)
-    option_b: str | None = Field(default=None, min_length=1, max_length=500)
-    option_c: str | None = Field(default=None, min_length=1, max_length=500)
-    option_d: str | None = Field(default=None, min_length=1, max_length=500)
-    correct_answer: str | None = Field(
-        default=None, regex=r"^[ABCD]$", description="Must be A, B, C, or D"
+    question_data: dict[str, Any] | None = Field(
+        default=None, description="Updated question data"
     )
+    difficulty: QuestionDifficulty | None = None
+    tags: list[str] | None = None
+
+    class Config:
+        use_enum_values = True
 
 
-class QuestionPublic(SQLModel):
+class QuestionResponse(BaseModel):
     """Public question schema for API responses."""
 
     id: uuid.UUID
     quiz_id: uuid.UUID
-    question_text: str
-    option_a: str
-    option_b: str
-    option_c: str
-    option_d: str
-    correct_answer: str
+    question_type: QuestionType
+    question_data: dict[str, Any]
+    difficulty: QuestionDifficulty | None = None
+    tags: list[str] | None = None
     is_approved: bool
-    approved_at: datetime | None
-    created_at: datetime | None
-    updated_at: datetime | None
-    canvas_item_id: str | None
+    approved_at: datetime | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+    canvas_item_id: str | None = None
+
+    class Config:
+        use_enum_values = True
+
+
+class GenerationRequest(BaseModel):
+    """Schema for question generation requests."""
+
+    quiz_id: uuid.UUID
+    question_type: QuestionType
+    target_count: int = Field(
+        ge=1, le=100, description="Number of questions to generate"
+    )
+    difficulty: QuestionDifficulty | None = None
+    tags: list[str] | None = None
+    custom_instructions: str | None = Field(default=None, max_length=500)
+
+    # Provider and workflow options
+    provider_name: str | None = None
+    workflow_name: str | None = None
+    template_name: str | None = None
+
+    class Config:
+        use_enum_values = True
+
+
+class GenerationResponse(BaseModel):
+    """Schema for question generation responses."""
+
+    success: bool
+    questions_generated: int
+    target_questions: int
+    error_message: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+    generated_at: datetime
+
+
+class QuestionStatistics(BaseModel):
+    """Schema for question statistics."""
+
+    total_questions: int
+    approved_questions: int
+    approval_rate: float
+    by_question_type: dict[str, dict[str, int | float]]
+
+
+class BatchGenerationRequest(BaseModel):
+    """Schema for batch question generation."""
+
+    requests: list[GenerationRequest] = Field(min_length=1, max_length=10)
+
+
+class BatchGenerationResponse(BaseModel):
+    """Schema for batch generation responses."""
+
+    results: list[GenerationResponse]
+    total_requests: int
+    successful_requests: int
+    failed_requests: int
+    total_questions_generated: int
