@@ -543,20 +543,13 @@ async def get_quiz_question_stats(
     )
 
     try:
-        # Get question counts
+        # Get question counts using local service
         from src.database import get_async_session
-        from src.question import service as question_service
+
+        from .service import get_question_counts
 
         async with get_async_session() as async_session:
-            full_stats = await question_service.get_question_statistics(
-                async_session, quiz_id=quiz.id
-            )
-
-        # Convert to expected format for backward compatibility
-        stats = {
-            "total": full_stats["total_questions"],
-            "approved": full_stats["approved_questions"],
-        }
+            stats = await get_question_counts(async_session, quiz.id)
 
         logger.info(
             "question_stats_retrieval_completed",

@@ -16,7 +16,6 @@ from .schemas import (
     GenerationResponse,
     QuestionCreateRequest,
     QuestionResponse,
-    QuestionStatistics,
     QuestionUpdateRequest,
 )
 
@@ -39,7 +38,6 @@ __all__ = [
     "QuestionUpdateRequest",
     "GenerationRequest",
     "GenerationResponse",
-    "QuestionStatistics",
     "BatchGenerationRequest",
     "BatchGenerationResponse",
     # Services

@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy import Integer, cast, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import Session, select
 
@@ -156,6 +157,50 @@ async def get_content_from_quiz(
     )
     content = result.scalar_one_or_none()
     return content
+
+
+async def get_question_counts(session: AsyncSession, quiz_id: UUID) -> dict[str, int]:
+    """
+    Get question counts for a quiz.
+
+    Args:
+        session: Async database session
+        quiz_id: Quiz ID
+
+    Returns:
+        Dict with 'total' and 'approved' question counts
+    """
+    # Import Question here to avoid circular imports
+    from src.question.models import Question
+
+    logger.debug("question_counts_requested", quiz_id=str(quiz_id))
+
+    # Query for total and approved question counts
+    result = await session.execute(
+        select(
+            func.count().label("total"),
+            func.sum(cast(Question.is_approved, Integer)).label("approved"),
+        ).where(Question.quiz_id == quiz_id)
+    )
+
+    row = result.first()
+    if row is None:
+        total_count = 0
+        approved_count = 0
+    else:
+        total_count = int(row.total or 0)
+        approved_count = int(row.approved or 0)
+
+    counts = {"total": total_count, "approved": approved_count}
+
+    logger.debug(
+        "question_counts_retrieved",
+        quiz_id=str(quiz_id),
+        total=counts["total"],
+        approved=counts["approved"],
+    )
+
+    return counts
 
 
 def update_quiz_content(
