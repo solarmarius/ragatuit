@@ -152,6 +152,7 @@ async def orchestrate_quiz_question_generation(
     llm_model: str,
     llm_temperature: float,
     question_type: QuestionType = QuestionType.MULTIPLE_CHOICE,
+    generation_service: Any = None,
 ) -> None:
     """
     Orchestrate the complete question generation workflow for a quiz.
@@ -165,6 +166,7 @@ async def orchestrate_quiz_question_generation(
         llm_model: LLM model to use for generation
         llm_temperature: Temperature setting for LLM
         question_type: Type of questions to generate
+        generation_service: Optional injected generation service (creates default if None)
     """
     logger.info(
         "quiz_question_generation_orchestration_started",
@@ -197,10 +199,11 @@ async def orchestrate_quiz_question_generation(
 
     # === Question Generation (outside transaction) ===
     try:
-        # Get generation service
-        from src.question.services import GenerationOrchestrationService
+        # Use injected generation service or create default
+        if generation_service is None:
+            from src.question.services import GenerationOrchestrationService
 
-        generation_service = GenerationOrchestrationService()
+            generation_service = GenerationOrchestrationService()
 
         # Create generation parameters
         generation_parameters = GenerationParameters(target_count=target_question_count)

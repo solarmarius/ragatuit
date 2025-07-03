@@ -27,8 +27,8 @@ from .service import (
     get_user_quizzes,
     prepare_content_extraction,
     prepare_question_generation,
-    verify_quiz_ownership,
 )
+from .validators import verify_quiz_ownership
 
 __all__ = [
     "router",

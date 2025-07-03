@@ -10,6 +10,7 @@ from sqlmodel import asc, select
 # Removed unused transaction import
 from src.logging_config import get_logger
 
+from .formatters import format_questions_batch
 from .types import (
     Question,
     # QuestionDifficulty,  # Unused
@@ -207,78 +208,8 @@ async def get_formatted_questions_by_quiz(
         session, quiz_id, question_type, approved_only, limit, offset
     )
 
-    # Get question type registry
-    question_registry = get_question_type_registry()
-
-    # Format questions while in session context
-    formatted_questions = []
-    for question in questions:
-        try:
-            # Get question type implementation
-            question_impl = question_registry.get_question_type(question.question_type)
-
-            # Validate and get typed data
-            typed_data = question_impl.validate_data(question.question_data)
-
-            # Format for display
-            display_data = question_impl.format_for_display(typed_data)
-
-            formatted_question = {
-                "id": str(question.id),
-                "quiz_id": str(question.quiz_id),
-                "question_type": question.question_type.value,
-                "question_data": question.question_data,  # Include raw data for API compatibility
-                "difficulty": question.difficulty.value
-                if question.difficulty
-                else None,
-                "tags": question.tags or [],
-                "is_approved": question.is_approved,
-                "approved_at": question.approved_at.isoformat()
-                if question.approved_at
-                else None,
-                "created_at": question.created_at.isoformat()
-                if question.created_at
-                else None,
-                "updated_at": question.updated_at.isoformat()
-                if question.updated_at
-                else None,
-                "canvas_item_id": question.canvas_item_id,
-                **display_data,  # Merge in the formatted question content for convenience
-            }
-
-            formatted_questions.append(formatted_question)
-
-        except Exception as format_error:
-            logger.error(
-                "question_formatting_failed",
-                question_id=str(question.id),
-                error=str(format_error),
-            )
-            # Return basic question data on formatting failure
-            formatted_questions.append(
-                {
-                    "id": str(question.id),
-                    "quiz_id": str(question.quiz_id),
-                    "question_type": question.question_type.value,
-                    "question_data": question.question_data,  # Required by API schema
-                    "difficulty": question.difficulty.value
-                    if question.difficulty
-                    else None,
-                    "tags": question.tags or [],
-                    "is_approved": question.is_approved,
-                    "approved_at": question.approved_at.isoformat()
-                    if question.approved_at
-                    else None,
-                    "created_at": question.created_at.isoformat()
-                    if question.created_at
-                    else None,
-                    "updated_at": question.updated_at.isoformat()
-                    if question.updated_at
-                    else None,
-                    "canvas_item_id": question.canvas_item_id,
-                    "formatting_error": str(format_error),
-                }
-            )
+    # Format questions using the new formatter module
+    formatted_questions = format_questions_batch(questions)
 
     logger.debug(
         "formatted_questions_retrieval_completed",
@@ -499,76 +430,3 @@ async def update_question_canvas_ids(
                 question_obj.canvas_item_id = export_result.get("item_id")
 
     logger.debug("question_canvas_ids_updated")
-
-
-def format_question_for_display(question: Question) -> dict[str, Any]:
-    """
-    Format a question for display/API response.
-
-    Args:
-        question: Question to format
-
-    Returns:
-        Formatted question data
-    """
-    try:
-        # Get question type registry
-        question_registry = get_question_type_registry()
-
-        # Get question type implementation
-        question_impl = question_registry.get_question_type(question.question_type)
-
-        # Validate and get typed data
-        typed_data = question_impl.validate_data(question.question_data)
-
-        # Format for display
-        display_data = question_impl.format_for_display(typed_data)
-
-        return {
-            "id": str(question.id),
-            "quiz_id": str(question.quiz_id),
-            "question_type": question.question_type.value,
-            "question_data": question.question_data,
-            "difficulty": question.difficulty.value if question.difficulty else None,
-            "tags": question.tags or [],
-            "is_approved": question.is_approved,
-            "approved_at": question.approved_at.isoformat()
-            if question.approved_at
-            else None,
-            "created_at": question.created_at.isoformat()
-            if question.created_at
-            else None,
-            "updated_at": question.updated_at.isoformat()
-            if question.updated_at
-            else None,
-            "canvas_item_id": question.canvas_item_id,
-            **display_data,  # Merge in the formatted question content
-        }
-
-    except Exception as e:
-        logger.error(
-            "question_formatting_failed",
-            question_id=str(question.id),
-            error=str(e),
-        )
-        # Return basic question data on error
-        return {
-            "id": str(question.id),
-            "quiz_id": str(question.quiz_id),
-            "question_type": question.question_type.value,
-            "question_data": question.question_data,
-            "difficulty": question.difficulty.value if question.difficulty else None,
-            "tags": question.tags or [],
-            "is_approved": question.is_approved,
-            "approved_at": question.approved_at.isoformat()
-            if question.approved_at
-            else None,
-            "created_at": question.created_at.isoformat()
-            if question.created_at
-            else None,
-            "updated_at": question.updated_at.isoformat()
-            if question.updated_at
-            else None,
-            "canvas_item_id": question.canvas_item_id,
-            "formatting_error": str(e),
-        }

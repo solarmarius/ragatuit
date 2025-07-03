@@ -11,6 +11,7 @@ from src.database import get_async_session
 from src.logging_config import get_logger
 
 from . import service
+from .formatters import format_question_for_display
 from .schemas import (
     BatchGenerationRequest,
     BatchGenerationResponse,
@@ -135,7 +136,7 @@ async def get_question(
                 raise HTTPException(status_code=404, detail="Question not found")
 
             # Format question for display
-            formatted_question = service.format_question_for_display(question)
+            formatted_question = format_question_for_display(question)
 
         logger.info(
             "question_retrieval_completed",
@@ -226,7 +227,7 @@ async def create_question(
                 )
 
             # Format question for display
-            formatted_question = service.format_question_for_display(question)
+            formatted_question = format_question_for_display(question)
 
         logger.info(
             "question_creation_completed",
@@ -305,7 +306,7 @@ async def update_question(
                 raise HTTPException(status_code=500, detail="Failed to update question")
 
             # Format question for display
-            formatted_question = service.format_question_for_display(updated_question)
+            formatted_question = format_question_for_display(updated_question)
 
         logger.info(
             "question_update_completed",
@@ -374,7 +375,7 @@ async def approve_question(
                 )
 
             # Format question for display
-            formatted_question = service.format_question_for_display(approved_question)
+            formatted_question = format_question_for_display(approved_question)
 
         logger.info(
             "question_approval_completed",
