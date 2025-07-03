@@ -1,13 +1,11 @@
 """Question module with polymorphic question support and modular architecture."""
 
 # Import router
-from . import router
+# Configuration
+from . import router, service
 
 # Configuration
 from .config import get_configuration_service
-
-# DI Container
-from .di import get_container
 
 # Core components
 from .models import Question, QuestionDifficulty, QuestionType
@@ -26,7 +24,6 @@ from .schemas import (
 from .services import (
     ContentProcessingService,
     GenerationOrchestrationService,
-    QuestionPersistenceService,
 )
 
 __all__ = [
@@ -48,8 +45,7 @@ __all__ = [
     # Services
     "ContentProcessingService",
     "GenerationOrchestrationService",
-    "QuestionPersistenceService",
+    "service",
     # Infrastructure
-    "get_container",
     "get_configuration_service",
 ]

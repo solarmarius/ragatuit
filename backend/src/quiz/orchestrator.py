@@ -12,8 +12,8 @@ from uuid import UUID
 
 from src.database import execute_in_transaction
 from src.logging_config import get_logger
-from src.question.di import get_container
-from src.question.services import GenerationOrchestrationService
+
+# Removed DI container import - GenerationOrchestrationService imported locally
 from src.question.types import GenerationParameters, QuestionType
 
 from .service import get_quiz_for_update
@@ -235,9 +235,10 @@ async def orchestrate_quiz_question_generation(
 
     # === Question Generation (outside transaction) ===
     try:
-        # Use dependency injection to get generation service
-        container = get_container()
-        generation_service = container.resolve(GenerationOrchestrationService)
+        # Get generation service
+        from src.question.services import GenerationOrchestrationService
+
+        generation_service = GenerationOrchestrationService()
 
         # Create generation parameters
         generation_parameters = GenerationParameters(target_count=target_question_count)
@@ -332,8 +333,7 @@ async def orchestrate_quiz_export_to_canvas(
         session: Any, quiz_id: UUID
     ) -> dict[str, Any] | None:
         """Validate quiz for export and reserve the export job."""
-        from src.question.di import get_container
-        from src.question.services import QuestionPersistenceService
+        # Removed DI container and persistence service imports
 
         quiz = await get_quiz_for_update(session, quiz_id)
         if not quiz:
@@ -364,11 +364,13 @@ async def orchestrate_quiz_export_to_canvas(
             return None
 
         # Get approved questions
-        container = get_container()
-        persistence_service = container.resolve(QuestionPersistenceService)
-        approved_questions = await persistence_service.get_questions_by_quiz(
-            quiz_id=quiz_id, approved_only=True
-        )
+        from src.database import get_async_session
+        from src.question import service as question_service
+
+        async with get_async_session() as async_session:
+            approved_questions = await question_service.get_questions_by_quiz(
+                async_session, quiz_id=quiz_id, approved_only=True
+            )
 
         if not approved_questions:
             logger.error("no_approved_questions_for_export", quiz_id=str(quiz_id))
