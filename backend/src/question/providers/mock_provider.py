@@ -5,7 +5,7 @@ import json
 import time
 from typing import Any
 
-from src.logging_config import get_logger
+from src.config import get_logger
 
 from .base import (
     BaseLLMProvider,

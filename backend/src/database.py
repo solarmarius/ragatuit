@@ -10,8 +10,7 @@ from sqlalchemy.pool import NullPool, QueuePool
 from sqlmodel import Session, select
 
 # Auth imports moved to avoid circular dependency
-from src.config import settings
-from src.logging_config import get_logger
+from src.config import get_logger, settings
 
 logger = get_logger("database")
 

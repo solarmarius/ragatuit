@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import asc, select
 
 # Removed unused transaction import
-from src.logging_config import get_logger
+from src.config import get_logger
 
 from .formatters import format_questions_batch
 from .types import (

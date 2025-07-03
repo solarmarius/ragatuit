@@ -3,7 +3,7 @@
 import time
 from collections.abc import Callable
 
-from src.logging_config import get_logger
+from src.config import get_logger
 
 from .exceptions import UnsupportedFormatError
 from .models import ProcessedContent, ProcessingSummary, RawContent

@@ -8,7 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.logging_config import get_logger
+from src.config import get_logger
 
 logger = get_logger("llm_provider")
 

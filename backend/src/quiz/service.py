@@ -8,7 +8,7 @@ from sqlalchemy import Integer, cast, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import Session, select
 
-from src.logging_config import get_logger
+from src.config import get_logger
 
 from .models import Quiz
 from .schemas import QuizCreate, Status

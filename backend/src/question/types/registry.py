@@ -1,6 +1,6 @@
 """Question type registry for dynamic type discovery and management."""
 
-from src.logging_config import get_logger
+from src.config import get_logger
 
 from .base import BaseQuestionType, QuestionType
 

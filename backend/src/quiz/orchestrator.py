@@ -9,8 +9,8 @@ from collections.abc import Callable
 from typing import Any
 from uuid import UUID
 
+from src.config import get_logger
 from src.database import execute_in_transaction
-from src.logging_config import get_logger
 
 # Removed DI container import - GenerationOrchestrationService imported locally
 from src.question.types import GenerationParameters, QuestionType

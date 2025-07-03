@@ -5,7 +5,7 @@ Simple service exceptions for standardized error handling.
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-from src.logging_config import get_logger
+from src.config import get_logger
 
 logger = get_logger("error_handler")
 

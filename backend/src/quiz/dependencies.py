@@ -7,8 +7,8 @@ from fastapi import Depends, HTTPException
 from sqlmodel import select
 
 from src.auth.dependencies import CurrentUser
+from src.config import get_logger
 from src.database import SessionDep
-from src.logging_config import get_logger
 
 from .models import Quiz
 from .service import get_quiz_by_id

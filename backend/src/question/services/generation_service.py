@@ -3,7 +3,7 @@
 from typing import Any
 from uuid import UUID
 
-from src.logging_config import get_logger
+from src.config import get_logger
 
 from ..config import get_configuration_service
 from ..providers import get_llm_provider_registry

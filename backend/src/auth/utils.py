@@ -10,8 +10,7 @@ from datetime import datetime, timedelta, timezone
 from cryptography.fernet import Fernet
 from jose import jwt
 
-from src.config import settings
-from src.logging_config import get_logger
+from src.config import get_logger, settings
 
 logger = get_logger("auth_utils")
 

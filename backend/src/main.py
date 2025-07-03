@@ -9,13 +9,12 @@ import src.auth.models  # noqa
 import src.question.models  # noqa
 import src.quiz.models  # noqa
 from src.api import api_router
-from src.config import settings
+from src.config import configure_logging, get_logger, settings
 from src.exceptions import (
     ServiceError,
     general_exception_handler,
     service_error_handler,
 )
-from src.logging_config import configure_logging, get_logger
 from src.middleware import LoggingMiddleware
 
 

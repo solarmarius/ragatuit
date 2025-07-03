@@ -4,9 +4,9 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 
 from src.auth.dependencies import CurrentUser
 from src.canvas.dependencies import CanvasToken
+from src.config import get_logger
 from src.database import SessionDep
 from src.exceptions import ServiceError
-from src.logging_config import get_logger
 
 from .constants import ERROR_MESSAGES, SUCCESS_MESSAGES
 from .dependencies import (

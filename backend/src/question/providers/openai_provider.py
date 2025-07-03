@@ -6,7 +6,7 @@ from typing import Any
 from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
 
-from src.logging_config import get_logger
+from src.config import get_logger
 
 from .base import (
     AuthenticationError,

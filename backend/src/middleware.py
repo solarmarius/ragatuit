@@ -13,7 +13,7 @@ from typing import Any
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from src.logging_config import get_logger, log_context
+from src.config import get_logger, log_context
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):

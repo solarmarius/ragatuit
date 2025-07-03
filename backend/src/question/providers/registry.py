@@ -1,6 +1,6 @@
 """LLM provider registry for managing and creating provider instances."""
 
-from src.logging_config import get_logger
+from src.config import get_logger
 
 from .base import BaseLLMProvider, LLMConfiguration, LLMModel, LLMProvider
 

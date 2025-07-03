@@ -3,8 +3,8 @@
 from typing import Any
 from uuid import UUID
 
+from src.config import get_logger
 from src.database import get_async_session
-from src.logging_config import get_logger
 
 from ..workflows import ContentChunk, WorkflowConfiguration
 

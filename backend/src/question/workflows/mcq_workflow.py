@@ -5,8 +5,8 @@ from typing import Any
 
 from langgraph.graph import END, START, StateGraph
 
+from src.config import get_logger
 from src.database import get_async_session, transaction
-from src.logging_config import get_logger
 
 from ..providers import LLMMessage
 from ..types import GenerationParameters

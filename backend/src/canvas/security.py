@@ -11,9 +11,8 @@ from src.auth.service import (
     get_decrypted_refresh_token,
     update_user_tokens,
 )
-from src.config import settings
+from src.config import get_logger, settings
 from src.exceptions import AuthenticationError, ExternalServiceError
-from src.logging_config import get_logger
 from src.retry import retry_on_failure
 
 ALGORITHM = "HS256"

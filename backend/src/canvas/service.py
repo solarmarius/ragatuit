@@ -6,9 +6,8 @@ from typing import Any
 
 import httpx
 
-from src.config import settings
+from src.config import get_logger, settings
 from src.exceptions import ExternalServiceError
-from src.logging_config import get_logger
 from src.retry import retry_on_failure
 
 # Import services from local module
