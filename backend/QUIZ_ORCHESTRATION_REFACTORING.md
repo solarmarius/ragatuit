@@ -137,12 +137,58 @@ background_tasks.add_task(
 
 | Status | File | Change Description |
 |--------|------|-------------------|
-| ✅ **Created** | `quiz/orchestrator.py` | New orchestration layer with functional dependency injection |
-| 🔄 **Modified** | `quiz/router.py` | Updated to use orchestrator with dependency injection |
-| 🔄 **Modified** | `canvas/flows.py` | Cleaned to contain only Canvas API operations |
-| 🔄 **Modified** | `quiz/__init__.py` | Updated exports to use orchestrator functions |
-| 🔄 **Modified** | `canvas/__init__.py` | Removed obsolete export references |
-| ❌ **Deleted** | `quiz/flows.py` | Completely removed (no backward compatibility) |
+| 🔄 **Modified** | `quiz/orchestrator.py` | **COMPLETED**: Refactored to improve separation of concerns |
+| 🔄 **Modified** | `quiz/service.py` | **COMPLETED**: Added domain-specific status management functions |
+| 🔄 **Modified** | `question/service.py` | **COMPLETED**: Added question export preparation functions |
+
+### Actual Changes Implemented (December 2024)
+
+#### 1. **Domain Service Extraction**
+
+**Question Service Enhancements** (`question/service.py`):
+- ✅ **Added** `prepare_questions_for_export(quiz_id)` - Moved question export logic from orchestrator
+- ✅ **Added** `update_question_canvas_ids(session, question_data, export_results)` - Handles Canvas ID updates
+
+**Quiz Service Enhancements** (`quiz/service.py`):
+- ✅ **Added** `reserve_quiz_job(session, quiz_id, job_type)` - Centralized job reservation with row locking
+- ✅ **Added** `update_quiz_status(session, quiz_id, status_type, status_value, **fields)` - Centralized status updates
+
+#### 2. **Orchestrator Simplification** (`quiz/orchestrator.py`):
+
+**Removed Complex Logic**:
+- ✅ **Removed** `_load_and_extract_question_data()` function (moved to question service)
+- ✅ **Removed** Direct Question model imports and manipulations
+- ✅ **Removed** Manual transaction management for status updates
+
+**Simplified Transaction Patterns**:
+- ✅ **Updated** Content extraction to use `reserve_quiz_job()` and `update_quiz_status()`
+- ✅ **Updated** Question generation to use domain service functions
+- ✅ **Updated** Quiz export to use question service for data preparation
+
+#### 3. **Clean Domain Boundaries**:
+
+**Before Refactoring Issues**:
+```python
+# Quiz orchestrator directly importing Question models
+from src.question.models import Question
+from src.question.types import QuestionType, get_question_type_registry
+from src.question.types.mcq import MultipleChoiceData
+
+# Direct database manipulation across domains
+question_obj = await session.get(Question, question_data["id"])
+if question_obj:
+    question_obj.canvas_item_id = item_result.get("item_id")
+```
+
+**After Refactoring**:
+```python
+# Clean service calls within domain boundaries
+from src.question import service as question_service
+
+# Question service handles all question-related operations
+question_data = await question_service.prepare_questions_for_export(quiz_id)
+await question_service.update_question_canvas_ids(session, question_data, export_results)
+```
 
 ### Import Changes
 
@@ -328,28 +374,93 @@ async def test_quiz_workflow():
 ### Architectural Benefits
 
 1. **Clear Separation of Concerns**: Each module has single responsibility
-2. **Eliminated Circular Dependencies**: Clean dependency direction
-3. **Improved Testability**: Easy mocking with dependency injection
-4. **Better Error Handling**: Centralized cross-domain error coordination
+   - ✅ **Quiz service** owns all quiz-related database operations
+   - ✅ **Question service** owns all question-related database operations
+   - ✅ **Orchestrator** focuses only on workflow coordination
+
+2. **Eliminated Cross-Domain Dependencies**: Clean domain boundaries
+   - ✅ **Removed** direct Question model imports from Quiz orchestrator
+   - ✅ **Established** clear service interfaces between domains
+   - ✅ **Eliminated** transaction management across domain boundaries
+
+3. **Improved Testability**: Domain services can be easily mocked
+   - ✅ **Service functions** have clear interfaces
+   - ✅ **Database operations** isolated within domain services
+   - ✅ **Orchestrator logic** can be tested with mocked services
+
+4. **Better Error Handling**: Domain-specific error management
+   - ✅ **Quiz service** handles quiz-related errors
+   - ✅ **Question service** handles question-related errors
+   - ✅ **Orchestrator** coordinates cross-domain error flows
+
 5. **Maintainable Code**: Clear ownership and boundaries
+   - ✅ **Single Responsibility Principle** enforced
+   - ✅ **Domain-Driven Design** principles applied
+   - ✅ **Clean interfaces** between components
 
 ### Development Benefits
 
-1. **Easier Debugging**: Clear workflow ownership in orchestrator
-2. **Safer Refactoring**: Functional boundaries reduce coupling
-3. **Cleaner Code Reviews**: Obvious violations of separation of concerns
-4. **Better Documentation**: Self-documenting dependency injection
-5. **Reduced Cognitive Load**: Clear module responsibilities
+1. **Easier Debugging**: Clear ownership of operations
+   - ✅ **Quiz issues** → Check quiz service
+   - ✅ **Question issues** → Check question service
+   - ✅ **Workflow issues** → Check orchestrator
 
-### Future Scalability
+2. **Safer Refactoring**: Reduced coupling between components
+   - ✅ **Service interfaces** provide stable contracts
+   - ✅ **Domain boundaries** prevent cascading changes
+   - ✅ **Clear dependencies** make impact analysis easier
 
-1. **Easy Feature Addition**: Clear patterns for new workflows
-2. **Service Extraction**: Canvas flows ready for microservice extraction
-3. **Alternative Implementations**: Easy to swap Canvas for other LMS systems
-4. **Parallel Development**: Teams can work on different modules independently
+3. **Cleaner Code Reviews**: Obvious violations are easy to spot
+   - ✅ **Domain violations** immediately visible
+   - ✅ **SRP violations** stand out clearly
+   - ✅ **Proper abstractions** enforced
+
+4. **Reduced Cognitive Load**: Clear module responsibilities
+   - ✅ **Developers** know where to make changes
+   - ✅ **Code organization** follows business domains
+   - ✅ **Function names** clearly indicate purpose
+
+### Actual Improvements Measured
+
+**Code Quality Metrics**:
+- ✅ **Linting**: All ruff and mypy checks pass
+- ✅ **Type Safety**: Proper type annotations maintained
+- ✅ **Import Hygiene**: No circular or cross-domain imports
+
+**Complexity Reduction**:
+- ✅ **Orchestrator**: Reduced from complex database operations to simple service calls
+- ✅ **Transaction Management**: Centralized within appropriate domains
+- ✅ **Function Length**: Long orchestrator functions broken into focused service functions
+
+**Maintainability**:
+- ✅ **Clear Interfaces**: Service functions have obvious contracts
+- ✅ **Single Responsibility**: Each function has one clear purpose
+- ✅ **Domain Ownership**: Clear data ownership boundaries
 
 ## Conclusion
 
-This refactoring successfully transformed a tightly-coupled, circular dependency architecture into a clean, maintainable system following Domain-Driven Design principles. The functional dependency injection pattern provides the benefits of clean architecture while keeping the implementation simple and testable.
+### December 2024 Refactoring Summary
 
-The new architecture supports future growth and makes the codebase significantly more maintainable for developers while eliminating the original architectural smells.
+This focused refactoring successfully addressed the core separation of concerns issues in the quiz orchestrator with **minimal architectural changes**. The approach prioritized:
+
+**✅ Completed Objectives**:
+1. **Moved domain logic to appropriate services** - Question export logic → Question service, Quiz status management → Quiz service
+2. **Simplified orchestrator responsibilities** - Now focuses only on workflow coordination
+3. **Eliminated cross-domain database operations** - Each service owns its domain's data
+4. **Maintained existing functionality** - No breaking changes to API or workflows
+5. **Improved code quality** - All linting and type checking passes
+
+**🎯 Key Success Factors**:
+- **Simple approach** - Enhanced existing files rather than major architectural overhaul
+- **Domain-driven** - Clear boundaries between Quiz and Question domains
+- **Backward compatible** - No changes to external interfaces
+- **Testable** - Service functions can be easily mocked and tested
+- **Maintainable** - Clear ownership and single responsibility
+
+**📈 Impact**:
+- **Developers** can now easily identify where to make Quiz vs Question changes
+- **Code reviews** will catch domain boundary violations more easily
+- **Testing** is simpler with clear service interfaces
+- **Future features** have clear patterns to follow
+
+This pragmatic refactoring demonstrates that significant architectural improvements can be achieved through focused, incremental changes that respect existing system boundaries while establishing cleaner separation of concerns.

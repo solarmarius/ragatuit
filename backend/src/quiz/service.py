@@ -472,3 +472,138 @@ def prepare_question_generation(
         "llm_model": quiz.llm_model,
         "llm_temperature": quiz.llm_temperature,
     }
+
+
+async def reserve_quiz_job(
+    session: AsyncSession, quiz_id: UUID, job_type: str
+) -> dict[str, Any] | None:
+    """
+    Reserve a quiz job (content extraction, question generation, export) using row lock.
+
+    Args:
+        session: Async database session
+        quiz_id: Quiz ID
+        job_type: Type of job ('extraction', 'generation', 'export')
+
+    Returns:
+        Quiz settings dict if job reserved successfully, None if already taken
+    """
+    quiz = await get_quiz_for_update(session, quiz_id)
+
+    if not quiz:
+        logger.error(
+            "quiz_not_found_for_job_reservation",
+            quiz_id=str(quiz_id),
+            job_type=job_type,
+        )
+        return None
+
+    # Check current status based on job type
+    if job_type == "extraction":
+        if quiz.content_extraction_status in ["processing", "completed"]:
+            logger.info(
+                "job_already_taken",
+                quiz_id=str(quiz_id),
+                job_type=job_type,
+                current_status=quiz.content_extraction_status,
+            )
+            return None
+        quiz.content_extraction_status = "processing"
+        settings = {
+            "target_questions": quiz.question_count,
+            "llm_model": quiz.llm_model,
+            "llm_temperature": quiz.llm_temperature,
+        }
+
+    elif job_type == "generation":
+        if quiz.llm_generation_status in ["processing", "completed"]:
+            logger.info(
+                "job_already_taken",
+                quiz_id=str(quiz_id),
+                job_type=job_type,
+                current_status=quiz.llm_generation_status,
+            )
+            return None
+        quiz.llm_generation_status = "processing"
+        settings = {}
+
+    elif job_type == "export":
+        if quiz.export_status == "completed" and quiz.canvas_quiz_id:
+            logger.warning(
+                "quiz_already_exported",
+                quiz_id=str(quiz_id),
+                canvas_quiz_id=quiz.canvas_quiz_id,
+            )
+            return {
+                "already_exported": True,
+                "canvas_quiz_id": quiz.canvas_quiz_id,
+                "course_id": quiz.canvas_course_id,
+                "title": quiz.title,
+            }
+        if quiz.export_status == "processing":
+            logger.warning(
+                "export_already_processing",
+                quiz_id=str(quiz_id),
+                current_status=quiz.export_status,
+            )
+            return None
+        quiz.export_status = "processing"
+        settings = {
+            "already_exported": False,
+            "course_id": quiz.canvas_course_id,
+            "title": quiz.title,
+        }
+
+    else:
+        logger.error("invalid_job_type", job_type=job_type)
+        return None
+
+    await session.flush()
+    return settings
+
+
+async def update_quiz_status(
+    session: AsyncSession,
+    quiz_id: UUID,
+    status_type: str,
+    status_value: str,
+    **additional_fields: Any,
+) -> None:
+    """
+    Update quiz status fields in a transaction.
+
+    Args:
+        session: Async database session
+        quiz_id: Quiz ID
+        status_type: Type of status ('content_extraction', 'llm_generation', 'export')
+        status_value: Status value ('pending', 'processing', 'completed', 'failed')
+        **additional_fields: Additional fields to update (e.g., extracted_content, canvas_quiz_id)
+    """
+    quiz = await get_quiz_for_update(session, quiz_id)
+    if not quiz:
+        logger.error("quiz_not_found_during_status_update", quiz_id=str(quiz_id))
+        return
+
+    # Update status based on type
+    if status_type == "content_extraction":
+        quiz.content_extraction_status = status_value
+        if status_value == "completed" and "extracted_content" in additional_fields:
+            quiz.extracted_content = additional_fields["extracted_content"]
+            quiz.content_extracted_at = datetime.now(timezone.utc)
+
+    elif status_type == "llm_generation":
+        quiz.llm_generation_status = status_value
+
+    elif status_type == "export":
+        quiz.export_status = status_value
+        if status_value == "completed":
+            if "canvas_quiz_id" in additional_fields:
+                quiz.canvas_quiz_id = additional_fields["canvas_quiz_id"]
+            quiz.exported_at = datetime.now(timezone.utc)
+
+    logger.debug(
+        "quiz_status_updated",
+        quiz_id=str(quiz_id),
+        status_type=status_type,
+        status_value=status_value,
+    )

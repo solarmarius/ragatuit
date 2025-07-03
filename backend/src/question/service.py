@@ -415,6 +415,92 @@ async def delete_question(
     return True
 
 
+async def prepare_questions_for_export(quiz_id: UUID) -> list[dict[str, Any]]:
+    """
+    Load approved questions and extract their data for export.
+
+    This function loads questions in their own session context and extracts
+    all needed data before the session closes to avoid DetachedInstanceError.
+
+    Args:
+        quiz_id: UUID of the quiz to load questions for
+
+    Returns:
+        List of question data dictionaries ready for export
+    """
+    from src.database import get_async_session
+    from src.question.types import QuestionType, get_question_type_registry
+    from src.question.types.mcq import MultipleChoiceData
+
+    async with get_async_session() as async_session:
+        # Load approved questions with all needed data
+        approved_questions = await get_questions_by_quiz(
+            async_session, quiz_id=quiz_id, approved_only=True
+        )
+
+        if not approved_questions:
+            logger.error("no_approved_questions_for_export", quiz_id=str(quiz_id))
+            return []
+
+        # Extract all data while questions are still bound to session
+        question_registry = get_question_type_registry()
+        question_data = []
+
+        for question in approved_questions:
+            if question.question_type == QuestionType.MULTIPLE_CHOICE:
+                typed_data = question.get_typed_data(question_registry)
+                if isinstance(typed_data, MultipleChoiceData):
+                    question_data.append(
+                        {
+                            "id": question.id,
+                            "question_text": typed_data.question_text,
+                            "option_a": typed_data.option_a,
+                            "option_b": typed_data.option_b,
+                            "option_c": typed_data.option_c,
+                            "option_d": typed_data.option_d,
+                            "correct_answer": typed_data.correct_answer,
+                        }
+                    )
+
+        logger.debug(
+            "question_data_extracted_for_export",
+            quiz_id=str(quiz_id),
+            questions_extracted=len(question_data),
+        )
+
+        return question_data
+
+
+async def update_question_canvas_ids(
+    session: AsyncSession,
+    question_data_list: list[dict[str, Any]],
+    export_results: list[dict[str, Any]],
+) -> None:
+    """
+    Update question Canvas item IDs after successful export.
+
+    Args:
+        session: Database session
+        question_data_list: List of question data used for export
+        export_results: List of export results from Canvas API
+    """
+    logger.debug(
+        "updating_question_canvas_ids",
+        question_count=len(question_data_list),
+        result_count=len(export_results),
+    )
+
+    for question_data, export_result in zip(
+        question_data_list, export_results, strict=False
+    ):
+        if export_result.get("success"):
+            question_obj = await session.get(Question, question_data["id"])
+            if question_obj:
+                question_obj.canvas_item_id = export_result.get("item_id")
+
+    logger.debug("question_canvas_ids_updated")
+
+
 def format_question_for_display(question: Question) -> dict[str, Any]:
     """
     Format a question for display/API response.
