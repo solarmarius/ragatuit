@@ -12,7 +12,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SiCanvas } from "react-icons/si";
 
-import { QuestionsService, type Quiz, QuizService } from "@/client";
+import { type Quiz, QuizService } from "@/client";
 import useCustomToast from "@/hooks/useCustomToast";
 
 interface QuestionStatsProps {
@@ -33,14 +33,9 @@ export function QuestionStats({ quiz }: QuestionStatsProps) {
       if (!quiz.id) {
         throw new Error("Quiz ID is required");
       }
-      const fullStats = await QuestionsService.getQuestionStatistics({
+      return await QuizService.getQuizQuestionStats({
         quizId: quiz.id,
       });
-      // Convert to legacy format for compatibility
-      return {
-        total: fullStats.total_questions,
-        approved: fullStats.approved_questions,
-      };
     },
   });
 

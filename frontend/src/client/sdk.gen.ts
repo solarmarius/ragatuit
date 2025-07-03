@@ -4,53 +4,51 @@ import type { CancelablePromise } from "./core/CancelablePromise"
 import { OpenAPI } from "./core/OpenAPI"
 import { request as __request } from "./core/request"
 import type {
-  AuthAuthCanvasResponse,
   AuthLoginCanvasResponse,
+  AuthAuthCanvasResponse,
   AuthLogoutCanvasResponse,
+  CanvasGetCoursesResponse,
   CanvasGetCourseModulesData,
   CanvasGetCourseModulesResponse,
-  CanvasGetCoursesResponse,
-  CanvasGetFileInfoData,
-  CanvasGetFileInfoResponse,
   CanvasGetModuleItemsData,
   CanvasGetModuleItemsResponse,
   CanvasGetPageContentData,
   CanvasGetPageContentResponse,
-  QuestionsApproveQuestionData,
-  QuestionsApproveQuestionResponse,
-  QuestionsBatchGenerateQuestionsData,
-  QuestionsBatchGenerateQuestionsResponse,
-  QuestionsCreateQuestionData,
-  QuestionsCreateQuestionResponse,
-  QuestionsDeleteQuestionData,
-  QuestionsDeleteQuestionResponse,
-  QuestionsGenerateQuestionsData,
-  QuestionsGenerateQuestionsResponse,
-  QuestionsGetQuestionData,
-  QuestionsGetQuestionResponse,
-  QuestionsGetQuestionStatisticsData,
-  QuestionsGetQuestionStatisticsResponse,
+  CanvasGetFileInfoData,
+  CanvasGetFileInfoResponse,
   QuestionsGetQuizQuestionsData,
   QuestionsGetQuizQuestionsResponse,
+  QuestionsCreateQuestionData,
+  QuestionsCreateQuestionResponse,
+  QuestionsGetQuestionData,
+  QuestionsGetQuestionResponse,
   QuestionsUpdateQuestionData,
   QuestionsUpdateQuestionResponse,
+  QuestionsDeleteQuestionData,
+  QuestionsDeleteQuestionResponse,
+  QuestionsApproveQuestionData,
+  QuestionsApproveQuestionResponse,
+  QuestionsGenerateQuestionsData,
+  QuestionsGenerateQuestionsResponse,
+  QuestionsBatchGenerateQuestionsData,
+  QuestionsBatchGenerateQuestionsResponse,
+  QuizGetUserQuizzesEndpointResponse,
   QuizCreateNewQuizData,
   QuizCreateNewQuizResponse,
+  QuizGetQuizData,
+  QuizGetQuizResponse,
   QuizDeleteQuizEndpointData,
   QuizDeleteQuizEndpointResponse,
-  QuizExportQuizToCanvasData,
-  QuizExportQuizToCanvasResponse,
-  QuizGetQuizData,
-  QuizGetQuizQuestionStatsData,
-  QuizGetQuizQuestionStatsResponse,
-  QuizGetQuizResponse,
-  QuizGetUserQuizzesEndpointResponse,
   QuizTriggerContentExtractionData,
   QuizTriggerContentExtractionResponse,
   QuizTriggerQuestionGenerationData,
   QuizTriggerQuestionGenerationResponse,
-  UsersDeleteUserMeResponse,
+  QuizGetQuizQuestionStatsData,
+  QuizGetQuizQuestionStatsResponse,
+  QuizExportQuizToCanvasData,
+  QuizExportQuizToCanvasResponse,
   UsersReadUserMeResponse,
+  UsersDeleteUserMeResponse,
   UsersUpdateUserMeData,
   UsersUpdateUserMeResponse,
   UtilsHealthCheckResponse,
@@ -691,35 +689,6 @@ export class QuestionsService {
       url: "/api/v1/questions/batch/generate",
       body: data.requestBody,
       mediaType: "application/json",
-      errors: {
-        422: "Validation Error",
-      },
-    })
-  }
-
-  /**
-   * Get Question Statistics
-   * Get statistics about questions for a quiz.
-   *
-   * **Parameters:**
-   * quiz_id: Quiz identifier
-   *
-   * **Returns:**
-   * Question statistics
-   * @param data The data for the request.
-   * @param data.quizId
-   * @returns QuestionStatistics Successful Response
-   * @throws ApiError
-   */
-  public static getQuestionStatistics(
-    data: QuestionsGetQuestionStatisticsData,
-  ): CancelablePromise<QuestionsGetQuestionStatisticsResponse> {
-    return __request(OpenAPI, {
-      method: "GET",
-      url: "/api/v1/questions/{quiz_id}/statistics",
-      path: {
-        quiz_id: data.quizId,
-      },
       errors: {
         422: "Validation Error",
       },

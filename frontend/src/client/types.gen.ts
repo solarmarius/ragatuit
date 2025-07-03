@@ -111,20 +111,6 @@ export type QuestionResponse = {
 }
 
 /**
- * Schema for question statistics.
- */
-export type QuestionStatistics = {
-  total_questions: number
-  approved_questions: number
-  approval_rate: number
-  by_question_type: {
-    [key: string]: {
-      [key: string]: number
-    }
-  }
-}
-
-/**
  * Enumeration of supported question types.
  */
 export type QuestionType =
@@ -346,12 +332,6 @@ export type QuestionsBatchGenerateQuestionsData = {
 }
 
 export type QuestionsBatchGenerateQuestionsResponse = BatchGenerationResponse
-
-export type QuestionsGetQuestionStatisticsData = {
-  quizId: string
-}
-
-export type QuestionsGetQuestionStatisticsResponse = QuestionStatistics
 
 export type QuizGetUserQuizzesEndpointResponse = Array<Quiz>
 
