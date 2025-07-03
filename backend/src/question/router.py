@@ -5,10 +5,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
 
+# Removed unused AsyncSession import
 from src.auth.dependencies import CurrentUser
+from src.database import get_async_session
 from src.logging_config import get_logger
 
-from .di import get_container
+from . import service
 from .schemas import (
     BatchGenerationRequest,
     BatchGenerationResponse,
@@ -19,7 +21,7 @@ from .schemas import (
     QuestionStatistics,
     QuestionUpdateRequest,
 )
-from .services import GenerationOrchestrationService, QuestionPersistenceService
+from .services import GenerationOrchestrationService
 from .types import QuestionType
 
 router = APIRouter(prefix="/questions", tags=["questions"])
@@ -61,27 +63,19 @@ async def get_quiz_questions(
     )
 
     try:
-        # Get services from DI container
-        container = get_container()
-        persistence_service = container.resolve(QuestionPersistenceService)
-
         # Verify quiz ownership
         await _verify_quiz_ownership(quiz_id, current_user.id)
 
-        # Get questions
-        questions = await persistence_service.get_questions_by_quiz(
-            quiz_id=quiz_id,
-            question_type=question_type,
-            approved_only=approved_only,
-            limit=limit,
-            offset=offset,
-        )
-
-        # Format questions for display
-        formatted_questions = [
-            persistence_service.format_question_for_display(question)
-            for question in questions
-        ]
+        # Get formatted questions (handled within single session)
+        async with get_async_session() as session:
+            formatted_questions = await service.get_formatted_questions_by_quiz(
+                session=session,
+                quiz_id=quiz_id,
+                question_type=question_type,
+                approved_only=approved_only,
+                limit=limit,
+                offset=offset,
+            )
 
         logger.info(
             "quiz_questions_retrieval_completed",
@@ -131,21 +125,18 @@ async def get_question(
     )
 
     try:
-        # Get services from DI container
-        container = get_container()
-        persistence_service = container.resolve(QuestionPersistenceService)
-
         # Verify quiz ownership
         await _verify_quiz_ownership(quiz_id, current_user.id)
 
-        # Get question
-        question = await persistence_service.get_question_by_id(question_id)
+        async with get_async_session() as session:
+            # Get question
+            question = await service.get_question_by_id(session, question_id)
 
-        if not question or question.quiz_id != quiz_id:
-            raise HTTPException(status_code=404, detail="Question not found")
+            if not question or question.quiz_id != quiz_id:
+                raise HTTPException(status_code=404, detail="Question not found")
 
-        # Format question for display
-        formatted_question = persistence_service.format_question_for_display(question)
+            # Format question for display
+            formatted_question = service.format_question_for_display(question)
 
         logger.info(
             "question_retrieval_completed",
@@ -203,41 +194,40 @@ async def create_question(
         if question_request.quiz_id != quiz_id:
             raise HTTPException(status_code=400, detail="Quiz ID mismatch")
 
-        # Get services from DI container
-        container = get_container()
-        persistence_service = container.resolve(QuestionPersistenceService)
-
         # Save question
-        result = await persistence_service.save_questions(
-            quiz_id=quiz_id,
-            question_type=question_request.question_type,
-            questions_data=[
-                {
-                    "quiz_id": quiz_id,
-                    "difficulty": question_request.difficulty,
-                    "tags": question_request.tags,
-                    **question_request.question_data,
-                }
-            ],
-        )
+        async with get_async_session() as session:
+            result = await service.save_questions(
+                session=session,
+                quiz_id=quiz_id,
+                question_type=question_request.question_type,
+                questions_data=[
+                    {
+                        "quiz_id": quiz_id,
+                        "difficulty": question_request.difficulty,
+                        "tags": question_request.tags,
+                        **question_request.question_data,
+                    }
+                ],
+            )
 
-        if result["questions_saved"] == 0:
+        if result["saved_count"] == 0:
             raise HTTPException(
                 status_code=400,
                 detail=f"Question validation failed: {result['errors']}",
             )
 
         # Get the created question
-        question_id = UUID(result["saved_question_ids"][0])
-        question = await persistence_service.get_question_by_id(question_id)
+        async with get_async_session() as session:
+            question_id = UUID(result["question_ids"][0])
+            question = await service.get_question_by_id(session, question_id)
 
-        if not question:
-            raise HTTPException(
-                status_code=500, detail="Failed to retrieve created question"
-            )
+            if not question:
+                raise HTTPException(
+                    status_code=500, detail="Failed to retrieve created question"
+                )
 
-        # Format question for display
-        formatted_question = persistence_service.format_question_for_display(question)
+            # Format question for display
+            formatted_question = service.format_question_for_display(question)
 
         logger.info(
             "question_creation_completed",
@@ -293,35 +283,30 @@ async def update_question(
         # Verify quiz ownership
         await _verify_quiz_ownership(quiz_id, current_user.id)
 
-        # Get services from DI container
-        container = get_container()
-        persistence_service = container.resolve(QuestionPersistenceService)
+        async with get_async_session() as session:
+            # Verify question exists and belongs to quiz
+            question = await service.get_question_by_id(session, question_id)
+            if not question or question.quiz_id != quiz_id:
+                raise HTTPException(status_code=404, detail="Question not found")
 
-        # Verify question exists and belongs to quiz
-        question = await persistence_service.get_question_by_id(question_id)
-        if not question or question.quiz_id != quiz_id:
-            raise HTTPException(status_code=404, detail="Question not found")
+            # Update question
+            updates: dict[str, Any] = {}
+            if question_update.question_data is not None:
+                updates["question_data"] = question_update.question_data
+            if question_update.difficulty is not None:
+                updates["difficulty"] = question_update.difficulty
+            if question_update.tags is not None:
+                updates["tags"] = question_update.tags
 
-        # Update question
-        updates: dict[str, Any] = {}
-        if question_update.question_data is not None:
-            updates["question_data"] = question_update.question_data
-        if question_update.difficulty is not None:
-            updates["difficulty"] = question_update.difficulty
-        if question_update.tags is not None:
-            updates["tags"] = question_update.tags
+            updated_question = await service.update_question(
+                session, question_id, updates
+            )
 
-        updated_question = await persistence_service.update_question(
-            question_id, updates
-        )
+            if not updated_question:
+                raise HTTPException(status_code=500, detail="Failed to update question")
 
-        if not updated_question:
-            raise HTTPException(status_code=500, detail="Failed to update question")
-
-        # Format question for display
-        formatted_question = persistence_service.format_question_for_display(
-            updated_question
-        )
+            # Format question for display
+            formatted_question = service.format_question_for_display(updated_question)
 
         logger.info(
             "question_update_completed",
@@ -375,25 +360,22 @@ async def approve_question(
         # Verify quiz ownership
         await _verify_quiz_ownership(quiz_id, current_user.id)
 
-        # Get services from DI container
-        container = get_container()
-        persistence_service = container.resolve(QuestionPersistenceService)
+        async with get_async_session() as session:
+            # Verify question exists and belongs to quiz
+            question = await service.get_question_by_id(session, question_id)
+            if not question or question.quiz_id != quiz_id:
+                raise HTTPException(status_code=404, detail="Question not found")
 
-        # Verify question exists and belongs to quiz
-        question = await persistence_service.get_question_by_id(question_id)
-        if not question or question.quiz_id != quiz_id:
-            raise HTTPException(status_code=404, detail="Question not found")
+            # Approve question
+            approved_question = await service.approve_question(session, question_id)
 
-        # Approve question
-        approved_question = await persistence_service.approve_question(question_id)
+            if not approved_question:
+                raise HTTPException(
+                    status_code=500, detail="Failed to approve question"
+                )
 
-        if not approved_question:
-            raise HTTPException(status_code=500, detail="Failed to approve question")
-
-        # Format question for display
-        formatted_question = persistence_service.format_question_for_display(
-            approved_question
-        )
+            # Format question for display
+            formatted_question = service.format_question_for_display(approved_question)
 
         logger.info(
             "question_approval_completed",
@@ -447,14 +429,11 @@ async def delete_question(
         # Verify quiz ownership
         await _verify_quiz_ownership(quiz_id, current_user.id)
 
-        # Get services from DI container
-        container = get_container()
-        persistence_service = container.resolve(QuestionPersistenceService)
-
         # Delete question
-        success = await persistence_service.delete_question(
-            question_id, current_user.id
-        )
+        async with get_async_session() as session:
+            success = await service.delete_question(
+                session, question_id, current_user.id
+            )
 
         if not success:
             raise HTTPException(status_code=404, detail="Question not found")
@@ -516,9 +495,8 @@ async def generate_questions(
         if generation_request.quiz_id != quiz_id:
             raise HTTPException(status_code=400, detail="Quiz ID mismatch")
 
-        # Get services from DI container
-        container = get_container()
-        generation_service = container.resolve(GenerationOrchestrationService)
+        # Get generation service
+        generation_service = GenerationOrchestrationService()
 
         # Create generation parameters
         from .types import GenerationParameters
@@ -597,9 +575,8 @@ async def batch_generate_questions(
         for request in batch_request.requests:
             await _verify_quiz_ownership(request.quiz_id, current_user.id)
 
-        # Get services from DI container
-        container = get_container()
-        generation_service = container.resolve(GenerationOrchestrationService)
+        # Get generation service
+        generation_service = GenerationOrchestrationService()
 
         # Convert requests to the format expected by the service
         service_requests = []
@@ -691,12 +668,9 @@ async def get_question_statistics(
         # Verify quiz ownership
         await _verify_quiz_ownership(quiz_id, current_user.id)
 
-        # Get services from DI container
-        container = get_container()
-        persistence_service = container.resolve(QuestionPersistenceService)
-
         # Get statistics
-        stats = await persistence_service.get_question_statistics(quiz_id=quiz_id)
+        async with get_async_session() as session:
+            stats = await service.get_question_statistics(session, quiz_id=quiz_id)
 
         return QuestionStatistics(**stats)
 

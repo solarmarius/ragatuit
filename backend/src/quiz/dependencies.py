@@ -198,14 +198,13 @@ async def validate_quiz_has_approved_questions(
     Raises:
         HTTPException: 400 if no approved questions found
     """
-    from src.question.di import get_container
-    from src.question.services import QuestionPersistenceService
+    from src.database import get_async_session
+    from src.question import service as question_service
 
-    container = get_container()
-    persistence_service = container.resolve(QuestionPersistenceService)
-    approved_questions = await persistence_service.get_questions_by_quiz(
-        quiz_id=quiz.id, approved_only=True
-    )
+    async with get_async_session() as async_session:
+        approved_questions = await question_service.get_questions_by_quiz(
+            async_session, quiz_id=quiz.id, approved_only=True
+        )
 
     if not approved_questions:
         logger.warning(

@@ -544,12 +544,13 @@ async def get_quiz_question_stats(
 
     try:
         # Get question counts
-        from src.question.di import get_container
-        from src.question.services import QuestionPersistenceService
+        from src.database import get_async_session
+        from src.question import service as question_service
 
-        container = get_container()
-        persistence_service = container.resolve(QuestionPersistenceService)
-        full_stats = await persistence_service.get_question_statistics(quiz_id=quiz.id)
+        async with get_async_session() as async_session:
+            full_stats = await question_service.get_question_statistics(
+                async_session, quiz_id=quiz.id
+            )
 
         # Convert to expected format for backward compatibility
         stats = {
