@@ -65,7 +65,7 @@ services:
       - fastapi
       - run
       - --reload
-      - "app/main.py"
+      - "src/main.py"
     develop:
       watch:
         - path: ./backend
