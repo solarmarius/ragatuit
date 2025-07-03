@@ -4,9 +4,8 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Integer, cast
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import asc, func, select
+from sqlmodel import asc, select
 
 # Removed unused transaction import
 from src.logging_config import get_logger
@@ -414,95 +413,6 @@ async def delete_question(
 
     logger.info("question_deleted_successfully", question_id=str(question_id))
     return True
-
-
-async def get_question_statistics(
-    session: AsyncSession,
-    quiz_id: UUID | None = None,
-    question_type: QuestionType | None = None,
-    user_id: UUID | None = None,
-) -> dict[str, Any]:
-    """
-    Get question statistics.
-
-    Args:
-        session: Database session
-        quiz_id: Filter by quiz ID (optional)
-        question_type: Filter by question type (optional)
-        user_id: Filter by user ID (optional)
-
-    Returns:
-        Dictionary with statistics
-    """
-    logger.debug(
-        "question_statistics_started",
-        quiz_id=str(quiz_id) if quiz_id else None,
-        question_type=question_type.value if question_type else None,
-        user_id=str(user_id) if user_id else None,
-    )
-
-    # Build base query
-    statement = select(
-        func.count().label("total"),
-        func.sum(cast(Question.is_approved, Integer)).label("approved"),
-        Question.question_type,
-    )
-
-    # Add filters
-    if quiz_id:
-        statement = statement.where(Question.quiz_id == quiz_id)
-
-    if question_type:
-        statement = statement.where(Question.question_type == question_type)
-
-    if user_id:
-        # Need to join with quiz to filter by user
-        from src.quiz.models import Quiz
-
-        statement = statement.join(Quiz).where(Quiz.owner_id == user_id)
-
-    # Group by question type
-    statement = statement.group_by(Question.question_type)
-
-    result = await session.execute(statement)
-    rows = result.all()
-
-    # Process results
-    total_questions = 0
-    approved_questions = 0
-    by_question_type: dict[str, dict[str, int | float]] = {}
-
-    for row in rows:
-        total = int(row.total or 0)
-        approved = int(row.approved or 0)
-        question_type_value = row.question_type.value
-
-        total_questions += total
-        approved_questions += approved
-        by_question_type[question_type_value] = {
-            "total": total,
-            "approved": approved,
-            "approval_rate": approved / total if total > 0 else 0.0,
-        }
-
-    # Calculate overall approval rate
-    approval_rate = approved_questions / total_questions if total_questions > 0 else 0.0
-
-    statistics = {
-        "total_questions": total_questions,
-        "approved_questions": approved_questions,
-        "by_question_type": by_question_type,
-        "approval_rate": approval_rate,
-    }
-
-    logger.debug(
-        "question_statistics_completed",
-        total_questions=statistics["total_questions"],
-        approved_questions=statistics["approved_questions"],
-        approval_rate=statistics["approval_rate"],
-    )
-
-    return statistics
 
 
 def format_question_for_display(question: Question) -> dict[str, Any]:

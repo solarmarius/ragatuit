@@ -18,7 +18,6 @@ from .schemas import (
     GenerationResponse,
     QuestionCreateRequest,
     QuestionResponse,
-    QuestionStatistics,
     QuestionUpdateRequest,
 )
 from .services import GenerationOrchestrationService
@@ -647,46 +646,6 @@ async def batch_generate_questions(
         raise HTTPException(
             status_code=500,
             detail="Failed to generate questions in batch. Please try again.",
-        )
-
-
-@router.get("/{quiz_id}/statistics", response_model=QuestionStatistics)
-async def get_question_statistics(
-    quiz_id: UUID,
-    current_user: CurrentUser,
-) -> QuestionStatistics:
-    """
-    Get statistics about questions for a quiz.
-
-    **Parameters:**
-        quiz_id: Quiz identifier
-
-    **Returns:**
-        Question statistics
-    """
-    try:
-        # Verify quiz ownership
-        await _verify_quiz_ownership(quiz_id, current_user.id)
-
-        # Get statistics
-        async with get_async_session() as session:
-            stats = await service.get_question_statistics(session, quiz_id=quiz_id)
-
-        return QuestionStatistics(**stats)
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(
-            "question_statistics_failed",
-            user_id=str(current_user.id),
-            quiz_id=str(quiz_id),
-            error=str(e),
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to get question statistics. Please try again.",
         )
 
 

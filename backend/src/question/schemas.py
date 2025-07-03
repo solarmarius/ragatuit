@@ -86,15 +86,6 @@ class GenerationResponse(BaseModel):
     generated_at: datetime
 
 
-class QuestionStatistics(BaseModel):
-    """Schema for question statistics."""
-
-    total_questions: int
-    approved_questions: int
-    approval_rate: float
-    by_question_type: dict[str, dict[str, int | float]]
-
-
 class BatchGenerationRequest(BaseModel):
     """Schema for batch question generation."""
 
