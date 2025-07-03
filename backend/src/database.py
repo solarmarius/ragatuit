@@ -19,7 +19,7 @@ logger = get_logger("database")
 # Determine pool class based on environment
 def get_pool_class() -> type:
     """Get appropriate pool class for environment."""
-    if settings.ENVIRONMENT == "test":  # type: ignore[comparison-overlap]
+    if settings.ENVIRONMENT == "test":
         # Use NullPool for tests to avoid connection issues
         return NullPool
     return QueuePool
@@ -33,7 +33,7 @@ engine_args = {
     "connect_args": {"options": "-c timezone=UTC"},
 }
 
-if settings.ENVIRONMENT != "test" and settings.USE_OPTIMIZED_DB_POOL:  # type: ignore[comparison-overlap]
+if settings.ENVIRONMENT != "test" and settings.USE_OPTIMIZED_DB_POOL:
     engine_args.update(
         {
             "pool_size": settings.DATABASE_POOL_SIZE,
@@ -87,7 +87,7 @@ async_engine_args: dict[str, Any] = {
 }
 
 # Only add pool settings for non-test environments
-if settings.ENVIRONMENT != "test" and settings.USE_OPTIMIZED_DB_POOL:  # type: ignore[comparison-overlap]
+if settings.ENVIRONMENT != "test" and settings.USE_OPTIMIZED_DB_POOL:
     async_engine_args.update(
         {
             "pool_size": settings.DATABASE_POOL_SIZE,

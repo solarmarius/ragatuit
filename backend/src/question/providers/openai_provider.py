@@ -316,3 +316,7 @@ class OpenAIProvider(BaseLLMProvider):
             if model.model_id == model_id:
                 return model
         return None
+
+    def __str__(self) -> str:
+        """String representation of the provider."""
+        return f"OpenAI Provider (model: {self.configuration.model})"

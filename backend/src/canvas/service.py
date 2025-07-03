@@ -83,9 +83,13 @@ async def fetch_canvas_module_items(
                 e.response.status_code,
             )
     except Exception as e:
-        raise ExternalServiceError(
-            "canvas", f"Failed to fetch module {module_id} items: {str(e)}"
+        logger.warning(
+            "canvas_module_items_fetch_failed",
+            course_id=course_id,
+            module_id=module_id,
+            error=str(e),
         )
+        return []  # Return empty list on network/connection errors
 
 
 @retry_on_failure(max_attempts=2, initial_delay=0.5)
@@ -280,6 +284,17 @@ async def create_canvas_quiz(
             "canvas",
             f"Failed to create Canvas quiz: {title}",
             e.response.status_code,
+        )
+    except Exception as e:
+        logger.error(
+            "canvas_quiz_creation_error",
+            course_id=course_id,
+            title=title,
+            error=str(e),
+        )
+        raise ExternalServiceError(
+            "canvas",
+            f"Failed to create Canvas quiz: {title} - {str(e)}",
         )
 
 
