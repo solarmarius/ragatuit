@@ -7,7 +7,7 @@ from typing import Any
 from jinja2 import Environment, FileSystemLoader, Template
 from pydantic import BaseModel, Field
 
-from src.logging_config import get_logger
+from src.config import get_logger
 
 from ..providers import LLMMessage
 from ..types import GenerationParameters, QuestionType

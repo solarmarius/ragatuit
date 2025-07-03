@@ -10,9 +10,8 @@ import httpx
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
-from src.config import settings
+from src.config import get_logger, settings
 from src.database import SessionDep
-from src.logging_config import get_logger
 from src.middleware import add_user_to_logs
 
 from .dependencies import CurrentUser

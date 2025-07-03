@@ -10,9 +10,8 @@ from jose import jwt
 from jwt.exceptions import InvalidTokenError
 from pydantic import ValidationError
 
-from src.config import settings
+from src.config import get_logger, settings
 from src.database import SessionDep
-from src.logging_config import get_logger
 
 from .models import User
 from .schemas import TokenPayload

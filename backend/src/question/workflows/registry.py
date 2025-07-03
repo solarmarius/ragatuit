@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from src.logging_config import get_logger
+from src.config import get_logger
 
 from ..types import QuestionType
 from .base import BaseQuestionWorkflow, WorkflowConfiguration

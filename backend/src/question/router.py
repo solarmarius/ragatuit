@@ -7,8 +7,8 @@ from fastapi import APIRouter, HTTPException, Query
 
 # Removed unused AsyncSession import
 from src.auth.dependencies import CurrentUser
+from src.config import get_logger
 from src.database import get_async_session
-from src.logging_config import get_logger
 
 from . import service
 from .formatters import format_question_for_display

@@ -7,8 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from src.config import settings
-from src.logging_config import get_logger
+from src.config import get_logger, settings
 
 from ..providers import LLMConfiguration, LLMProvider
 from ..types import QuestionType

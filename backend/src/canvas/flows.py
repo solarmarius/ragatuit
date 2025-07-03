@@ -9,6 +9,7 @@ This module contains flows for Canvas operations without any Quiz domain logic:
 from datetime import datetime
 from typing import Any
 
+from src.config import get_logger
 from src.content_extraction import (
     RawContent,
     get_content_processor,
@@ -18,7 +19,6 @@ from src.content_extraction.constants import (
     MAX_PAGES_PER_MODULE,
     MAX_TOTAL_CONTENT_SIZE,
 )
-from src.logging_config import get_logger
 
 # QuizService imported locally to avoid circular imports
 from .service import (

@@ -7,7 +7,7 @@ from uuid import UUID
 from langgraph.graph import StateGraph
 from pydantic import BaseModel, Field
 
-from src.logging_config import get_logger
+from src.config import get_logger
 
 from ..providers import BaseLLMProvider, LLMMessage
 from ..types import GenerationParameters, GenerationResult, QuestionType

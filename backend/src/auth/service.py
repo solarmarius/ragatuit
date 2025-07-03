@@ -7,7 +7,7 @@ from uuid import UUID
 
 from sqlmodel import Session, select
 
-from src.logging_config import get_logger
+from src.config import get_logger
 
 from .models import User
 from .schemas import UserCreate

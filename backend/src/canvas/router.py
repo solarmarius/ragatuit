@@ -8,8 +8,7 @@ import httpx
 from fastapi import APIRouter, HTTPException
 
 from src.auth.dependencies import CurrentUser
-from src.config import settings
-from src.logging_config import get_logger
+from src.config import get_logger, settings
 
 from .dependencies import CanvasToken
 from .schemas import CanvasCourse, CanvasModule

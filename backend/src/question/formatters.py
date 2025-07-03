@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Any
 
-from src.logging_config import get_logger
+from src.config import get_logger
 
 from .types import Question, get_question_type_registry
 
