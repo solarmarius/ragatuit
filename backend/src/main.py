@@ -1,5 +1,5 @@
 import sentry_sdk
-from fastapi import FastAPI, Request
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from starlette.middleware.cors import CORSMiddleware
@@ -8,7 +8,9 @@ from starlette.middleware.cors import CORSMiddleware
 import src.auth.models  # noqa
 import src.question.models  # noqa
 import src.quiz.models  # noqa
-from src.api import api_router
+from src.auth import router as auth_router
+from src.auth import users_router
+from src.canvas.router import router as canvas_router
 from src.config import configure_logging, get_logger, settings
 from src.exceptions import (
     ServiceError,
@@ -16,6 +18,8 @@ from src.exceptions import (
     service_error_handler,
 )
 from src.middleware import LoggingMiddleware
+from src.question.router import router as question_router
+from src.quiz.router import router as quiz_router
 
 
 def custom_generate_unique_id(route: APIRoute) -> str:
@@ -56,6 +60,31 @@ if settings.all_cors_origins:
         allow_headers=["*"],
     )
     logger.info("cors_middleware_added", origins=settings.all_cors_origins)
+
+
+# Create main API router
+api_router = APIRouter()
+
+# Include all module routers
+api_router.include_router(auth_router)
+api_router.include_router(
+    users_router
+)  # User management endpoints without /auth prefix
+api_router.include_router(canvas_router)
+api_router.include_router(quiz_router)
+api_router.include_router(question_router)
+
+
+# Health check endpoint (moved from api/routes/utils.py)
+@api_router.get("/utils/health-check/", tags=["utils"])
+async def health_check() -> bool:
+    """
+    Simple health check endpoint.
+
+    Returns True if the API is running and responsive.
+    Used for monitoring and load balancer health checks.
+    """
+    return True
 
 
 # Add global exception handlers
