@@ -17,12 +17,12 @@ from .dependencies import (
     validate_question_generation_ready,
     validate_quiz_has_approved_questions,
 )
-from .flows import (
-    quiz_content_extraction_flow,
-    quiz_export_background_flow,
-    quiz_question_generation_flow,
-)
 from .models import Quiz
+from .orchestrator import (
+    orchestrate_quiz_content_extraction,
+    orchestrate_quiz_export_to_canvas,
+    orchestrate_quiz_question_generation,
+)
 from .schemas import QuizCreate
 from .service import (
     create_quiz,
@@ -95,13 +95,18 @@ async def create_new_quiz(
     try:
         quiz = create_quiz(session, quiz_data, current_user.id)
 
-        # Trigger content extraction in the background
+        # Import Canvas dependencies for injection
+        from src.canvas.flows import extract_content_for_modules, get_content_summary
+
+        # Trigger content extraction in the background using orchestrator
         background_tasks.add_task(
-            quiz_content_extraction_flow,
+            orchestrate_quiz_content_extraction,
             quiz.id,
             quiz_data.canvas_course_id,
             [int(module_id) for module_id in quiz_data.selected_modules.keys()],
             canvas_token,
+            extract_content_for_modules,  # Inject Canvas content extractor
+            get_content_summary,  # Inject content summarizer
         )
 
         logger.info(
@@ -279,13 +284,18 @@ async def trigger_content_extraction(
             session, quiz.id, current_user.id
         )
 
-        # Trigger content extraction in the background
+        # Import Canvas dependencies for injection
+        from src.canvas.flows import extract_content_for_modules, get_content_summary
+
+        # Trigger content extraction in the background using orchestrator
         background_tasks.add_task(
-            quiz_content_extraction_flow,
+            orchestrate_quiz_content_extraction,
             quiz.id,
             extraction_params["course_id"],
             extraction_params["module_ids"],
             canvas_token,
+            extract_content_for_modules,  # Inject Canvas content extractor
+            get_content_summary,  # Inject content summarizer
         )
 
         logger.info(
@@ -454,9 +464,9 @@ async def trigger_question_generation(
             session, quiz.id, current_user.id
         )
 
-        # Trigger question generation in the background
+        # Trigger question generation in the background using orchestrator
         background_tasks.add_task(
-            quiz_question_generation_flow,
+            orchestrate_quiz_question_generation,
             quiz.id,
             generation_params["question_count"],
             generation_params["llm_model"],
@@ -626,11 +636,19 @@ async def export_quiz_to_canvas(
         # Validate quiz has approved questions
         await validate_quiz_has_approved_questions(quiz, session)
 
-        # Trigger background export
+        # Import Canvas dependencies for injection
+        from src.canvas.flows import (
+            create_canvas_quiz_flow,
+            export_questions_batch_flow,
+        )
+
+        # Trigger background export using orchestrator
         background_tasks.add_task(
-            quiz_export_background_flow,
+            orchestrate_quiz_export_to_canvas,
             quiz.id,
             canvas_token,
+            create_canvas_quiz_flow,  # Inject Canvas quiz creator
+            export_questions_batch_flow,  # Inject question exporter
         )
 
         logger.info(

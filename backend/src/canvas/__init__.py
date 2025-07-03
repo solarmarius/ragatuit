@@ -3,7 +3,6 @@
 # Import router separately to avoid circular imports
 from . import router
 from .flows import (
-    export_quiz_to_canvas_flow,
     extract_content_for_modules,
     get_content_summary,
 )
@@ -31,6 +30,5 @@ __all__ = [
     "QuizExportResponse",
     "extract_content_for_modules",
     "get_content_summary",
-    "export_quiz_to_canvas_flow",
     "CanvasURLBuilder",
 ]

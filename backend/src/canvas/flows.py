@@ -1,14 +1,13 @@
 """
-Canvas module orchestration flows.
+Canvas module flows for pure Canvas API operations.
 
-This module orchestrates Canvas operations using functional composition:
+This module contains flows for Canvas operations without any Quiz domain logic:
 - Content extraction flows for module content processing
-- Quiz export flows for exporting quizzes to Canvas LMS
+- Canvas quiz creation and question export operations
 """
 
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
-from uuid import UUID
 
 from src.content_extraction import (
     RawContent,
@@ -19,11 +18,7 @@ from src.content_extraction.constants import (
     MAX_PAGES_PER_MODULE,
     MAX_TOTAL_CONTENT_SIZE,
 )
-from src.exceptions import ResourceNotFoundError, ValidationError
 from src.logging_config import get_logger
-
-# Import the new typed models
-from .schemas import CanvasItemExportResult, QuestionData, QuizExportData
 
 # QuizService imported locally to avoid circular imports
 from .service import (
@@ -500,246 +495,17 @@ def get_content_summary(
     }
 
 
-# Quiz Export Flows
-
-
-async def export_quiz_to_canvas_flow(
-    quiz_id: UUID, canvas_token: str
-) -> dict[str, Any]:
-    """
-    Main orchestration flow to export a quiz to Canvas.
-
-    Uses proper transaction management for background task compatibility.
-    Follows the same pattern as content extraction with separate transactions.
-
-    Args:
-        quiz_id: UUID of the quiz to export
-        canvas_token: Canvas API authentication token
-
-    Returns:
-        Export result with success status and Canvas quiz information
-
-    Raises:
-        ResourceNotFoundError: If quiz not found
-        ValidationError: If quiz has no approved questions
-        ExternalServiceError: If Canvas API calls fail
-    """
-    logger.info("canvas_quiz_export_started", quiz_id=str(quiz_id))
-
-    # === Transaction 1: Validate and Reserve ===
-    async def _validate_and_reserve(
-        session: Any, quiz_id: UUID
-    ) -> QuizExportData | None:
-        return await validate_quiz_for_export_flow(session, quiz_id)
-
-    from src.database import execute_in_transaction
-
-    quiz_data = await execute_in_transaction(
-        _validate_and_reserve, quiz_id, isolation_level="REPEATABLE READ", retries=3
-    )
-
-    if not quiz_data:
-        raise RuntimeError("Failed to validate quiz for export")
-
-    # Handle already exported case
-    if quiz_data.already_exported:
-        return {
-            "success": True,
-            "canvas_quiz_id": quiz_data.canvas_quiz_id,
-            "exported_questions": 0,
-            "message": "Quiz already exported to Canvas",
-            "already_exported": True,
-        }
-
-    # === Canvas API Operations (outside transaction) ===
-    try:
-        # Create Canvas quiz
-        canvas_quiz = await create_canvas_quiz_flow(
-            canvas_token=canvas_token,
-            course_id=quiz_data.course_id,
-            title=quiz_data.title,
-            total_points=len(quiz_data.questions),
-        )
-
-        # Export questions to Canvas
-        exported_items = await export_questions_batch_flow(
-            canvas_token=canvas_token,
-            course_id=quiz_data.course_id,
-            quiz_id=canvas_quiz["id"],
-            questions=quiz_data.questions,
-        )
-
-        # === Transaction 2: Save Results ===
-        async def _save_results(session: Any, quiz_id: UUID) -> dict[str, Any]:
-            return await finalize_quiz_export_flow(
-                session=session,
-                quiz_id=quiz_id,
-                canvas_quiz_id=canvas_quiz["id"],
-                questions=quiz_data.questions,
-                exported_items=exported_items,
-            )
-
-        result: dict[str, Any] = await execute_in_transaction(
-            _save_results, quiz_id, isolation_level="REPEATABLE READ", retries=3
-        )
-
-        logger.info(
-            "canvas_quiz_export_completed",
-            quiz_id=str(quiz_id),
-            canvas_quiz_id=canvas_quiz["id"],
-            exported_questions=result["exported_questions"],
-        )
-
-        return result
-
-    except Exception as e:
-        # === Transaction 3: Mark as Failed ===
-        async def _mark_failed(session: Any, quiz_id: UUID) -> None:
-            await update_quiz_export_status(session, quiz_id, "failed")
-
-        try:
-            await execute_in_transaction(
-                _mark_failed, quiz_id, isolation_level="REPEATABLE READ", retries=3
-            )
-        except Exception as update_error:
-            logger.error(
-                "canvas_quiz_export_status_update_failed",
-                quiz_id=str(quiz_id),
-                error=str(update_error),
-            )
-
-        logger.error(
-            "canvas_quiz_export_failed",
-            quiz_id=str(quiz_id),
-            error=str(e),
-            error_type=type(e).__name__,
-            exc_info=True,
-        )
-        raise
-
-
-async def validate_quiz_for_export_flow(session: Any, quiz_id: UUID) -> QuizExportData:
-    """
-    Validation flow for quiz export prerequisites.
-
-    Args:
-        session: Database session
-        quiz_id: UUID of the quiz to validate
-
-    Returns:
-        QuizExportData with course_id, title, and questions
-
-    Raises:
-        ResourceNotFoundError: If quiz not found
-        ValidationError: If quiz invalid for export
-    """
-    from src.quiz.service import get_quiz_for_update
-
-    quiz = await get_quiz_for_update(session, quiz_id)
-    if not quiz:
-        logger.error("canvas_quiz_export_quiz_not_found", quiz_id=str(quiz_id))
-        raise ResourceNotFoundError(f"Quiz {quiz_id}")
-
-    # Extract all quiz data WITHIN the session context to avoid lazy loading issues
-    quiz_course_id = quiz.canvas_course_id
-    quiz_title = quiz.title
-    quiz_export_status = quiz.export_status
-    quiz_canvas_quiz_id = quiz.canvas_quiz_id
-
-    # Check if already exported
-    if quiz_export_status == "completed" and quiz_canvas_quiz_id:
-        logger.warning(
-            "canvas_quiz_export_already_exported",
-            quiz_id=str(quiz_id),
-            canvas_quiz_id=quiz_canvas_quiz_id,
-        )
-        return QuizExportData(
-            course_id=quiz_course_id,
-            title=quiz_title,
-            questions=[],
-            already_exported=True,
-            canvas_quiz_id=quiz_canvas_quiz_id,
-        )
-
-    # Check if currently processing
-    if quiz_export_status == "processing":
-        logger.warning(
-            "canvas_quiz_export_already_processing",
-            quiz_id=str(quiz_id),
-            current_status=quiz_export_status,
-        )
-        raise ValidationError("Quiz export is already in progress")
-
-    # Get approved questions
-    from src.question.di import get_container
-    from src.question.services import QuestionPersistenceService
-
-    container = get_container()
-    persistence_service = container.resolve(QuestionPersistenceService)
-
-    approved_questions = await persistence_service.get_questions_by_quiz(
-        quiz_id=quiz_id, approved_only=True
-    )
-
-    if not approved_questions:
-        logger.error(
-            "canvas_quiz_export_no_approved_questions",
-            quiz_id=str(quiz_id),
-        )
-        raise ValidationError("Quiz has no approved questions to export")
-
-    # Prepare question data - extract all attributes within session context
-    # Import question type registry to handle polymorphic questions
-    from src.question.types import QuestionType, get_question_type_registry
-
-    question_registry = get_question_type_registry()
-    question_data = []
-
-    for question in approved_questions:
-        # Only handle multiple choice questions for now
-        if question.question_type == QuestionType.MULTIPLE_CHOICE:
-            # Get typed data using the registry
-            typed_data = question.get_typed_data(question_registry)
-            # Cast to MultipleChoiceData to access MCQ-specific attributes
-            from src.question.types.mcq import MultipleChoiceData
-
-            if isinstance(typed_data, MultipleChoiceData):
-                question_data.append(
-                    QuestionData(
-                        id=question.id,
-                        question_text=typed_data.question_text,
-                        option_a=typed_data.option_a,
-                        option_b=typed_data.option_b,
-                        option_c=typed_data.option_c,
-                        option_d=typed_data.option_d,
-                        correct_answer=typed_data.correct_answer,
-                    )
-                )
-
-    # Mark as processing
-    quiz.export_status = "processing"
-    await session.commit()
-
-    logger.info(
-        "canvas_quiz_export_processing",
-        quiz_id=str(quiz_id),
-        course_id=quiz_course_id,
-        approved_questions_count=len(question_data),
-    )
-
-    return QuizExportData(
-        course_id=quiz_course_id,
-        title=quiz_title,
-        questions=question_data,
-        already_exported=False,
-    )
+# Canvas Quiz Creation and Export Functions (Pure Canvas Operations)
 
 
 async def create_canvas_quiz_flow(
     canvas_token: str, course_id: int, title: str, total_points: int
 ) -> dict[str, Any]:
     """
-    Flow for creating a Canvas quiz.
+    Pure Canvas operation to create a quiz in Canvas LMS.
+
+    This function only handles Canvas API operations and does not manage
+    any Quiz domain entities or database transactions.
 
     Args:
         canvas_token: Canvas API authentication token
@@ -753,7 +519,6 @@ async def create_canvas_quiz_flow(
     Raises:
         ExternalServiceError: If Canvas API call fails
     """
-
     canvas_quiz = await create_canvas_quiz(canvas_token, course_id, title, total_points)
 
     logger.info(
@@ -767,40 +532,28 @@ async def create_canvas_quiz_flow(
 
 
 async def export_questions_batch_flow(
-    canvas_token: str, course_id: int, quiz_id: str, questions: list[QuestionData]
-) -> list[CanvasItemExportResult]:
+    canvas_token: str, course_id: int, quiz_id: str, questions: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
     """
-    Flow for exporting questions to Canvas in batch.
+    Pure Canvas operation to export questions to a Canvas quiz.
+
+    This function only handles Canvas API operations and does not manage
+    any Quiz domain entities or database transactions.
 
     Args:
         canvas_token: Canvas API authentication token
         course_id: Canvas course ID
         quiz_id: Canvas quiz ID
-        questions: List of QuestionData objects
+        questions: List of question data dicts
 
     Returns:
-        List of CanvasItemExportResult for each question
+        List of export results for each question
     """
-    # Convert QuestionData to dict format for Canvas service
-    questions_dict = [question.model_dump() for question in questions]
-
     raw_exported_items = await create_canvas_quiz_items(
-        canvas_token, course_id, quiz_id, questions_dict
+        canvas_token, course_id, quiz_id, questions
     )
 
-    # Convert to typed models
-    exported_items = [
-        CanvasItemExportResult(
-            success=item["success"],
-            question_id=item["question_id"],
-            item_id=item.get("item_id"),
-            position=item["position"],
-            error=item.get("error"),
-        )
-        for item in raw_exported_items
-    ]
-
-    successful_items = len([r for r in exported_items if r.success])
+    successful_items = len([r for r in raw_exported_items if r.get("success")])
     logger.info(
         "canvas_questions_batch_exported",
         course_id=course_id,
@@ -810,70 +563,4 @@ async def export_questions_batch_flow(
         failed_items=len(questions) - successful_items,
     )
 
-    return exported_items
-
-
-async def finalize_quiz_export_flow(
-    session: Any,
-    quiz_id: UUID,
-    canvas_quiz_id: str,
-    questions: list[QuestionData],
-    exported_items: list[CanvasItemExportResult],
-) -> dict[str, Any]:
-    """
-    Flow for finalizing quiz export and updating database.
-
-    Args:
-        session: Database session
-        quiz_id: UUID of the original quiz
-        canvas_quiz_id: Canvas quiz ID
-        questions: Original QuestionData list
-        exported_items: CanvasItemExportResult list from Canvas
-
-    Returns:
-        Final export result summary
-    """
-    # Update quiz export status
-    from src.question.models import Question
-    from src.quiz.service import get_quiz_for_update
-
-    quiz = await get_quiz_for_update(session, quiz_id)
-    if quiz:
-        quiz.canvas_quiz_id = canvas_quiz_id
-        quiz.export_status = "completed"
-        quiz.exported_at = datetime.now(timezone.utc)
-
-        # Update individual question Canvas IDs
-        for question_data, item_result in zip(questions, exported_items, strict=False):
-            if item_result.success:
-                question_obj = await session.get(Question, question_data.id)
-                if question_obj:
-                    question_obj.canvas_item_id = item_result.item_id
-
-        # Note: session.commit() will be handled by execute_in_transaction()
-
-    successful_exports = len([r for r in exported_items if r.success])
-
-    return {
-        "success": True,
-        "canvas_quiz_id": canvas_quiz_id,
-        "exported_questions": successful_exports,
-        "message": "Quiz successfully exported to Canvas",
-    }
-
-
-async def update_quiz_export_status(session: Any, quiz_id: UUID, status: str) -> None:
-    """
-    Utility function to update quiz export status.
-
-    Args:
-        session: Database session
-        quiz_id: UUID of the quiz
-        status: New export status
-    """
-    from src.quiz.service import get_quiz_for_update
-
-    quiz = await get_quiz_for_update(session, quiz_id)
-    if quiz:
-        quiz.export_status = status
-        await session.commit()
+    return raw_exported_items

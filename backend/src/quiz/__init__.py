@@ -3,12 +3,12 @@
 # Import router separately to avoid circular imports
 from . import router
 from .constants import ERROR_MESSAGES, SUCCESS_MESSAGES
-from .flows import (
-    quiz_content_extraction_flow,
-    quiz_export_background_flow,
-    quiz_question_generation_flow,
-)
 from .models import Quiz
+from .orchestrator import (
+    orchestrate_quiz_content_extraction,
+    orchestrate_quiz_export_to_canvas,
+    orchestrate_quiz_question_generation,
+)
 from .schemas import (
     QuizContentExtractionData,
     QuizCreate,
@@ -42,9 +42,9 @@ __all__ = [
     "QuizExportData",
     "QuizOperationResult",
     "QuizOperationStatus",
-    "quiz_content_extraction_flow",
-    "quiz_question_generation_flow",
-    "quiz_export_background_flow",
+    "orchestrate_quiz_content_extraction",
+    "orchestrate_quiz_question_generation",
+    "orchestrate_quiz_export_to_canvas",
     "ERROR_MESSAGES",
     "SUCCESS_MESSAGES",
     "create_quiz",
