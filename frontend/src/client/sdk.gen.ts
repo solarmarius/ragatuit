@@ -4,46 +4,51 @@ import type { CancelablePromise } from "./core/CancelablePromise"
 import { OpenAPI } from "./core/OpenAPI"
 import { request as __request } from "./core/request"
 import type {
-  AuthAuthCanvasResponse,
   AuthLoginCanvasResponse,
+  AuthAuthCanvasResponse,
   AuthLogoutCanvasResponse,
-  AuthRefreshCanvasTokenResponse,
+  CanvasGetCoursesResponse,
   CanvasGetCourseModulesData,
   CanvasGetCourseModulesResponse,
-  CanvasGetCoursesResponse,
-  CanvasGetFileInfoData,
-  CanvasGetFileInfoResponse,
   CanvasGetModuleItemsData,
   CanvasGetModuleItemsResponse,
   CanvasGetPageContentData,
   CanvasGetPageContentResponse,
-  QuestionsApproveQuizQuestionData,
-  QuestionsApproveQuizQuestionResponse,
-  QuestionsDeleteQuizQuestionData,
-  QuestionsDeleteQuizQuestionResponse,
-  QuestionsGetQuestionData,
-  QuestionsGetQuestionResponse,
+  CanvasGetFileInfoData,
+  CanvasGetFileInfoResponse,
   QuestionsGetQuizQuestionsData,
   QuestionsGetQuizQuestionsResponse,
-  QuestionsUpdateQuizQuestionData,
-  QuestionsUpdateQuizQuestionResponse,
+  QuestionsCreateQuestionData,
+  QuestionsCreateQuestionResponse,
+  QuestionsGetQuestionData,
+  QuestionsGetQuestionResponse,
+  QuestionsUpdateQuestionData,
+  QuestionsUpdateQuestionResponse,
+  QuestionsDeleteQuestionData,
+  QuestionsDeleteQuestionResponse,
+  QuestionsApproveQuestionData,
+  QuestionsApproveQuestionResponse,
+  QuestionsGenerateQuestionsData,
+  QuestionsGenerateQuestionsResponse,
+  QuestionsBatchGenerateQuestionsData,
+  QuestionsBatchGenerateQuestionsResponse,
+  QuizGetUserQuizzesEndpointResponse,
   QuizCreateNewQuizData,
   QuizCreateNewQuizResponse,
+  QuizGetQuizData,
+  QuizGetQuizResponse,
   QuizDeleteQuizEndpointData,
   QuizDeleteQuizEndpointResponse,
-  QuizExportQuizToCanvasData,
-  QuizExportQuizToCanvasResponse,
-  QuizGetQuizData,
-  QuizGetQuizQuestionStatsData,
-  QuizGetQuizQuestionStatsResponse,
-  QuizGetQuizResponse,
-  QuizGetUserQuizzesEndpointResponse,
   QuizTriggerContentExtractionData,
   QuizTriggerContentExtractionResponse,
   QuizTriggerQuestionGenerationData,
   QuizTriggerQuestionGenerationResponse,
-  UsersDeleteUserMeResponse,
+  QuizGetQuizQuestionStatsData,
+  QuizGetQuizQuestionStatsResponse,
+  QuizExportQuizToCanvasData,
+  QuizExportQuizToCanvasResponse,
   UsersReadUserMeResponse,
+  UsersDeleteUserMeResponse,
   UsersUpdateUserMeData,
   UsersUpdateUserMeResponse,
   UtilsHealthCheckResponse,
@@ -167,52 +172,6 @@ export class AuthService {
     return __request(OpenAPI, {
       method: "DELETE",
       url: "/api/v1/auth/logout",
-    })
-  }
-
-  /**
-   * Refresh Canvas Token
-   * Refresh Canvas access token using stored refresh token.
-   *
-   * Exchanges the user's stored Canvas refresh token for a new access token,
-   * ensuring continued access to Canvas APIs without requiring re-authentication.
-   *
-   * **Parameters:**
-   * current_user (CurrentUser): Authenticated user from JWT token
-   * session (SessionDep): Database session for token updates
-   *
-   * **Flow:**
-   * 1. Validates user has a stored refresh token
-   * 2. Decrypts the refresh token from database
-   * 3. Calls Canvas token refresh endpoint
-   * 4. Updates user's access token and expiration in database
-   * 5. Returns success confirmation
-   *
-   * **Returns:**
-   * dict: Success message confirming token refresh
-   *
-   * **Authentication:**
-   * Requires valid JWT token in Authorization header
-   *
-   * **Raises:**
-   * HTTPException: 401 if no refresh token available or decryption fails
-   * HTTPException: 400 if Canvas token refresh fails or returns error
-   *
-   * **Example:**
-   * POST /api/v1/auth/refresh
-   * Authorization: Bearer jwt_token
-   * -> {"message": "Token refreshed successfully"}
-   *
-   * **Note:**
-   * This endpoint is automatically called by the token validation middleware
-   * when Canvas tokens are near expiration, but can also be called manually.
-   * @returns string Successful Response
-   * @throws ApiError
-   */
-  public static refreshCanvasToken(): CancelablePromise<AuthRefreshCanvasTokenResponse> {
-    return __request(OpenAPI, {
-      method: "POST",
-      url: "/api/v1/auth/refresh",
     })
   }
 }
@@ -469,26 +428,24 @@ export class CanvasService {
 export class QuestionsService {
   /**
    * Get Quiz Questions
-   * Retrieve all questions for a specific quiz.
-   *
-   * Returns all questions (approved and unapproved) for the quiz if the
-   * authenticated user is the quiz owner.
+   * Retrieve questions for a quiz with filtering support.
    *
    * **Parameters:**
-   * quiz_id (UUID): The UUID of the quiz to get questions for
+   * quiz_id: Quiz identifier
+   * question_type: Filter by question type (optional)
+   * approved_only: Only return approved questions
+   * limit: Maximum number of questions to return
+   * offset: Number of questions to skip for pagination
    *
    * **Returns:**
-   * list[QuestionPublic]: List of question objects with approval status
-   *
-   * **Authentication:**
-   * Requires valid JWT token in Authorization header
-   *
-   * **Raises:**
-   * HTTPException: 404 if quiz not found or user doesn't own it
-   * HTTPException: 500 if database operation fails
+   * List of questions with formatted display data
    * @param data The data for the request.
    * @param data.quizId
-   * @returns QuestionPublic Successful Response
+   * @param data.questionType Filter by question type
+   * @param data.approvedOnly Only return approved questions
+   * @param data.limit Maximum questions to return
+   * @param data.offset Number of questions to skip
+   * @returns QuestionResponse Successful Response
    * @throws ApiError
    */
   public static getQuizQuestions(
@@ -496,9 +453,15 @@ export class QuestionsService {
   ): CancelablePromise<QuestionsGetQuizQuestionsResponse> {
     return __request(OpenAPI, {
       method: "GET",
-      url: "/api/v1/quiz/{quiz_id}/questions",
+      url: "/api/v1/questions/{quiz_id}",
       path: {
         quiz_id: data.quizId,
+      },
+      query: {
+        question_type: data.questionType,
+        approved_only: data.approvedOnly,
+        limit: data.limit,
+        offset: data.offset,
       },
       errors: {
         422: "Validation Error",
@@ -507,26 +470,52 @@ export class QuestionsService {
   }
 
   /**
-   * Get Question
-   * Retrieve a specific question by its ID.
+   * Create Question
+   * Create a new question for a quiz.
    *
    * **Parameters:**
-   * quiz_id (UUID): The UUID of the quiz the question belongs to
-   * question_id (UUID): The UUID of the question to retrieve
+   * quiz_id: Quiz identifier
+   * question_request: Question creation data
    *
    * **Returns:**
-   * QuestionPublic: The question object with all details
+   * Created question with formatted display data
+   * @param data The data for the request.
+   * @param data.quizId
+   * @param data.requestBody
+   * @returns QuestionResponse Successful Response
+   * @throws ApiError
+   */
+  public static createQuestion(
+    data: QuestionsCreateQuestionData,
+  ): CancelablePromise<QuestionsCreateQuestionResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/questions/{quiz_id}",
+      path: {
+        quiz_id: data.quizId,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Get Question
+   * Retrieve a specific question by ID.
    *
-   * **Authentication:**
-   * Requires valid JWT token in Authorization header
+   * **Parameters:**
+   * quiz_id: Quiz identifier
+   * question_id: Question identifier
    *
-   * **Raises:**
-   * HTTPException: 404 if question/quiz not found or user doesn't own the quiz
-   * HTTPException: 500 if database operation fails
+   * **Returns:**
+   * Question with formatted display data
    * @param data The data for the request.
    * @param data.quizId
    * @param data.questionId
-   * @returns QuestionPublic Successful Response
+   * @returns QuestionResponse Successful Response
    * @throws ApiError
    */
   public static getQuestion(
@@ -534,7 +523,7 @@ export class QuestionsService {
   ): CancelablePromise<QuestionsGetQuestionResponse> {
     return __request(OpenAPI, {
       method: "GET",
-      url: "/api/v1/quiz/{quiz_id}/questions/{question_id}",
+      url: "/api/v1/questions/{quiz_id}/{question_id}",
       path: {
         quiz_id: data.quizId,
         question_id: data.questionId,
@@ -546,40 +535,29 @@ export class QuestionsService {
   }
 
   /**
-   * Update Quiz Question
-   * Update a question's content (text, options, correct answer).
-   *
-   * Allows editing of question text, all options (A, B, C, D), and the correct answer.
-   * The question must belong to a quiz owned by the authenticated user.
+   * Update Question
+   * Update a question.
    *
    * **Parameters:**
-   * quiz_id (UUID): The UUID of the quiz the question belongs to
-   * question_id (UUID): The UUID of the question to update
-   * question_update (QuestionUpdate): Updated question data
+   * quiz_id: Quiz identifier
+   * question_id: Question identifier
+   * question_update: Question update data
    *
    * **Returns:**
-   * QuestionPublic: The updated question object
-   *
-   * **Authentication:**
-   * Requires valid JWT token in Authorization header
-   *
-   * **Raises:**
-   * HTTPException: 404 if question/quiz not found or user doesn't own the quiz
-   * HTTPException: 400 if validation fails
-   * HTTPException: 500 if database operation fails
+   * Updated question with formatted display data
    * @param data The data for the request.
    * @param data.quizId
    * @param data.questionId
    * @param data.requestBody
-   * @returns QuestionPublic Successful Response
+   * @returns QuestionResponse Successful Response
    * @throws ApiError
    */
-  public static updateQuizQuestion(
-    data: QuestionsUpdateQuizQuestionData,
-  ): CancelablePromise<QuestionsUpdateQuizQuestionResponse> {
+  public static updateQuestion(
+    data: QuestionsUpdateQuestionData,
+  ): CancelablePromise<QuestionsUpdateQuestionResponse> {
     return __request(OpenAPI, {
       method: "PUT",
-      url: "/api/v1/quiz/{quiz_id}/questions/{question_id}",
+      url: "/api/v1/questions/{quiz_id}/{question_id}",
       path: {
         quiz_id: data.quizId,
         question_id: data.questionId,
@@ -593,36 +571,27 @@ export class QuestionsService {
   }
 
   /**
-   * Delete Quiz Question
+   * Delete Question
    * Delete a question from the quiz.
    *
-   * Permanently removes a question from the quiz. Only the quiz owner can delete questions.
-   *
    * **Parameters:**
-   * quiz_id (UUID): The UUID of the quiz the question belongs to
-   * question_id (UUID): The UUID of the question to delete
+   * quiz_id: Quiz identifier
+   * question_id: Question identifier
    *
    * **Returns:**
-   * Message: Confirmation message that the question was deleted
-   *
-   * **Authentication:**
-   * Requires valid JWT token in Authorization header
-   *
-   * **Raises:**
-   * HTTPException: 404 if question/quiz not found or user doesn't own the quiz
-   * HTTPException: 500 if database operation fails
+   * Confirmation message
    * @param data The data for the request.
    * @param data.quizId
    * @param data.questionId
-   * @returns Message Successful Response
+   * @returns string Successful Response
    * @throws ApiError
    */
-  public static deleteQuizQuestion(
-    data: QuestionsDeleteQuizQuestionData,
-  ): CancelablePromise<QuestionsDeleteQuizQuestionResponse> {
+  public static deleteQuestion(
+    data: QuestionsDeleteQuestionData,
+  ): CancelablePromise<QuestionsDeleteQuestionResponse> {
     return __request(OpenAPI, {
       method: "DELETE",
-      url: "/api/v1/quiz/{quiz_id}/questions/{question_id}",
+      url: "/api/v1/questions/{quiz_id}/{question_id}",
       path: {
         quiz_id: data.quizId,
         question_id: data.questionId,
@@ -634,41 +603,92 @@ export class QuestionsService {
   }
 
   /**
-   * Approve Quiz Question
+   * Approve Question
    * Approve a question for inclusion in the final quiz.
    *
-   * Sets the question's is_approved status to True and records the approval timestamp.
-   * Only the quiz owner can approve questions.
-   *
    * **Parameters:**
-   * quiz_id (UUID): The UUID of the quiz the question belongs to
-   * question_id (UUID): The UUID of the question to approve
+   * quiz_id: Quiz identifier
+   * question_id: Question identifier
    *
    * **Returns:**
-   * QuestionPublic: The approved question object
-   *
-   * **Authentication:**
-   * Requires valid JWT token in Authorization header
-   *
-   * **Raises:**
-   * HTTPException: 404 if question/quiz not found or user doesn't own the quiz
-   * HTTPException: 500 if database operation fails
+   * Approved question with formatted display data
    * @param data The data for the request.
    * @param data.quizId
    * @param data.questionId
-   * @returns QuestionPublic Successful Response
+   * @returns QuestionResponse Successful Response
    * @throws ApiError
    */
-  public static approveQuizQuestion(
-    data: QuestionsApproveQuizQuestionData,
-  ): CancelablePromise<QuestionsApproveQuizQuestionResponse> {
+  public static approveQuestion(
+    data: QuestionsApproveQuestionData,
+  ): CancelablePromise<QuestionsApproveQuestionResponse> {
     return __request(OpenAPI, {
       method: "PUT",
-      url: "/api/v1/quiz/{quiz_id}/questions/{question_id}/approve",
+      url: "/api/v1/questions/{quiz_id}/{question_id}/approve",
       path: {
         quiz_id: data.quizId,
         question_id: data.questionId,
       },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Generate Questions
+   * Generate questions for a quiz using AI.
+   *
+   * **Parameters:**
+   * quiz_id: Quiz identifier
+   * generation_request: Generation parameters
+   *
+   * **Returns:**
+   * Generation result with statistics
+   * @param data The data for the request.
+   * @param data.quizId
+   * @param data.requestBody
+   * @returns GenerationResponse Successful Response
+   * @throws ApiError
+   */
+  public static generateQuestions(
+    data: QuestionsGenerateQuestionsData,
+  ): CancelablePromise<QuestionsGenerateQuestionsResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/questions/{quiz_id}/generate",
+      path: {
+        quiz_id: data.quizId,
+      },
+      body: data.requestBody,
+      mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Batch Generate Questions
+   * Generate questions for multiple quizzes in batch.
+   *
+   * **Parameters:**
+   * batch_request: Batch generation requests
+   *
+   * **Returns:**
+   * Batch generation results
+   * @param data The data for the request.
+   * @param data.requestBody
+   * @returns BatchGenerationResponse Successful Response
+   * @throws ApiError
+   */
+  public static batchGenerateQuestions(
+    data: QuestionsBatchGenerateQuestionsData,
+  ): CancelablePromise<QuestionsBatchGenerateQuestionsResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/questions/batch/generate",
+      body: data.requestBody,
+      mediaType: "application/json",
       errors: {
         422: "Validation Error",
       },
@@ -883,7 +903,7 @@ export class QuizService {
    * This operation is permanent. The quiz cannot be recovered after deletion.
    * @param data The data for the request.
    * @param data.quizId
-   * @returns Message Successful Response
+   * @returns unknown Successful Response
    * @throws ApiError
    */
   public static deleteQuizEndpoint(
@@ -919,6 +939,7 @@ export class QuizService {
    *
    * **Raises:**
    * HTTPException: 404 if quiz not found or user doesn't own it
+   * HTTPException: 409 if extraction already in progress
    * HTTPException: 500 if unable to trigger extraction
    * @param data The data for the request.
    * @param data.quizId
@@ -1096,7 +1117,7 @@ export class UsersService {
    * - Additional public fields as defined in UserPublic schema
    *
    * **Usage:**
-   * GET /api/v1/users/me
+   * GET /api/v1/auth/users/me
    * Authorization: Bearer <jwt_token>
    *
    * **Example Response:**
@@ -1142,7 +1163,7 @@ export class UsersService {
    * Message: Confirmation message that the account was deleted
    *
    * **Usage:**
-   * DELETE /api/v1/users/me
+   * DELETE /api/v1/auth/users/me
    * Authorization: Bearer <jwt_token>
    *
    * **Example Response:**
@@ -1180,7 +1201,7 @@ export class UsersService {
    * **Note:**
    * This operation is final. Consider implementing account deactivation
    * instead of deletion for better user experience.
-   * @returns Message Successful Response
+   * @returns unknown Successful Response
    * @throws ApiError
    */
   public static deleteUserMe(): CancelablePromise<UsersDeleteUserMeResponse> {
@@ -1212,7 +1233,7 @@ export class UsersService {
    * UserPublic: Updated user profile with new information
    *
    * **Usage:**
-   * PATCH /api/v1/users/me
+   * PATCH /api/v1/auth/users/me
    * Authorization: Bearer <jwt_token>
    * Content-Type: application/json
    *
@@ -1263,6 +1284,10 @@ export class UsersService {
 export class UtilsService {
   /**
    * Health Check
+   * Simple health check endpoint.
+   *
+   * Returns True if the API is running and responsive.
+   * Used for monitoring and load balancer health checks.
    * @returns boolean Successful Response
    * @throws ApiError
    */

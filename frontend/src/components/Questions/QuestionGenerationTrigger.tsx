@@ -2,7 +2,7 @@ import { Box, Button, Card, HStack, Text, VStack } from "@chakra-ui/react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { MdAutoAwesome } from "react-icons/md"
 
-import { type Quiz, QuizService } from "@/client"
+import { type GenerationRequest, QuestionsService, type Quiz } from "@/client"
 import useCustomToast from "@/hooks/useCustomToast"
 
 interface QuestionGenerationTriggerProps {
@@ -20,7 +20,23 @@ export function QuestionGenerationTrigger({
       if (!quiz.id) {
         throw new Error("Quiz ID is required")
       }
-      return await QuizService.triggerQuestionGeneration({ quizId: quiz.id })
+
+      const generationRequest: GenerationRequest = {
+        quiz_id: quiz.id,
+        question_type: "multiple_choice",
+        target_count: quiz.question_count || 10,
+        difficulty: null,
+        tags: null,
+        custom_instructions: null,
+        provider_name: null,
+        workflow_name: null,
+        template_name: null,
+      }
+
+      return await QuestionsService.generateQuestions({
+        quizId: quiz.id,
+        requestBody: generationRequest,
+      })
     },
     onSuccess: () => {
       showSuccessToast("Question generation started")

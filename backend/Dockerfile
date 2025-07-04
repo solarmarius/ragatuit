@@ -33,11 +33,12 @@ COPY ./scripts /app/scripts
 
 COPY ./pyproject.toml ./uv.lock ./alembic.ini /app/
 
-COPY ./app /app/app
+COPY ./src /app/src
+COPY ./alembic /app/alembic
 
 # Sync the project
 # Ref: https://docs.astral.sh/uv/guides/integration/docker/#intermediate-layers
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync
 
-CMD ["fastapi", "run", "--workers", "4", "app/main.py"]
+CMD ["fastapi", "run", "--workers", "4", "src/main.py"]
