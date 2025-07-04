@@ -10,7 +10,7 @@ const baseQuiz = {
   owner_id: "user123",
   canvas_course_id: 12345,
   canvas_course_name: "Test Course",
-  selected_modules: '{"173467": "Module 1", "173468": "Module 2"}',
+  selected_modules: { "173467": "Module 1", "173468": "Module 2" },
   question_count: 50,
   llm_model: "gpt-4o",
   llm_temperature: 0.7,

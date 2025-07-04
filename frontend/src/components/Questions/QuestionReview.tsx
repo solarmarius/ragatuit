@@ -3,56 +3,36 @@ import {
   Box,
   Button,
   Card,
-  Fieldset,
   HStack,
   IconButton,
-  Input,
   Skeleton,
   Text,
-  Textarea,
   VStack,
-} from "@chakra-ui/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { MdCancel, MdCheck, MdDelete, MdEdit, MdSave } from "react-icons/md";
+} from "@chakra-ui/react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
+import { MdCheck, MdDelete, MdEdit } from "react-icons/md"
 
-import { type QuestionUpdateRequest, QuestionsService } from "@/client";
-import { Field } from "@/components/ui/field";
-import { Radio, RadioGroup } from "@/components/ui/radio";
-import useCustomToast from "@/hooks/useCustomToast";
 import {
-  type LegacyQuestionPublic,
-  convertToLegacyQuestion,
-} from "@/utils/questionCompatibility";
+  type QuestionResponse,
+  type QuestionUpdateRequest,
+  QuestionsService,
+} from "@/client"
+import useCustomToast from "@/hooks/useCustomToast"
+import { QuestionDisplay } from "./QuestionDisplay"
+import { QuestionEditor } from "./QuestionEditor"
 
 interface QuestionReviewProps {
-  quizId: string;
-}
-
-interface EditingQuestion {
-  questionText: string;
-  optionA: string;
-  optionB: string;
-  optionC: string;
-  optionD: string;
-  correctAnswer: string;
+  quizId: string
 }
 
 export function QuestionReview({ quizId }: QuestionReviewProps) {
-  const { showErrorToast, showSuccessToast } = useCustomToast();
-  const queryClient = useQueryClient();
+  const { showErrorToast, showSuccessToast } = useCustomToast()
+  const queryClient = useQueryClient()
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(
-    null
-  );
-  const [editingData, setEditingData] = useState<EditingQuestion>({
-    questionText: "",
-    optionA: "",
-    optionB: "",
-    optionC: "",
-    optionD: "",
-    correctAnswer: "A",
-  });
-  const [filterView, setFilterView] = useState<"pending" | "all">("pending");
+    null,
+  )
+  const [filterView, setFilterView] = useState<"pending" | "all">("pending")
 
   // Fetch questions
   const {
@@ -65,24 +45,23 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       const response = await QuestionsService.getQuizQuestions({
         quizId,
         approvedOnly: false, // Get all questions for review
-      });
-      // Convert new polymorphic structure to legacy format for compatibility
-      return response.map(convertToLegacyQuestion);
+      })
+      return response
     },
-  });
+  })
 
   // Filter questions based on current view
   const filteredQuestions = questions
     ? filterView === "pending"
       ? questions.filter((q) => !q.is_approved)
       : questions
-    : [];
+    : []
 
   // Calculate counts
   const pendingCount = questions
     ? questions.filter((q) => !q.is_approved).length
-    : 0;
-  const totalCount = questions ? questions.length : 0;
+    : 0
+  const totalCount = questions ? questions.length : 0
 
   // Approve question mutation
   const approveQuestionMutation = useMutation({
@@ -90,22 +69,22 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       return await QuestionsService.approveQuestion({
         quizId,
         questionId,
-      });
+      })
     },
     onSuccess: (_, _questionId) => {
-      showSuccessToast("Question approved");
+      showSuccessToast("Question approved")
       queryClient.invalidateQueries({
         queryKey: ["quiz", quizId, "questions"],
-      });
+      })
       queryClient.invalidateQueries({
         queryKey: ["quiz", quizId, "questions", "stats"],
-      });
+      })
     },
     onError: (error: any) => {
-      const message = error?.body?.detail || "Failed to approve question";
-      showErrorToast(message);
+      const message = error?.body?.detail || "Failed to approve question"
+      showErrorToast(message)
     },
-  });
+  })
 
   // Update question mutation
   const updateQuestionMutation = useMutation({
@@ -113,27 +92,27 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       questionId,
       data,
     }: {
-      questionId: string;
-      data: QuestionUpdateRequest;
+      questionId: string
+      data: QuestionUpdateRequest
     }) => {
       return await QuestionsService.updateQuestion({
         quizId,
         questionId,
         requestBody: data,
-      });
+      })
     },
     onSuccess: () => {
-      showSuccessToast("Question updated");
-      setEditingQuestionId(null);
+      showSuccessToast("Question updated")
+      setEditingQuestionId(null)
       queryClient.invalidateQueries({
         queryKey: ["quiz", quizId, "questions"],
-      });
+      })
     },
     onError: (error: any) => {
-      const message = error?.body?.detail || "Failed to update question";
-      showErrorToast(message);
+      const message = error?.body?.detail || "Failed to update question"
+      showErrorToast(message)
     },
-  });
+  })
 
   // Delete question mutation
   const deleteQuestionMutation = useMutation({
@@ -141,69 +120,42 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       return await QuestionsService.deleteQuestion({
         quizId,
         questionId,
-      });
+      })
     },
     onSuccess: () => {
-      showSuccessToast("Question deleted");
+      showSuccessToast("Question deleted")
       queryClient.invalidateQueries({
         queryKey: ["quiz", quizId, "questions"],
-      });
+      })
       queryClient.invalidateQueries({
         queryKey: ["quiz", quizId, "questions", "stats"],
-      });
+      })
     },
     onError: (error: any) => {
-      const message = error?.body?.detail || "Failed to delete question";
-      showErrorToast(message);
+      const message = error?.body?.detail || "Failed to delete question"
+      showErrorToast(message)
     },
-  });
+  })
 
-  const startEditing = (question: LegacyQuestionPublic) => {
-    setEditingQuestionId(question.id);
-    setEditingData({
-      questionText: question.question_text,
-      optionA: question.option_a,
-      optionB: question.option_b,
-      optionC: question.option_c,
-      optionD: question.option_d,
-      correctAnswer: question.correct_answer,
-    });
-  };
+  const startEditing = (question: QuestionResponse) => {
+    setEditingQuestionId(question.id)
+  }
 
   const cancelEditing = () => {
-    setEditingQuestionId(null);
-    setEditingData({
-      questionText: "",
-      optionA: "",
-      optionB: "",
-      optionC: "",
-      optionD: "",
-      correctAnswer: "A",
-    });
-  };
+    setEditingQuestionId(null)
+  }
 
-  const saveEditing = () => {
-    if (!editingQuestionId) return;
-
-    const updateData: QuestionUpdateRequest = {
-      question_data: {
-        question_text: editingData.questionText,
-        option_a: editingData.optionA,
-        option_b: editingData.optionB,
-        option_c: editingData.optionC,
-        option_d: editingData.optionD,
-        correct_answer: editingData.correctAnswer,
-      },
-    };
+  const handleSaveQuestion = (updateData: QuestionUpdateRequest) => {
+    if (!editingQuestionId) return
 
     updateQuestionMutation.mutate({
       questionId: editingQuestionId,
       data: updateData,
-    });
-  };
+    })
+  }
 
   if (isLoading) {
-    return <QuestionReviewSkeleton />;
+    return <QuestionReviewSkeleton />
   }
 
   if (error || !questions) {
@@ -220,7 +172,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
           </VStack>
         </Card.Body>
       </Card.Root>
-    );
+    )
   }
 
   if (!questions || questions.length === 0) {
@@ -238,7 +190,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
           </VStack>
         </Card.Body>
       </Card.Root>
-    );
+    )
   }
 
   return (
@@ -309,25 +261,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
               </HStack>
               <HStack gap={2}>
                 {editingQuestionId === question.id ? (
-                  <>
-                    <IconButton
-                      size="sm"
-                      colorScheme="green"
-                      variant="outline"
-                      onClick={saveEditing}
-                      loading={updateQuestionMutation.isPending}
-                    >
-                      <MdSave />
-                    </IconButton>
-                    <IconButton
-                      size="sm"
-                      colorScheme="gray"
-                      variant="outline"
-                      onClick={cancelEditing}
-                    >
-                      <MdCancel />
-                    </IconButton>
-                  </>
+                  <></>
                 ) : (
                   <>
                     <IconButton
@@ -367,149 +301,19 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
           </Card.Header>
           <Card.Body>
             {editingQuestionId === question.id ? (
-              <VStack gap={4} align="stretch">
-                <Field label="Question Text">
-                  <Textarea
-                    value={editingData.questionText}
-                    onChange={(e) =>
-                      setEditingData({
-                        ...editingData,
-                        questionText: e.target.value,
-                      })
-                    }
-                    placeholder="Enter question text..."
-                    rows={3}
-                  />
-                </Field>
-
-                <Fieldset.Root>
-                  <Fieldset.Legend>Answer Options</Fieldset.Legend>
-                  <VStack gap={3} align="stretch">
-                    <Field label="Option A">
-                      <Input
-                        value={editingData.optionA}
-                        onChange={(e) =>
-                          setEditingData({
-                            ...editingData,
-                            optionA: e.target.value,
-                          })
-                        }
-                        placeholder="Enter option A..."
-                      />
-                    </Field>
-                    <Field label="Option B">
-                      <Input
-                        value={editingData.optionB}
-                        onChange={(e) =>
-                          setEditingData({
-                            ...editingData,
-                            optionB: e.target.value,
-                          })
-                        }
-                        placeholder="Enter option B..."
-                      />
-                    </Field>
-                    <Field label="Option C">
-                      <Input
-                        value={editingData.optionC}
-                        onChange={(e) =>
-                          setEditingData({
-                            ...editingData,
-                            optionC: e.target.value,
-                          })
-                        }
-                        placeholder="Enter option C..."
-                      />
-                    </Field>
-                    <Field label="Option D">
-                      <Input
-                        value={editingData.optionD}
-                        onChange={(e) =>
-                          setEditingData({
-                            ...editingData,
-                            optionD: e.target.value,
-                          })
-                        }
-                        placeholder="Enter option D..."
-                      />
-                    </Field>
-                  </VStack>
-                </Fieldset.Root>
-
-                <Field label="Correct Answer">
-                  <RadioGroup
-                    value={editingData.correctAnswer}
-                    onValueChange={(details) =>
-                      setEditingData({
-                        ...editingData,
-                        correctAnswer: details.value,
-                      })
-                    }
-                  >
-                    <HStack gap={4}>
-                      <Radio value="A">A</Radio>
-                      <Radio value="B">B</Radio>
-                      <Radio value="C">C</Radio>
-                      <Radio value="D">D</Radio>
-                    </HStack>
-                  </RadioGroup>
-                </Field>
-              </VStack>
+              <QuestionEditor
+                question={question}
+                onSave={handleSaveQuestion}
+                onCancel={cancelEditing}
+                isLoading={updateQuestionMutation.isPending}
+              />
             ) : (
               <VStack gap={4} align="stretch">
-                <Box>
-                  <Text fontSize="md" fontWeight="medium" mb={2}>
-                    {question.question_text}
-                  </Text>
-                </Box>
-
-                <VStack gap={2} align="stretch">
-                  {[
-                    { key: "A", text: question.option_a },
-                    { key: "B", text: question.option_b },
-                    { key: "C", text: question.option_c },
-                    { key: "D", text: question.option_d },
-                  ].map((option) => (
-                    <HStack
-                      key={option.key}
-                      p={3}
-                      bg={
-                        option.key === question.correct_answer
-                          ? "green.50"
-                          : "gray.50"
-                      }
-                      borderRadius="md"
-                      border={
-                        option.key === question.correct_answer
-                          ? "2px solid"
-                          : "1px solid"
-                      }
-                      borderColor={
-                        option.key === question.correct_answer
-                          ? "green.200"
-                          : "gray.200"
-                      }
-                    >
-                      <Badge
-                        colorScheme={
-                          option.key === question.correct_answer
-                            ? "green"
-                            : "gray"
-                        }
-                        variant="solid"
-                        size="sm"
-                      >
-                        {option.key}
-                      </Badge>
-                      <Text flex={1}>{option.text}</Text>
-                      {option.key === question.correct_answer && (
-                        <Badge colorScheme="green" variant="subtle" size="sm">
-                          Correct
-                        </Badge>
-                      )}
-                    </HStack>
-                  ))}
-                </VStack>
+                <QuestionDisplay
+                  question={question}
+                  showCorrectAnswer={true}
+                  showExplanation={false}
+                />
 
                 {question.approved_at && (
                   <Text fontSize="sm" color="gray.600">
@@ -522,7 +326,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
                         day: "numeric",
                         hour: "2-digit",
                         minute: "2-digit",
-                      }
+                      },
                     )}
                   </Text>
                 )}
@@ -532,7 +336,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
         </Card.Root>
       ))}
     </VStack>
-  );
+  )
 }
 
 function QuestionReviewSkeleton() {
@@ -568,5 +372,5 @@ function QuestionReviewSkeleton() {
         </Card.Root>
       ))}
     </VStack>
-  );
+  )
 }

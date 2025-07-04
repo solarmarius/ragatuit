@@ -14,6 +14,10 @@ import { SiCanvas } from "react-icons/si";
 
 import { type Quiz, QuizService } from "@/client";
 import useCustomToast from "@/hooks/useCustomToast";
+import {
+  type QuestionStats as TypedQuestionStats,
+  mergeLegacyStats,
+} from "@/types/questionStats";
 
 interface QuestionStatsProps {
   quiz: Quiz;
@@ -24,7 +28,7 @@ export function QuestionStats({ quiz }: QuestionStatsProps) {
   const queryClient = useQueryClient();
 
   const {
-    data: stats,
+    data: rawStats,
     isLoading,
     error,
   } = useQuery({
@@ -38,6 +42,11 @@ export function QuestionStats({ quiz }: QuestionStatsProps) {
       });
     },
   });
+
+  // Convert legacy stats format to typed format
+  const stats: TypedQuestionStats | null = rawStats
+    ? mergeLegacyStats(rawStats)
+    : null;
 
   // Export quiz to Canvas mutation
   const exportMutation = useMutation({
@@ -72,8 +81,9 @@ export function QuestionStats({ quiz }: QuestionStatsProps) {
     );
   }
 
-  const progressPercentage =
-    stats.total > 0 ? (stats.approved / stats.total) * 100 : 0;
+  const progressPercentage = stats?.approval_rate
+    ? stats.approval_rate * 100
+    : 0;
 
   return (
     <Card.Root>
@@ -89,7 +99,7 @@ export function QuestionStats({ quiz }: QuestionStatsProps) {
               Approved Questions
             </Text>
             <Badge variant="outline" colorScheme="green" size="lg">
-              {stats.approved} of {stats.total}
+              {stats.approved_questions} of {stats.total_questions}
             </Badge>
           </HStack>
 
@@ -113,81 +123,87 @@ export function QuestionStats({ quiz }: QuestionStatsProps) {
             </Progress.Root>
           </Box>
 
-          {stats.total > 0 && stats.approved === stats.total && (
-            <Box
-              p={3}
-              bg="green.50"
-              borderRadius="md"
-              border="1px solid"
-              borderColor="green.200"
-            >
-              <Text
-                fontSize="sm"
-                fontWeight="medium"
-                color="green.700"
-                textAlign="center"
-                mb={quiz.export_status !== "completed" ? 3 : 0}
+          {stats.total_questions > 0 &&
+            stats.approved_questions === stats.total_questions && (
+              <Box
+                p={3}
+                bg="green.50"
+                borderRadius="md"
+                border="1px solid"
+                borderColor="green.200"
               >
-                All questions have been reviewed and approved!
-              </Text>
+                <Text
+                  fontSize="sm"
+                  fontWeight="medium"
+                  color="green.700"
+                  textAlign="center"
+                  mb={quiz.export_status !== "completed" ? 3 : 2}
+                >
+                  All questions have been reviewed and approved!
+                </Text>
 
-              {(() => {
-                const isExported = quiz.export_status === "completed";
-                const isExporting =
-                  exportMutation.isPending ||
-                  quiz.export_status === "processing";
-                const canExport = !isExported;
+                {(() => {
+                  const isExported = quiz.export_status === "completed";
+                  const isExporting =
+                    exportMutation.isPending ||
+                    quiz.export_status === "processing";
+                  const canExport = !isExported;
 
-                if (canExport) {
-                  return (
-                    <Button
-                      size="lg"
-                      colorPalette="green"
-                      onClick={() => exportMutation.mutate()}
-                      loading={isExporting}
-                      width="100%"
-                    >
-                      <SiCanvas />
-                      Post to Canvas
-                    </Button>
-                  );
-                }
+                  if (canExport) {
+                    return (
+                      <Button
+                        size="lg"
+                        colorPalette="green"
+                        onClick={() => exportMutation.mutate()}
+                        loading={isExporting}
+                        width="100%"
+                      >
+                        <SiCanvas />
+                        Post to Canvas
+                      </Button>
+                    );
+                  }
 
-                if (isExported) {
-                  return (
-                    <Text
-                      fontSize="sm"
-                      fontWeight="medium"
-                      color="green.600"
-                      textAlign="center"
-                      mt={2}
-                    >
-                      ✅ Quiz has been successfully exported to Canvas!
-                      {quiz.exported_at && (
-                        <Text fontSize="xs" color="green.500" mt={1}>
-                          Exported on{" "}
-                          {new Date(quiz.exported_at).toLocaleDateString(
-                            "en-GB",
-                            {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }
-                          )}
+                  if (isExported) {
+                    return (
+                      <VStack gap={1}>
+                        <Text
+                          fontSize="sm"
+                          fontWeight="medium"
+                          color="green.600"
+                          textAlign="center"
+                        >
+                          Quiz has been successfully exported to Canvas
                         </Text>
-                      )}
-                    </Text>
-                  );
-                }
+                        {quiz.exported_at && (
+                          <Text
+                            fontSize="xs"
+                            color="green.500"
+                            textAlign="center"
+                          >
+                            Exported on{" "}
+                            {new Date(quiz.exported_at).toLocaleDateString(
+                              "en-GB",
+                              {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}
+                          </Text>
+                        )}
+                      </VStack>
+                    );
+                  }
 
-                return null;
-              })()}
-            </Box>
-          )}
+                  return null;
+                })()}
+              </Box>
+            )}
 
-          {stats.total === 0 && (
+          {stats.total_questions === 0 && (
             <Box
               p={3}
               bg="gray.50"
