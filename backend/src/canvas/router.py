@@ -8,11 +8,10 @@ import httpx
 from fastapi import APIRouter, HTTPException
 
 from src.auth.dependencies import CurrentUser
-from src.config import get_logger, settings
+from src.config import get_logger
 
-from .dependencies import CanvasToken
+from .dependencies import CanvasToken, CanvasURLBuilderDep
 from .schemas import CanvasCourse, CanvasModule
-from .url_builder import CanvasURLBuilder
 
 router = APIRouter(prefix="/canvas", tags=["canvas"])
 logger = get_logger("canvas")
@@ -20,7 +19,9 @@ logger = get_logger("canvas")
 
 @router.get("/courses", response_model=list[CanvasCourse])
 async def get_courses(
-    current_user: CurrentUser, canvas_token: CanvasToken
+    current_user: CurrentUser,
+    canvas_token: CanvasToken,
+    url_builder: CanvasURLBuilderDep,
 ) -> list[CanvasCourse]:
     """
     Fetch Canvas courses where the current user has teacher enrollment.
@@ -54,12 +55,6 @@ async def get_courses(
     try:
         # Canvas token is automatically refreshed by the CanvasToken dependency
         # if it's expiring within 5 minutes
-
-        # Initialize URL builder
-        base_url = str(settings.CANVAS_BASE_URL)
-        if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
-            base_url = str(settings.CANVAS_MOCK_URL)
-        url_builder = CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
 
         # Call Canvas API to get courses
         async with httpx.AsyncClient() as client:
@@ -187,7 +182,10 @@ async def get_courses(
 
 @router.get("/courses/{course_id}/modules", response_model=list[CanvasModule])
 async def get_course_modules(
-    course_id: int, current_user: CurrentUser, canvas_token: CanvasToken
+    course_id: int,
+    current_user: CurrentUser,
+    canvas_token: CanvasToken,
+    url_builder: CanvasURLBuilderDep,
 ) -> list[CanvasModule]:
     """
     Fetch Canvas modules for a specific course.
@@ -238,12 +236,6 @@ async def get_course_modules(
     try:
         # Canvas token is automatically refreshed by the CanvasToken dependency
         # if it's expiring within 5 minutes
-
-        # Initialize URL builder
-        base_url = str(settings.CANVAS_BASE_URL)
-        if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
-            base_url = str(settings.CANVAS_MOCK_URL)
-        url_builder = CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
 
         # Call Canvas API to get course modules
         async with httpx.AsyncClient() as client:
@@ -374,7 +366,11 @@ async def get_course_modules(
 
 @router.get("/courses/{course_id}/modules/{module_id}/items")
 async def get_module_items(
-    course_id: int, module_id: int, current_user: CurrentUser, canvas_token: CanvasToken
+    course_id: int,
+    module_id: int,
+    current_user: CurrentUser,
+    canvas_token: CanvasToken,
+    url_builder: CanvasURLBuilderDep,
 ) -> list[dict[str, Any]]:
     """
     Fetch items within a specific Canvas module.
@@ -432,12 +428,6 @@ async def get_module_items(
     )
 
     try:
-        # Initialize URL builder
-        base_url = str(settings.CANVAS_BASE_URL)
-        if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
-            base_url = str(settings.CANVAS_MOCK_URL)
-        url_builder = CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
-
         # Call Canvas API to get module items
         async with httpx.AsyncClient() as client:
             try:
@@ -579,7 +569,11 @@ async def get_module_items(
 
 @router.get("/courses/{course_id}/pages/{page_url}")
 async def get_page_content(
-    course_id: int, page_url: str, current_user: CurrentUser, canvas_token: CanvasToken
+    course_id: int,
+    page_url: str,
+    current_user: CurrentUser,
+    canvas_token: CanvasToken,
+    url_builder: CanvasURLBuilderDep,
 ) -> dict[str, Any]:
     """
     Fetch content of a specific Canvas page.
@@ -645,12 +639,6 @@ async def get_page_content(
     )
 
     try:
-        # Initialize URL builder
-        base_url = str(settings.CANVAS_BASE_URL)
-        if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
-            base_url = str(settings.CANVAS_MOCK_URL)
-        url_builder = CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
-
         # Call Canvas API to get page content
         async with httpx.AsyncClient() as client:
             try:
@@ -773,7 +761,11 @@ async def get_page_content(
 
 @router.get("/courses/{course_id}/files/{file_id}")
 async def get_file_info(
-    course_id: int, file_id: int, current_user: CurrentUser, canvas_token: CanvasToken
+    course_id: int,
+    file_id: int,
+    current_user: CurrentUser,
+    canvas_token: CanvasToken,
+    url_builder: CanvasURLBuilderDep,
 ) -> dict[str, Any]:
     """
     Fetch metadata and download URL for a specific Canvas file.
@@ -832,12 +824,6 @@ async def get_file_info(
     )
 
     try:
-        # Initialize URL builder
-        base_url = str(settings.CANVAS_BASE_URL)
-        if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
-            base_url = str(settings.CANVAS_MOCK_URL)
-        url_builder = CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
-
         # Call Canvas API to get file info
         async with httpx.AsyncClient() as client:
             try:

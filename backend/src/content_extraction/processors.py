@@ -1,5 +1,6 @@
 """Content type processors for different formats."""
 
+from .constants import MAX_CONTENT_LENGTH
 from .models import ProcessedContent, RawContent
 from .utils import (
     clean_html_content,
@@ -45,8 +46,8 @@ def process_html_content(raw_content: RawContent) -> ProcessedContent | None:
             return None
 
         # Truncate if necessary
-        if len(normalized_text) > 50000:  # Use settings value
-            normalized_text = truncate_content(normalized_text, 50000)
+        if len(normalized_text) > MAX_CONTENT_LENGTH:  # Use settings value
+            normalized_text = truncate_content(normalized_text, MAX_CONTENT_LENGTH)
 
         # Create processing metadata
         metadata = create_processing_metadata(

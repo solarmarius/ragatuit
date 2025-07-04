@@ -7,9 +7,11 @@ from typing import Annotated
 from fastapi import Depends
 
 from src.auth.dependencies import CurrentUser
+from src.config import settings
 from src.database import SessionDep
 
 from .security import ensure_valid_canvas_token
+from .url_builder import CanvasURLBuilder
 
 
 async def get_canvas_token(current_user: CurrentUser, session: SessionDep) -> str:
@@ -63,5 +65,40 @@ async def get_canvas_token(current_user: CurrentUser, session: SessionDep) -> st
     return await ensure_valid_canvas_token(session, current_user)
 
 
+def get_canvas_url_builder() -> CanvasURLBuilder:
+    """
+    FastAPI dependency that provides a configured Canvas URL builder.
+
+    Creates a CanvasURLBuilder instance with the appropriate base URL
+    (either real Canvas or mock Canvas based on settings) and API version.
+
+    **Returns:**
+        CanvasURLBuilder: Configured URL builder ready for API requests
+
+    **URL Configuration:**
+    - Uses CANVAS_MOCK_URL when USE_CANVAS_MOCK is True
+    - Falls back to CANVAS_BASE_URL for production/staging
+    - Automatically includes the configured API version
+
+    **Usage as Dependency:**
+        >>> @router.get("/canvas/courses")
+        >>> async def get_courses(url_builder: CanvasURLBuilderDep):
+        ...     # Use url_builder for Canvas API URLs
+        ...     courses_url = url_builder.build_url("courses")
+
+    **Mock Environment Support:**
+    - Automatically switches to mock Canvas URL in test environments
+    - Maintains consistent API interface across environments
+    - Transparent to API consumers
+    """
+    # Determine base URL based on environment settings
+    base_url = str(settings.CANVAS_BASE_URL)
+    if settings.USE_CANVAS_MOCK and settings.CANVAS_MOCK_URL:
+        base_url = str(settings.CANVAS_MOCK_URL)
+
+    return CanvasURLBuilder(base_url, settings.CANVAS_API_VERSION)
+
+
 # Type aliases for dependency injection
 CanvasToken = Annotated[str, Depends(get_canvas_token)]
+CanvasURLBuilderDep = Annotated[CanvasURLBuilder, Depends(get_canvas_url_builder)]
