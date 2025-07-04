@@ -19,7 +19,7 @@ import {
   QuestionsService,
 } from "@/client"
 import useCustomToast from "@/hooks/useCustomToast"
-import { QuestionDisplay } from "./QuestionDisplay"
+import { QuestionDisplay } from "./display"
 import { QuestionEditor } from "./QuestionEditor"
 
 interface QuestionReviewProps {
