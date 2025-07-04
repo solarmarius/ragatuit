@@ -2,12 +2,12 @@ import { Flex } from "@chakra-ui/react"
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router"
 
 import Sidebar from "@/components/Common/Sidebar"
-import { isLoggedIn } from "@/hooks/useCanvasAuth"
+import { isAuthenticated } from "@/lib/api/client"
 
 export const Route = createFileRoute("/_layout")({
   component: Layout,
   beforeLoad: async () => {
-    if (!isLoggedIn()) {
+    if (!isAuthenticated()) {
       throw redirect({
         to: "/login",
       })

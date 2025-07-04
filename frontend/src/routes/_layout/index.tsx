@@ -6,16 +6,15 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react"
-import { useQuery } from "@tanstack/react-query"
 import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
 
-import { QuizService } from "@/client"
 import { HelpPanel } from "@/components/Dashboard/HelpPanel"
 import { QuizGenerationPanel } from "@/components/Dashboard/QuizGenerationPanel"
 import { QuizReviewPanel } from "@/components/Dashboard/QuizReviewPanel"
 import { OnboardingModal } from "@/components/Onboarding/OnboardingModal"
 import { Button } from "@/components/ui/button"
-import useAuth from "@/hooks/useCanvasAuth"
+import { useAuth } from "@/hooks/auth"
+import { useUserQuizzes } from "@/hooks/api"
 import useCustomToast from "@/hooks/useCustomToast"
 import { useOnboarding } from "@/hooks/useOnboarding"
 
@@ -39,20 +38,10 @@ function Dashboard() {
     data: quizzes,
     isLoading,
     error,
-  } = useQuery({
-    queryKey: ["user-quizzes"],
-    queryFn: async () => {
-      try {
-        const response = await QuizService.getUserQuizzesEndpoint()
-        return response
-      } catch (err) {
-        showErrorToast("Failed to load quizzes")
-        throw err
-      }
-    },
-  })
+  } = useUserQuizzes()
 
   if (error) {
+    showErrorToast("Failed to load quizzes")
     return (
       <Container maxW="6xl" py={8}>
         <VStack gap={6} align="stretch">

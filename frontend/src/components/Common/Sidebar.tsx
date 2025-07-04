@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router"
 
 import Logo from "/assets/images/logo.svg"
 
-import useAuth from "@/hooks/useCanvasAuth"
+import { useAuth } from "@/hooks/auth"
 import SidebarItems from "./SidebarItems"
 
 const Sidebar = () => {
