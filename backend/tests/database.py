@@ -1,6 +1,7 @@
 """Test database configuration and utilities."""
 
 import asyncio
+import logging
 from collections.abc import AsyncGenerator, Generator
 from contextlib import asynccontextmanager, contextmanager
 from typing import Any
@@ -13,6 +14,8 @@ from sqlmodel import Session, SQLModel, select
 
 from src.auth.models import User
 from src.config import settings
+
+logger = logging.getLogger(__name__)
 
 # Test database URL - use a separate test database
 TEST_DATABASE_URL = str(settings.SQLALCHEMY_DATABASE_URI).replace(
@@ -87,8 +90,25 @@ async def get_test_async_session() -> AsyncGenerator[AsyncSession, None]:
         await connection.close()
 
 
+def _ensure_test_database_exists() -> None:
+    """Ensure test database exists before creating tables."""
+    try:
+        # Import here to avoid circular imports
+        from scripts.setup.create_test_db import create_test_database as create_db
+
+        create_db()
+    except Exception as e:
+        logger.warning(f"Could not create test database: {e}")
+        # Continue anyway - maybe the database already exists
+        pass
+
+
 def create_test_database() -> None:
     """Create test database tables."""
+    # First ensure the test database exists
+    _ensure_test_database_exists()
+
+    # Then create tables
     engine = get_test_engine()
     SQLModel.metadata.create_all(engine)
 
