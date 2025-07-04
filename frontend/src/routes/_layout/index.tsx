@@ -8,9 +8,7 @@ import {
 } from "@chakra-ui/react"
 import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
 
-import { HelpPanel } from "@/components/Dashboard/HelpPanel"
-import { QuizGenerationPanel } from "@/components/Dashboard/QuizGenerationPanel"
-import { QuizReviewPanel } from "@/components/Dashboard/QuizReviewPanel"
+import { HelpPanel, QuizGenerationPanel, QuizReviewPanel } from "@/components/dashboard"
 import { OnboardingModal } from "@/components/Onboarding/OnboardingModal"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/auth"
