@@ -9,12 +9,12 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react"
-import { useQuery } from "@tanstack/react-query"
 import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
 
-import { QuizService } from "@/client"
 import { Button } from "@/components/ui/button"
 import { StatusLight } from "@/components/ui/status-light"
+import { useUserQuizzes } from "@/hooks/api"
+import { formatDate } from "@/lib/utils"
 import useCustomToast from "@/hooks/useCustomToast"
 
 export const Route = createFileRoute("/_layout/quizzes")({
@@ -28,24 +28,14 @@ function QuizList() {
     data: quizzes,
     isLoading,
     error,
-  } = useQuery({
-    queryKey: ["user-quizzes"],
-    queryFn: async () => {
-      try {
-        const response = await QuizService.getUserQuizzesEndpoint()
-        return response
-      } catch (err) {
-        showErrorToast("Failed to load quizzes")
-        throw err
-      }
-    },
-  })
+  } = useUserQuizzes()
 
   if (isLoading) {
     return <QuizListSkeleton />
   }
 
   if (error) {
+    showErrorToast("Failed to load quizzes")
     return (
       <Container maxW="6xl" py={8}>
         <Card.Root>
@@ -198,14 +188,7 @@ function QuizList() {
                         <Table.Cell>
                           <Text fontSize="sm">
                             {quiz.created_at
-                              ? new Date(quiz.created_at).toLocaleDateString(
-                                  "en-GB",
-                                  {
-                                    year: "numeric",
-                                    month: "short",
-                                    day: "numeric",
-                                  },
-                                )
+                              ? formatDate(quiz.created_at)
                               : "Unknown"}
                           </Text>
                         </Table.Cell>

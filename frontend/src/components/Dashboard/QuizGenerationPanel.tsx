@@ -13,10 +13,7 @@ import { Link as RouterLink } from "@tanstack/react-router"
 import type { Quiz } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import { StatusLight } from "@/components/ui/status-light"
-import {
-  getQuizProcessingPhase,
-  getQuizzesBeingGenerated,
-} from "@/utils/quizFilters"
+import { getQuizProcessingPhase, getQuizzesBeingGenerated } from "@/lib/utils"
 
 interface QuizGenerationPanelProps {
   quizzes: Quiz[]

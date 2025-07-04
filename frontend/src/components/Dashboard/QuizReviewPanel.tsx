@@ -12,7 +12,7 @@ import { Link as RouterLink } from "@tanstack/react-router"
 import type { Quiz } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import { StatusLight } from "@/components/ui/status-light"
-import { getQuizzesNeedingReview } from "@/utils/quizFilters"
+import { getQuizzesNeedingReview } from "@/lib/utils"
 
 interface QuizReviewPanelProps {
   quizzes: Quiz[]
