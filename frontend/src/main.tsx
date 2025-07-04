@@ -9,17 +9,16 @@ import React, { StrictMode } from "react"
 import ReactDOM from "react-dom/client"
 import { routeTree } from "./routeTree.gen"
 
-import { ApiError, OpenAPI } from "./client"
+import { ApiError } from "./client"
 import { CustomProvider } from "./components/ui/provider"
+import { configureApiClient, clearAuthToken } from "./lib/api/client"
 
-OpenAPI.BASE = import.meta.env.VITE_API_URL
-OpenAPI.TOKEN = async () => {
-  return localStorage.getItem("access_token") || ""
-}
+// Configure API client
+configureApiClient()
 
 const handleApiError = (error: Error) => {
   if (error instanceof ApiError && error.status === 401) {
-    localStorage.removeItem("access_token")
+    clearAuthToken()
     window.location.href = "/login"
   }
 }
