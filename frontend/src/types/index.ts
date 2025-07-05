@@ -5,3 +5,4 @@
 // Question types
 export * from "./questionTypes"
 export * from "./questionStats"
+export * from "./components"
