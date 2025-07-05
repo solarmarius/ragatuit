@@ -1,4 +1,5 @@
 import { Box, Text } from "@chakra-ui/react"
+import { memo } from "react"
 
 interface CorrectAnswerBoxProps {
   correctAnswer: string
@@ -6,7 +7,7 @@ interface CorrectAnswerBoxProps {
   caseSensitive?: boolean
 }
 
-export function CorrectAnswerBox({
+export const CorrectAnswerBox = memo(function CorrectAnswerBox({
   correctAnswer,
   answerVariations,
   caseSensitive,
@@ -48,4 +49,4 @@ export function CorrectAnswerBox({
       )}
     </Box>
   )
-}
+})

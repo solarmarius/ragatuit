@@ -1,6 +1,7 @@
 import type { QuestionResponse } from "@/client"
 import { extractQuestionData } from "@/types/questionTypes"
 import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react"
+import { memo } from "react"
 import { ErrorDisplay } from "./ErrorDisplay"
 import { ExplanationBox } from "../shared/ExplanationBox"
 
@@ -10,7 +11,7 @@ interface MCQDisplayProps {
   showExplanation: boolean
 }
 
-export function MCQDisplay({
+export const MCQDisplay = memo(function MCQDisplay({
   question,
   showCorrectAnswer,
   showExplanation,
@@ -82,4 +83,4 @@ export function MCQDisplay({
   } catch (error) {
     return <ErrorDisplay error="Error loading MCQ question data" />
   }
-}
+})

@@ -1,4 +1,5 @@
 import { Box, Text, VStack } from "@chakra-ui/react"
+import { memo } from "react"
 
 interface BlankData {
   position: number
@@ -11,7 +12,7 @@ interface FillInBlankAnswersBoxProps {
   blanks: BlankData[]
 }
 
-export function FillInBlankAnswersBox({ blanks }: FillInBlankAnswersBoxProps) {
+export const FillInBlankAnswersBox = memo(function FillInBlankAnswersBox({ blanks }: FillInBlankAnswersBoxProps) {
   return (
     <Box
       p={3}
@@ -47,4 +48,4 @@ export function FillInBlankAnswersBox({ blanks }: FillInBlankAnswersBoxProps) {
       </VStack>
     </Box>
   )
-}
+})

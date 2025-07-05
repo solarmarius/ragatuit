@@ -1,6 +1,7 @@
 import type { QuestionResponse } from "@/client"
 import { extractQuestionData } from "@/types/questionTypes"
 import { Box, Text, VStack } from "@chakra-ui/react"
+import { memo } from "react"
 import { ErrorDisplay } from "./ErrorDisplay"
 import { ExplanationBox } from "../shared/ExplanationBox"
 import { CorrectAnswerBox } from "../shared/CorrectAnswerBox"
@@ -11,7 +12,7 @@ interface ShortAnswerDisplayProps {
   showExplanation: boolean
 }
 
-export function ShortAnswerDisplay({
+export const ShortAnswerDisplay = memo(function ShortAnswerDisplay({
   question,
   showCorrectAnswer,
   showExplanation,
@@ -43,4 +44,4 @@ export function ShortAnswerDisplay({
   } catch (error) {
     return <ErrorDisplay error="Error loading Short Answer question data" />
   }
-}
+})

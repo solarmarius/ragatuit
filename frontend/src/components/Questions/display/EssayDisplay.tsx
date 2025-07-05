@@ -1,6 +1,7 @@
 import type { QuestionResponse } from "@/client"
 import { extractQuestionData } from "@/types/questionTypes"
 import { Badge, Box, Text, VStack } from "@chakra-ui/react"
+import { memo } from "react"
 import { ErrorDisplay } from "./ErrorDisplay"
 import { GradingRubricBox } from "../shared/GradingRubricBox"
 import { SampleAnswerBox } from "../shared/SampleAnswerBox"
@@ -11,7 +12,7 @@ interface EssayDisplayProps {
   showExplanation: boolean
 }
 
-export function EssayDisplay({
+export const EssayDisplay = memo(function EssayDisplay({
   question,
   showCorrectAnswer,
 }: EssayDisplayProps) {
@@ -60,4 +61,4 @@ export function EssayDisplay({
   } catch (error) {
     return <ErrorDisplay error="Error loading Essay question data" />
   }
-}
+})

@@ -1,6 +1,7 @@
 import type { QuestionResponse } from "@/client"
 import { extractQuestionData } from "@/types/questionTypes"
 import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react"
+import { memo } from "react"
 import { ErrorDisplay } from "./ErrorDisplay"
 import { ExplanationBox } from "../shared/ExplanationBox"
 
@@ -10,7 +11,7 @@ interface TrueFalseDisplayProps {
   showExplanation: boolean
 }
 
-export function TrueFalseDisplay({
+export const TrueFalseDisplay = memo(function TrueFalseDisplay({
   question,
   showCorrectAnswer,
   showExplanation,
@@ -80,4 +81,4 @@ export function TrueFalseDisplay({
   } catch (error) {
     return <ErrorDisplay error="Error loading True/False question data" />
   }
-}
+})

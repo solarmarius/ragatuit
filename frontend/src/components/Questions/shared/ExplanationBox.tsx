@@ -1,10 +1,11 @@
 import { Box, Text } from "@chakra-ui/react"
+import { memo } from "react"
 
 interface ExplanationBoxProps {
   explanation: string
 }
 
-export function ExplanationBox({ explanation }: ExplanationBoxProps) {
+export const ExplanationBox = memo(function ExplanationBox({ explanation }: ExplanationBoxProps) {
   return (
     <Box
       p={3}
@@ -21,4 +22,4 @@ export function ExplanationBox({ explanation }: ExplanationBoxProps) {
       </Text>
     </Box>
   )
-}
+})

@@ -1,10 +1,11 @@
 import { Box, Text } from "@chakra-ui/react"
+import { memo } from "react"
 
 interface SampleAnswerBoxProps {
   sampleAnswer: string
 }
 
-export function SampleAnswerBox({ sampleAnswer }: SampleAnswerBoxProps) {
+export const SampleAnswerBox = memo(function SampleAnswerBox({ sampleAnswer }: SampleAnswerBoxProps) {
   return (
     <Box
       p={3}
@@ -21,4 +22,4 @@ export function SampleAnswerBox({ sampleAnswer }: SampleAnswerBoxProps) {
       </Text>
     </Box>
   )
-}
+})

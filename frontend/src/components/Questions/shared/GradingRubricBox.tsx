@@ -1,10 +1,11 @@
 import { Box, Text } from "@chakra-ui/react"
+import { memo } from "react"
 
 interface GradingRubricBoxProps {
   rubric: string
 }
 
-export function GradingRubricBox({ rubric }: GradingRubricBoxProps) {
+export const GradingRubricBox = memo(function GradingRubricBox({ rubric }: GradingRubricBoxProps) {
   return (
     <Box
       p={3}
@@ -21,4 +22,4 @@ export function GradingRubricBox({ rubric }: GradingRubricBoxProps) {
       </Text>
     </Box>
   )
-}
+})
