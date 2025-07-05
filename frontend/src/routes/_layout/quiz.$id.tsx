@@ -22,7 +22,7 @@ import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirma
 import { StatusBadge } from "@/components/ui/status-badge"
 import { StatusDescription } from "@/components/ui/status-description"
 import { StatusLight } from "@/components/ui/status-light"
-import useCustomToast from "@/hooks/useCustomToast"
+import { useCustomToast } from "@/hooks/common"
 
 export const Route = createFileRoute("/_layout/quiz/$id")({
   component: QuizDetail,

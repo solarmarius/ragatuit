@@ -18,7 +18,7 @@ import {
   type QuestionUpdateRequest,
   QuestionsService,
 } from "@/client"
-import useCustomToast from "@/hooks/useCustomToast"
+import { useCustomToast } from "@/hooks/common"
 import { QuestionDisplay } from "./display"
 import { QuestionEditor } from "./QuestionEditor"
 

@@ -1,5 +1,5 @@
 import { ApiError } from "./client"
-import useCustomToast from "./hooks/useCustomToast"
+import { useCustomToast } from "./hooks/common"
 
 export const handleError = (err: ApiError) => {
   const { showErrorToast } = useCustomToast()

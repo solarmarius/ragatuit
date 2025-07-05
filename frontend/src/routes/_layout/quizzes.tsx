@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button"
 import { StatusLight } from "@/components/ui/status-light"
 import { useUserQuizzes } from "@/hooks/api"
 import { formatDate } from "@/lib/utils"
-import useCustomToast from "@/hooks/useCustomToast"
+import { useCustomToast } from "@/hooks/common"
 
 export const Route = createFileRoute("/_layout/quizzes")({
   component: QuizList,

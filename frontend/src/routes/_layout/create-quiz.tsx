@@ -15,7 +15,7 @@ import { QuizService } from "@/client"
 import { CourseSelectionStep } from "@/components/QuizCreation/CourseSelectionStep"
 import { ModuleSelectionStep } from "@/components/QuizCreation/ModuleSelectionStep"
 import { QuizSettingsStep } from "@/components/QuizCreation/QuizSettingsStep"
-import useCustomToast from "@/hooks/useCustomToast"
+import { useCustomToast } from "@/hooks/common"
 
 export const Route = createFileRoute("/_layout/create-quiz")({
   component: CreateQuiz,

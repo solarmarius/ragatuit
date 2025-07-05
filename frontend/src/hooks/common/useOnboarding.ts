@@ -1,7 +1,7 @@
 import { UsersService } from "@/client"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
-import useAuth from "./useCanvasAuth"
+import { useAuth } from "../auth"
 
 export const useOnboarding = () => {
   const [currentStep, setCurrentStep] = useState(1)

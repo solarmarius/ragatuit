@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { MdAutoAwesome } from "react-icons/md"
 
 import { type GenerationRequest, QuestionsService, type Quiz } from "@/client"
-import useCustomToast from "@/hooks/useCustomToast"
+import { useCustomToast } from "@/hooks/common"
 
 interface QuestionGenerationTriggerProps {
   quiz: Quiz

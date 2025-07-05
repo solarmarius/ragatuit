@@ -13,7 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SiCanvas } from "react-icons/si";
 
 import { type Quiz, QuizService } from "@/client";
-import useCustomToast from "@/hooks/useCustomToast";
+import { useCustomToast } from "@/hooks/common";
 import {
   type QuestionStats as TypedQuestionStats,
   mergeLegacyStats,

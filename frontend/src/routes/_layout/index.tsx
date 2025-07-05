@@ -13,8 +13,7 @@ import { OnboardingModal } from "@/components/Onboarding/OnboardingModal"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/hooks/auth"
 import { useUserQuizzes } from "@/hooks/api"
-import useCustomToast from "@/hooks/useCustomToast"
-import { useOnboarding } from "@/hooks/useOnboarding"
+import { useCustomToast, useOnboarding } from "@/hooks/common"
 
 export const Route = createFileRoute("/_layout/")({
   component: Dashboard,

@@ -23,3 +23,4 @@ const useCustomToast = () => {
 }
 
 export default useCustomToast
+export { useCustomToast }

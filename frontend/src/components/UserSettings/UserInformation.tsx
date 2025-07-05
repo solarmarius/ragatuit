@@ -19,7 +19,7 @@ import {
   UsersService,
 } from "@/client"
 import useAuth from "@/hooks/useCanvasAuth"
-import useCustomToast from "@/hooks/useCustomToast"
+import { useCustomToast } from "@/hooks/common"
 import { handleError } from "@/utils"
 import { Field } from "../ui/field"
 
