@@ -1,7 +1,7 @@
 import type { QuestionResponse, QuestionUpdateRequest } from "@/client"
 import { FormField, FormGroup } from "@/components/forms"
 import { Checkbox } from "@/components/ui/checkbox"
-import { extractQuestionData } from "@/types/questionTypes"
+import { extractQuestionData, type FillInBlankData } from "@/types/questionTypes"
 import {
   Box,
   Button,
@@ -87,9 +87,16 @@ export const FillInBlankEditor = memo(function FillInBlankEditor({
       })
     }
 
-    const updateBlank = (index: number, field: string, value: any) => {
+    const updateBlank = (index: number, field: keyof FillInBlankData['blanks'][0], value: string | boolean) => {
       const updatedBlanks = [...formData.blanks]
-      updatedBlanks[index] = { ...updatedBlanks[index], [field]: value }
+      const fieldMap: Record<keyof FillInBlankData['blanks'][0], keyof typeof updatedBlanks[0]> = {
+        correct_answer: 'correctAnswer',
+        answer_variations: 'answerVariations',
+        case_sensitive: 'caseSensitive',
+        position: 'position'
+      }
+      const formField = fieldMap[field]
+      updatedBlanks[index] = { ...updatedBlanks[index], [formField]: value }
       setFormData({ ...formData, blanks: updatedBlanks })
     }
 
@@ -136,7 +143,7 @@ export const FillInBlankEditor = memo(function FillInBlankEditor({
                     <Input
                       value={blank.correctAnswer}
                       onChange={(e) =>
-                        updateBlank(index, "correctAnswer", e.target.value)
+                        updateBlank(index, "correct_answer", e.target.value)
                       }
                       placeholder="Enter correct answer..."
                     />
@@ -146,7 +153,7 @@ export const FillInBlankEditor = memo(function FillInBlankEditor({
                     <Input
                       value={blank.answerVariations}
                       onChange={(e) =>
-                        updateBlank(index, "answerVariations", e.target.value)
+                        updateBlank(index, "answer_variations", e.target.value)
                       }
                       placeholder="Enter variations separated by commas..."
                     />
@@ -156,7 +163,7 @@ export const FillInBlankEditor = memo(function FillInBlankEditor({
                     <Checkbox
                       checked={blank.caseSensitive}
                       onCheckedChange={(e) =>
-                        updateBlank(index, "caseSensitive", !!e.checked)
+                        updateBlank(index, "case_sensitive", !!e.checked)
                       }
                     >
                       Case sensitive

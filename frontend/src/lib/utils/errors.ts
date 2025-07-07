@@ -18,6 +18,20 @@ export interface ErrorDetails {
   isRetryable: boolean
 }
 
+interface ValidationErrorItem {
+  msg?: string
+  message?: string
+  type?: string
+  input?: unknown
+  ctx?: Record<string, unknown>
+}
+
+interface ApiErrorBody {
+  detail?: string | ValidationErrorItem[]
+  message?: string
+  error?: string
+}
+
 /**
  * Analyze Canvas-specific errors and provide user-friendly messaging
  */
@@ -89,13 +103,15 @@ export function analyzeCanvasError(error: unknown): CanvasErrorInfo {
  */
 export function extractErrorDetails(error: unknown): ErrorDetails {
   if (error instanceof ApiError) {
-    const errDetail = (error.body as any)?.detail
+    const errorBody = error.body as ApiErrorBody | undefined
+    const errDetail = errorBody?.detail
     let message = 'An API error occurred'
 
     if (typeof errDetail === 'string') {
       message = errDetail
     } else if (Array.isArray(errDetail) && errDetail.length > 0) {
-      message = errDetail[0].msg || errDetail[0].message || message
+      const firstError = errDetail[0]
+      message = firstError.msg || firstError.message || message
     }
 
     return {

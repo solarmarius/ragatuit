@@ -104,7 +104,7 @@ function QuizDetail() {
 
   // Get selected modules (already an object from API)
   const selectedModules = quiz.selected_modules || {}
-  const moduleNames = Object.values(selectedModules) as string[]
+  const moduleNames = Object.values(selectedModules).filter((value): value is string => typeof value === 'string')
 
   // Check if quiz is ready for approval
   const isQuizReadyForApproval =

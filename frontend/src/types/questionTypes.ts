@@ -12,7 +12,6 @@ import type {
 
 // Multiple Choice Question Data
 export interface MCQData {
-  [key: string]: unknown
   question_text: string
   option_a: string
   option_b: string
@@ -24,7 +23,6 @@ export interface MCQData {
 
 // True/False Question Data
 export interface TrueFalseData {
-  [key: string]: unknown
   question_text: string
   correct_answer: boolean
   explanation?: string | null
@@ -32,7 +30,6 @@ export interface TrueFalseData {
 
 // Short Answer Question Data
 export interface ShortAnswerData {
-  [key: string]: unknown
   question_text: string
   correct_answer: string
   answer_variations?: string[]
@@ -42,7 +39,6 @@ export interface ShortAnswerData {
 
 // Essay Question Data
 export interface EssayData {
-  [key: string]: unknown
   question_text: string
   grading_rubric?: string | null
   max_words?: number | null
@@ -52,7 +48,6 @@ export interface EssayData {
 
 // Fill in the Blank Question Data
 export interface FillInBlankData {
-  [key: string]: unknown
   question_text: string
   blanks: Array<{
     position: number
@@ -104,57 +99,76 @@ export type EssayQuestionResponse = TypedQuestionResponse<"essay">
 export type FillInBlankQuestionResponse = TypedQuestionResponse<"fill_in_blank">
 
 // Type guards for question data
-export function isMCQData(data: any): data is MCQData {
+export function isMCQData(data: unknown): data is MCQData {
+  if (typeof data !== "object" || data === null) {
+    return false
+  }
+
+  const obj = data as Record<string, unknown>
   return (
-    typeof data === "object" &&
-    data !== null &&
-    typeof data.question_text === "string" &&
-    typeof data.option_a === "string" &&
-    typeof data.option_b === "string" &&
-    typeof data.option_c === "string" &&
-    typeof data.option_d === "string" &&
-    typeof data.correct_answer === "string" &&
-    ["A", "B", "C", "D"].includes(data.correct_answer)
+    typeof obj.question_text === "string" &&
+    typeof obj.option_a === "string" &&
+    typeof obj.option_b === "string" &&
+    typeof obj.option_c === "string" &&
+    typeof obj.option_d === "string" &&
+    typeof obj.correct_answer === "string" &&
+    ["A", "B", "C", "D"].includes(obj.correct_answer)
   )
 }
 
-export function isTrueFalseData(data: any): data is TrueFalseData {
+export function isTrueFalseData(data: unknown): data is TrueFalseData {
+  if (typeof data !== "object" || data === null) {
+    return false
+  }
+
+  const obj = data as Record<string, unknown>
   return (
-    typeof data === "object" &&
-    data !== null &&
-    typeof data.question_text === "string" &&
-    typeof data.correct_answer === "boolean"
+    typeof obj.question_text === "string" &&
+    typeof obj.correct_answer === "boolean"
   )
 }
 
-export function isShortAnswerData(data: any): data is ShortAnswerData {
+export function isShortAnswerData(data: unknown): data is ShortAnswerData {
+  if (typeof data !== "object" || data === null) {
+    return false
+  }
+
+  const obj = data as Record<string, unknown>
   return (
-    typeof data === "object" &&
-    data !== null &&
-    typeof data.question_text === "string" &&
-    typeof data.correct_answer === "string"
+    typeof obj.question_text === "string" &&
+    typeof obj.correct_answer === "string"
   )
 }
 
-export function isEssayData(data: any): data is EssayData {
-  return (
-    typeof data === "object" &&
-    data !== null &&
-    typeof data.question_text === "string"
-  )
+export function isEssayData(data: unknown): data is EssayData {
+  if (typeof data !== "object" || data === null) {
+    return false
+  }
+
+  const obj = data as Record<string, unknown>
+  return typeof obj.question_text === "string"
 }
 
-export function isFillInBlankData(data: any): data is FillInBlankData {
+export function isFillInBlankData(data: unknown): data is FillInBlankData {
+  if (typeof data !== "object" || data === null) {
+    return false
+  }
+
+  const obj = data as Record<string, unknown>
   return (
-    typeof data === "object" &&
-    data !== null &&
-    typeof data.question_text === "string" &&
-    Array.isArray(data.blanks) &&
-    data.blanks.every(
-      (blank: any) =>
-        typeof blank === "object" &&
-        typeof blank.position === "number" &&
-        typeof blank.correct_answer === "string",
+    typeof obj.question_text === "string" &&
+    Array.isArray(obj.blanks) &&
+    obj.blanks.every(
+      (blank: unknown) => {
+        if (typeof blank !== "object" || blank === null) {
+          return false
+        }
+        const blankObj = blank as Record<string, unknown>
+        return (
+          typeof blankObj.position === "number" &&
+          typeof blankObj.correct_answer === "string"
+        )
+      }
     )
   )
 }
@@ -176,35 +190,37 @@ export function extractQuestionData<T extends QuestionType>(
     throw new Error(`Expected ${type} question, got ${question.question_type}`)
   }
 
-  const data = question.question_data as any
+  const data = question.question_data
 
   switch (type) {
     case "multiple_choice":
       if (!isMCQData(data)) {
         throw new Error("Invalid MCQ question data structure")
       }
-      return data as any
+      return data as unknown as TypedQuestionResponse<T>["question_data"]
     case "true_false":
       if (!isTrueFalseData(data)) {
         throw new Error("Invalid True/False question data structure")
       }
-      return data as any
+      return data as unknown as TypedQuestionResponse<T>["question_data"]
     case "short_answer":
       if (!isShortAnswerData(data)) {
         throw new Error("Invalid Short Answer question data structure")
       }
-      return data as any
+      return data as unknown as TypedQuestionResponse<T>["question_data"]
     case "essay":
       if (!isEssayData(data)) {
         throw new Error("Invalid Essay question data structure")
       }
-      return data as any
+      return data as unknown as TypedQuestionResponse<T>["question_data"]
     case "fill_in_blank":
       if (!isFillInBlankData(data)) {
         throw new Error("Invalid Fill in Blank question data structure")
       }
-      return data as any
+      return data as unknown as TypedQuestionResponse<T>["question_data"]
     default:
-      throw new Error(`Unsupported question type: ${type}`)
+      // TypeScript exhaustiveness check - this should never happen
+      const _exhaustiveCheck: never = type
+      throw new Error(`Unsupported question type: ${String(_exhaustiveCheck)}`)
   }
 }
