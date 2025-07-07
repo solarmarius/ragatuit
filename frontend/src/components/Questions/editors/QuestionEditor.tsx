@@ -1,3 +1,5 @@
+import { memo } from "react"
+
 import type { QuestionResponse, QuestionUpdateRequest } from "@/client"
 import { QUESTION_TYPES } from "@/lib/constants"
 import { MCQEditor } from "./MCQEditor"
@@ -14,7 +16,7 @@ interface QuestionEditorProps {
   isLoading?: boolean
 }
 
-export function QuestionEditor({
+export const QuestionEditor = memo(function QuestionEditor({
   question,
   onSave,
   onCancel,
@@ -41,4 +43,4 @@ export function QuestionEditor({
     default:
       return <UnsupportedEditor questionType={question.question_type} onCancel={onCancel} />
   }
-}
+})

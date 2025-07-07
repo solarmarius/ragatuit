@@ -7,6 +7,7 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { Link as RouterLink } from "@tanstack/react-router"
+import { memo, useMemo } from "react"
 
 import type { Quiz } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
@@ -21,11 +22,11 @@ interface QuizGenerationPanelProps {
   isLoading: boolean
 }
 
-export function QuizGenerationPanel({
+export const QuizGenerationPanel = memo(function QuizGenerationPanel({
   quizzes,
   isLoading,
 }: QuizGenerationPanelProps) {
-  const generatingQuizzes = getQuizzesBeingGenerated(quizzes)
+  const generatingQuizzes = useMemo(() => getQuizzesBeingGenerated(quizzes), [quizzes])
 
   if (isLoading) {
     return <QuizGenerationPanelSkeleton />
@@ -78,4 +79,4 @@ export function QuizGenerationPanel({
       </Card.Body>
     </Card.Root>
   )
-}
+})

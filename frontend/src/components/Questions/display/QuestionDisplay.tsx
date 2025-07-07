@@ -1,3 +1,5 @@
+import { memo } from "react"
+
 import type { QuestionResponse } from "@/client"
 import { QUESTION_TYPES } from "@/lib/constants"
 import { MCQDisplay } from "./MCQDisplay"
@@ -13,7 +15,7 @@ interface QuestionDisplayProps {
   showExplanation?: boolean
 }
 
-export function QuestionDisplay({
+export const QuestionDisplay = memo(function QuestionDisplay({
   question,
   showCorrectAnswer = false,
   showExplanation = false,
@@ -38,4 +40,4 @@ export function QuestionDisplay({
     default:
       return <UnsupportedDisplay questionType={question.question_type} />
   }
-}
+})

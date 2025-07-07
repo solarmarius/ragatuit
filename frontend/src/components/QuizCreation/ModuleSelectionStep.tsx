@@ -9,6 +9,7 @@ import {
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import type React from "react"
+import { useCallback, useMemo } from "react"
 
 import { CanvasService } from "@/client"
 import { LoadingSkeleton } from "@/components/common"
@@ -56,7 +57,7 @@ export function ModuleSelectionStep({
     enabled: !!courseId && courseId > 0,
   })
 
-  const handleModuleToggle = (module: Module, checked: boolean) => {
+  const handleModuleToggle = useCallback((module: Module, checked: boolean) => {
     const newSelectedModules = { ...selectedModules }
 
     if (checked) {
@@ -66,7 +67,9 @@ export function ModuleSelectionStep({
     }
 
     onModulesSelect(newSelectedModules)
-  }
+  }, [selectedModules, onModulesSelect])
+
+  const selectedCount = useMemo(() => Object.keys(selectedModules).length, [selectedModules])
 
   if (isLoading) {
     return (
@@ -108,9 +111,6 @@ export function ModuleSelectionStep({
       </Alert.Root>
     )
   }
-
-  const selectedModuleIds = Object.keys(selectedModules).map(Number)
-  const selectedCount = selectedModuleIds.length
 
   return (
     <VStack gap={4} align="stretch">

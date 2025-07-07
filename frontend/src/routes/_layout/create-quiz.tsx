@@ -9,7 +9,7 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useState } from "react"
+import { useState, useCallback } from "react"
 
 import { QuizService } from "@/client"
 import { CourseSelectionStep } from "@/components/QuizCreation/CourseSelectionStep"
@@ -59,9 +59,9 @@ function CreateQuiz() {
     navigate({ to: "/" })
   }
 
-  const updateFormData = (data: Partial<QuizFormData>) => {
+  const updateFormData = useCallback((data: Partial<QuizFormData>) => {
     setFormData((prev) => ({ ...prev, ...data }))
-  }
+  }, [])
 
   const handleCreateQuiz = async () => {
     if (

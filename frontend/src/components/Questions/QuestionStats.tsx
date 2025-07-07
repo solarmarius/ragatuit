@@ -9,6 +9,7 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { memo, useMemo } from "react";
 import { SiCanvas } from "react-icons/si";
 
 import { type Quiz, QuizService } from "@/client";
@@ -23,7 +24,7 @@ interface QuestionStatsProps {
   quiz: Quiz;
 }
 
-export function QuestionStats({ quiz }: QuestionStatsProps) {
+export const QuestionStats = memo(function QuestionStats({ quiz }: QuestionStatsProps) {
   const { showSuccessToast } = useCustomToast();
   const { handleError } = useErrorHandler();
   const queryClient = useQueryClient();
@@ -48,6 +49,12 @@ export function QuestionStats({ quiz }: QuestionStatsProps) {
   const stats: TypedQuestionStats | null = rawStats
     ? mergeLegacyStats(rawStats)
     : null;
+
+  // Calculate progress percentage with memoization
+  const progressPercentage = useMemo(() =>
+    stats?.approval_rate ? stats.approval_rate * 100 : 0,
+    [stats?.approval_rate]
+  );
 
   // Export quiz to Canvas mutation
   const exportMutation = useMutation({
@@ -82,10 +89,6 @@ export function QuestionStats({ quiz }: QuestionStatsProps) {
       </Card.Root>
     );
   }
-
-  const progressPercentage = stats?.approval_rate
-    ? stats.approval_rate * 100
-    : 0;
 
   return (
     <Card.Root>
@@ -223,7 +226,7 @@ export function QuestionStats({ quiz }: QuestionStatsProps) {
       </Card.Body>
     </Card.Root>
   );
-}
+});
 
 function QuestionStatsSkeleton() {
   return (

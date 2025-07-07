@@ -9,7 +9,7 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useState } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { MdCheck, MdDelete, MdEdit } from "react-icons/md"
 
 import {
@@ -51,18 +51,21 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
     },
   })
 
-  // Filter questions based on current view
-  const filteredQuestions = questions
-    ? filterView === "pending"
-      ? questions.filter((q) => !q.is_approved)
-      : questions
-    : []
+  // Filter questions based on current view and calculate counts
+  const { filteredQuestions, pendingCount, totalCount } = useMemo(() => {
+    if (!questions) {
+      return { filteredQuestions: [], pendingCount: 0, totalCount: 0 }
+    }
 
-  // Calculate counts
-  const pendingCount = questions
-    ? questions.filter((q) => !q.is_approved).length
-    : 0
-  const totalCount = questions ? questions.length : 0
+    const pending = questions.filter((q) => !q.is_approved)
+    const filtered = filterView === "pending" ? pending : questions
+
+    return {
+      filteredQuestions: filtered,
+      pendingCount: pending.length,
+      totalCount: questions.length
+    }
+  }, [questions, filterView])
 
   // Approve question mutation
   const approveQuestionMutation = useMutation({
@@ -129,22 +132,22 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
     onError: handleError,
   })
 
-  const startEditing = (question: QuestionResponse) => {
+  const startEditing = useCallback((question: QuestionResponse) => {
     setEditingQuestionId(question.id)
-  }
+  }, [])
 
-  const cancelEditing = () => {
+  const cancelEditing = useCallback(() => {
     setEditingQuestionId(null)
-  }
+  }, [])
 
-  const handleSaveQuestion = (updateData: QuestionUpdateRequest) => {
+  const handleSaveQuestion = useCallback((updateData: QuestionUpdateRequest) => {
     if (!editingQuestionId) return
 
     updateQuestionMutation.mutate({
       questionId: editingQuestionId,
       data: updateData,
     })
-  }
+  }, [editingQuestionId, updateQuestionMutation])
 
   if (isLoading) {
     return <QuestionReviewSkeleton />

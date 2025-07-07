@@ -7,6 +7,7 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { Link as RouterLink } from "@tanstack/react-router"
+import { memo, useMemo } from "react"
 
 import type { Quiz } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
@@ -19,8 +20,8 @@ interface QuizReviewPanelProps {
   isLoading: boolean
 }
 
-export function QuizReviewPanel({ quizzes, isLoading }: QuizReviewPanelProps) {
-  const reviewQuizzes = getQuizzesNeedingReview(quizzes)
+export const QuizReviewPanel = memo(function QuizReviewPanel({ quizzes, isLoading }: QuizReviewPanelProps) {
+  const reviewQuizzes = useMemo(() => getQuizzesNeedingReview(quizzes), [quizzes])
 
   if (isLoading) {
     return <QuizReviewPanelSkeleton />
@@ -77,7 +78,7 @@ export function QuizReviewPanel({ quizzes, isLoading }: QuizReviewPanelProps) {
       </Card.Body>
     </Card.Root>
   )
-}
+})
 
 function QuizReviewPanelSkeleton() {
   return (
