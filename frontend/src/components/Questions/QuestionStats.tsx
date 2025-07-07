@@ -13,7 +13,7 @@ import { SiCanvas } from "react-icons/si";
 
 import { type Quiz, QuizService } from "@/client";
 import { ErrorState, LoadingSkeleton } from "@/components/common";
-import { useCustomToast } from "@/hooks/common";
+import { useCustomToast, useErrorHandler } from "@/hooks/common";
 import {
   type QuestionStats as TypedQuestionStats,
   mergeLegacyStats,
@@ -24,7 +24,8 @@ interface QuestionStatsProps {
 }
 
 export function QuestionStats({ quiz }: QuestionStatsProps) {
-  const { showErrorToast, showSuccessToast } = useCustomToast();
+  const { showSuccessToast } = useCustomToast();
+  const { handleError } = useErrorHandler();
   const queryClient = useQueryClient();
 
   const {
@@ -61,10 +62,7 @@ export function QuestionStats({ quiz }: QuestionStatsProps) {
       // Invalidate quiz queries to trigger status updates and polling
       queryClient.invalidateQueries({ queryKey: ["quiz", quiz.id] });
     },
-    onError: (error: any) => {
-      const message = error?.body?.detail || "Failed to export quiz to Canvas";
-      showErrorToast(message);
-    },
+    onError: handleError,
   });
 
   if (isLoading) {

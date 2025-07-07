@@ -15,7 +15,7 @@ import { QuizService } from "@/client"
 import { CourseSelectionStep } from "@/components/QuizCreation/CourseSelectionStep"
 import { ModuleSelectionStep } from "@/components/QuizCreation/ModuleSelectionStep"
 import { QuizSettingsStep } from "@/components/QuizCreation/QuizSettingsStep"
-import { useCustomToast } from "@/hooks/common"
+import { useCustomToast, useErrorHandler } from "@/hooks/common"
 
 export const Route = createFileRoute("/_layout/create-quiz")({
   component: CreateQuiz,
@@ -41,6 +41,7 @@ function CreateQuiz() {
   const [formData, setFormData] = useState<QuizFormData>({})
   const [isCreating, setIsCreating] = useState(false)
   const { showSuccessToast, showErrorToast } = useCustomToast()
+  const { handleError } = useErrorHandler()
 
   const handleNext = () => {
     if (currentStep < TOTAL_STEPS) {
@@ -96,8 +97,7 @@ function CreateQuiz() {
         throw new Error("Failed to create quiz")
       }
     } catch (error) {
-      console.error("Error creating quiz:", error)
-      showErrorToast("Failed to create quiz. Please try again.")
+      handleError(error)
     } finally {
       setIsCreating(false)
     }

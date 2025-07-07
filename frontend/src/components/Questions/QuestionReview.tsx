@@ -18,7 +18,7 @@ import {
   QuestionsService,
 } from "@/client"
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/common"
-import { useCustomToast } from "@/hooks/common"
+import { useCustomToast, useErrorHandler } from "@/hooks/common"
 import { QuestionDisplay } from "./display"
 import { QuestionEditor } from "./editors"
 
@@ -27,7 +27,8 @@ interface QuestionReviewProps {
 }
 
 export function QuestionReview({ quizId }: QuestionReviewProps) {
-  const { showErrorToast, showSuccessToast } = useCustomToast()
+  const { showSuccessToast } = useCustomToast()
+  const { handleError } = useErrorHandler()
   const queryClient = useQueryClient()
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(
     null,
@@ -80,10 +81,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
         queryKey: ["quiz", quizId, "questions", "stats"],
       })
     },
-    onError: (error: any) => {
-      const message = error?.body?.detail || "Failed to approve question"
-      showErrorToast(message)
-    },
+    onError: handleError,
   })
 
   // Update question mutation
@@ -108,10 +106,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
         queryKey: ["quiz", quizId, "questions"],
       })
     },
-    onError: (error: any) => {
-      const message = error?.body?.detail || "Failed to update question"
-      showErrorToast(message)
-    },
+    onError: handleError,
   })
 
   // Delete question mutation
@@ -131,10 +126,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
         queryKey: ["quiz", quizId, "questions", "stats"],
       })
     },
-    onError: (error: any) => {
-      const message = error?.body?.detail || "Failed to delete question"
-      showErrorToast(message)
-    },
+    onError: handleError,
   })
 
   const startEditing = (question: QuestionResponse) => {

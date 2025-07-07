@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { MdAutoAwesome } from "react-icons/md"
 
 import { type GenerationRequest, QuestionsService, type Quiz } from "@/client"
-import { useCustomToast } from "@/hooks/common"
+import { useCustomToast, useErrorHandler } from "@/hooks/common"
 
 interface QuestionGenerationTriggerProps {
   quiz: Quiz
@@ -12,7 +12,8 @@ interface QuestionGenerationTriggerProps {
 export function QuestionGenerationTrigger({
   quiz,
 }: QuestionGenerationTriggerProps) {
-  const { showErrorToast, showSuccessToast } = useCustomToast()
+  const { showSuccessToast } = useCustomToast()
+  const { handleError } = useErrorHandler()
   const queryClient = useQueryClient()
 
   const triggerGenerationMutation = useMutation({
@@ -42,11 +43,7 @@ export function QuestionGenerationTrigger({
       showSuccessToast("Question generation started")
       queryClient.invalidateQueries({ queryKey: ["quiz", quiz.id] })
     },
-    onError: (error: any) => {
-      const message =
-        error?.body?.detail || "Failed to start question generation"
-      showErrorToast(message)
-    },
+    onError: handleError,
   })
 
   // Don't show if quiz ID is missing

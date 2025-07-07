@@ -11,7 +11,7 @@ import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
 import { Button } from "@/components/ui/button"
 import { EmptyState, ErrorState, LoadingSkeleton, QuizTable } from "@/components/common"
 import { useUserQuizzes } from "@/hooks/api"
-import { useCustomToast } from "@/hooks/common"
+import { useErrorHandler } from "@/hooks/common"
 import { UI_TEXT, UI_SIZES } from "@/lib/constants"
 
 export const Route = createFileRoute("/_layout/quizzes")({
@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_layout/quizzes")({
 })
 
 function QuizList() {
-  const { showErrorToast } = useCustomToast()
+  const { handleError } = useErrorHandler()
 
   const {
     data: quizzes,
@@ -32,7 +32,7 @@ function QuizList() {
   }
 
   if (error) {
-    showErrorToast("Failed to load quizzes")
+    handleError(error)
     return (
       <Container maxW="6xl" py={8}>
         <Card.Root>

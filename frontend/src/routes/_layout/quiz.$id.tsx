@@ -22,7 +22,7 @@ import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirma
 import { StatusBadge } from "@/components/ui/status-badge"
 import { StatusDescription } from "@/components/ui/status-description"
 import { StatusLight } from "@/components/ui/status-light"
-import { useCustomToast } from "@/hooks/common"
+import { useCustomToast, useErrorHandler } from "@/hooks/common"
 
 export const Route = createFileRoute("/_layout/quiz/$id")({
   component: QuizDetail,
@@ -30,7 +30,8 @@ export const Route = createFileRoute("/_layout/quiz/$id")({
 
 function QuizDetail() {
   const { id } = Route.useParams()
-  const { showErrorToast, showSuccessToast } = useCustomToast()
+  const { showSuccessToast } = useCustomToast()
+  const { handleError } = useErrorHandler()
   const queryClient = useQueryClient()
   const [currentTab, setCurrentTab] = useState("info")
 
@@ -41,13 +42,8 @@ function QuizDetail() {
   } = useQuery({
     queryKey: ["quiz", id],
     queryFn: async () => {
-      try {
-        const response = await QuizService.getQuiz({ quizId: id })
-        return response
-      } catch (err) {
-        showErrorToast("Failed to load quiz details")
-        throw err
-      }
+      const response = await QuizService.getQuiz({ quizId: id })
+      return response
     },
     refetchInterval: (query) => {
       // Poll every 5 seconds if any status is pending or processing
@@ -82,11 +78,7 @@ function QuizDetail() {
       showSuccessToast("Content extraction restarted")
       queryClient.invalidateQueries({ queryKey: ["quiz", id] })
     },
-    onError: (error: any) => {
-      const message =
-        error?.body?.detail || "Failed to restart content extraction"
-      showErrorToast(message)
-    },
+    onError: handleError,
   })
 
   if (isLoading) {
