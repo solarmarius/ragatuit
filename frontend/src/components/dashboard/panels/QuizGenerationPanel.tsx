@@ -13,7 +13,7 @@ import type { Quiz } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import { StatusLight } from "@/components/ui/status-light"
 import { EmptyState, LoadingSkeleton } from "@/components/common"
-import { getQuizProcessingPhase, getQuizzesBeingGenerated } from "@/lib/utils"
+import { getQuizProcessingPhase, getQuizzesBeingGenerated, getQuizProgressPercentage } from "@/lib/utils"
 
 interface QuizGenerationPanelProps {
   quizzes: Quiz[]
@@ -60,25 +60,7 @@ export function QuizGenerationPanel({
           <VStack gap={4} align="stretch">
             {generatingQuizzes.slice(0, 4).map((quiz) => {
               const processingPhase = getQuizProcessingPhase(quiz)
-
-              // Calculate progress percentage
-              const extractionStatus =
-                quiz.content_extraction_status || "pending"
-              const generationStatus = quiz.llm_generation_status || "pending"
-
-              let progressPercentage = 0
-              if (extractionStatus === "completed") {
-                progressPercentage = 50
-              }
-              if (generationStatus === "completed") {
-                progressPercentage = 100
-              }
-              if (extractionStatus === "processing") {
-                progressPercentage = 25
-              }
-              if (generationStatus === "processing") {
-                progressPercentage = 75
-              }
+              const progressPercentage = getQuizProgressPercentage(quiz)
 
               return (
                 <Box

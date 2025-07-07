@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button"
 import { StatusLight } from "@/components/ui/status-light"
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/common"
 import { useUserQuizzes } from "@/hooks/api"
-import { formatDate } from "@/lib/utils"
+import { formatDate, getQuizStatusText, getSelectedModulesCount } from "@/lib/utils"
 import { useCustomToast } from "@/hooks/common"
 
 export const Route = createFileRoute("/_layout/quizzes")({
@@ -103,9 +103,7 @@ function QuizList() {
                 </Table.Header>
                 <Table.Body>
                   {quizzes.map((quiz) => {
-                    // Get selected modules for display (already an object from API)
-                    const selectedModules = quiz.selected_modules || {}
-                    const moduleCount = Object.keys(selectedModules).length
+                    const moduleCount = getSelectedModulesCount(quiz)
 
                     return (
                       <Table.Row key={quiz.id}>
@@ -147,35 +145,7 @@ function QuizList() {
                               }
                             />
                             <Text fontSize="sm" color="gray.600">
-                              {(() => {
-                                const extractionStatus =
-                                  quiz.content_extraction_status || "pending"
-                                const generationStatus =
-                                  quiz.llm_generation_status || "pending"
-
-                                if (
-                                  extractionStatus === "failed" ||
-                                  generationStatus === "failed"
-                                ) {
-                                  return "Failed"
-                                }
-
-                                if (
-                                  extractionStatus === "completed" &&
-                                  generationStatus === "completed"
-                                ) {
-                                  return "Complete"
-                                }
-
-                                if (
-                                  extractionStatus === "processing" ||
-                                  generationStatus === "processing"
-                                ) {
-                                  return "Processing"
-                                }
-
-                                return "Pending"
-                              })()}
+                              {getQuizStatusText(quiz)}
                             </Text>
                           </HStack>
                         </Table.Cell>
