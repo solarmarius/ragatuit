@@ -5,7 +5,6 @@ import {
   Card,
   HStack,
   IconButton,
-  Skeleton,
   Text,
   VStack,
 } from "@chakra-ui/react"
@@ -18,6 +17,7 @@ import {
   type QuestionUpdateRequest,
   QuestionsService,
 } from "@/client"
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/common"
 import { useCustomToast } from "@/hooks/common"
 import { QuestionDisplay } from "./display"
 import { QuestionEditor } from "./editors"
@@ -162,14 +162,11 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
     return (
       <Card.Root>
         <Card.Body>
-          <VStack gap={4}>
-            <Text fontSize="xl" fontWeight="bold" color="red.500">
-              Failed to Load Questions
-            </Text>
-            <Text color="gray.600">
-              There was an error loading the questions for this quiz.
-            </Text>
-          </VStack>
+          <ErrorState
+            title="Failed to Load Questions"
+            message="There was an error loading the questions for this quiz."
+            showRetry={false}
+          />
         </Card.Body>
       </Card.Root>
     )
@@ -179,15 +176,10 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
     return (
       <Card.Root>
         <Card.Body>
-          <VStack gap={4}>
-            <Text fontSize="xl" fontWeight="bold" color="gray.500">
-              No Questions Generated Yet
-            </Text>
-            <Text color="gray.600">
-              Questions will appear here once the generation process is
-              complete.
-            </Text>
-          </VStack>
+          <EmptyState
+            title="No Questions Generated Yet"
+            description="Questions will appear here once the generation process is complete."
+          />
         </Card.Body>
       </Card.Root>
     )
@@ -229,18 +221,14 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       {filteredQuestions.length === 0 && (
         <Card.Root>
           <Card.Body>
-            <VStack gap={4}>
-              <Text fontSize="xl" fontWeight="bold" color="gray.500">
-                {filterView === "pending"
-                  ? "No Pending Questions"
-                  : "No Questions Found"}
-              </Text>
-              <Text color="gray.600">
-                {filterView === "pending"
-                  ? 'All questions have been approved! Switch to "All Questions" to see them.'
-                  : "No questions match the current filter."}
-              </Text>
-            </VStack>
+            <EmptyState
+              title={filterView === "pending"
+                ? "No Pending Questions"
+                : "No Questions Found"}
+              description={filterView === "pending"
+                ? 'All questions have been approved! Switch to "All Questions" to see them.'
+                : "No questions match the current filter."}
+            />
           </Card.Body>
         </Card.Root>
       )}
@@ -343,29 +331,29 @@ function QuestionReviewSkeleton() {
   return (
     <VStack gap={6} align="stretch">
       <Box>
-        <Skeleton height="32px" width="200px" mb={2} />
-        <Skeleton height="20px" width="400px" />
+        <LoadingSkeleton height="32px" width="200px" />
+        <Box mt={2}>
+          <LoadingSkeleton height="20px" width="400px" />
+        </Box>
       </Box>
 
       {[1, 2, 3].map((i) => (
         <Card.Root key={i}>
           <Card.Header>
             <HStack justify="space-between">
-              <Skeleton height="24px" width="120px" />
+              <LoadingSkeleton height="24px" width="120px" />
               <HStack gap={2}>
-                <Skeleton height="32px" width="40px" />
-                <Skeleton height="32px" width="40px" />
-                <Skeleton height="32px" width="40px" />
+                <LoadingSkeleton height="32px" width="40px" />
+                <LoadingSkeleton height="32px" width="40px" />
+                <LoadingSkeleton height="32px" width="40px" />
               </HStack>
             </HStack>
           </Card.Header>
           <Card.Body>
             <VStack gap={4} align="stretch">
-              <Skeleton height="20px" width="100%" />
+              <LoadingSkeleton height="20px" width="100%" />
               <VStack gap={2} align="stretch">
-                {[1, 2, 3, 4].map((j) => (
-                  <Skeleton key={j} height="40px" width="100%" />
-                ))}
+                <LoadingSkeleton height="40px" width="100%" lines={4} />
               </VStack>
             </VStack>
           </Card.Body>

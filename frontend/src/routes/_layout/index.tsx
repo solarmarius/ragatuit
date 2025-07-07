@@ -11,6 +11,7 @@ import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
 import { HelpPanel, QuizGenerationPanel, QuizReviewPanel } from "@/components/dashboard"
 import { OnboardingModal } from "@/components/Onboarding/OnboardingModal"
 import { Button } from "@/components/ui/button"
+import { ErrorState } from "@/components/common"
 import { useAuth } from "@/hooks/auth"
 import { useUserQuizzes } from "@/hooks/api"
 import { useCustomToast, useOnboarding } from "@/hooks/common"
@@ -41,17 +42,11 @@ function Dashboard() {
     showErrorToast("Failed to load quizzes")
     return (
       <Container maxW="6xl" py={8}>
-        <VStack gap={6} align="stretch">
-          <Box>
-            <Text fontSize="3xl" fontWeight="bold" color="red.500">
-              Error Loading Dashboard
-            </Text>
-            <Text color="gray.600">
-              There was an error loading your dashboard. Please try refreshing
-              the page.
-            </Text>
-          </Box>
-        </VStack>
+        <ErrorState
+          title="Error Loading Dashboard"
+          message="There was an error loading your dashboard. Please try refreshing the page."
+          showRetry={false}
+        />
       </Container>
     )
   }

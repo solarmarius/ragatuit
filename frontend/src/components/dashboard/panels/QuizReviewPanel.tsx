@@ -3,7 +3,6 @@ import {
   Box,
   Card,
   HStack,
-  Skeleton,
   Text,
   VStack,
 } from "@chakra-ui/react"
@@ -12,6 +11,7 @@ import { Link as RouterLink } from "@tanstack/react-router"
 import type { Quiz } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import { StatusLight } from "@/components/ui/status-light"
+import { EmptyState, LoadingSkeleton } from "@/components/common"
 import { getQuizzesNeedingReview } from "@/lib/utils"
 
 interface QuizReviewPanelProps {
@@ -43,14 +43,10 @@ export function QuizReviewPanel({ quizzes, isLoading }: QuizReviewPanelProps) {
       </Card.Header>
       <Card.Body>
         {reviewQuizzes.length === 0 ? (
-          <Box textAlign="center" py={6}>
-            <Text fontSize="sm" color="gray.500" mb={2}>
-              No quizzes need review
-            </Text>
-            <Text fontSize="sm" color="gray.400">
-              Generated quizzes will appear here when ready for approval
-            </Text>
-          </Box>
+          <EmptyState
+            title="No quizzes need review"
+            description="Generated quizzes will appear here when ready for approval"
+          />
         ) : (
           <VStack gap={4} align="stretch">
             {reviewQuizzes.slice(0, 5).map((quiz) => (
@@ -152,10 +148,12 @@ function QuizReviewPanelSkeleton() {
     <Card.Root>
       <Card.Header>
         <HStack justify="space-between" align="center">
-          <Skeleton height="24px" width="180px" />
-          <Skeleton height="20px" width="30px" />
+          <LoadingSkeleton height="24px" width="180px" />
+          <LoadingSkeleton height="20px" width="30px" />
         </HStack>
-        <Skeleton height="16px" width="250px" mt={2} />
+        <Box mt={2}>
+          <LoadingSkeleton height="16px" width="250px" />
+        </Box>
       </Card.Header>
       <Card.Body>
         <VStack gap={4} align="stretch">
@@ -171,18 +169,18 @@ function QuizReviewPanelSkeleton() {
               <VStack align="stretch" gap={3}>
                 <HStack justify="space-between" align="start">
                   <VStack align="start" gap={1} flex={1}>
-                    <Skeleton height="16px" width="140px" />
-                    <Skeleton height="12px" width="100px" />
+                    <LoadingSkeleton height="16px" width="140px" />
+                    <LoadingSkeleton height="12px" width="100px" />
                   </VStack>
-                  <Skeleton height="12px" width="12px" borderRadius="full" />
+                  <LoadingSkeleton height="12px" width="12px" />
                 </HStack>
 
                 <HStack justify="space-between" align="center">
                   <HStack gap={2}>
-                    <Skeleton height="20px" width="80px" />
-                    <Skeleton height="20px" width="60px" />
+                    <LoadingSkeleton height="20px" width="80px" />
+                    <LoadingSkeleton height="20px" width="60px" />
                   </HStack>
-                  <Skeleton height="24px" width="100px" />
+                  <LoadingSkeleton height="24px" width="100px" />
                 </HStack>
               </VStack>
             </Box>
