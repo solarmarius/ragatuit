@@ -15,6 +15,7 @@ import { SiCanvas } from "react-icons/si";
 import { type Quiz, QuizService } from "@/client";
 import { ErrorState, LoadingSkeleton } from "@/components/common";
 import { useCustomToast, useErrorHandler } from "@/hooks/common";
+import { UI_SIZES } from "@/lib/constants";
 import {
   type QuestionStats as TypedQuestionStats,
   mergeLegacyStats,
@@ -232,24 +233,24 @@ function QuestionStatsSkeleton() {
   return (
     <Card.Root>
       <Card.Header>
-        <LoadingSkeleton height="24px" width="200px" />
+        <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XL} width={UI_SIZES.SKELETON.WIDTH.TEXT_LG} />
       </Card.Header>
       <Card.Body>
         <VStack gap={4} align="stretch">
           <HStack justify="space-between">
-            <LoadingSkeleton height="20px" width="120px" />
-            <LoadingSkeleton height="24px" width="40px" />
+            <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.TEXT_MD} />
+            <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XL} width={UI_SIZES.SKELETON.WIDTH.SM} />
           </HStack>
           <HStack justify="space-between">
-            <LoadingSkeleton height="20px" width="140px" />
-            <LoadingSkeleton height="24px" width="40px" />
+            <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.TEXT_LG} />
+            <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XL} width={UI_SIZES.SKELETON.WIDTH.SM} />
           </HStack>
           <Box>
             <HStack justify="space-between" mb={2}>
-              <LoadingSkeleton height="20px" width="80px" />
-              <LoadingSkeleton height="16px" width="30px" />
+              <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.LG} />
+              <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.MD} width={UI_SIZES.SKELETON.WIDTH.XS} />
             </HStack>
-            <LoadingSkeleton height="8px" width="100%" />
+            <LoadingSkeleton height={UI_SIZES.PANEL.PROGRESS_HEIGHT} width={UI_SIZES.SKELETON.WIDTH.FULL} />
           </Box>
         </VStack>
       </Card.Body>

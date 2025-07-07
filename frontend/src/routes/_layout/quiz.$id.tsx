@@ -23,6 +23,7 @@ import { StatusBadge } from "@/components/ui/status-badge"
 import { StatusDescription } from "@/components/ui/status-description"
 import { StatusLight } from "@/components/ui/status-light"
 import { useCustomToast, useErrorHandler } from "@/hooks/common"
+import { UI_SIZES } from "@/lib/constants"
 
 export const Route = createFileRoute("/_layout/quiz/$id")({
   component: QuizDetail,
@@ -419,9 +420,9 @@ function QuizDetailSkeleton() {
       <VStack gap={6} align="stretch">
         {/* Header Skeleton */}
         <Box>
-          <LoadingSkeleton height="40px" width="300px" />
+          <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XXL} width={UI_SIZES.SKELETON.WIDTH.TEXT_XL} />
           <Box mt={2}>
-            <LoadingSkeleton height="24px" width="150px" />
+            <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XL} width={UI_SIZES.SKELETON.WIDTH.TEXT_MD} />
           </Box>
         </Box>
 
@@ -429,11 +430,11 @@ function QuizDetailSkeleton() {
         {[1, 2, 3, 4].map((i) => (
           <Card.Root key={i}>
             <Card.Header>
-              <LoadingSkeleton height="24px" width="200px" />
+              <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XL} width={UI_SIZES.SKELETON.WIDTH.TEXT_LG} />
             </Card.Header>
             <Card.Body>
               <VStack gap={3} align="stretch">
-                <LoadingSkeleton height="20px" width="100%" lines={3} />
+                <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.FULL} lines={3} />
               </VStack>
             </Card.Body>
           </Card.Root>

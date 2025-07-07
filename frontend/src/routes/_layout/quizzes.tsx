@@ -9,7 +9,7 @@ import {
 import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
 
 import { Button } from "@/components/ui/button"
-import { EmptyState, ErrorState, LoadingSkeleton, QuizTable } from "@/components/common"
+import { EmptyState, ErrorState, LoadingSkeleton, QuizTable, QuizTableSkeleton } from "@/components/common"
 import { useUserQuizzes } from "@/hooks/api"
 import { useErrorHandler } from "@/hooks/common"
 import { UI_TEXT, UI_SIZES } from "@/lib/constants"
@@ -103,26 +103,11 @@ function QuizListSkeleton() {
               <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.TEXT_XL} />
             </Box>
           </Box>
-          <LoadingSkeleton height="40px" width={UI_SIZES.SKELETON.WIDTH.TEXT_MD} />
+          <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XXL} width={UI_SIZES.SKELETON.WIDTH.TEXT_MD} />
         </HStack>
 
         {/* Table Skeleton */}
-        <Card.Root>
-          <Card.Body p={0}>
-            <VStack gap={4} p={6}>
-              {[1, 2, 3, 4, 5].map((i) => (
-                <HStack key={i} justify="space-between" width="100%">
-                  <LoadingSkeleton height="20px" width="200px" />
-                  <LoadingSkeleton height="20px" width="150px" />
-                  <LoadingSkeleton height="20px" width="60px" />
-                  <LoadingSkeleton height="20px" width="80px" />
-                  <LoadingSkeleton height="20px" width="100px" />
-                  <LoadingSkeleton height="32px" width="60px" />
-                </HStack>
-              ))}
-            </VStack>
-          </Card.Body>
-        </Card.Root>
+        <QuizTableSkeleton />
       </VStack>
     </Container>
   )

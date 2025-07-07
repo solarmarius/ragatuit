@@ -19,6 +19,7 @@ import {
 } from "@/client"
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/common"
 import { useCustomToast, useErrorHandler } from "@/hooks/common"
+import { UI_SIZES } from "@/lib/constants"
 import { QuestionDisplay } from "./display"
 import { QuestionEditor } from "./editors"
 
@@ -326,9 +327,9 @@ function QuestionReviewSkeleton() {
   return (
     <VStack gap={6} align="stretch">
       <Box>
-        <LoadingSkeleton height="32px" width="200px" />
+        <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XXL} width={UI_SIZES.SKELETON.WIDTH.TEXT_LG} />
         <Box mt={2}>
-          <LoadingSkeleton height="20px" width="400px" />
+          <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.TEXT_XL} />
         </Box>
       </Box>
 
@@ -336,19 +337,19 @@ function QuestionReviewSkeleton() {
         <Card.Root key={i}>
           <Card.Header>
             <HStack justify="space-between">
-              <LoadingSkeleton height="24px" width="120px" />
+              <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XL} width={UI_SIZES.SKELETON.WIDTH.TEXT_MD} />
               <HStack gap={2}>
-                <LoadingSkeleton height="32px" width="40px" />
-                <LoadingSkeleton height="32px" width="40px" />
-                <LoadingSkeleton height="32px" width="40px" />
+                <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XXL} width={UI_SIZES.SKELETON.WIDTH.SM} />
+                <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XXL} width={UI_SIZES.SKELETON.WIDTH.SM} />
+                <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XXL} width={UI_SIZES.SKELETON.WIDTH.SM} />
               </HStack>
             </HStack>
           </Card.Header>
           <Card.Body>
             <VStack gap={4} align="stretch">
-              <LoadingSkeleton height="20px" width="100%" />
+              <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.FULL} />
               <VStack gap={2} align="stretch">
-                <LoadingSkeleton height="40px" width="100%" lines={4} />
+                <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XXL} width={UI_SIZES.SKELETON.WIDTH.FULL} lines={4} />
               </VStack>
             </VStack>
           </Card.Body>
