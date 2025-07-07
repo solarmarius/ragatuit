@@ -12,7 +12,7 @@ import type React from "react"
 
 import { CanvasService } from "@/client"
 import { LoadingSkeleton } from "@/components/common"
-import { analyzeCanvasError } from "@/utils"
+import { analyzeCanvasError } from "@/lib/utils"
 
 interface Module {
   id: number

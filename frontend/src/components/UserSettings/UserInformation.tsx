@@ -20,12 +20,12 @@ import {
 import { FormField, FormGroup } from "@/components/forms"
 import { PageHeader } from "@/components/common"
 import useAuth from "@/hooks/useCanvasAuth"
-import { useCustomToast } from "@/hooks/common"
-import { handleError } from "@/utils"
+import { useCustomToast, useErrorHandler } from "@/hooks/common"
 
 const UserInformation = () => {
   const queryClient = useQueryClient()
   const { showSuccessToast } = useCustomToast()
+  const { handleError } = useErrorHandler()
   const [editMode, setEditMode] = useState(false)
   const { user: currentUser } = useAuth()
   const {

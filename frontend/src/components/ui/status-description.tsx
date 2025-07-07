@@ -1,4 +1,4 @@
-import { formatTimeAgo } from "@/utils/time"
+import { formatTimeAgo } from "@/lib/utils"
 import { Text } from "@chakra-ui/react"
 
 interface StatusDescriptionProps {

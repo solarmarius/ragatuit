@@ -1,7 +1,28 @@
-export function formatDate(date: string | Date, locale = 'en-GB'): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date
+/**
+ * Date and time utility functions
+ */
 
-  if (isNaN(dateObj.getTime())) {
+/**
+ * Safely parse a date string or Date object
+ */
+function parseDate(date: string | Date): Date {
+  return typeof date === 'string' ? new Date(date) : date
+}
+
+/**
+ * Check if a date is valid
+ */
+function isValidDate(date: Date): boolean {
+  return !isNaN(date.getTime())
+}
+
+/**
+ * Format a date as a localized date string
+ */
+export function formatDate(date: string | Date, locale = 'en-GB'): string {
+  const dateObj = parseDate(date)
+
+  if (!isValidDate(dateObj)) {
     return 'Invalid date'
   }
 
@@ -12,10 +33,13 @@ export function formatDate(date: string | Date, locale = 'en-GB'): string {
   })
 }
 
+/**
+ * Format a date as a localized date and time string
+ */
 export function formatDateTime(date: string | Date, locale = 'en-GB'): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date
+  const dateObj = parseDate(date)
 
-  if (isNaN(dateObj.getTime())) {
+  if (!isValidDate(dateObj)) {
     return 'Invalid date'
   }
 
@@ -28,6 +52,9 @@ export function formatDateTime(date: string | Date, locale = 'en-GB'): string {
   })
 }
 
+/**
+ * Format a timestamp as a relative time string (e.g., "2 hours ago")
+ */
 export function formatTimeAgo(timestamp: string): string {
   try {
     // Ensure the timestamp is treated as UTC if it doesn't have timezone info
@@ -46,16 +73,40 @@ export function formatTimeAgo(timestamp: string): string {
     const diffMins = Math.floor(diffMs / (1000 * 60))
 
     if (diffMins < 1) return 'just now'
-    if (diffMins < 60)
+    if (diffMins < 60) {
       return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`
+    }
 
     const diffHours = Math.floor(diffMins / 60)
-    if (diffHours < 24)
+    if (diffHours < 24) {
       return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`
+    }
 
     const diffDays = Math.floor(diffHours / 24)
     return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`
   } catch {
     return ''
   }
+}
+
+/**
+ * Get the current timestamp as an ISO string
+ */
+export function getCurrentTimestamp(): string {
+  return new Date().toISOString()
+}
+
+/**
+ * Check if a date is today
+ */
+export function isToday(date: string | Date): boolean {
+  const dateObj = parseDate(date)
+  if (!isValidDate(dateObj)) return false
+
+  const today = new Date()
+  return (
+    dateObj.getDate() === today.getDate() &&
+    dateObj.getMonth() === today.getMonth() &&
+    dateObj.getFullYear() === today.getFullYear()
+  )
 }

@@ -13,7 +13,7 @@ import { useQuery } from "@tanstack/react-query"
 import { CanvasService } from "@/client"
 import { Field } from "@/components/ui/field"
 import { LoadingSkeleton } from "@/components/common"
-import { analyzeCanvasError } from "@/utils"
+import { analyzeCanvasError } from "@/lib/utils"
 
 interface Course {
   id: number
