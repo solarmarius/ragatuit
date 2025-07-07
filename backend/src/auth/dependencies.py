@@ -7,7 +7,7 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import jwt
-from jwt.exceptions import InvalidTokenError
+from jose.exceptions import JWTError
 from pydantic import ValidationError
 
 from src.config import get_logger, settings
@@ -62,7 +62,7 @@ def get_current_user(
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
         token_data = TokenPayload(**payload)
-    except (InvalidTokenError, ValidationError):
+    except (JWTError, ValidationError):
         logger.warning("invalid_jwt_token", error="Token validation failed")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
