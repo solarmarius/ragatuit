@@ -8,7 +8,7 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { useState, useMemo, useCallback } from "react"
 import { MdCheck, MdDelete, MdEdit } from "react-icons/md"
 
@@ -18,7 +18,7 @@ import {
   QuestionsService,
 } from "@/client"
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/common"
-import { useCustomToast, useErrorHandler } from "@/hooks/common"
+import { useApiMutation, useEditingState, useFormattedDate } from "@/hooks/common"
 import { UI_SIZES } from "@/lib/constants"
 import { QuestionDisplay } from "./display"
 import { QuestionEditor } from "./editors"
@@ -27,14 +27,23 @@ interface QuestionReviewProps {
   quizId: string
 }
 
-export function QuestionReview({ quizId }: QuestionReviewProps) {
-  const { showSuccessToast } = useCustomToast()
-  const { handleError } = useErrorHandler()
-  const queryClient = useQueryClient()
-  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(
-    null,
+function ApprovalTimestamp({ approvedAt }: { approvedAt: string }) {
+  const formattedDate = useFormattedDate(approvedAt, 'short')
+
+  if (!formattedDate) return null
+
+  return (
+    <Text fontSize="sm" color="gray.600">
+      Approved on {formattedDate}
+    </Text>
   )
+}
+
+export function QuestionReview({ quizId }: QuestionReviewProps) {
   const [filterView, setFilterView] = useState<"pending" | "all">("pending")
+  const { editingId, startEditing, cancelEditing, isEditing } = useEditingState<QuestionResponse>(
+    (question) => question.id
+  )
 
   // Fetch questions
   const {
@@ -69,28 +78,25 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
   }, [questions, filterView])
 
   // Approve question mutation
-  const approveQuestionMutation = useMutation({
-    mutationFn: async (questionId: string) => {
+  const approveQuestionMutation = useApiMutation(
+    async (questionId: string) => {
       return await QuestionsService.approveQuestion({
         quizId,
         questionId,
       })
     },
-    onSuccess: (_, _questionId) => {
-      showSuccessToast("Question approved")
-      queryClient.invalidateQueries({
-        queryKey: ["quiz", quizId, "questions"],
-      })
-      queryClient.invalidateQueries({
-        queryKey: ["quiz", quizId, "questions", "stats"],
-      })
-    },
-    onError: handleError,
-  })
+    {
+      successMessage: "Question approved",
+      invalidateQueries: [
+        ["quiz", quizId, "questions"],
+        ["quiz", quizId, "questions", "stats"],
+      ],
+    }
+  )
 
   // Update question mutation
-  const updateQuestionMutation = useMutation({
-    mutationFn: async ({
+  const updateQuestionMutation = useApiMutation(
+    async ({
       questionId,
       data,
     }: {
@@ -103,52 +109,40 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
         requestBody: data,
       })
     },
-    onSuccess: () => {
-      showSuccessToast("Question updated")
-      setEditingQuestionId(null)
-      queryClient.invalidateQueries({
-        queryKey: ["quiz", quizId, "questions"],
-      })
-    },
-    onError: handleError,
-  })
+    {
+      successMessage: "Question updated",
+      invalidateQueries: [["quiz", quizId, "questions"]],
+      onSuccess: () => {
+        cancelEditing()
+      },
+    }
+  )
 
   // Delete question mutation
-  const deleteQuestionMutation = useMutation({
-    mutationFn: async (questionId: string) => {
+  const deleteQuestionMutation = useApiMutation(
+    async (questionId: string) => {
       return await QuestionsService.deleteQuestion({
         quizId,
         questionId,
       })
     },
-    onSuccess: () => {
-      showSuccessToast("Question deleted")
-      queryClient.invalidateQueries({
-        queryKey: ["quiz", quizId, "questions"],
-      })
-      queryClient.invalidateQueries({
-        queryKey: ["quiz", quizId, "questions", "stats"],
-      })
-    },
-    onError: handleError,
-  })
-
-  const startEditing = useCallback((question: QuestionResponse) => {
-    setEditingQuestionId(question.id)
-  }, [])
-
-  const cancelEditing = useCallback(() => {
-    setEditingQuestionId(null)
-  }, [])
+    {
+      successMessage: "Question deleted",
+      invalidateQueries: [
+        ["quiz", quizId, "questions"],
+        ["quiz", quizId, "questions", "stats"],
+      ],
+    }
+  )
 
   const handleSaveQuestion = useCallback((updateData: QuestionUpdateRequest) => {
-    if (!editingQuestionId) return
+    if (!editingId) return
 
     updateQuestionMutation.mutate({
-      questionId: editingQuestionId,
+      questionId: editingId,
       data: updateData,
     })
-  }, [editingQuestionId, updateQuestionMutation])
+  }, [editingId, updateQuestionMutation])
 
   if (isLoading) {
     return <QuestionReviewSkeleton />
@@ -244,7 +238,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
                 )}
               </HStack>
               <HStack gap={2}>
-                {editingQuestionId === question.id ? (
+                {isEditing(question) ? (
                   <></>
                 ) : (
                   <>
@@ -284,7 +278,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
             </HStack>
           </Card.Header>
           <Card.Body>
-            {editingQuestionId === question.id ? (
+            {isEditing(question) ? (
               <QuestionEditor
                 question={question}
                 onSave={handleSaveQuestion}
@@ -300,19 +294,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
                 />
 
                 {question.approved_at && (
-                  <Text fontSize="sm" color="gray.600">
-                    Approved on{" "}
-                    {new Date(question.approved_at).toLocaleDateString(
-                      "en-GB",
-                      {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      },
-                    )}
-                  </Text>
+                  <ApprovalTimestamp approvedAt={question.approved_at} />
                 )}
               </VStack>
             )}

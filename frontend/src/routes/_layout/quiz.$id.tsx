@@ -9,7 +9,7 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
 
@@ -22,19 +22,25 @@ import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirma
 import { StatusBadge } from "@/components/ui/status-badge"
 import { StatusDescription } from "@/components/ui/status-description"
 import { StatusLight } from "@/components/ui/status-light"
-import { useCustomToast, useErrorHandler } from "@/hooks/common"
+import { useApiMutation, useQuizStatusPolling, useFormattedDate } from "@/hooks/common"
 import { UI_SIZES } from "@/lib/constants"
 
 export const Route = createFileRoute("/_layout/quiz/$id")({
   component: QuizDetail,
 })
 
+function DateDisplay({ date }: { date: string | null | undefined }) {
+  const formattedDate = useFormattedDate(date, 'default')
+
+  if (!formattedDate) return <Text color="gray.500">Not available</Text>
+
+  return <Text color="gray.600">{formattedDate}</Text>
+}
+
 function QuizDetail() {
   const { id } = Route.useParams()
-  const { showSuccessToast } = useCustomToast()
-  const { handleError } = useErrorHandler()
-  const queryClient = useQueryClient()
   const [currentTab, setCurrentTab] = useState("info")
+  const pollingInterval = useQuizStatusPolling()
 
   const {
     data: quiz,
@@ -46,41 +52,20 @@ function QuizDetail() {
       const response = await QuizService.getQuiz({ quizId: id })
       return response
     },
-    refetchInterval: (query) => {
-      // Poll every 5 seconds if any status is pending or processing
-      const data = query?.state?.data
-      if (data) {
-        const extractionStatus = data.content_extraction_status || "pending"
-        const generationStatus = data.llm_generation_status || "pending"
-        const exportStatus = data.export_status || "pending"
-
-        if (
-          extractionStatus === "pending" ||
-          extractionStatus === "processing" ||
-          generationStatus === "pending" ||
-          generationStatus === "processing" ||
-          exportStatus === "pending" ||
-          exportStatus === "processing"
-        ) {
-          return 5000 // 5 seconds
-        }
-      }
-      return false // Stop polling when all are completed or failed
-    },
+    refetchInterval: pollingInterval,
     refetchIntervalInBackground: false, // Only poll when tab is active
   })
 
   // Retry content extraction mutation
-  const retryExtractionMutation = useMutation({
-    mutationFn: async () => {
+  const retryExtractionMutation = useApiMutation(
+    async () => {
       return await QuizService.triggerContentExtraction({ quizId: id })
     },
-    onSuccess: () => {
-      showSuccessToast("Content extraction restarted")
-      queryClient.invalidateQueries({ queryKey: ["quiz", id] })
-    },
-    onError: handleError,
-  })
+    {
+      successMessage: "Content extraction restarted",
+      invalidateQueries: [["quiz", id]],
+    }
+  )
 
   if (isLoading) {
     return <QuizDetailSkeleton />
@@ -266,18 +251,7 @@ function QuizDetail() {
                         <Text fontWeight="medium" color="gray.700">
                           Created
                         </Text>
-                        <Text color="gray.600">
-                          {new Date(quiz.created_at).toLocaleDateString(
-                            "en-GB",
-                            {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            },
-                          )}
-                        </Text>
+                        <DateDisplay date={quiz.created_at} />
                       </HStack>
                     )}
 
@@ -286,18 +260,7 @@ function QuizDetail() {
                         <Text fontWeight="medium" color="gray.700">
                           Last Updated
                         </Text>
-                        <Text color="gray.600">
-                          {new Date(quiz.updated_at).toLocaleDateString(
-                            "en-GB",
-                            {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            },
-                          )}
-                        </Text>
+                        <DateDisplay date={quiz.updated_at} />
                       </HStack>
                     )}
                   </VStack>
@@ -336,7 +299,7 @@ function QuizDetail() {
                           colorScheme="blue"
                           variant="outline"
                           loading={retryExtractionMutation.isPending}
-                          onClick={() => retryExtractionMutation.mutate()}
+                          onClick={() => retryExtractionMutation.mutate(undefined)}
                           mt={2}
                         >
                           Retry Content Extraction
