@@ -1,20 +1,16 @@
 import {
-  Badge,
   Box,
   Card,
   Container,
   HStack,
-  Table,
   Text,
   VStack,
 } from "@chakra-ui/react"
 import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
 
 import { Button } from "@/components/ui/button"
-import { StatusLight } from "@/components/ui/status-light"
-import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/common"
+import { EmptyState, ErrorState, LoadingSkeleton, QuizTable } from "@/components/common"
 import { useUserQuizzes } from "@/hooks/api"
-import { formatDate, getQuizStatusText, getSelectedModulesCount } from "@/lib/utils"
 import { useCustomToast } from "@/hooks/common"
 import { UI_TEXT, UI_SIZES } from "@/lib/constants"
 
@@ -88,91 +84,7 @@ function QuizList() {
             </Card.Body>
           </Card.Root>
         ) : (
-          <Card.Root>
-            <Card.Body p={0}>
-              <Table.Root>
-                <Table.Header>
-                  <Table.Row>
-                    <Table.ColumnHeader>Quiz Title</Table.ColumnHeader>
-                    <Table.ColumnHeader>Course</Table.ColumnHeader>
-                    <Table.ColumnHeader>Questions</Table.ColumnHeader>
-                    <Table.ColumnHeader>LLM Model</Table.ColumnHeader>
-                    <Table.ColumnHeader>Status</Table.ColumnHeader>
-                    <Table.ColumnHeader>Created</Table.ColumnHeader>
-                    <Table.ColumnHeader>Actions</Table.ColumnHeader>
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                  {quizzes.map((quiz) => {
-                    const moduleCount = getSelectedModulesCount(quiz)
-
-                    return (
-                      <Table.Row key={quiz.id}>
-                        <Table.Cell>
-                          <VStack align="start" gap={1}>
-                            <Text fontWeight="medium">{quiz.title}</Text>
-                            <Text fontSize="sm" color="gray.500">
-                              {moduleCount} module{moduleCount !== 1 ? "s" : ""}{" "}
-                              selected
-                            </Text>
-                          </VStack>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <VStack align="start" gap={1}>
-                            <Text>{quiz.canvas_course_name}</Text>
-                            <Text fontSize="sm" color="gray.500">
-                              ID: {quiz.canvas_course_id}
-                            </Text>
-                          </VStack>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <Badge variant="solid" colorScheme="blue">
-                            {quiz.question_count}
-                          </Badge>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <Badge variant="outline" colorScheme="purple">
-                            {quiz.llm_model}
-                          </Badge>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <HStack gap={2} align="center">
-                            <StatusLight
-                              extractionStatus={
-                                quiz.content_extraction_status || "pending"
-                              }
-                              generationStatus={
-                                quiz.llm_generation_status || "pending"
-                              }
-                            />
-                            <Text fontSize="sm" color="gray.600">
-                              {getQuizStatusText(quiz)}
-                            </Text>
-                          </HStack>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <Text fontSize="sm">
-                            {quiz.created_at
-                              ? formatDate(quiz.created_at)
-                              : "Unknown"}
-                          </Text>
-                        </Table.Cell>
-                        <Table.Cell>
-                          <HStack gap={2}>
-                            <Button size="sm" variant="outline" asChild>
-                              <RouterLink to={`/quiz/${quiz.id}`}>
-                                View
-                              </RouterLink>
-                            </Button>
-                          </HStack>
-                        </Table.Cell>
-                      </Table.Row>
-                    )
-                  })}
-                </Table.Body>
-              </Table.Root>
-            </Card.Body>
-          </Card.Root>
+          <QuizTable quizzes={quizzes} />
         )}
       </VStack>
     </Container>
