@@ -20,7 +20,7 @@ import {
 } from "@/client"
 import { useCustomToast } from "@/hooks/common"
 import { QuestionDisplay } from "./display"
-import { QuestionEditor } from "./QuestionEditor"
+import { QuestionEditor } from "./editors"
 
 interface QuestionReviewProps {
   quizId: string
