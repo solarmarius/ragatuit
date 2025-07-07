@@ -4,7 +4,6 @@ import {
   Box,
   Card,
   HStack,
-  Skeleton,
   Text,
   VStack,
 } from "@chakra-ui/react"
@@ -12,6 +11,7 @@ import { useQuery } from "@tanstack/react-query"
 import type React from "react"
 
 import { CanvasService } from "@/client"
+import { LoadingSkeleton } from "@/components/common"
 import { analyzeCanvasError } from "@/utils"
 
 interface Module {
@@ -74,9 +74,7 @@ export function ModuleSelectionStep({
         <Text fontSize="lg" fontWeight="semibold">
           Loading course modules...
         </Text>
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} height="60px" borderRadius="md" />
-        ))}
+        <LoadingSkeleton height="60px" lines={4} />
       </VStack>
     )
   }

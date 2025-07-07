@@ -5,7 +5,6 @@ import {
   Card,
   Container,
   HStack,
-  Skeleton,
   Tabs,
   Text,
   VStack,
@@ -15,6 +14,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
 
 import { QuizService } from "@/client"
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/common"
 import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenerationTrigger"
 import { QuestionReview } from "@/components/Questions/QuestionReview"
 import { QuestionStats } from "@/components/Questions/QuestionStats"
@@ -98,15 +98,11 @@ function QuizDetail() {
       <Container maxW="4xl" py={8}>
         <Card.Root>
           <Card.Body>
-            <VStack gap={4}>
-              <Text fontSize="xl" fontWeight="bold" color="red.500">
-                Quiz Not Found
-              </Text>
-              <Text color="gray.600">
-                The quiz you're looking for doesn't exist or you don't have
-                permission to view it.
-              </Text>
-            </VStack>
+            <ErrorState
+              title="Quiz Not Found"
+              message="The quiz you're looking for doesn't exist or you don't have permission to view it."
+              showRetry={false}
+            />
           </Card.Body>
         </Card.Root>
       </Container>
@@ -410,15 +406,10 @@ function QuizDetail() {
               {quiz.llm_generation_status !== "completed" && (
                 <Card.Root>
                   <Card.Body>
-                    <VStack gap={4} textAlign="center">
-                      <Text fontSize="xl" fontWeight="bold" color="gray.500">
-                        Questions Not Available Yet
-                      </Text>
-                      <Text color="gray.600">
-                        Questions will appear here once the generation process
-                        is complete.
-                      </Text>
-                    </VStack>
+                    <EmptyState
+                      title="Questions Not Available Yet"
+                      description="Questions will appear here once the generation process is complete."
+                    />
                   </Card.Body>
                 </Card.Root>
               )}
@@ -436,21 +427,21 @@ function QuizDetailSkeleton() {
       <VStack gap={6} align="stretch">
         {/* Header Skeleton */}
         <Box>
-          <Skeleton height="40px" width="300px" mb={2} />
-          <Skeleton height="24px" width="150px" />
+          <LoadingSkeleton height="40px" width="300px" />
+          <Box mt={2}>
+            <LoadingSkeleton height="24px" width="150px" />
+          </Box>
         </Box>
 
         {/* Cards Skeleton */}
         {[1, 2, 3, 4].map((i) => (
           <Card.Root key={i}>
             <Card.Header>
-              <Skeleton height="24px" width="200px" />
+              <LoadingSkeleton height="24px" width="200px" />
             </Card.Header>
             <Card.Body>
               <VStack gap={3} align="stretch">
-                <Skeleton height="20px" width="100%" />
-                <Skeleton height="20px" width="80%" />
-                <Skeleton height="20px" width="60%" />
+                <LoadingSkeleton height="20px" width="100%" lines={3} />
               </VStack>
             </Card.Body>
           </Card.Root>

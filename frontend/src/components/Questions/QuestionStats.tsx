@@ -5,7 +5,6 @@ import {
   Card,
   HStack,
   Progress,
-  Skeleton,
   Text,
   VStack,
 } from "@chakra-ui/react";
@@ -13,6 +12,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SiCanvas } from "react-icons/si";
 
 import { type Quiz, QuizService } from "@/client";
+import { ErrorState, LoadingSkeleton } from "@/components/common";
 import { useCustomToast } from "@/hooks/common";
 import {
   type QuestionStats as TypedQuestionStats,
@@ -75,7 +75,11 @@ export function QuestionStats({ quiz }: QuestionStatsProps) {
     return (
       <Card.Root>
         <Card.Body>
-          <Text color="red.500">Failed to load question statistics</Text>
+          <ErrorState
+            title="Failed to load question statistics"
+            message="There was an error loading the statistics for this quiz."
+            showRetry={false}
+          />
         </Card.Body>
       </Card.Root>
     );
@@ -227,24 +231,24 @@ function QuestionStatsSkeleton() {
   return (
     <Card.Root>
       <Card.Header>
-        <Skeleton height="24px" width="200px" />
+        <LoadingSkeleton height="24px" width="200px" />
       </Card.Header>
       <Card.Body>
         <VStack gap={4} align="stretch">
           <HStack justify="space-between">
-            <Skeleton height="20px" width="120px" />
-            <Skeleton height="24px" width="40px" />
+            <LoadingSkeleton height="20px" width="120px" />
+            <LoadingSkeleton height="24px" width="40px" />
           </HStack>
           <HStack justify="space-between">
-            <Skeleton height="20px" width="140px" />
-            <Skeleton height="24px" width="40px" />
+            <LoadingSkeleton height="20px" width="140px" />
+            <LoadingSkeleton height="24px" width="40px" />
           </HStack>
           <Box>
             <HStack justify="space-between" mb={2}>
-              <Skeleton height="20px" width="80px" />
-              <Skeleton height="16px" width="30px" />
+              <LoadingSkeleton height="20px" width="80px" />
+              <LoadingSkeleton height="16px" width="30px" />
             </HStack>
-            <Skeleton height="8px" width="100%" />
+            <LoadingSkeleton height="8px" width="100%" />
           </Box>
         </VStack>
       </Card.Body>

@@ -4,7 +4,6 @@ import {
   Card,
   HStack,
   Progress,
-  Skeleton,
   Text,
   VStack,
 } from "@chakra-ui/react"
@@ -13,6 +12,7 @@ import { Link as RouterLink } from "@tanstack/react-router"
 import type { Quiz } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import { StatusLight } from "@/components/ui/status-light"
+import { EmptyState, LoadingSkeleton } from "@/components/common"
 import { getQuizProcessingPhase, getQuizzesBeingGenerated } from "@/lib/utils"
 
 interface QuizGenerationPanelProps {
@@ -47,17 +47,15 @@ export function QuizGenerationPanel({
       </Card.Header>
       <Card.Body>
         {generatingQuizzes.length === 0 ? (
-          <Box textAlign="center" py={6}>
-            <Text fontSize="sm" color="gray.500" mb={2}>
-              No quizzes being generated
-            </Text>
-            <Text fontSize="sm" color="gray.400">
-              Start creating a quiz to see generation progress here
-            </Text>
-            <Button size="sm" variant="outline" asChild mt={4}>
-              <RouterLink to="/create-quiz">Create New Quiz</RouterLink>
-            </Button>
-          </Box>
+          <EmptyState
+            title="No quizzes being generated"
+            description="Start creating a quiz to see generation progress here"
+            action={
+              <Button size="sm" variant="outline" asChild>
+                <RouterLink to="/create-quiz">Create New Quiz</RouterLink>
+              </Button>
+            }
+          />
         ) : (
           <VStack gap={4} align="stretch">
             {generatingQuizzes.slice(0, 4).map((quiz) => {
@@ -195,10 +193,12 @@ function QuizGenerationPanelSkeleton() {
     <Card.Root>
       <Card.Header>
         <HStack justify="space-between" align="center">
-          <Skeleton height="24px" width="180px" />
-          <Skeleton height="20px" width="30px" />
+          <LoadingSkeleton height="24px" width="180px" />
+          <LoadingSkeleton height="20px" width="30px" />
         </HStack>
-        <Skeleton height="16px" width="200px" mt={2} />
+        <Box mt={2}>
+          <LoadingSkeleton height="16px" width="200px" />
+        </Box>
       </Card.Header>
       <Card.Body>
         <VStack gap={4} align="stretch">
@@ -214,26 +214,26 @@ function QuizGenerationPanelSkeleton() {
               <VStack align="stretch" gap={3}>
                 <HStack justify="space-between" align="start">
                   <VStack align="start" gap={1} flex={1}>
-                    <Skeleton height="16px" width="140px" />
-                    <Skeleton height="12px" width="100px" />
+                    <LoadingSkeleton height="16px" width="140px" />
+                    <LoadingSkeleton height="12px" width="100px" />
                   </VStack>
-                  <Skeleton height="12px" width="12px" borderRadius="full" />
+                  <LoadingSkeleton height="12px" width="12px" />
                 </HStack>
 
                 <Box>
                   <HStack justify="space-between" mb={2}>
-                    <Skeleton height="12px" width="120px" />
-                    <Skeleton height="12px" width="30px" />
+                    <LoadingSkeleton height="12px" width="120px" />
+                    <LoadingSkeleton height="12px" width="30px" />
                   </HStack>
-                  <Skeleton height="6px" width="100%" />
+                  <LoadingSkeleton height="6px" width="100%" />
                 </Box>
 
                 <HStack justify="space-between" align="center">
                   <HStack gap={2}>
-                    <Skeleton height="20px" width="80px" />
-                    <Skeleton height="20px" width="60px" />
+                    <LoadingSkeleton height="20px" width="80px" />
+                    <LoadingSkeleton height="20px" width="60px" />
                   </HStack>
-                  <Skeleton height="24px" width="80px" />
+                  <LoadingSkeleton height="24px" width="80px" />
                 </HStack>
               </VStack>
             </Box>

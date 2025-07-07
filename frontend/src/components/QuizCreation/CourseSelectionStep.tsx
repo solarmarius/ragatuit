@@ -5,7 +5,6 @@ import {
   HStack,
   Input,
   RadioGroup,
-  Skeleton,
   Text,
   VStack,
 } from "@chakra-ui/react"
@@ -13,6 +12,7 @@ import { useQuery } from "@tanstack/react-query"
 
 import { CanvasService } from "@/client"
 import { Field } from "@/components/ui/field"
+import { LoadingSkeleton } from "@/components/common"
 import { analyzeCanvasError } from "@/utils"
 
 interface Course {
@@ -51,9 +51,7 @@ export function CourseSelectionStep({
         <Text fontSize="lg" fontWeight="semibold">
           Loading your courses...
         </Text>
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} height="60px" borderRadius="md" />
-        ))}
+        <LoadingSkeleton height="60px" lines={3} />
       </VStack>
     )
   }
