@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { StatusLight } from "@/components/ui/status-light"
 import { EmptyState, LoadingSkeleton } from "@/components/common"
 import { getQuizProcessingPhase, getQuizzesBeingGenerated, getQuizProgressPercentage } from "@/lib/utils"
+import { UI_SIZES, UI_COLORS, UI_TEXT } from "@/lib/constants"
 
 interface QuizGenerationPanelProps {
   quizzes: Quiz[]
@@ -48,17 +49,17 @@ export function QuizGenerationPanel({
       <Card.Body>
         {generatingQuizzes.length === 0 ? (
           <EmptyState
-            title="No quizzes being generated"
+            title={UI_TEXT.EMPTY_STATES.NO_QUIZZES_GENERATING}
             description="Start creating a quiz to see generation progress here"
             action={
               <Button size="sm" variant="outline" asChild>
-                <RouterLink to="/create-quiz">Create New Quiz</RouterLink>
+                <RouterLink to="/create-quiz">{UI_TEXT.ACTIONS.CREATE_QUIZ}</RouterLink>
               </Button>
             }
           />
         ) : (
           <VStack gap={4} align="stretch">
-            {generatingQuizzes.slice(0, 4).map((quiz) => {
+            {generatingQuizzes.slice(0, UI_SIZES.PANEL.MAX_ITEMS).map((quiz) => {
               const processingPhase = getQuizProcessingPhase(quiz)
               const progressPercentage = getQuizProgressPercentage(quiz)
 
@@ -67,9 +68,9 @@ export function QuizGenerationPanel({
                   key={quiz.id}
                   p={4}
                   border="1px solid"
-                  borderColor="orange.200"
+                  borderColor={UI_COLORS.BORDER.PROCESSING}
                   borderRadius="md"
-                  bg="orange.50"
+                  bg={UI_COLORS.BACKGROUND.PROCESSING}
                   _hover={{ bg: "orange.100" }}
                   transition="background-color 0.2s"
                 >
@@ -144,7 +145,7 @@ export function QuizGenerationPanel({
                           to="/quiz/$id"
                           params={{ id: quiz.id || "" }}
                         >
-                          View Details
+                          {UI_TEXT.ACTIONS.VIEW_DETAILS}
                         </RouterLink>
                       </Button>
                     </HStack>
@@ -153,13 +154,13 @@ export function QuizGenerationPanel({
               )
             })}
 
-            {generatingQuizzes.length > 4 && (
+            {generatingQuizzes.length > UI_SIZES.PANEL.MAX_ITEMS && (
               <Box textAlign="center" pt={2}>
                 <Text fontSize="sm" color="gray.500">
-                  +{generatingQuizzes.length - 4} more quizzes in progress
+                  +{generatingQuizzes.length - UI_SIZES.PANEL.MAX_ITEMS} more quizzes in progress
                 </Text>
                 <Button size="sm" variant="ghost" asChild mt={2}>
-                  <RouterLink to="/quizzes">View All Quizzes</RouterLink>
+                  <RouterLink to="/quizzes">{UI_TEXT.ACTIONS.VIEW_ALL}</RouterLink>
                 </Button>
               </Box>
             )}
@@ -175,11 +176,11 @@ function QuizGenerationPanelSkeleton() {
     <Card.Root>
       <Card.Header>
         <HStack justify="space-between" align="center">
-          <LoadingSkeleton height="24px" width="180px" />
-          <LoadingSkeleton height="20px" width="30px" />
+          <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XL} width={UI_SIZES.SKELETON.WIDTH.TEXT_LG} />
+          <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.XS} />
         </HStack>
         <Box mt={2}>
-          <LoadingSkeleton height="16px" width="200px" />
+          <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.MD} width={UI_SIZES.SKELETON.WIDTH.TEXT_LG} />
         </Box>
       </Card.Header>
       <Card.Body>
@@ -189,33 +190,33 @@ function QuizGenerationPanelSkeleton() {
               key={i}
               p={4}
               border="1px solid"
-              borderColor="orange.200"
+              borderColor={UI_COLORS.BORDER.PROCESSING}
               borderRadius="md"
-              bg="orange.50"
+              bg={UI_COLORS.BACKGROUND.PROCESSING}
             >
               <VStack align="stretch" gap={3}>
                 <HStack justify="space-between" align="start">
                   <VStack align="start" gap={1} flex={1}>
-                    <LoadingSkeleton height="16px" width="140px" />
-                    <LoadingSkeleton height="12px" width="100px" />
+                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.MD} width={UI_SIZES.SKELETON.WIDTH.TEXT_MD} />
+                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.SM} width={UI_SIZES.SKELETON.WIDTH.XL} />
                   </VStack>
-                  <LoadingSkeleton height="12px" width="12px" />
+                  <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.SM} width={UI_SIZES.SKELETON.HEIGHT.SM} />
                 </HStack>
 
                 <Box>
                   <HStack justify="space-between" mb={2}>
-                    <LoadingSkeleton height="12px" width="120px" />
-                    <LoadingSkeleton height="12px" width="30px" />
+                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.SM} width={UI_SIZES.SKELETON.WIDTH.XXL} />
+                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.SM} width={UI_SIZES.SKELETON.WIDTH.XS} />
                   </HStack>
-                  <LoadingSkeleton height="6px" width="100%" />
+                  <LoadingSkeleton height={UI_SIZES.PANEL.PROGRESS_HEIGHT} width={UI_SIZES.SKELETON.WIDTH.FULL} />
                 </Box>
 
                 <HStack justify="space-between" align="center">
                   <HStack gap={2}>
-                    <LoadingSkeleton height="20px" width="80px" />
-                    <LoadingSkeleton height="20px" width="60px" />
+                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.LG} />
+                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.MD} />
                   </HStack>
-                  <LoadingSkeleton height="24px" width="80px" />
+                  <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XL} width={UI_SIZES.SKELETON.WIDTH.LG} />
                 </HStack>
               </VStack>
             </Box>

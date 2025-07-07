@@ -16,6 +16,7 @@ import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/common"
 import { useUserQuizzes } from "@/hooks/api"
 import { formatDate, getQuizStatusText, getSelectedModulesCount } from "@/lib/utils"
 import { useCustomToast } from "@/hooks/common"
+import { UI_TEXT, UI_SIZES } from "@/lib/constants"
 
 export const Route = createFileRoute("/_layout/quizzes")({
   component: QuizList,
@@ -65,7 +66,7 @@ function QuizList() {
             </Text>
           </Box>
           <Button asChild>
-            <RouterLink to="/create-quiz">Create New Quiz</RouterLink>
+            <RouterLink to="/create-quiz">{UI_TEXT.ACTIONS.CREATE_QUIZ}</RouterLink>
           </Button>
         </HStack>
 
@@ -74,12 +75,12 @@ function QuizList() {
           <Card.Root>
             <Card.Body>
               <EmptyState
-                title="No Quizzes Found"
+                title={UI_TEXT.EMPTY_STATES.NO_QUIZZES}
                 description="You haven't created any quizzes yet. Get started by creating your first quiz."
                 action={
                   <Button asChild>
                     <RouterLink to="/create-quiz">
-                      Create Your First Quiz
+                      {UI_TEXT.ACTIONS.CREATE_FIRST_QUIZ}
                     </RouterLink>
                   </Button>
                 }
@@ -185,12 +186,12 @@ function QuizListSkeleton() {
         {/* Header Skeleton */}
         <HStack justify="space-between" align="center">
           <Box>
-            <LoadingSkeleton height="36px" width="200px" />
+            <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XXL} width={UI_SIZES.SKELETON.WIDTH.TEXT_LG} />
             <Box mt={2}>
-              <LoadingSkeleton height="20px" width="300px" />
+              <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.TEXT_XL} />
             </Box>
           </Box>
-          <LoadingSkeleton height="40px" width="150px" />
+          <LoadingSkeleton height="40px" width={UI_SIZES.SKELETON.WIDTH.TEXT_MD} />
         </HStack>
 
         {/* Table Skeleton */}

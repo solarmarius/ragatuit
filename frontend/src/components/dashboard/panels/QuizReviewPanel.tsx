@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { StatusLight } from "@/components/ui/status-light"
 import { EmptyState, LoadingSkeleton } from "@/components/common"
 import { getQuizzesNeedingReview } from "@/lib/utils"
+import { UI_SIZES, UI_TEXT, PROCESSING_STATUSES } from "@/lib/constants"
 
 interface QuizReviewPanelProps {
   quizzes: Quiz[]
@@ -44,12 +45,12 @@ export function QuizReviewPanel({ quizzes, isLoading }: QuizReviewPanelProps) {
       <Card.Body>
         {reviewQuizzes.length === 0 ? (
           <EmptyState
-            title="No quizzes need review"
+            title={UI_TEXT.EMPTY_STATES.NO_QUIZZES_REVIEW}
             description="Generated quizzes will appear here when ready for approval"
           />
         ) : (
           <VStack gap={4} align="stretch">
-            {reviewQuizzes.slice(0, 5).map((quiz) => (
+            {reviewQuizzes.slice(0, UI_SIZES.PANEL.MAX_ITEMS + 1).map((quiz) => (
               <Box
                 key={quiz.id}
                 p={3}
@@ -73,10 +74,10 @@ export function QuizReviewPanel({ quizzes, isLoading }: QuizReviewPanelProps) {
                       </Text>
                       <StatusLight
                         extractionStatus={
-                          quiz.content_extraction_status || "pending"
+                          quiz.content_extraction_status || PROCESSING_STATUSES.PENDING
                         }
                         generationStatus={
-                          quiz.llm_generation_status || "pending"
+                          quiz.llm_generation_status || PROCESSING_STATUSES.PENDING
                         }
                       />
                     </HStack>
@@ -148,11 +149,11 @@ function QuizReviewPanelSkeleton() {
     <Card.Root>
       <Card.Header>
         <HStack justify="space-between" align="center">
-          <LoadingSkeleton height="24px" width="180px" />
-          <LoadingSkeleton height="20px" width="30px" />
+          <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XL} width={UI_SIZES.SKELETON.WIDTH.TEXT_LG} />
+          <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.XS} />
         </HStack>
         <Box mt={2}>
-          <LoadingSkeleton height="16px" width="250px" />
+          <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.MD} width={UI_SIZES.SKELETON.WIDTH.TEXT_XL} />
         </Box>
       </Card.Header>
       <Card.Body>
@@ -169,18 +170,18 @@ function QuizReviewPanelSkeleton() {
               <VStack align="stretch" gap={3}>
                 <HStack justify="space-between" align="start">
                   <VStack align="start" gap={1} flex={1}>
-                    <LoadingSkeleton height="16px" width="140px" />
-                    <LoadingSkeleton height="12px" width="100px" />
+                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.MD} width={UI_SIZES.SKELETON.WIDTH.TEXT_MD} />
+                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.SM} width={UI_SIZES.SKELETON.WIDTH.XL} />
                   </VStack>
-                  <LoadingSkeleton height="12px" width="12px" />
+                  <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.SM} width={UI_SIZES.SKELETON.HEIGHT.SM} />
                 </HStack>
 
                 <HStack justify="space-between" align="center">
                   <HStack gap={2}>
-                    <LoadingSkeleton height="20px" width="80px" />
-                    <LoadingSkeleton height="20px" width="60px" />
+                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.LG} />
+                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.MD} />
                   </HStack>
-                  <LoadingSkeleton height="24px" width="100px" />
+                  <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XL} width={UI_SIZES.SKELETON.WIDTH.XL} />
                 </HStack>
               </VStack>
             </Box>

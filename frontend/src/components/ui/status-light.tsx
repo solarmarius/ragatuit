@@ -1,4 +1,5 @@
 import { Box } from "@chakra-ui/react"
+import { PROCESSING_STATUSES, UI_SIZES } from "@/lib/constants"
 
 interface StatusLightProps {
   extractionStatus: string
@@ -11,12 +12,12 @@ export function StatusLight({
 }: StatusLightProps) {
   const getStatusColor = () => {
     // Red: Something failed
-    if (extractionStatus === "failed" || generationStatus === "failed") {
+    if (extractionStatus === PROCESSING_STATUSES.FAILED || generationStatus === PROCESSING_STATUSES.FAILED) {
       return "red.500"
     }
 
     // Green: Questions have been generated (both completed)
-    if (extractionStatus === "completed" && generationStatus === "completed") {
+    if (extractionStatus === PROCESSING_STATUSES.COMPLETED && generationStatus === PROCESSING_STATUSES.COMPLETED) {
       return "green.500"
     }
 
@@ -25,17 +26,17 @@ export function StatusLight({
   }
 
   const getStatusTitle = () => {
-    if (extractionStatus === "failed" || generationStatus === "failed") {
+    if (extractionStatus === PROCESSING_STATUSES.FAILED || generationStatus === PROCESSING_STATUSES.FAILED) {
       return "Generation failed"
     }
 
-    if (extractionStatus === "completed" && generationStatus === "completed") {
+    if (extractionStatus === PROCESSING_STATUSES.COMPLETED && generationStatus === PROCESSING_STATUSES.COMPLETED) {
       return "Questions generated successfully"
     }
 
     if (
-      extractionStatus === "processing" ||
-      generationStatus === "processing"
+      extractionStatus === PROCESSING_STATUSES.PROCESSING ||
+      generationStatus === PROCESSING_STATUSES.PROCESSING
     ) {
       return "Generating questions..."
     }
@@ -45,8 +46,8 @@ export function StatusLight({
 
   return (
     <Box
-      width="12px"
-      height="12px"
+      width={UI_SIZES.SKELETON.HEIGHT.SM}
+      height={UI_SIZES.SKELETON.HEIGHT.SM}
       borderRadius="full"
       bg={getStatusColor()}
       title={getStatusTitle()}
