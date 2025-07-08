@@ -1,6 +1,7 @@
 import type { QuestionResponse, QuestionUpdateRequest } from "@/client"
 import { FormField, FormGroup } from "@/components/forms"
 import { Radio, RadioGroup } from "@/components/ui/radio"
+import { type MCQFormData, mcqSchema } from "@/lib/validation"
 import { extractQuestionData } from "@/types/questionTypes"
 import {
   Button,
@@ -10,7 +11,9 @@ import {
   Textarea,
   VStack,
 } from "@chakra-ui/react"
-import { memo, useState } from "react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { memo } from "react"
+import { Controller, useForm } from "react-hook-form"
 import { ErrorEditor } from "./ErrorEditor"
 
 interface MCQEditorProps {
@@ -29,26 +32,33 @@ export const MCQEditor = memo(function MCQEditor({
   try {
     const mcqData = extractQuestionData(question, "multiple_choice")
 
-    const [formData, setFormData] = useState({
-      questionText: mcqData.question_text,
-      optionA: mcqData.option_a,
-      optionB: mcqData.option_b,
-      optionC: mcqData.option_c,
-      optionD: mcqData.option_d,
-      correctAnswer: mcqData.correct_answer,
-      explanation: mcqData.explanation || "",
+    const {
+      control,
+      handleSubmit,
+      formState: { errors, isDirty },
+    } = useForm<MCQFormData>({
+      resolver: zodResolver(mcqSchema),
+      defaultValues: {
+        questionText: mcqData.question_text,
+        optionA: mcqData.option_a,
+        optionB: mcqData.option_b,
+        optionC: mcqData.option_c,
+        optionD: mcqData.option_d,
+        correctAnswer: mcqData.correct_answer,
+        explanation: mcqData.explanation || "",
+      },
     })
 
-    const handleSave = () => {
+    const onSubmit = (data: MCQFormData) => {
       const updateData: QuestionUpdateRequest = {
         question_data: {
-          question_text: formData.questionText,
-          option_a: formData.optionA,
-          option_b: formData.optionB,
-          option_c: formData.optionC,
-          option_d: formData.optionD,
-          correct_answer: formData.correctAnswer,
-          explanation: formData.explanation || null,
+          question_text: data.questionText,
+          option_a: data.optionA,
+          option_b: data.optionB,
+          option_c: data.optionC,
+          option_d: data.optionD,
+          correct_answer: data.correctAnswer,
+          explanation: data.explanation || null,
         },
       }
       onSave(updateData)
@@ -56,94 +66,132 @@ export const MCQEditor = memo(function MCQEditor({
 
     return (
       <FormGroup>
-        <FormField label="Question Text" isRequired>
-          <Textarea
-            value={formData.questionText}
-            onChange={(e) =>
-              setFormData({ ...formData, questionText: e.target.value })
-            }
-            placeholder="Enter question text..."
-            rows={3}
-          />
-        </FormField>
+        <Controller
+          name="questionText"
+          control={control}
+          render={({ field }) => (
+            <FormField
+              label="Question Text"
+              isRequired
+              error={errors.questionText?.message}
+            >
+              <Textarea
+                {...field}
+                placeholder="Enter question text..."
+                rows={3}
+              />
+            </FormField>
+          )}
+        />
 
         <Fieldset.Root>
           <Fieldset.Legend>Answer Options</Fieldset.Legend>
           <VStack gap={3} align="stretch">
-            <FormField label="Option A" isRequired>
-              <Input
-                value={formData.optionA}
-                onChange={(e) =>
-                  setFormData({ ...formData, optionA: e.target.value })
-                }
-                placeholder="Enter option A..."
-              />
-            </FormField>
-            <FormField label="Option B" isRequired>
-              <Input
-                value={formData.optionB}
-                onChange={(e) =>
-                  setFormData({ ...formData, optionB: e.target.value })
-                }
-                placeholder="Enter option B..."
-              />
-            </FormField>
-            <FormField label="Option C" isRequired>
-              <Input
-                value={formData.optionC}
-                onChange={(e) =>
-                  setFormData({ ...formData, optionC: e.target.value })
-                }
-                placeholder="Enter option C..."
-              />
-            </FormField>
-            <FormField label="Option D" isRequired>
-              <Input
-                value={formData.optionD}
-                onChange={(e) =>
-                  setFormData({ ...formData, optionD: e.target.value })
-                }
-                placeholder="Enter option D..."
-              />
-            </FormField>
+            <Controller
+              name="optionA"
+              control={control}
+              render={({ field }) => (
+                <FormField
+                  label="Option A"
+                  isRequired
+                  error={errors.optionA?.message}
+                >
+                  <Input {...field} placeholder="Enter option A..." />
+                </FormField>
+              )}
+            />
+            <Controller
+              name="optionB"
+              control={control}
+              render={({ field }) => (
+                <FormField
+                  label="Option B"
+                  isRequired
+                  error={errors.optionB?.message}
+                >
+                  <Input {...field} placeholder="Enter option B..." />
+                </FormField>
+              )}
+            />
+            <Controller
+              name="optionC"
+              control={control}
+              render={({ field }) => (
+                <FormField
+                  label="Option C"
+                  isRequired
+                  error={errors.optionC?.message}
+                >
+                  <Input {...field} placeholder="Enter option C..." />
+                </FormField>
+              )}
+            />
+            <Controller
+              name="optionD"
+              control={control}
+              render={({ field }) => (
+                <FormField
+                  label="Option D"
+                  isRequired
+                  error={errors.optionD?.message}
+                >
+                  <Input {...field} placeholder="Enter option D..." />
+                </FormField>
+              )}
+            />
           </VStack>
         </Fieldset.Root>
 
-        <FormField label="Correct Answer" isRequired>
-          <RadioGroup
-            value={formData.correctAnswer}
-            onValueChange={(details) =>
-              setFormData({
-                ...formData,
-                correctAnswer: details.value as "A" | "B" | "C" | "D",
-              })
-            }
-          >
-            <HStack gap={4}>
-              <Radio value="A">A</Radio>
-              <Radio value="B">B</Radio>
-              <Radio value="C">C</Radio>
-              <Radio value="D">D</Radio>
-            </HStack>
-          </RadioGroup>
-        </FormField>
+        <Controller
+          name="correctAnswer"
+          control={control}
+          render={({ field: { onChange, value } }) => (
+            <FormField
+              label="Correct Answer"
+              isRequired
+              error={errors.correctAnswer?.message}
+            >
+              <RadioGroup
+                value={value}
+                onValueChange={(details) =>
+                  onChange(details.value as "A" | "B" | "C" | "D")
+                }
+              >
+                <HStack gap={4}>
+                  <Radio value="A">A</Radio>
+                  <Radio value="B">B</Radio>
+                  <Radio value="C">C</Radio>
+                  <Radio value="D">D</Radio>
+                </HStack>
+              </RadioGroup>
+            </FormField>
+          )}
+        />
 
-        <FormField label="Explanation">
-          <Textarea
-            value={formData.explanation}
-            onChange={(e) =>
-              setFormData({ ...formData, explanation: e.target.value })
-            }
-            placeholder="Enter explanation for the answer..."
-            rows={2}
-          />
-        </FormField>
+        <Controller
+          name="explanation"
+          control={control}
+          render={({ field }) => (
+            <FormField label="Explanation" error={errors.explanation?.message}>
+              <Textarea
+                {...field}
+                placeholder="Enter explanation for the answer..."
+                rows={2}
+              />
+            </FormField>
+          )}
+        />
 
         <HStack gap={3} justify="end">
           <Button variant="outline" onClick={onCancel} disabled={isLoading}>
             Cancel
           </Button>
-          <Button colorScheme="blue" onClick={handleSave} loading={isLoading}>
+          <Button
+            colorScheme="blue"
+            onClick={handleSubmit(onSubmit)}
+            loading={isLoading}
+            disabled={!isDirty}
+          >
             Save Changes
           </Button>
         </HStack>

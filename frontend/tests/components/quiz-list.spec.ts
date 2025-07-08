@@ -50,7 +50,7 @@ test.describe("Quiz List Component", () => {
         canvas_course_name: "Intro to AI",
         selected_modules: {
           "173467": "Neural Networks",
-          "173468": "Deep Learning"
+          "173468": "Deep Learning",
         },
         question_count: 50,
         llm_model: "gpt-4o",
@@ -67,7 +67,7 @@ test.describe("Quiz List Component", () => {
         selected_modules: {
           "173469": "Variables",
           "173470": "Functions",
-          "173471": "Classes"
+          "173471": "Classes",
         },
         question_count: 25,
         llm_model: "o3",

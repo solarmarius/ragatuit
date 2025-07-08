@@ -1,10 +1,8 @@
 import type { QuestionResponse, QuestionUpdateRequest } from "@/client"
 import { FormField, FormGroup } from "@/components/forms"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  type FillInBlankData,
-  extractQuestionData,
-} from "@/types/questionTypes"
+import { type FillInBlankFormData, fillInBlankSchema } from "@/lib/validation"
+import { extractQuestionData } from "@/types/questionTypes"
 import {
   Box,
   Button,
@@ -15,7 +13,9 @@ import {
   Textarea,
   VStack,
 } from "@chakra-ui/react"
-import { memo, useState } from "react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { memo } from "react"
+import { Controller, useFieldArray, useForm } from "react-hook-form"
 import { ErrorEditor } from "./ErrorEditor"
 
 interface FillInBlankEditorProps {
@@ -34,22 +34,34 @@ export const FillInBlankEditor = memo(function FillInBlankEditor({
   try {
     const fibData = extractQuestionData(question, "fill_in_blank")
 
-    const [formData, setFormData] = useState({
-      questionText: fibData.question_text,
-      blanks: fibData.blanks.map((blank) => ({
-        position: blank.position,
-        correctAnswer: blank.correct_answer,
-        answerVariations: blank.answer_variations?.join(", ") || "",
-        caseSensitive: blank.case_sensitive || false,
-      })),
-      explanation: fibData.explanation || "",
+    const {
+      control,
+      handleSubmit,
+      formState: { errors, isDirty },
+    } = useForm<FillInBlankFormData>({
+      resolver: zodResolver(fillInBlankSchema),
+      defaultValues: {
+        questionText: fibData.question_text,
+        blanks: fibData.blanks.map((blank) => ({
+          position: blank.position,
+          correctAnswer: blank.correct_answer,
+          answerVariations: blank.answer_variations?.join(", ") || "",
+          caseSensitive: blank.case_sensitive || false,
+        })),
+        explanation: fibData.explanation || "",
+      },
     })
 
-    const handleSave = () => {
+    const { fields, append, remove } = useFieldArray({
+      control,
+      name: "blanks",
+    })
+
+    const onSubmit = (data: FillInBlankFormData) => {
       const updateData: QuestionUpdateRequest = {
         question_data: {
-          question_text: formData.questionText,
-          blanks: formData.blanks.map((blank) => ({
+          question_text: data.questionText,
+          blanks: data.blanks.map((blank) => ({
             position: blank.position,
             correct_answer: blank.correctAnswer,
             answer_variations: blank.answerVariations
@@ -60,75 +72,48 @@ export const FillInBlankEditor = memo(function FillInBlankEditor({
               : undefined,
             case_sensitive: blank.caseSensitive,
           })),
-          explanation: formData.explanation || null,
+          explanation: data.explanation || null,
         },
       }
       onSave(updateData)
     }
 
     const addBlank = () => {
-      const newPosition =
-        Math.max(...formData.blanks.map((b) => b.position), 0) + 1
-      setFormData({
-        ...formData,
-        blanks: [
-          ...formData.blanks,
-          {
-            position: newPosition,
-            correctAnswer: "",
-            answerVariations: "",
-            caseSensitive: false,
-          },
-        ],
+      const newPosition = Math.max(...fields.map((_, i) => i + 1), 0) + 1
+      append({
+        position: newPosition,
+        correctAnswer: "",
+        answerVariations: "",
+        caseSensitive: false,
       })
-    }
-
-    const removeBlank = (index: number) => {
-      setFormData({
-        ...formData,
-        blanks: formData.blanks.filter((_, i) => i !== index),
-      })
-    }
-
-    const updateBlank = (
-      index: number,
-      field: keyof FillInBlankData["blanks"][0],
-      value: string | boolean,
-    ) => {
-      const updatedBlanks = [...formData.blanks]
-      const fieldMap: Record<
-        keyof FillInBlankData["blanks"][0],
-        keyof (typeof updatedBlanks)[0]
-      > = {
-        correct_answer: "correctAnswer",
-        answer_variations: "answerVariations",
-        case_sensitive: "caseSensitive",
-        position: "position",
-      }
-      const formField = fieldMap[field]
-      updatedBlanks[index] = { ...updatedBlanks[index], [formField]: value }
-      setFormData({ ...formData, blanks: updatedBlanks })
     }
 
     return (
       <FormGroup>
-        <FormField label="Question Text" isRequired>
-          <Textarea
-            value={formData.questionText}
-            onChange={(e) =>
-              setFormData({ ...formData, questionText: e.target.value })
-            }
-            placeholder="Enter question text with blanks marked..."
-            rows={3}
-          />
-        </FormField>
+        <Controller
+          name="questionText"
+          control={control}
+          render={({ field }) => (
+            <FormField
+              label="Question Text"
+              isRequired
+              error={errors.questionText?.message}
+            >
+              <Textarea
+                {...field}
+                placeholder="Enter question text with blanks marked..."
+                rows={3}
+              />
+            </FormField>
+          )}
+        />
 
         <Fieldset.Root>
           <Fieldset.Legend>Blanks</Fieldset.Legend>
           <VStack gap={4} align="stretch">
-            {formData.blanks.map((blank, index) => (
+            {fields.map((field, index) => (
               <Box
-                key={index}
+                key={field.id}
                 p={3}
                 border="1px solid"
                 borderColor="gray.200"
@@ -137,48 +122,70 @@ export const FillInBlankEditor = memo(function FillInBlankEditor({
                 <FormGroup gap={3}>
                   <HStack>
                     <Text fontWeight="medium" fontSize="sm">
-                      Blank {blank.position}
+                      Blank {index + 1}
                     </Text>
                     <Button
                       size="sm"
                       variant="outline"
                       colorScheme="red"
-                      onClick={() => removeBlank(index)}
+                      onClick={() => remove(index)}
                     >
                       Remove
                     </Button>
                   </HStack>
 
-                  <FormField label="Correct Answer" isRequired>
-                    <Input
-                      value={blank.correctAnswer}
-                      onChange={(e) =>
-                        updateBlank(index, "correct_answer", e.target.value)
-                      }
-                      placeholder="Enter correct answer..."
-                    />
-                  </FormField>
+                  <Controller
+                    name={`blanks.${index}.correctAnswer`}
+                    control={control}
+                    render={({ field }) => (
+                      <FormField
+                        label="Correct Answer"
+                        isRequired
+                        error={errors.blanks?.[index]?.correctAnswer?.message}
+                      >
+                        <Input
+                          {...field}
+                          placeholder="Enter correct answer..."
+                        />
+                      </FormField>
+                    )}
+                  />
 
-                  <FormField label="Answer Variations">
-                    <Input
-                      value={blank.answerVariations}
-                      onChange={(e) =>
-                        updateBlank(index, "answer_variations", e.target.value)
-                      }
-                      placeholder="Enter variations separated by commas..."
-                    />
-                  </FormField>
+                  <Controller
+                    name={`blanks.${index}.answerVariations`}
+                    control={control}
+                    render={({ field }) => (
+                      <FormField
+                        label="Answer Variations"
+                        error={
+                          errors.blanks?.[index]?.answerVariations?.message
+                        }
+                        helperText="Separate multiple variations with commas"
+                      >
+                        <Input
+                          {...field}
+                          placeholder="Enter variations separated by commas..."
+                        />
+                      </FormField>
+                    )}
+                  />
 
-                  <FormField>
-                    <Checkbox
-                      checked={blank.caseSensitive}
-                      onCheckedChange={(e) =>
-                        updateBlank(index, "case_sensitive", !!e.checked)
-                      }
-                    >
-                      Case sensitive
-                    </Checkbox>
-                  </FormField>
+                  <Controller
+                    name={`blanks.${index}.caseSensitive`}
+                    control={control}
+                    render={({ field: { onChange, value } }) => (
+                      <FormField
+                        error={errors.blanks?.[index]?.caseSensitive?.message}
+                      >
+                        <Checkbox
+                          checked={value}
+                          onCheckedChange={(e) => onChange(!!e.checked)}
+                        >
+                          Case sensitive
+                        </Checkbox>
+                      </FormField>
+                    )}
+                  />
                 </FormGroup>
               </Box>
             ))}
@@ -189,22 +196,30 @@ export const FillInBlankEditor = memo(function FillInBlankEditor({
           </VStack>
         </Fieldset.Root>
 
-        <FormField label="Explanation">
-          <Textarea
-            value={formData.explanation}
-            onChange={(e) =>
-              setFormData({ ...formData, explanation: e.target.value })
-            }
-            placeholder="Enter explanation for the answers..."
-            rows={2}
-          />
-        </FormField>
+        <Controller
+          name="explanation"
+          control={control}
+          render={({ field }) => (
+            <FormField label="Explanation" error={errors.explanation?.message}>
+              <Textarea
+                {...field}
+                placeholder="Enter explanation for the answers..."
+                rows={2}
+              />
+            </FormField>
+          )}
+        />
 
         <HStack gap={3} justify="end">
           <Button variant="outline" onClick={onCancel} disabled={isLoading}>
             Cancel
           </Button>
-          <Button colorScheme="blue" onClick={handleSave} loading={isLoading}>
+          <Button
+            colorScheme="blue"
+            onClick={handleSubmit(onSubmit)}
+            loading={isLoading}
+            disabled={!isDirty}
+          >
             Save Changes
           </Button>
         </HStack>
