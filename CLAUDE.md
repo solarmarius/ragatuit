@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Rag@UiT is a Canvas LMS quiz generator application that uses language models to generate multiple-choice questions based on course content. The application consists of a FastAPI backend with PostgreSQL database and a React frontend with TypeScript.
 
 **Key Features:**
+
 - Canvas OAuth integration for course access
 - AI-powered question generation from course materials
 - Question review and approval workflow
@@ -16,6 +17,7 @@ Rag@UiT is a Canvas LMS quiz generator application that uses language models to 
 ## Development Commands
 
 ### Full Stack Development
+
 ```bash
 # Start the entire stack with Docker Compose (recommended)
 docker compose watch
@@ -29,37 +31,24 @@ docker compose logs frontend
 ```
 
 ### Backend Development
+
 ```bash
-# From backend/ directory
-cd backend
+# RUN TESTS
+cd backend && source .venv/bin/activate && bash scripts/test.sh
 
-# Install dependencies
-uv sync
-
-# Activate virtual environment
-source .venv/bin/activate
-
-# Run local development server
-fastapi dev app/main.py
-
-# Run tests with coverage
-bash scripts/test.sh
-
-# Run linting and type checking
-bash scripts/lint.sh
+# RUN LINTING
+cd backend && source .venv/bin/activate && bash scripts/lint.sh
 
 # Individual linting commands
 mypy app
 ruff check app
 ruff format app --check
-
-# Database migrations
-docker compose exec backend bash
-alembic revision --autogenerate -m "Description"
-alembic upgrade head
 ```
 
+All backend database migrations should be prompted to the user to be done manually.
+
 ### Frontend Development
+
 ```bash
 # From frontend/ directory
 cd frontend
@@ -85,6 +74,7 @@ npx playwright test --ui
 ```
 
 ### Cross-Service Commands
+
 ```bash
 # Generate frontend client from backend API (from project root)
 ./scripts/generate-client.sh
@@ -96,6 +86,7 @@ uv run pre-commit run --all-files
 ## Architecture
 
 ### Backend (FastAPI + SQLModel + PostgreSQL)
+
 - **Entry Point**: `backend/app/main.py` - FastAPI application setup
 - **API Routes**: `backend/app/api/routes/` - auth, users, utils
 - **Models**: `backend/app/models.py` - SQLModel database models and Pydantic schemas
@@ -106,15 +97,32 @@ uv run pre-commit run --all-files
 - **Tests**: `backend/app/tests/` - Pytest-based test suite
 
 ### Frontend (React + TypeScript + Chakra UI)
+
 - **Entry Point**: `frontend/src/main.tsx` - React application bootstrap
 - **Routing**: `frontend/src/routes/` - TanStack Router file-based routing
 - **Components**: `frontend/src/components/` - Reusable UI components organized by feature
 - **API Client**: `frontend/src/client/` - Auto-generated from backend OpenAPI spec
-- **Hooks**: `frontend/src/hooks/` - Custom React hooks for auth and utilities
+- **Custom Hooks**: `frontend/src/hooks/` - Reusable React hooks for API, auth, and utilities
 - **Theme**: `frontend/src/theme.tsx` - Chakra UI theme configuration
 - **Auth Flow**: Canvas OAuth integration with redirect handling
 
+### Frontend Architecture Documentation
+
+Comprehensive documentation for the refactored frontend architecture:
+
+- **📄 `/docs/frontend/ARCHITECTURE.md`** - Complete architectural overview, component organization, and development guidelines
+- **📄 `/docs/frontend/CUSTOM_HOOKS.md`** - Detailed documentation for all 9 custom React hooks with usage examples
+- **📄 `/docs/frontend/COMPONENT_PATTERNS.md`** - Reusable component patterns and design principles
+
+**Key Frontend Features:**
+
+- **Type Safety**: 100% TypeScript coverage with strict mode
+- **Custom Hooks System**: 9 reusable hooks for API operations, state management, and UI interactions
+- **Component Library**: Organized components with consistent patterns and JSDoc documentation
+- **Performance Optimized**: Memoization, code splitting, and efficient data fetching
+
 ### Key Models
+
 - **User**: Canvas user with OAuth tokens and metadata
 - **Canvas Integration**: OAuth flow for accessing Canvas courses and content
 - **Authentication**: JWT-based session management with Canvas token storage
@@ -131,6 +139,7 @@ uv run pre-commit run --all-files
 ## Important Conventions
 
 ### Backend
+
 - Use SQLModel for database models (combines SQLAlchemy + Pydantic)
 - All API endpoints return consistent response formats
 - Canvas tokens are securely stored and refreshed automatically
@@ -138,13 +147,18 @@ uv run pre-commit run --all-files
 - Comprehensive test coverage required
 
 ### Frontend
+
 - File-based routing with TanStack Router
 - Auto-generated API client from backend OpenAPI spec
-- Chakra UI for consistent component styling
-- TypeScript strict mode enabled
+- Chakra UI for consistent component styling with custom design system
+- TypeScript strict mode enabled with 100% type coverage
 - Canvas authentication state managed globally
+- Custom hooks system for reusable logic and API operations
+- Component patterns documented in `/docs/frontend/` for consistency
+- JSDoc comments on all component props and custom hooks
 
 ### Testing
+
 - Backend: Pytest with coverage reporting
 - Frontend: Playwright for end-to-end testing
 - All tests must pass before deployment
@@ -153,6 +167,7 @@ uv run pre-commit run --all-files
 ## Canvas Integration
 
 The application integrates deeply with Canvas LMS:
+
 - OAuth 2.0 flow for secure authentication
 - Course and module content fetching
 - Direct quiz/exam creation in Canvas
@@ -161,6 +176,7 @@ The application integrates deeply with Canvas LMS:
 ## Environment Setup
 
 Development uses Docker Compose with service-specific overrides. The stack includes:
+
 - Backend API (FastAPI)
 - Frontend (React dev server)
 - PostgreSQL database
@@ -169,6 +185,7 @@ Development uses Docker Compose with service-specific overrides. The stack inclu
 - MailCatcher (email testing)
 
 URLs:
+
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:8000
 - API Docs: http://localhost:8000/docs

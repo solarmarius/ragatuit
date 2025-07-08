@@ -21,7 +21,34 @@ import {
   mergeLegacyStats,
 } from "@/types/questionStats"
 
+/**
+ * Props for the QuestionStats component.
+ * Displays question approval statistics and Canvas export functionality.
+ * Shows progress bar, approval counts, and export status.
+ *
+ * @example
+ * ```tsx
+ * // Basic usage with quiz data
+ * <QuestionStats quiz={quiz} />
+ *
+ * // Usage in a dashboard panel
+ * function QuizDashboard({ quizId }: { quizId: string }) {
+ *   const { data: quiz } = useQuery(['quiz', quizId], getQuiz)
+ *
+ *   return (
+ *     <VStack gap={4}>
+ *       <QuestionStats quiz={quiz} />
+ *       <QuestionReview quizId={quizId} />
+ *     </VStack>
+ *   )
+ * }
+ *
+ * // Usage with conditional rendering
+ * {quiz && <QuestionStats quiz={quiz} />}
+ * ```
+ */
 interface QuestionStatsProps {
+  /** The quiz object containing ID and export status information */
   quiz: Quiz
 }
 

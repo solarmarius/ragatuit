@@ -1,8 +1,52 @@
 import { PROCESSING_STATUSES, UI_SIZES } from "@/lib/constants"
 import { Box } from "@chakra-ui/react"
 
+/**
+ * Props for the StatusLight component.
+ * Displays a colored status indicator based on content extraction and question generation status.
+ *
+ * Status colors:
+ * - Red: Any process failed
+ * - Green: Both processes completed successfully
+ * - Orange: Processes are pending or in progress
+ *
+ * @example
+ * ```tsx
+ * // Basic usage with processing statuses
+ * <StatusLight
+ *   extractionStatus="completed"
+ *   generationStatus="processing"
+ * />
+ *
+ * // With quiz data
+ * <StatusLight
+ *   extractionStatus={quiz.content_extraction_status}
+ *   generationStatus={quiz.llm_generation_status}
+ * />
+ *
+ * // All possible status combinations
+ * <StatusLight
+ *   extractionStatus="pending"     // waiting to start
+ *   generationStatus="pending"
+ * />
+ * <StatusLight
+ *   extractionStatus="processing"  // in progress
+ *   generationStatus="pending"
+ * />
+ * <StatusLight
+ *   extractionStatus="completed"   // success
+ *   generationStatus="completed"
+ * />
+ * <StatusLight
+ *   extractionStatus="failed"      // error state
+ *   generationStatus="pending"
+ * />
+ * ```
+ */
 interface StatusLightProps {
+  /** Status of content extraction process (pending, processing, completed, failed) */
   extractionStatus: string
+  /** Status of LLM question generation process (pending, processing, completed, failed) */
   generationStatus: string
 }
 

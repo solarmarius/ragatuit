@@ -1,16 +1,16 @@
-import { Badge, Box, Card, HStack, Text, VStack } from "@chakra-ui/react"
-import { Link as RouterLink } from "@tanstack/react-router"
-import { memo, useMemo } from "react"
+import { Badge, Box, Card, HStack, Text, VStack } from "@chakra-ui/react";
+import { Link as RouterLink } from "@tanstack/react-router";
+import { memo, useMemo } from "react";
 
-import type { Quiz } from "@/client/types.gen"
-import { EmptyState, LoadingSkeleton, QuizListCard } from "@/components/common"
-import { Button } from "@/components/ui/button"
-import { UI_SIZES, UI_TEXT } from "@/lib/constants"
-import { getQuizzesNeedingReview } from "@/lib/utils"
+import type { Quiz } from "@/client/types.gen";
+import { EmptyState, LoadingSkeleton, QuizListCard } from "@/components/common";
+import { Button } from "@/components/ui/button";
+import { UI_SIZES, UI_TEXT } from "@/lib/constants";
+import { getQuizzesNeedingReview } from "@/lib/utils";
 
 interface QuizReviewPanelProps {
-  quizzes: Quiz[]
-  isLoading: boolean
+  quizzes: Quiz[];
+  isLoading: boolean;
 }
 
 export const QuizReviewPanel = memo(function QuizReviewPanel({
@@ -19,11 +19,11 @@ export const QuizReviewPanel = memo(function QuizReviewPanel({
 }: QuizReviewPanelProps) {
   const reviewQuizzes = useMemo(
     () => getQuizzesNeedingReview(quizzes),
-    [quizzes],
-  )
+    [quizzes]
+  );
 
   if (isLoading) {
-    return <QuizReviewPanelSkeleton />
+    return <QuizReviewPanelSkeleton />;
   }
 
   return (
@@ -49,20 +49,18 @@ export const QuizReviewPanel = memo(function QuizReviewPanel({
           />
         ) : (
           <VStack gap={4} align="stretch">
-            {reviewQuizzes
-              .slice(0, UI_SIZES.PANEL.MAX_ITEMS + 1)
-              .map((quiz) => (
-                <QuizListCard
-                  key={quiz.id}
-                  quiz={quiz}
-                  actionButton={{
-                    text: "Review",
-                    to: "/quiz/$id",
-                    params: { id: quiz.id || "" },
-                  }}
-                  compact
-                />
-              ))}
+            {reviewQuizzes.slice(0, UI_SIZES.PANEL.MAX_ITEMS).map((quiz) => (
+              <QuizListCard
+                key={quiz.id}
+                quiz={quiz}
+                actionButton={{
+                  text: "Review",
+                  to: "/quiz/$id",
+                  params: { id: quiz.id || "" },
+                }}
+                compact
+              />
+            ))}
 
             {reviewQuizzes.length > 5 && (
               <Box textAlign="center" pt={2}>
@@ -78,8 +76,8 @@ export const QuizReviewPanel = memo(function QuizReviewPanel({
         )}
       </Card.Body>
     </Card.Root>
-  )
-})
+  );
+});
 
 function QuizReviewPanelSkeleton() {
   return (
@@ -153,5 +151,5 @@ function QuizReviewPanelSkeleton() {
         </VStack>
       </Card.Body>
     </Card.Root>
-  )
+  );
 }

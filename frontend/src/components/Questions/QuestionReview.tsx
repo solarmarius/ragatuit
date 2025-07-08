@@ -27,7 +27,33 @@ import { UI_SIZES } from "@/lib/constants"
 import { QuestionDisplay } from "./display"
 import { QuestionEditor } from "./editors"
 
+/**
+ * Props for the QuestionReview component.
+ * Provides a comprehensive question review interface for quiz questions.
+ * Allows filtering, editing, approval, and deletion of questions.
+ *
+ * @example
+ * ```tsx
+ * // Basic usage in a quiz management page
+ * <QuestionReview quizId="quiz-123" />
+ *
+ * // Usage in a route component
+ * function QuizReviewPage() {
+ *   const { quizId } = useParams()
+ *
+ *   return (
+ *     <Container maxW="4xl">
+ *       <QuestionReview quizId={quizId} />
+ *     </Container>
+ *   )
+ * }
+ *
+ * // Usage with conditional rendering
+ * {quiz?.id && <QuestionReview quizId={quiz.id} />}
+ * ```
+ */
 interface QuestionReviewProps {
+  /** The ID of the quiz whose questions should be reviewed */
   quizId: string
 }
 
