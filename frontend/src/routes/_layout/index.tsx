@@ -8,12 +8,16 @@ import {
 } from "@chakra-ui/react"
 import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
 
-import { HelpPanel, QuizGenerationPanel, QuizReviewPanel } from "@/components/dashboard"
 import { OnboardingModal } from "@/components/Onboarding/OnboardingModal"
-import { Button } from "@/components/ui/button"
 import { ErrorState } from "@/components/common"
-import { useAuth } from "@/hooks/auth"
+import {
+  HelpPanel,
+  QuizGenerationPanel,
+  QuizReviewPanel,
+} from "@/components/dashboard"
+import { Button } from "@/components/ui/button"
 import { useUserQuizzes } from "@/hooks/api"
+import { useAuth } from "@/hooks/auth"
 import { useCustomToast, useOnboarding } from "@/hooks/common"
 
 export const Route = createFileRoute("/_layout/")({
@@ -32,11 +36,7 @@ function Dashboard() {
     skipOnboarding,
   } = useOnboarding()
 
-  const {
-    data: quizzes,
-    isLoading,
-    error,
-  } = useUserQuizzes()
+  const { data: quizzes, isLoading, error } = useUserQuizzes()
 
   if (error) {
     showErrorToast("Failed to load quizzes")

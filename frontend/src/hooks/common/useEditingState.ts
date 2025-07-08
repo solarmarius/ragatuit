@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useCallback, useState } from "react"
 
 /**
  * Hook for managing editing state of items in a list.
@@ -7,17 +7,23 @@ import { useState, useCallback } from 'react'
 export function useEditingState<T>(getId: (item: T) => string) {
   const [editingId, setEditingId] = useState<string | null>(null)
 
-  const startEditing = useCallback((item: T) => {
-    setEditingId(getId(item))
-  }, [getId])
+  const startEditing = useCallback(
+    (item: T) => {
+      setEditingId(getId(item))
+    },
+    [getId],
+  )
 
   const cancelEditing = useCallback(() => {
     setEditingId(null)
   }, [])
 
-  const isEditing = useCallback((item: T) => {
-    return editingId === getId(item)
-  }, [editingId, getId])
+  const isEditing = useCallback(
+    (item: T) => {
+      return editingId === getId(item)
+    },
+    [editingId, getId],
+  )
 
   return {
     editingId,

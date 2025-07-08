@@ -38,12 +38,7 @@ export const QuizListCard = memo(function QuizListCard({
       <VStack align="stretch" gap={compact ? 2 : 3}>
         <VStack align="start" gap={1}>
           <HStack justify="space-between" align="start" width="100%">
-            <Text
-              fontWeight="medium"
-              fontSize="sm"
-              lineHeight="tight"
-              truncate
-            >
+            <Text fontWeight="medium" fontSize="sm" lineHeight="tight" truncate>
               {quiz.title}
             </Text>
             <StatusLight
@@ -62,19 +57,9 @@ export const QuizListCard = memo(function QuizListCard({
           )}
         </VStack>
 
-        <HStack
-          justify="space-between"
-          align="center"
-          gap={2}
-          flexWrap="wrap"
-        >
+        <HStack justify="space-between" align="center" gap={2} flexWrap="wrap">
           <HStack gap={2} flex="1" minW="0">
-            <Badge
-              variant="solid"
-              colorScheme="blue"
-              size="sm"
-              flexShrink={0}
-            >
+            <Badge variant="solid" colorScheme="blue" size="sm" flexShrink={0}>
               {quiz.question_count} questions
             </Badge>
             {quiz.llm_model && (

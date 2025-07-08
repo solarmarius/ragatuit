@@ -27,7 +27,7 @@ test.describe("Quiz List Content Extraction Status", () => {
         title: "Pending Quiz",
         canvas_course_id: 12345,
         canvas_course_name: "Test Course 1",
-        selected_modules: '{"173467": "Module 1"}',
+        selected_modules: {"173467": "Module 1"},
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
@@ -42,7 +42,7 @@ test.describe("Quiz List Content Extraction Status", () => {
         title: "Processing Quiz",
         canvas_course_id: 12346,
         canvas_course_name: "Test Course 2",
-        selected_modules: '{"173468": "Module 2"}',
+        selected_modules: {"173468": "Module 2"},
         question_count: 25,
         llm_model: "o3",
         llm_temperature: 0.5,
@@ -57,7 +57,7 @@ test.describe("Quiz List Content Extraction Status", () => {
         title: "Completed Quiz",
         canvas_course_id: 12347,
         canvas_course_name: "Test Course 3",
-        selected_modules: '{"173469": "Module 3"}',
+        selected_modules: {"173469": "Module 3"},
         question_count: 75,
         llm_model: "gpt-4",
         llm_temperature: 0.7,
@@ -72,7 +72,7 @@ test.describe("Quiz List Content Extraction Status", () => {
         title: "Failed Quiz",
         canvas_course_id: 12348,
         canvas_course_name: "Test Course 4",
-        selected_modules: '{"173470": "Module 4"}',
+        selected_modules: {"173470": "Module 4"},
         question_count: 30,
         llm_model: "gpt-4o",
         llm_temperature: 0.2,
@@ -141,7 +141,7 @@ test.describe("Quiz List Content Extraction Status", () => {
         .filter({
           has: page.locator('[title="Questions generated successfully"]'),
         })
-        .getByText("Complete"),
+        .getByText("Ready for Review"),
     ).toBeVisible()
 
     // Failed Quiz
@@ -164,7 +164,7 @@ test.describe("Quiz List Content Extraction Status", () => {
         title: "Green Status Quiz",
         canvas_course_id: 12345,
         canvas_course_name: "Test Course",
-        selected_modules: '{"173467": "Module 1"}',
+        selected_modules: {"173467": "Module 1"},
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
@@ -179,7 +179,7 @@ test.describe("Quiz List Content Extraction Status", () => {
         title: "Orange Status Quiz",
         canvas_course_id: 12346,
         canvas_course_name: "Test Course",
-        selected_modules: '{"173468": "Module 2"}',
+        selected_modules: {"173468": "Module 2"},
         question_count: 25,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
@@ -194,7 +194,7 @@ test.describe("Quiz List Content Extraction Status", () => {
         title: "Red Status Quiz",
         canvas_course_id: 12347,
         canvas_course_name: "Test Course",
-        selected_modules: '{"173469": "Module 3"}',
+        selected_modules: {"173469": "Module 3"},
         question_count: 75,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
@@ -241,7 +241,7 @@ test.describe("Quiz List Content Extraction Status", () => {
         title: "Legacy Quiz",
         canvas_course_id: 12345,
         canvas_course_name: "Test Course",
-        selected_modules: '{"173467": "Module 1"}',
+        selected_modules: {"173467": "Module 1"},
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
@@ -255,7 +255,7 @@ test.describe("Quiz List Content Extraction Status", () => {
         title: "Null Status Quiz",
         canvas_course_id: 12346,
         canvas_course_name: "Test Course",
-        selected_modules: '{"173468": "Module 2"}',
+        selected_modules: {"173468": "Module 2"},
         question_count: 25,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
@@ -313,7 +313,7 @@ test.describe("Quiz List Content Extraction Status", () => {
       {
         extraction: "completed",
         generation: "completed",
-        expectedText: "Complete",
+        expectedText: "Ready for Review",
       },
       {
         extraction: "failed",
@@ -334,7 +334,7 @@ test.describe("Quiz List Content Extraction Status", () => {
         title: `Status Test ${testCase.extraction}-${testCase.generation}`,
         canvas_course_id: 12345 + i,
         canvas_course_name: "Test Course",
-        selected_modules: '{"173467": "Module 1"}',
+        selected_modules: {"173467": "Module 1"},
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
@@ -373,7 +373,7 @@ test.describe("Quiz List Content Extraction Status", () => {
         title: "Alignment Test Quiz",
         canvas_course_id: 12345,
         canvas_course_name: "Test Course",
-        selected_modules: '{"173467": "Module 1"}',
+        selected_modules: {"173467": "Module 1"},
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
@@ -409,7 +409,7 @@ test.describe("Quiz List Content Extraction Status", () => {
     await expect(
       statusCell.locator('[title="Questions generated successfully"]'),
     ).toBeVisible()
-    await expect(statusCell.getByText("Complete")).toBeVisible()
+    await expect(statusCell.getByText("Ready for Review")).toBeVisible()
 
     // Check horizontal alignment - status light and text should be in a horizontal container
     const statusContainer = statusCell.locator("div, span").first()
@@ -425,7 +425,7 @@ test.describe("Quiz List Content Extraction Status", () => {
         title: "Column Position Quiz",
         canvas_course_id: 12345,
         canvas_course_name: "Test Course",
-        selected_modules: '{"173467": "Module 1"}',
+        selected_modules: {"173467": "Module 1"},
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
@@ -472,7 +472,7 @@ test.describe("Quiz List Content Extraction Status", () => {
           title: "Status Update Quiz",
           canvas_course_id: 12345,
           canvas_course_name: "Test Course",
-          selected_modules: '{"173467": "Module 1"}',
+          selected_modules: {"173467": "Module 1"},
           question_count: 50,
           llm_model: "gpt-4o",
           llm_temperature: 0.3,
@@ -490,7 +490,7 @@ test.describe("Quiz List Content Extraction Status", () => {
           title: "Status Update Quiz",
           canvas_course_id: 12345,
           canvas_course_name: "Test Course",
-          selected_modules: '{"173467": "Module 1"}',
+          selected_modules: {"173467": "Module 1"},
           question_count: 50,
           llm_model: "gpt-4o",
           llm_temperature: 0.3,
@@ -518,7 +518,7 @@ test.describe("Quiz List Content Extraction Status", () => {
     await page.waitForLoadState("networkidle")
 
     // Should now show completed status
-    await expect(page.getByText("Complete")).toBeVisible()
+    await expect(page.getByText("Ready for Review")).toBeVisible()
     await expect(
       page.locator('[title="Questions generated successfully"]'),
     ).toBeVisible()

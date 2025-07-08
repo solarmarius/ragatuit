@@ -1,7 +1,7 @@
 import { Box } from "@chakra-ui/react"
 import type { ReactNode } from "react"
-import { FormLabel } from "./FormLabel"
 import { FormError } from "./FormError"
+import { FormLabel } from "./FormLabel"
 
 interface FormFieldProps {
   children: ReactNode

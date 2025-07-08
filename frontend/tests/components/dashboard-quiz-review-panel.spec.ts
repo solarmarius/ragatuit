@@ -54,7 +54,7 @@ test.describe("QuizReviewPanel Component", () => {
     await page.reload()
 
     // Check empty state in review panel
-    await expect(page.getByText("No quizzes need review")).toBeVisible()
+    await expect(page.getByText("No quizzes ready for review")).toBeVisible()
     await expect(
       page.getByText(
         "Generated quizzes will appear here when ready for approval",
@@ -172,10 +172,10 @@ test.describe("QuizReviewPanel Component", () => {
     await page.reload()
 
     // Should show empty state in review panel
-    await expect(page.getByText("No quizzes need review")).toBeVisible()
+    await expect(page.getByText("No quizzes ready for review")).toBeVisible()
 
-    // But generation panel should have content
-    await expect(page.getByText("Database Design Principles")).toBeVisible()
+    // But generation panel should have content (Web Development Concepts should be visible)
+    await expect(page.getByText("Web Development Concepts")).toBeVisible()
   })
 
   test("should be responsive on mobile devices", async ({ page }) => {

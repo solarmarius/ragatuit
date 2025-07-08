@@ -60,7 +60,7 @@ test.describe("Dashboard Layout", () => {
     await page.goto("/")
 
     // Check empty states in panels
-    await expect(page.getByText("No quizzes need review")).toBeVisible()
+    await expect(page.getByText("No quizzes ready for review")).toBeVisible()
     await expect(page.getByText("No quizzes being generated")).toBeVisible()
 
     // Help panel should still be visible
@@ -178,7 +178,7 @@ test.describe("Dashboard Layout", () => {
       .locator('text="Quizzes Being Generated"')
       .locator("..")
       .locator('[data-testid="badge"]')
-    await expect(generationBadge).toContainText("6")
+    await expect(generationBadge).toContainText("3")
   })
 
   test("should handle mixed quiz states correctly", async ({ page }) => {
@@ -205,11 +205,11 @@ test.describe("Dashboard Layout", () => {
       .locator('text="Quizzes Being Generated"')
       .locator("..")
       .getByTestId("badge")
-    await expect(generationPanelBadge).toContainText("3")
+    await expect(generationPanelBadge).toContainText("2")
 
     // Both panels should have content
     await expect(page.getByText("Machine Learning Fundamentals")).toBeVisible()
-    await expect(page.getByText("Database Design Principles")).toBeVisible()
+    await expect(page.getByText("Web Development Concepts")).toBeVisible()
   })
 
   test("should maintain layout consistency with container spacing", async ({

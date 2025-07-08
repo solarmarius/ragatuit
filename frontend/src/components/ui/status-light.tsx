@@ -1,5 +1,5 @@
-import { Box } from "@chakra-ui/react"
 import { PROCESSING_STATUSES, UI_SIZES } from "@/lib/constants"
+import { Box } from "@chakra-ui/react"
 
 interface StatusLightProps {
   extractionStatus: string
@@ -12,12 +12,18 @@ export function StatusLight({
 }: StatusLightProps) {
   const getStatusColor = () => {
     // Red: Something failed
-    if (extractionStatus === PROCESSING_STATUSES.FAILED || generationStatus === PROCESSING_STATUSES.FAILED) {
+    if (
+      extractionStatus === PROCESSING_STATUSES.FAILED ||
+      generationStatus === PROCESSING_STATUSES.FAILED
+    ) {
       return "red.500"
     }
 
     // Green: Questions have been generated (both completed)
-    if (extractionStatus === PROCESSING_STATUSES.COMPLETED && generationStatus === PROCESSING_STATUSES.COMPLETED) {
+    if (
+      extractionStatus === PROCESSING_STATUSES.COMPLETED &&
+      generationStatus === PROCESSING_STATUSES.COMPLETED
+    ) {
       return "green.500"
     }
 
@@ -26,11 +32,17 @@ export function StatusLight({
   }
 
   const getStatusTitle = () => {
-    if (extractionStatus === PROCESSING_STATUSES.FAILED || generationStatus === PROCESSING_STATUSES.FAILED) {
+    if (
+      extractionStatus === PROCESSING_STATUSES.FAILED ||
+      generationStatus === PROCESSING_STATUSES.FAILED
+    ) {
       return "Generation failed"
     }
 
-    if (extractionStatus === PROCESSING_STATUSES.COMPLETED && generationStatus === PROCESSING_STATUSES.COMPLETED) {
+    if (
+      extractionStatus === PROCESSING_STATUSES.COMPLETED &&
+      generationStatus === PROCESSING_STATUSES.COMPLETED
+    ) {
       return "Questions generated successfully"
     }
 

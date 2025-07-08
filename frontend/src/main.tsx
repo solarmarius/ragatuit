@@ -11,7 +11,7 @@ import { routeTree } from "./routeTree.gen"
 
 import { ApiError } from "./client"
 import { CustomProvider } from "./components/ui/provider"
-import { configureApiClient, clearAuthToken } from "./lib/api/client"
+import { clearAuthToken, configureApiClient } from "./lib/api/client"
 
 // Configure API client
 configureApiClient()

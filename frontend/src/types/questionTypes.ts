@@ -158,18 +158,16 @@ export function isFillInBlankData(data: unknown): data is FillInBlankData {
   return (
     typeof obj.question_text === "string" &&
     Array.isArray(obj.blanks) &&
-    obj.blanks.every(
-      (blank: unknown) => {
-        if (typeof blank !== "object" || blank === null) {
-          return false
-        }
-        const blankObj = blank as Record<string, unknown>
-        return (
-          typeof blankObj.position === "number" &&
-          typeof blankObj.correct_answer === "string"
-        )
+    obj.blanks.every((blank: unknown) => {
+      if (typeof blank !== "object" || blank === null) {
+        return false
       }
-    )
+      const blankObj = blank as Record<string, unknown>
+      return (
+        typeof blankObj.position === "number" &&
+        typeof blankObj.correct_answer === "string"
+      )
+    })
   )
 }
 
@@ -218,9 +216,10 @@ export function extractQuestionData<T extends QuestionType>(
         throw new Error("Invalid Fill in Blank question data structure")
       }
       return data as unknown as TypedQuestionResponse<T>["question_data"]
-    default:
+    default: {
       // TypeScript exhaustiveness check - this should never happen
       const _exhaustiveCheck: never = type
       throw new Error(`Unsupported question type: ${String(_exhaustiveCheck)}`)
+    }
   }
 }

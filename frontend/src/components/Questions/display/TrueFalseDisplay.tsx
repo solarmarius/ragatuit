@@ -2,8 +2,8 @@ import type { QuestionResponse } from "@/client"
 import { extractQuestionData } from "@/types/questionTypes"
 import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react"
 import { memo } from "react"
-import { ErrorDisplay } from "./ErrorDisplay"
 import { ExplanationBox } from "../shared/ExplanationBox"
+import { ErrorDisplay } from "./ErrorDisplay"
 
 interface TrueFalseDisplayProps {
   question: QuestionResponse

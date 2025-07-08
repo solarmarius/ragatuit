@@ -1,6 +1,6 @@
-import { ApiError } from '@/client'
-import { extractErrorDetails } from '@/lib/utils'
-import { useCustomToast } from './useCustomToast'
+import type { ApiError } from "@/client"
+import { extractErrorDetails } from "@/lib/utils"
+import { useCustomToast } from "./useCustomToast"
 
 /**
  * Hook for consistent error handling across the application

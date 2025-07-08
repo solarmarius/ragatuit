@@ -1,18 +1,17 @@
-import {
-  Box,
-  Card,
-  Container,
-  HStack,
-  Text,
-  VStack,
-} from "@chakra-ui/react"
+import { Box, Card, Container, HStack, Text, VStack } from "@chakra-ui/react"
 import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
 
+import {
+  EmptyState,
+  ErrorState,
+  LoadingSkeleton,
+  QuizTable,
+  QuizTableSkeleton,
+} from "@/components/common"
 import { Button } from "@/components/ui/button"
-import { EmptyState, ErrorState, LoadingSkeleton, QuizTable, QuizTableSkeleton } from "@/components/common"
 import { useUserQuizzes } from "@/hooks/api"
 import { useErrorHandler } from "@/hooks/common"
-import { UI_TEXT, UI_SIZES } from "@/lib/constants"
+import { UI_SIZES, UI_TEXT } from "@/lib/constants"
 
 export const Route = createFileRoute("/_layout/quizzes")({
   component: QuizList,
@@ -21,11 +20,7 @@ export const Route = createFileRoute("/_layout/quizzes")({
 function QuizList() {
   const { handleError } = useErrorHandler()
 
-  const {
-    data: quizzes,
-    isLoading,
-    error,
-  } = useUserQuizzes()
+  const { data: quizzes, isLoading, error } = useUserQuizzes()
 
   if (isLoading) {
     return <QuizListSkeleton />
@@ -62,7 +57,9 @@ function QuizList() {
             </Text>
           </Box>
           <Button asChild>
-            <RouterLink to="/create-quiz">{UI_TEXT.ACTIONS.CREATE_QUIZ}</RouterLink>
+            <RouterLink to="/create-quiz">
+              {UI_TEXT.ACTIONS.CREATE_QUIZ}
+            </RouterLink>
           </Button>
         </HStack>
 
@@ -98,12 +95,21 @@ function QuizListSkeleton() {
         {/* Header Skeleton */}
         <HStack justify="space-between" align="center">
           <Box>
-            <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XXL} width={UI_SIZES.SKELETON.WIDTH.TEXT_LG} />
+            <LoadingSkeleton
+              height={UI_SIZES.SKELETON.HEIGHT.XXL}
+              width={UI_SIZES.SKELETON.WIDTH.TEXT_LG}
+            />
             <Box mt={2}>
-              <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.TEXT_XL} />
+              <LoadingSkeleton
+                height={UI_SIZES.SKELETON.HEIGHT.LG}
+                width={UI_SIZES.SKELETON.WIDTH.TEXT_XL}
+              />
             </Box>
           </Box>
-          <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XXL} width={UI_SIZES.SKELETON.WIDTH.TEXT_MD} />
+          <LoadingSkeleton
+            height={UI_SIZES.SKELETON.HEIGHT.XXL}
+            width={UI_SIZES.SKELETON.WIDTH.TEXT_MD}
+          />
         </HStack>
 
         {/* Table Skeleton */}

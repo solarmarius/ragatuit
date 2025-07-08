@@ -5,7 +5,9 @@ interface ExplanationBoxProps {
   explanation: string
 }
 
-export const ExplanationBox = memo(function ExplanationBox({ explanation }: ExplanationBoxProps) {
+export const ExplanationBox = memo(function ExplanationBox({
+  explanation,
+}: ExplanationBoxProps) {
   return (
     <Box
       p={3}

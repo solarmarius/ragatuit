@@ -1,4 +1,4 @@
-import { VStack, Text, Box } from "@chakra-ui/react"
+import { Box, Text, VStack } from "@chakra-ui/react"
 import { memo } from "react"
 import type { ReactNode } from "react"
 

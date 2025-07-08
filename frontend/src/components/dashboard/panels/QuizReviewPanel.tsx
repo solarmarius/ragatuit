@@ -1,27 +1,26 @@
-import {
-  Badge,
-  Box,
-  Card,
-  HStack,
-  Text,
-  VStack,
-} from "@chakra-ui/react"
+import { Badge, Box, Card, HStack, Text, VStack } from "@chakra-ui/react"
 import { Link as RouterLink } from "@tanstack/react-router"
 import { memo, useMemo } from "react"
 
 import type { Quiz } from "@/client/types.gen"
-import { Button } from "@/components/ui/button"
 import { EmptyState, LoadingSkeleton, QuizListCard } from "@/components/common"
-import { getQuizzesNeedingReview } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import { UI_SIZES, UI_TEXT } from "@/lib/constants"
+import { getQuizzesNeedingReview } from "@/lib/utils"
 
 interface QuizReviewPanelProps {
   quizzes: Quiz[]
   isLoading: boolean
 }
 
-export const QuizReviewPanel = memo(function QuizReviewPanel({ quizzes, isLoading }: QuizReviewPanelProps) {
-  const reviewQuizzes = useMemo(() => getQuizzesNeedingReview(quizzes), [quizzes])
+export const QuizReviewPanel = memo(function QuizReviewPanel({
+  quizzes,
+  isLoading,
+}: QuizReviewPanelProps) {
+  const reviewQuizzes = useMemo(
+    () => getQuizzesNeedingReview(quizzes),
+    [quizzes],
+  )
 
   if (isLoading) {
     return <QuizReviewPanelSkeleton />
@@ -50,18 +49,20 @@ export const QuizReviewPanel = memo(function QuizReviewPanel({ quizzes, isLoadin
           />
         ) : (
           <VStack gap={4} align="stretch">
-            {reviewQuizzes.slice(0, UI_SIZES.PANEL.MAX_ITEMS + 1).map((quiz) => (
-              <QuizListCard
-                key={quiz.id}
-                quiz={quiz}
-                actionButton={{
-                  text: "Review",
-                  to: "/quiz/$id",
-                  params: { id: quiz.id || "" }
-                }}
-                compact
-              />
-            ))}
+            {reviewQuizzes
+              .slice(0, UI_SIZES.PANEL.MAX_ITEMS + 1)
+              .map((quiz) => (
+                <QuizListCard
+                  key={quiz.id}
+                  quiz={quiz}
+                  actionButton={{
+                    text: "Review",
+                    to: "/quiz/$id",
+                    params: { id: quiz.id || "" },
+                  }}
+                  compact
+                />
+              ))}
 
             {reviewQuizzes.length > 5 && (
               <Box textAlign="center" pt={2}>
@@ -85,11 +86,20 @@ function QuizReviewPanelSkeleton() {
     <Card.Root>
       <Card.Header>
         <HStack justify="space-between" align="center">
-          <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XL} width={UI_SIZES.SKELETON.WIDTH.TEXT_LG} />
-          <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.XS} />
+          <LoadingSkeleton
+            height={UI_SIZES.SKELETON.HEIGHT.XL}
+            width={UI_SIZES.SKELETON.WIDTH.TEXT_LG}
+          />
+          <LoadingSkeleton
+            height={UI_SIZES.SKELETON.HEIGHT.LG}
+            width={UI_SIZES.SKELETON.WIDTH.XS}
+          />
         </HStack>
         <Box mt={2}>
-          <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.MD} width={UI_SIZES.SKELETON.WIDTH.TEXT_XL} />
+          <LoadingSkeleton
+            height={UI_SIZES.SKELETON.HEIGHT.MD}
+            width={UI_SIZES.SKELETON.WIDTH.TEXT_XL}
+          />
         </Box>
       </Card.Header>
       <Card.Body>
@@ -106,18 +116,36 @@ function QuizReviewPanelSkeleton() {
               <VStack align="stretch" gap={3}>
                 <HStack justify="space-between" align="start">
                   <VStack align="start" gap={1} flex={1}>
-                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.MD} width={UI_SIZES.SKELETON.WIDTH.TEXT_MD} />
-                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.SM} width={UI_SIZES.SKELETON.WIDTH.XL} />
+                    <LoadingSkeleton
+                      height={UI_SIZES.SKELETON.HEIGHT.MD}
+                      width={UI_SIZES.SKELETON.WIDTH.TEXT_MD}
+                    />
+                    <LoadingSkeleton
+                      height={UI_SIZES.SKELETON.HEIGHT.SM}
+                      width={UI_SIZES.SKELETON.WIDTH.XL}
+                    />
                   </VStack>
-                  <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.SM} width={UI_SIZES.SKELETON.HEIGHT.SM} />
+                  <LoadingSkeleton
+                    height={UI_SIZES.SKELETON.HEIGHT.SM}
+                    width={UI_SIZES.SKELETON.HEIGHT.SM}
+                  />
                 </HStack>
 
                 <HStack justify="space-between" align="center">
                   <HStack gap={2}>
-                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.LG} />
-                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.MD} />
+                    <LoadingSkeleton
+                      height={UI_SIZES.SKELETON.HEIGHT.LG}
+                      width={UI_SIZES.SKELETON.WIDTH.LG}
+                    />
+                    <LoadingSkeleton
+                      height={UI_SIZES.SKELETON.HEIGHT.LG}
+                      width={UI_SIZES.SKELETON.WIDTH.MD}
+                    />
                   </HStack>
-                  <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XL} width={UI_SIZES.SKELETON.WIDTH.XL} />
+                  <LoadingSkeleton
+                    height={UI_SIZES.SKELETON.HEIGHT.XL}
+                    width={UI_SIZES.SKELETON.WIDTH.XL}
+                  />
                 </HStack>
               </VStack>
             </Box>

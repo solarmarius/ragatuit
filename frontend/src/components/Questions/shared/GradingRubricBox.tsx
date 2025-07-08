@@ -5,7 +5,9 @@ interface GradingRubricBoxProps {
   rubric: string
 }
 
-export const GradingRubricBox = memo(function GradingRubricBox({ rubric }: GradingRubricBoxProps) {
+export const GradingRubricBox = memo(function GradingRubricBox({
+  rubric,
+}: GradingRubricBoxProps) {
   return (
     <Box
       p={3}

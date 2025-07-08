@@ -1,7 +1,10 @@
 import type { QuestionResponse, QuestionUpdateRequest } from "@/client"
 import { FormField, FormGroup } from "@/components/forms"
 import { Checkbox } from "@/components/ui/checkbox"
-import { extractQuestionData, type FillInBlankData } from "@/types/questionTypes"
+import {
+  type FillInBlankData,
+  extractQuestionData,
+} from "@/types/questionTypes"
 import {
   Box,
   Button,
@@ -87,13 +90,20 @@ export const FillInBlankEditor = memo(function FillInBlankEditor({
       })
     }
 
-    const updateBlank = (index: number, field: keyof FillInBlankData['blanks'][0], value: string | boolean) => {
+    const updateBlank = (
+      index: number,
+      field: keyof FillInBlankData["blanks"][0],
+      value: string | boolean,
+    ) => {
       const updatedBlanks = [...formData.blanks]
-      const fieldMap: Record<keyof FillInBlankData['blanks'][0], keyof typeof updatedBlanks[0]> = {
-        correct_answer: 'correctAnswer',
-        answer_variations: 'answerVariations',
-        case_sensitive: 'caseSensitive',
-        position: 'position'
+      const fieldMap: Record<
+        keyof FillInBlankData["blanks"][0],
+        keyof (typeof updatedBlanks)[0]
+      > = {
+        correct_answer: "correctAnswer",
+        answer_variations: "answerVariations",
+        case_sensitive: "caseSensitive",
+        position: "position",
       }
       const formField = fieldMap[field]
       updatedBlanks[index] = { ...updatedBlanks[index], [formField]: value }

@@ -1,6 +1,10 @@
-import { useMutation, useQueryClient, type QueryKey } from '@tanstack/react-query'
+import {
+  type QueryKey,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query"
 
-import { useCustomToast, useErrorHandler } from '@/hooks/common'
+import { useCustomToast, useErrorHandler } from "@/hooks/common"
 
 interface UseApiMutationOptions<TData, TVariables> {
   successMessage?: string
@@ -15,18 +19,13 @@ interface UseApiMutationOptions<TData, TVariables> {
  */
 export function useApiMutation<TData, TVariables>(
   mutationFn: (variables: TVariables) => Promise<TData>,
-  options: UseApiMutationOptions<TData, TVariables> = {}
+  options: UseApiMutationOptions<TData, TVariables> = {},
 ) {
   const { showSuccessToast } = useCustomToast()
   const { handleError } = useErrorHandler()
   const queryClient = useQueryClient()
 
-  const {
-    successMessage,
-    invalidateQueries = [],
-    onSuccess,
-    onError,
-  } = options
+  const { successMessage, invalidateQueries = [], onSuccess, onError } = options
 
   return useMutation({
     mutationFn,
@@ -38,7 +37,7 @@ export function useApiMutation<TData, TVariables>(
 
       // Invalidate queries if specified
       if (invalidateQueries.length > 0) {
-        invalidateQueries.forEach(queryKey => {
+        invalidateQueries.forEach((queryKey) => {
           queryClient.invalidateQueries({ queryKey })
         })
       }

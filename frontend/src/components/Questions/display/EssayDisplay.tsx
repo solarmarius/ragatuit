@@ -2,9 +2,9 @@ import type { QuestionResponse } from "@/client"
 import { extractQuestionData } from "@/types/questionTypes"
 import { Badge, Box, Text, VStack } from "@chakra-ui/react"
 import { memo } from "react"
-import { ErrorDisplay } from "./ErrorDisplay"
 import { GradingRubricBox } from "../shared/GradingRubricBox"
 import { SampleAnswerBox } from "../shared/SampleAnswerBox"
+import { ErrorDisplay } from "./ErrorDisplay"
 
 interface EssayDisplayProps {
   question: QuestionResponse

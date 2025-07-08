@@ -9,7 +9,7 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
-import { useState, useCallback } from "react"
+import { useCallback, useState } from "react"
 
 import { QuizService } from "@/client"
 import { CourseSelectionStep } from "@/components/QuizCreation/CourseSelectionStep"

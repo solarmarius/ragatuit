@@ -2,11 +2,11 @@ import { memo } from "react"
 
 import type { QuestionResponse, QuestionUpdateRequest } from "@/client"
 import { QUESTION_TYPES } from "@/lib/constants"
-import { MCQEditor } from "./MCQEditor"
-import { TrueFalseEditor } from "./TrueFalseEditor"
-import { ShortAnswerEditor } from "./ShortAnswerEditor"
 import { EssayEditor } from "./EssayEditor"
 import { FillInBlankEditor } from "./FillInBlankEditor"
+import { MCQEditor } from "./MCQEditor"
+import { ShortAnswerEditor } from "./ShortAnswerEditor"
+import { TrueFalseEditor } from "./TrueFalseEditor"
 import { UnsupportedEditor } from "./UnsupportedEditor"
 
 interface QuestionEditorProps {
@@ -41,6 +41,11 @@ export const QuestionEditor = memo(function QuestionEditor({
     case QUESTION_TYPES.FILL_IN_BLANK:
       return <FillInBlankEditor {...commonProps} />
     default:
-      return <UnsupportedEditor questionType={question.question_type} onCancel={onCancel} />
+      return (
+        <UnsupportedEditor
+          questionType={question.question_type}
+          onCancel={onCancel}
+        />
+      )
   }
 })

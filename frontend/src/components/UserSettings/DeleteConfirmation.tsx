@@ -15,8 +15,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import useAuth from "@/hooks/useCanvasAuth"
 import { useCustomToast, useErrorHandler } from "@/hooks/common"
+import useAuth from "@/hooks/useCanvasAuth"
 
 const DeleteConfirmation = () => {
   const [isOpen, setIsOpen] = useState(false)

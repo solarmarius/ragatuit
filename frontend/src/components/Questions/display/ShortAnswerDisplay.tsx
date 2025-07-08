@@ -2,9 +2,9 @@ import type { QuestionResponse } from "@/client"
 import { extractQuestionData } from "@/types/questionTypes"
 import { Box, Text, VStack } from "@chakra-ui/react"
 import { memo } from "react"
-import { ErrorDisplay } from "./ErrorDisplay"
-import { ExplanationBox } from "../shared/ExplanationBox"
 import { CorrectAnswerBox } from "../shared/CorrectAnswerBox"
+import { ExplanationBox } from "../shared/ExplanationBox"
+import { ErrorDisplay } from "./ErrorDisplay"
 
 interface ShortAnswerDisplayProps {
   question: QuestionResponse

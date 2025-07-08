@@ -4,7 +4,7 @@
  */
 export function useConditionalPolling<T>(
   shouldPoll: (data: T | undefined) => boolean,
-  interval: number = 5000
+  interval = 5000,
 ) {
   return (query: { state: { data?: T } }) => {
     const data = query?.state?.data
@@ -16,7 +16,7 @@ export function useConditionalPolling<T>(
  * Predefined polling condition for quiz processing status.
  * Polls while any status is pending or processing.
  */
-export function useQuizStatusPolling(interval: number = 5000) {
+export function useQuizStatusPolling(interval = 5000) {
   return useConditionalPolling((data: any) => {
     if (!data) return false
 

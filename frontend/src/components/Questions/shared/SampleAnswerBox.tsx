@@ -5,7 +5,9 @@ interface SampleAnswerBoxProps {
   sampleAnswer: string
 }
 
-export const SampleAnswerBox = memo(function SampleAnswerBox({ sampleAnswer }: SampleAnswerBoxProps) {
+export const SampleAnswerBox = memo(function SampleAnswerBox({
+  sampleAnswer,
+}: SampleAnswerBoxProps) {
   return (
     <Box
       p={3}

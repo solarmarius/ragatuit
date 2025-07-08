@@ -1,6 +1,6 @@
+import { PROCESSING_STATUSES } from "@/lib/constants"
 import { formatTimeAgo } from "@/lib/utils"
 import { Text } from "@chakra-ui/react"
-import { PROCESSING_STATUSES } from "@/lib/constants"
 
 interface StatusDescriptionProps {
   status: string

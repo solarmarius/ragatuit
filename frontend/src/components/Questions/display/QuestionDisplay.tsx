@@ -2,11 +2,11 @@ import { memo } from "react"
 
 import type { QuestionResponse } from "@/client"
 import { QUESTION_TYPES } from "@/lib/constants"
-import { MCQDisplay } from "./MCQDisplay"
-import { TrueFalseDisplay } from "./TrueFalseDisplay"
-import { ShortAnswerDisplay } from "./ShortAnswerDisplay"
 import { EssayDisplay } from "./EssayDisplay"
 import { FillInBlankDisplay } from "./FillInBlankDisplay"
+import { MCQDisplay } from "./MCQDisplay"
+import { ShortAnswerDisplay } from "./ShortAnswerDisplay"
+import { TrueFalseDisplay } from "./TrueFalseDisplay"
 import { UnsupportedDisplay } from "./UnsupportedDisplay"
 
 interface QuestionDisplayProps {

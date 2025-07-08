@@ -1,6 +1,6 @@
+import type { LoadingSkeletonProps } from "@/types/components"
 import { Skeleton, VStack } from "@chakra-ui/react"
 import { memo } from "react"
-import type { LoadingSkeletonProps } from "@/types/components"
 
 export const LoadingSkeleton = memo(function LoadingSkeleton({
   height = "20px",

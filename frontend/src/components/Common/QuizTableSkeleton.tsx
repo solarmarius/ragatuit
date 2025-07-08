@@ -1,8 +1,8 @@
 import { Card, HStack, Table, VStack } from "@chakra-ui/react"
 import { memo } from "react"
 
-import { LoadingSkeleton } from "./LoadingSkeleton"
 import { UI_SIZES } from "@/lib/constants"
+import { LoadingSkeleton } from "./LoadingSkeleton"
 
 interface QuizTableSkeletonProps {
   rows?: number
@@ -31,33 +31,63 @@ export const QuizTableSkeleton = memo(function QuizTableSkeleton({
               <Table.Row key={i}>
                 <Table.Cell>
                   <VStack align="start" gap={1}>
-                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.MD} width={UI_SIZES.SKELETON.WIDTH.TEXT_LG} />
-                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.SM} width={UI_SIZES.SKELETON.WIDTH.TEXT_MD} />
+                    <LoadingSkeleton
+                      height={UI_SIZES.SKELETON.HEIGHT.MD}
+                      width={UI_SIZES.SKELETON.WIDTH.TEXT_LG}
+                    />
+                    <LoadingSkeleton
+                      height={UI_SIZES.SKELETON.HEIGHT.SM}
+                      width={UI_SIZES.SKELETON.WIDTH.TEXT_MD}
+                    />
                   </VStack>
                 </Table.Cell>
                 <Table.Cell>
                   <VStack align="start" gap={1}>
-                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.MD} width={UI_SIZES.SKELETON.WIDTH.TEXT_MD} />
-                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.SM} width={UI_SIZES.SKELETON.WIDTH.LG} />
+                    <LoadingSkeleton
+                      height={UI_SIZES.SKELETON.HEIGHT.MD}
+                      width={UI_SIZES.SKELETON.WIDTH.TEXT_MD}
+                    />
+                    <LoadingSkeleton
+                      height={UI_SIZES.SKELETON.HEIGHT.SM}
+                      width={UI_SIZES.SKELETON.WIDTH.LG}
+                    />
                   </VStack>
                 </Table.Cell>
                 <Table.Cell>
-                  <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.MD} />
+                  <LoadingSkeleton
+                    height={UI_SIZES.SKELETON.HEIGHT.LG}
+                    width={UI_SIZES.SKELETON.WIDTH.MD}
+                  />
                 </Table.Cell>
                 <Table.Cell>
-                  <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.LG} />
+                  <LoadingSkeleton
+                    height={UI_SIZES.SKELETON.HEIGHT.LG}
+                    width={UI_SIZES.SKELETON.WIDTH.LG}
+                  />
                 </Table.Cell>
                 <Table.Cell>
                   <HStack gap={2} align="center">
-                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.SM} width={UI_SIZES.SKELETON.WIDTH.SM} />
-                    <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.SM} width={UI_SIZES.SKELETON.WIDTH.TEXT_MD} />
+                    <LoadingSkeleton
+                      height={UI_SIZES.SKELETON.HEIGHT.SM}
+                      width={UI_SIZES.SKELETON.WIDTH.SM}
+                    />
+                    <LoadingSkeleton
+                      height={UI_SIZES.SKELETON.HEIGHT.SM}
+                      width={UI_SIZES.SKELETON.WIDTH.TEXT_MD}
+                    />
                   </HStack>
                 </Table.Cell>
                 <Table.Cell>
-                  <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.SM} width={UI_SIZES.SKELETON.WIDTH.LG} />
+                  <LoadingSkeleton
+                    height={UI_SIZES.SKELETON.HEIGHT.SM}
+                    width={UI_SIZES.SKELETON.WIDTH.LG}
+                  />
                 </Table.Cell>
                 <Table.Cell>
-                  <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XL} width={UI_SIZES.SKELETON.WIDTH.MD} />
+                  <LoadingSkeleton
+                    height={UI_SIZES.SKELETON.HEIGHT.XL}
+                    width={UI_SIZES.SKELETON.WIDTH.MD}
+                  />
                 </Table.Cell>
               </Table.Row>
             ))}

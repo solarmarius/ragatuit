@@ -14,15 +14,19 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
 
 import { QuizService } from "@/client"
-import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/common"
 import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenerationTrigger"
 import { QuestionReview } from "@/components/Questions/QuestionReview"
 import { QuestionStats } from "@/components/Questions/QuestionStats"
 import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirmation"
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/common"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { StatusDescription } from "@/components/ui/status-description"
 import { StatusLight } from "@/components/ui/status-light"
-import { useApiMutation, useQuizStatusPolling, useFormattedDate } from "@/hooks/common"
+import {
+  useApiMutation,
+  useFormattedDate,
+  useQuizStatusPolling,
+} from "@/hooks/common"
 import { UI_SIZES } from "@/lib/constants"
 
 export const Route = createFileRoute("/_layout/quiz/$id")({
@@ -30,7 +34,7 @@ export const Route = createFileRoute("/_layout/quiz/$id")({
 })
 
 function DateDisplay({ date }: { date: string | null | undefined }) {
-  const formattedDate = useFormattedDate(date, 'default')
+  const formattedDate = useFormattedDate(date, "default")
 
   if (!formattedDate) return <Text color="gray.500">Not available</Text>
 
@@ -64,7 +68,7 @@ function QuizDetail() {
     {
       successMessage: "Content extraction restarted",
       invalidateQueries: [["quiz", id]],
-    }
+    },
   )
 
   if (isLoading) {
@@ -87,9 +91,30 @@ function QuizDetail() {
     )
   }
 
-  // Get selected modules (already an object from API)
-  const selectedModules = quiz.selected_modules || {}
-  const moduleNames = Object.values(selectedModules).filter((value): value is string => typeof value === 'string')
+  // Get selected modules - parse JSON string if needed
+  const selectedModules = (() => {
+    if (!quiz.selected_modules) return {}
+
+    // If it's already an object, use it directly
+    if (typeof quiz.selected_modules === 'object') {
+      return quiz.selected_modules
+    }
+
+    // If it's a string, parse it as JSON
+    if (typeof quiz.selected_modules === 'string') {
+      try {
+        return JSON.parse(quiz.selected_modules)
+      } catch {
+        return {}
+      }
+    }
+
+    return {}
+  })()
+
+  const moduleNames = Object.values(selectedModules).filter(
+    (value): value is string => typeof value === "string",
+  )
 
   // Check if quiz is ready for approval
   const isQuizReadyForApproval =
@@ -299,7 +324,9 @@ function QuizDetail() {
                           colorScheme="blue"
                           variant="outline"
                           loading={retryExtractionMutation.isPending}
-                          onClick={() => retryExtractionMutation.mutate(undefined)}
+                          onClick={() =>
+                            retryExtractionMutation.mutate(undefined)
+                          }
                           mt={2}
                         >
                           Retry Content Extraction
@@ -383,9 +410,15 @@ function QuizDetailSkeleton() {
       <VStack gap={6} align="stretch">
         {/* Header Skeleton */}
         <Box>
-          <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XXL} width={UI_SIZES.SKELETON.WIDTH.TEXT_XL} />
+          <LoadingSkeleton
+            height={UI_SIZES.SKELETON.HEIGHT.XXL}
+            width={UI_SIZES.SKELETON.WIDTH.TEXT_XL}
+          />
           <Box mt={2}>
-            <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XL} width={UI_SIZES.SKELETON.WIDTH.TEXT_MD} />
+            <LoadingSkeleton
+              height={UI_SIZES.SKELETON.HEIGHT.XL}
+              width={UI_SIZES.SKELETON.WIDTH.TEXT_MD}
+            />
           </Box>
         </Box>
 
@@ -393,11 +426,18 @@ function QuizDetailSkeleton() {
         {[1, 2, 3, 4].map((i) => (
           <Card.Root key={i}>
             <Card.Header>
-              <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XL} width={UI_SIZES.SKELETON.WIDTH.TEXT_LG} />
+              <LoadingSkeleton
+                height={UI_SIZES.SKELETON.HEIGHT.XL}
+                width={UI_SIZES.SKELETON.WIDTH.TEXT_LG}
+              />
             </Card.Header>
             <Card.Body>
               <VStack gap={3} align="stretch">
-                <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.FULL} lines={3} />
+                <LoadingSkeleton
+                  height={UI_SIZES.SKELETON.HEIGHT.LG}
+                  width={UI_SIZES.SKELETON.WIDTH.FULL}
+                  lines={3}
+                />
               </VStack>
             </Card.Body>
           </Card.Root>

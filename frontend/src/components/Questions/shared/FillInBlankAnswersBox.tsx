@@ -12,7 +12,9 @@ interface FillInBlankAnswersBoxProps {
   blanks: BlankData[]
 }
 
-export const FillInBlankAnswersBox = memo(function FillInBlankAnswersBox({ blanks }: FillInBlankAnswersBoxProps) {
+export const FillInBlankAnswersBox = memo(function FillInBlankAnswersBox({
+  blanks,
+}: FillInBlankAnswersBoxProps) {
   return (
     <Box
       p={3}

@@ -9,7 +9,7 @@ import {
   VStack,
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
-import { useState, useMemo, useCallback } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { MdCheck, MdDelete, MdEdit } from "react-icons/md"
 
 import {
@@ -18,7 +18,11 @@ import {
   QuestionsService,
 } from "@/client"
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/common"
-import { useApiMutation, useEditingState, useFormattedDate } from "@/hooks/common"
+import {
+  useApiMutation,
+  useEditingState,
+  useFormattedDate,
+} from "@/hooks/common"
 import { UI_SIZES } from "@/lib/constants"
 import { QuestionDisplay } from "./display"
 import { QuestionEditor } from "./editors"
@@ -28,7 +32,7 @@ interface QuestionReviewProps {
 }
 
 function ApprovalTimestamp({ approvedAt }: { approvedAt: string }) {
-  const formattedDate = useFormattedDate(approvedAt, 'short')
+  const formattedDate = useFormattedDate(approvedAt, "short")
 
   if (!formattedDate) return null
 
@@ -41,9 +45,8 @@ function ApprovalTimestamp({ approvedAt }: { approvedAt: string }) {
 
 export function QuestionReview({ quizId }: QuestionReviewProps) {
   const [filterView, setFilterView] = useState<"pending" | "all">("pending")
-  const { editingId, startEditing, cancelEditing, isEditing } = useEditingState<QuestionResponse>(
-    (question) => question.id
-  )
+  const { editingId, startEditing, cancelEditing, isEditing } =
+    useEditingState<QuestionResponse>((question) => question.id)
 
   // Fetch questions
   const {
@@ -73,7 +76,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
     return {
       filteredQuestions: filtered,
       pendingCount: pending.length,
-      totalCount: questions.length
+      totalCount: questions.length,
     }
   }, [questions, filterView])
 
@@ -91,7 +94,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
         ["quiz", quizId, "questions"],
         ["quiz", quizId, "questions", "stats"],
       ],
-    }
+    },
   )
 
   // Update question mutation
@@ -115,7 +118,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       onSuccess: () => {
         cancelEditing()
       },
-    }
+    },
   )
 
   // Delete question mutation
@@ -132,17 +135,20 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
         ["quiz", quizId, "questions"],
         ["quiz", quizId, "questions", "stats"],
       ],
-    }
+    },
   )
 
-  const handleSaveQuestion = useCallback((updateData: QuestionUpdateRequest) => {
-    if (!editingId) return
+  const handleSaveQuestion = useCallback(
+    (updateData: QuestionUpdateRequest) => {
+      if (!editingId) return
 
-    updateQuestionMutation.mutate({
-      questionId: editingId,
-      data: updateData,
-    })
-  }, [editingId, updateQuestionMutation])
+      updateQuestionMutation.mutate({
+        questionId: editingId,
+        data: updateData,
+      })
+    },
+    [editingId, updateQuestionMutation],
+  )
 
   if (isLoading) {
     return <QuestionReviewSkeleton />
@@ -212,12 +218,16 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
         <Card.Root>
           <Card.Body>
             <EmptyState
-              title={filterView === "pending"
-                ? "No Pending Questions"
-                : "No Questions Found"}
-              description={filterView === "pending"
-                ? 'All questions have been approved! Switch to "All Questions" to see them.'
-                : "No questions match the current filter."}
+              title={
+                filterView === "pending"
+                  ? "No Pending Questions"
+                  : "No Questions Found"
+              }
+              description={
+                filterView === "pending"
+                  ? 'All questions have been approved! Switch to "All Questions" to see them.'
+                  : "No questions match the current filter."
+              }
             />
           </Card.Body>
         </Card.Root>
@@ -309,9 +319,15 @@ function QuestionReviewSkeleton() {
   return (
     <VStack gap={6} align="stretch">
       <Box>
-        <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XXL} width={UI_SIZES.SKELETON.WIDTH.TEXT_LG} />
+        <LoadingSkeleton
+          height={UI_SIZES.SKELETON.HEIGHT.XXL}
+          width={UI_SIZES.SKELETON.WIDTH.TEXT_LG}
+        />
         <Box mt={2}>
-          <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.TEXT_XL} />
+          <LoadingSkeleton
+            height={UI_SIZES.SKELETON.HEIGHT.LG}
+            width={UI_SIZES.SKELETON.WIDTH.TEXT_XL}
+          />
         </Box>
       </Box>
 
@@ -319,19 +335,38 @@ function QuestionReviewSkeleton() {
         <Card.Root key={i}>
           <Card.Header>
             <HStack justify="space-between">
-              <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XL} width={UI_SIZES.SKELETON.WIDTH.TEXT_MD} />
+              <LoadingSkeleton
+                height={UI_SIZES.SKELETON.HEIGHT.XL}
+                width={UI_SIZES.SKELETON.WIDTH.TEXT_MD}
+              />
               <HStack gap={2}>
-                <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XXL} width={UI_SIZES.SKELETON.WIDTH.SM} />
-                <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XXL} width={UI_SIZES.SKELETON.WIDTH.SM} />
-                <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XXL} width={UI_SIZES.SKELETON.WIDTH.SM} />
+                <LoadingSkeleton
+                  height={UI_SIZES.SKELETON.HEIGHT.XXL}
+                  width={UI_SIZES.SKELETON.WIDTH.SM}
+                />
+                <LoadingSkeleton
+                  height={UI_SIZES.SKELETON.HEIGHT.XXL}
+                  width={UI_SIZES.SKELETON.WIDTH.SM}
+                />
+                <LoadingSkeleton
+                  height={UI_SIZES.SKELETON.HEIGHT.XXL}
+                  width={UI_SIZES.SKELETON.WIDTH.SM}
+                />
               </HStack>
             </HStack>
           </Card.Header>
           <Card.Body>
             <VStack gap={4} align="stretch">
-              <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.LG} width={UI_SIZES.SKELETON.WIDTH.FULL} />
+              <LoadingSkeleton
+                height={UI_SIZES.SKELETON.HEIGHT.LG}
+                width={UI_SIZES.SKELETON.WIDTH.FULL}
+              />
               <VStack gap={2} align="stretch">
-                <LoadingSkeleton height={UI_SIZES.SKELETON.HEIGHT.XXL} width={UI_SIZES.SKELETON.WIDTH.FULL} lines={4} />
+                <LoadingSkeleton
+                  height={UI_SIZES.SKELETON.HEIGHT.XXL}
+                  width={UI_SIZES.SKELETON.WIDTH.FULL}
+                  lines={4}
+                />
               </VStack>
             </VStack>
           </Card.Body>

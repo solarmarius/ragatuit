@@ -1,19 +1,12 @@
-import {
-  Badge,
-  Box,
-  Card,
-  HStack,
-  Text,
-  VStack,
-} from "@chakra-ui/react"
+import { Badge, Box, Card, HStack, Text, VStack } from "@chakra-ui/react"
 import { Link as RouterLink } from "@tanstack/react-router"
 import { memo, useMemo } from "react"
 
 import type { Quiz } from "@/client/types.gen"
-import { Button } from "@/components/ui/button"
 import { EmptyState } from "@/components/common"
-import { getQuizzesBeingGenerated } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 import { UI_SIZES, UI_TEXT } from "@/lib/constants"
+import { getQuizzesBeingGenerated } from "@/lib/utils"
 import { QuizGenerationCard } from "../QuizGenerationCard"
 import { QuizGenerationPanelSkeleton } from "../QuizGenerationPanelSkeleton"
 
@@ -26,7 +19,10 @@ export const QuizGenerationPanel = memo(function QuizGenerationPanel({
   quizzes,
   isLoading,
 }: QuizGenerationPanelProps) {
-  const generatingQuizzes = useMemo(() => getQuizzesBeingGenerated(quizzes), [quizzes])
+  const generatingQuizzes = useMemo(
+    () => getQuizzesBeingGenerated(quizzes),
+    [quizzes],
+  )
 
   if (isLoading) {
     return <QuizGenerationPanelSkeleton />
@@ -54,23 +50,30 @@ export const QuizGenerationPanel = memo(function QuizGenerationPanel({
             description="Start creating a quiz to see generation progress here"
             action={
               <Button size="sm" variant="outline" asChild>
-                <RouterLink to="/create-quiz">{UI_TEXT.ACTIONS.CREATE_QUIZ}</RouterLink>
+                <RouterLink to="/create-quiz">
+                  {UI_TEXT.ACTIONS.CREATE_QUIZ}
+                </RouterLink>
               </Button>
             }
           />
         ) : (
           <VStack gap={4} align="stretch">
-            {generatingQuizzes.slice(0, UI_SIZES.PANEL.MAX_ITEMS).map((quiz) => (
-              <QuizGenerationCard key={quiz.id} quiz={quiz} />
-            ))}
+            {generatingQuizzes
+              .slice(0, UI_SIZES.PANEL.MAX_ITEMS)
+              .map((quiz) => (
+                <QuizGenerationCard key={quiz.id} quiz={quiz} />
+              ))}
 
             {generatingQuizzes.length > UI_SIZES.PANEL.MAX_ITEMS && (
               <Box textAlign="center" pt={2}>
                 <Text fontSize="sm" color="gray.500">
-                  +{generatingQuizzes.length - UI_SIZES.PANEL.MAX_ITEMS} more quizzes in progress
+                  +{generatingQuizzes.length - UI_SIZES.PANEL.MAX_ITEMS} more
+                  quizzes in progress
                 </Text>
                 <Button size="sm" variant="ghost" asChild mt={2}>
-                  <RouterLink to="/quizzes">{UI_TEXT.ACTIONS.VIEW_ALL}</RouterLink>
+                  <RouterLink to="/quizzes">
+                    {UI_TEXT.ACTIONS.VIEW_ALL}
+                  </RouterLink>
                 </Button>
               </Box>
             )}

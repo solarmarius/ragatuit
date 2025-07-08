@@ -5,8 +5,12 @@ import { memo } from "react"
 import type { Quiz } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import { StatusLight } from "@/components/ui/status-light"
-import { formatDate, getQuizStatusText, getSelectedModulesCount } from "@/lib/utils"
 import { PROCESSING_STATUSES } from "@/lib/constants"
+import {
+  formatDate,
+  getQuizStatusText,
+  getSelectedModulesCount,
+} from "@/lib/utils"
 
 interface QuizTableRowProps {
   quiz: Quiz

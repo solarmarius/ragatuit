@@ -6,49 +6,49 @@
  * Safely parse a date string or Date object
  */
 function parseDate(date: string | Date): Date {
-  return typeof date === 'string' ? new Date(date) : date
+  return typeof date === "string" ? new Date(date) : date
 }
 
 /**
  * Check if a date is valid
  */
 function isValidDate(date: Date): boolean {
-  return !isNaN(date.getTime())
+  return !Number.isNaN(date.getTime())
 }
 
 /**
  * Format a date as a localized date string
  */
-export function formatDate(date: string | Date, locale = 'en-GB'): string {
+export function formatDate(date: string | Date, locale = "en-GB"): string {
   const dateObj = parseDate(date)
 
   if (!isValidDate(dateObj)) {
-    return 'Invalid date'
+    return "Invalid date"
   }
 
   return dateObj.toLocaleDateString(locale, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   })
 }
 
 /**
  * Format a date as a localized date and time string
  */
-export function formatDateTime(date: string | Date, locale = 'en-GB'): string {
+export function formatDateTime(date: string | Date, locale = "en-GB"): string {
   const dateObj = parseDate(date)
 
   if (!isValidDate(dateObj)) {
-    return 'Invalid date'
+    return "Invalid date"
   }
 
   return dateObj.toLocaleString(locale, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   })
 }
 
@@ -60,9 +60,9 @@ export function formatTimeAgo(timestamp: string): string {
     // Ensure the timestamp is treated as UTC if it doesn't have timezone info
     let normalizedTimestamp = timestamp
     if (
-      !timestamp.includes('Z') &&
-      !timestamp.includes('+') &&
-      !timestamp.includes('-', 10)
+      !timestamp.includes("Z") &&
+      !timestamp.includes("+") &&
+      !timestamp.includes("-", 10)
     ) {
       normalizedTimestamp = `${timestamp}Z`
     }
@@ -72,20 +72,20 @@ export function formatTimeAgo(timestamp: string): string {
     const diffMs = now.getTime() - date.getTime()
     const diffMins = Math.floor(diffMs / (1000 * 60))
 
-    if (diffMins < 1) return 'just now'
+    if (diffMins < 1) return "just now"
     if (diffMins < 60) {
-      return `${diffMins} minute${diffMins === 1 ? '' : 's'} ago`
+      return `${diffMins} minute${diffMins === 1 ? "" : "s"} ago`
     }
 
     const diffHours = Math.floor(diffMins / 60)
     if (diffHours < 24) {
-      return `${diffHours} hour${diffHours === 1 ? '' : 's'} ago`
+      return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`
     }
 
     const diffDays = Math.floor(diffHours / 24)
-    return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`
+    return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`
   } catch {
-    return ''
+    return ""
   }
 }
 

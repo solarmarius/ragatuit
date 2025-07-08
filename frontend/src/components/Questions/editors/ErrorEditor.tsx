@@ -13,11 +13,7 @@ export const ErrorEditor = memo(function ErrorEditor({
 }: ErrorEditorProps) {
   return (
     <>
-      <ErrorState
-        title="Editor Error"
-        message={error}
-        showRetry={false}
-      />
+      <ErrorState title="Editor Error" message={error} showRetry={false} />
       <HStack gap={3} justify="end">
         <Button variant="outline" onClick={onCancel}>
           Close

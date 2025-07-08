@@ -1,6 +1,6 @@
-import { Box, Button, Text, VStack } from '@chakra-ui/react'
-import { ErrorBoundary as ReactErrorBoundary } from 'react-error-boundary'
-import type { ReactNode, ErrorInfo } from 'react'
+import { Box, Button, Text, VStack } from "@chakra-ui/react"
+import type { ErrorInfo, ReactNode } from "react"
+import { ErrorBoundary as ReactErrorBoundary } from "react-error-boundary"
 
 interface ErrorFallbackProps {
   error: Error
@@ -44,10 +44,7 @@ interface ErrorBoundaryProps {
 
 export function ErrorBoundary({ children, onError }: ErrorBoundaryProps) {
   return (
-    <ReactErrorBoundary
-      FallbackComponent={ErrorFallback}
-      onError={onError}
-    >
+    <ReactErrorBoundary FallbackComponent={ErrorFallback} onError={onError}>
       {children}
     </ReactErrorBoundary>
   )

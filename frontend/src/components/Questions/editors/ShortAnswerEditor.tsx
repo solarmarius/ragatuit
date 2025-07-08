@@ -2,13 +2,7 @@ import type { QuestionResponse, QuestionUpdateRequest } from "@/client"
 import { FormField, FormGroup } from "@/components/forms"
 import { Checkbox } from "@/components/ui/checkbox"
 import { extractQuestionData } from "@/types/questionTypes"
-import {
-  Button,
-  HStack,
-  Input,
-  Text,
-  Textarea,
-} from "@chakra-ui/react"
+import { Button, HStack, Input, Text, Textarea } from "@chakra-ui/react"
 import { memo, useState } from "react"
 import { ErrorEditor } from "./ErrorEditor"
 

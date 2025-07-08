@@ -1,10 +1,10 @@
-import { OpenAPI } from '@/client'
-import { STORAGE_KEYS } from '@/lib/constants'
+import { OpenAPI } from "@/client"
+import { STORAGE_KEYS } from "@/lib/constants"
 
 export const configureApiClient = () => {
   OpenAPI.BASE = import.meta.env.VITE_API_URL
   OpenAPI.TOKEN = async () => {
-    return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN) || ''
+    return localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN) || ""
   }
 }
 

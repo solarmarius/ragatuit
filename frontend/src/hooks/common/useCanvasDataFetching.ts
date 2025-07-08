@@ -1,6 +1,6 @@
-import { useQuery, type QueryKey } from '@tanstack/react-query'
+import { type QueryKey, useQuery } from "@tanstack/react-query"
 
-import { useErrorHandler } from '@/hooks/common'
+import { useErrorHandler } from "@/hooks/common"
 
 interface UseCanvasDataFetchingOptions {
   enabled?: boolean
@@ -16,7 +16,7 @@ interface UseCanvasDataFetchingOptions {
 export function useCanvasDataFetching<T>(
   queryKey: QueryKey,
   queryFn: () => Promise<T>,
-  options: UseCanvasDataFetchingOptions = {}
+  options: UseCanvasDataFetchingOptions = {},
 ) {
   const { handleError } = useErrorHandler()
 

@@ -1,4 +1,4 @@
-import { VStack, Text, Box, Button } from "@chakra-ui/react"
+import { Box, Button, Text, VStack } from "@chakra-ui/react"
 import { memo } from "react"
 
 interface ErrorStateProps {

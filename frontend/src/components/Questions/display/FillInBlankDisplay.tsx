@@ -2,9 +2,9 @@ import type { QuestionResponse } from "@/client"
 import { extractQuestionData } from "@/types/questionTypes"
 import { Box, Text, VStack } from "@chakra-ui/react"
 import { memo } from "react"
-import { ErrorDisplay } from "./ErrorDisplay"
 import { ExplanationBox } from "../shared/ExplanationBox"
 import { FillInBlankAnswersBox } from "../shared/FillInBlankAnswersBox"
+import { ErrorDisplay } from "./ErrorDisplay"
 
 interface FillInBlankDisplayProps {
   question: QuestionResponse
@@ -28,9 +28,7 @@ export const FillInBlankDisplay = memo(function FillInBlankDisplay({
           </Text>
         </Box>
 
-        {showCorrectAnswer && (
-          <FillInBlankAnswersBox blanks={fibData.blanks} />
-        )}
+        {showCorrectAnswer && <FillInBlankAnswersBox blanks={fibData.blanks} />}
 
         {showExplanation && fibData.explanation && (
           <ExplanationBox explanation={fibData.explanation} />

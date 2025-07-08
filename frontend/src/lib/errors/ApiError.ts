@@ -5,7 +5,7 @@ export class AppError extends Error {
     public statusCode?: number,
   ) {
     super(message)
-    this.name = 'AppError'
+    this.name = "AppError"
   }
 }
 
@@ -16,7 +16,7 @@ export class ApiError extends AppError {
     public code?: string,
   ) {
     super(message, code, statusCode)
-    this.name = 'ApiError'
+    this.name = "ApiError"
   }
 }
 
@@ -25,7 +25,7 @@ export class ValidationError extends AppError {
     message: string,
     public field?: string,
   ) {
-    super(message, 'VALIDATION_ERROR')
-    this.name = 'ValidationError'
+    super(message, "VALIDATION_ERROR")
+    this.name = "ValidationError"
   }
 }

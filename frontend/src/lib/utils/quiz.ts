@@ -1,11 +1,11 @@
-import type { Quiz } from '@/client/types.gen'
-import { PROCESSING_STATUSES } from '@/lib/constants'
+import type { Quiz } from "@/client/types.gen"
+import { PROCESSING_STATUSES } from "@/lib/constants"
 
 /**
  * Quiz utility functions for status handling, filtering, and processing
  */
 
-export type QuizStatusType = 'pending' | 'processing' | 'completed' | 'failed'
+export type QuizStatusType = "pending" | "processing" | "completed" | "failed"
 
 /**
  * Get quiz statuses with fallback defaults
@@ -13,7 +13,7 @@ export type QuizStatusType = 'pending' | 'processing' | 'completed' | 'failed'
 function getQuizStatuses(quiz: Quiz) {
   return {
     extraction: quiz.content_extraction_status || PROCESSING_STATUSES.PENDING,
-    generation: quiz.llm_generation_status || PROCESSING_STATUSES.PENDING
+    generation: quiz.llm_generation_status || PROCESSING_STATUSES.PENDING,
   }
 }
 
@@ -31,7 +31,8 @@ export function getQuizzesBeingGenerated(quizzes: Quiz[]): Quiz[] {
     return (
       extraction === PROCESSING_STATUSES.PROCESSING ||
       generation === PROCESSING_STATUSES.PROCESSING ||
-      (extraction === PROCESSING_STATUSES.COMPLETED && generation === PROCESSING_STATUSES.PENDING)
+      (extraction === PROCESSING_STATUSES.COMPLETED &&
+        generation === PROCESSING_STATUSES.PENDING)
     )
   })
 }
@@ -42,7 +43,10 @@ export function getQuizzesBeingGenerated(quizzes: Quiz[]): Quiz[] {
 export function getQuizzesNeedingReview(quizzes: Quiz[]): Quiz[] {
   return quizzes.filter((quiz) => {
     const { extraction, generation } = getQuizStatuses(quiz)
-    return extraction === PROCESSING_STATUSES.COMPLETED && generation === PROCESSING_STATUSES.COMPLETED
+    return (
+      extraction === PROCESSING_STATUSES.COMPLETED &&
+      generation === PROCESSING_STATUSES.COMPLETED
+    )
   })
 }
 
@@ -59,7 +63,10 @@ export function getFailedQuizzes(quizzes: Quiz[]): Quiz[] {
 export function getPendingQuizzes(quizzes: Quiz[]): Quiz[] {
   return quizzes.filter((quiz) => {
     const { extraction, generation } = getQuizStatuses(quiz)
-    return extraction === PROCESSING_STATUSES.PENDING && generation === PROCESSING_STATUSES.PENDING
+    return (
+      extraction === PROCESSING_STATUSES.PENDING &&
+      generation === PROCESSING_STATUSES.PENDING
+    )
   })
 }
 
@@ -73,27 +80,36 @@ export function getPendingQuizzes(quizzes: Quiz[]): Quiz[] {
 export function getQuizProcessingPhase(quiz: Quiz): string {
   const { extraction, generation } = getQuizStatuses(quiz)
 
-  if (extraction === PROCESSING_STATUSES.FAILED || generation === PROCESSING_STATUSES.FAILED) {
-    return 'Failed'
+  if (
+    extraction === PROCESSING_STATUSES.FAILED ||
+    generation === PROCESSING_STATUSES.FAILED
+  ) {
+    return "Failed"
   }
 
-  if (extraction === PROCESSING_STATUSES.COMPLETED && generation === PROCESSING_STATUSES.COMPLETED) {
-    return 'Complete'
+  if (
+    extraction === PROCESSING_STATUSES.COMPLETED &&
+    generation === PROCESSING_STATUSES.COMPLETED
+  ) {
+    return "Complete"
   }
 
   if (extraction === PROCESSING_STATUSES.PROCESSING) {
-    return 'Extracting content...'
+    return "Extracting content..."
   }
 
   if (generation === PROCESSING_STATUSES.PROCESSING) {
-    return 'Generating questions...'
+    return "Generating questions..."
   }
 
-  if (extraction === PROCESSING_STATUSES.COMPLETED && generation === PROCESSING_STATUSES.PENDING) {
-    return 'Ready for generation'
+  if (
+    extraction === PROCESSING_STATUSES.COMPLETED &&
+    generation === PROCESSING_STATUSES.PENDING
+  ) {
+    return "Ready for generation"
   }
 
-  return 'Pending'
+  return "Pending"
 }
 
 /**
@@ -102,19 +118,28 @@ export function getQuizProcessingPhase(quiz: Quiz): string {
 export function getQuizStatusText(quiz: Quiz): string {
   const { extraction, generation } = getQuizStatuses(quiz)
 
-  if (extraction === PROCESSING_STATUSES.FAILED || generation === PROCESSING_STATUSES.FAILED) {
-    return 'Failed'
+  if (
+    extraction === PROCESSING_STATUSES.FAILED ||
+    generation === PROCESSING_STATUSES.FAILED
+  ) {
+    return "Failed"
   }
 
-  if (extraction === PROCESSING_STATUSES.COMPLETED && generation === PROCESSING_STATUSES.COMPLETED) {
-    return 'Ready for Review'
+  if (
+    extraction === PROCESSING_STATUSES.COMPLETED &&
+    generation === PROCESSING_STATUSES.COMPLETED
+  ) {
+    return "Ready for Review"
   }
 
-  if (extraction === PROCESSING_STATUSES.PROCESSING || generation === PROCESSING_STATUSES.PROCESSING) {
-    return 'Processing'
+  if (
+    extraction === PROCESSING_STATUSES.PROCESSING ||
+    generation === PROCESSING_STATUSES.PROCESSING
+  ) {
+    return "Processing"
   }
 
-  return 'Pending'
+  return "Pending"
 }
 
 /**
@@ -123,15 +148,21 @@ export function getQuizStatusText(quiz: Quiz): string {
 export function getQuizStatusColor(quiz: Quiz): string {
   const { extraction, generation } = getQuizStatuses(quiz)
 
-  if (extraction === PROCESSING_STATUSES.FAILED || generation === PROCESSING_STATUSES.FAILED) {
-    return 'red'
+  if (
+    extraction === PROCESSING_STATUSES.FAILED ||
+    generation === PROCESSING_STATUSES.FAILED
+  ) {
+    return "red"
   }
 
-  if (extraction === PROCESSING_STATUSES.COMPLETED && generation === PROCESSING_STATUSES.COMPLETED) {
-    return 'green'
+  if (
+    extraction === PROCESSING_STATUSES.COMPLETED &&
+    generation === PROCESSING_STATUSES.COMPLETED
+  ) {
+    return "green"
   }
 
-  return 'orange'
+  return "orange"
 }
 
 /**
@@ -140,11 +171,17 @@ export function getQuizStatusColor(quiz: Quiz): string {
 export function getQuizProgressPercentage(quiz: Quiz): number {
   const { extraction, generation } = getQuizStatuses(quiz)
 
-  if (extraction === PROCESSING_STATUSES.FAILED || generation === PROCESSING_STATUSES.FAILED) {
+  if (
+    extraction === PROCESSING_STATUSES.FAILED ||
+    generation === PROCESSING_STATUSES.FAILED
+  ) {
     return 0
   }
 
-  if (extraction === PROCESSING_STATUSES.COMPLETED && generation === PROCESSING_STATUSES.COMPLETED) {
+  if (
+    extraction === PROCESSING_STATUSES.COMPLETED &&
+    generation === PROCESSING_STATUSES.COMPLETED
+  ) {
     return 100
   }
 
@@ -152,7 +189,10 @@ export function getQuizProgressPercentage(quiz: Quiz): number {
     return 25
   }
 
-  if (extraction === PROCESSING_STATUSES.COMPLETED && generation === PROCESSING_STATUSES.PENDING) {
+  if (
+    extraction === PROCESSING_STATUSES.COMPLETED &&
+    generation === PROCESSING_STATUSES.PENDING
+  ) {
     return 50
   }
 
@@ -172,7 +212,10 @@ export function getQuizProgressPercentage(quiz: Quiz): number {
  */
 export function hasQuizFailed(quiz: Quiz): boolean {
   const { extraction, generation } = getQuizStatuses(quiz)
-  return extraction === PROCESSING_STATUSES.FAILED || generation === PROCESSING_STATUSES.FAILED
+  return (
+    extraction === PROCESSING_STATUSES.FAILED ||
+    generation === PROCESSING_STATUSES.FAILED
+  )
 }
 
 /**
@@ -180,7 +223,10 @@ export function hasQuizFailed(quiz: Quiz): boolean {
  */
 export function isQuizComplete(quiz: Quiz): boolean {
   const { extraction, generation } = getQuizStatuses(quiz)
-  return extraction === PROCESSING_STATUSES.COMPLETED && generation === PROCESSING_STATUSES.COMPLETED
+  return (
+    extraction === PROCESSING_STATUSES.COMPLETED &&
+    generation === PROCESSING_STATUSES.COMPLETED
+  )
 }
 
 /**
@@ -188,7 +234,10 @@ export function isQuizComplete(quiz: Quiz): boolean {
  */
 export function isQuizProcessing(quiz: Quiz): boolean {
   const { extraction, generation } = getQuizStatuses(quiz)
-  return extraction === PROCESSING_STATUSES.PROCESSING || generation === PROCESSING_STATUSES.PROCESSING
+  return (
+    extraction === PROCESSING_STATUSES.PROCESSING ||
+    generation === PROCESSING_STATUSES.PROCESSING
+  )
 }
 
 /**
@@ -196,7 +245,10 @@ export function isQuizProcessing(quiz: Quiz): boolean {
  */
 export function isQuizPending(quiz: Quiz): boolean {
   const { extraction, generation } = getQuizStatuses(quiz)
-  return extraction === PROCESSING_STATUSES.PENDING && generation === PROCESSING_STATUSES.PENDING
+  return (
+    extraction === PROCESSING_STATUSES.PENDING &&
+    generation === PROCESSING_STATUSES.PENDING
+  )
 }
 
 // =============================================================================
@@ -215,7 +267,7 @@ export function getSelectedModulesCount(quiz: Quiz): number {
  * Format quiz title with fallback
  */
 export function getQuizDisplayTitle(quiz: Quiz): string {
-  return quiz.title || 'Untitled Quiz'
+  return quiz.title || "Untitled Quiz"
 }
 
 /**

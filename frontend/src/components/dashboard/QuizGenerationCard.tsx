@@ -5,10 +5,10 @@ import { memo } from "react"
 import type { Quiz } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import { StatusLight } from "@/components/ui/status-light"
+import { PROCESSING_STATUSES, UI_COLORS, UI_TEXT } from "@/lib/constants"
 import { getQuizProcessingPhase, getQuizProgressPercentage } from "@/lib/utils"
-import { UI_COLORS, UI_TEXT, PROCESSING_STATUSES } from "@/lib/constants"
-import { QuizProgressIndicator } from "./QuizProgressIndicator"
 import { QuizBadges } from "./QuizBadges"
+import { QuizProgressIndicator } from "./QuizProgressIndicator"
 
 interface QuizGenerationCardProps {
   quiz: Quiz

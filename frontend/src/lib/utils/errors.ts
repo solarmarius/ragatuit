@@ -1,4 +1,4 @@
-import { ApiError } from '@/client'
+import { ApiError } from "@/client"
 
 /**
  * Error handling utility functions
@@ -41,21 +41,23 @@ export function analyzeCanvasError(error: unknown): CanvasErrorInfo {
     return {
       isCanvasError: false,
       isPermissionError: false,
-      userFriendlyMessage: 'An unexpected error occurred',
-      actionableGuidance: 'Please try again or contact support if the problem persists.',
+      userFriendlyMessage: "An unexpected error occurred",
+      actionableGuidance:
+        "Please try again or contact support if the problem persists.",
     }
   }
 
-  const isCanvasApiCall = error.url?.includes('/canvas') || false
+  const isCanvasApiCall = error.url?.includes("/canvas") || false
 
   // Handle 403 errors from Canvas API calls
   if (error.status === 403 && isCanvasApiCall) {
     return {
       isCanvasError: true,
       isPermissionError: true,
-      userFriendlyMessage: "You don't have permission to access this Canvas content",
+      userFriendlyMessage:
+        "You don't have permission to access this Canvas content",
       actionableGuidance:
-        'This course may be restricted or you may need additional permissions. Contact your Canvas administrator or course instructor for access.',
+        "This course may be restricted or you may need additional permissions. Contact your Canvas administrator or course instructor for access.",
     }
   }
 
@@ -65,9 +67,9 @@ export function analyzeCanvasError(error: unknown): CanvasErrorInfo {
       return {
         isCanvasError: true,
         isPermissionError: false,
-        userFriendlyMessage: 'Canvas content not found',
+        userFriendlyMessage: "Canvas content not found",
         actionableGuidance:
-          'The requested course or modules may have been removed or are no longer available.',
+          "The requested course or modules may have been removed or are no longer available.",
       }
     }
 
@@ -75,7 +77,7 @@ export function analyzeCanvasError(error: unknown): CanvasErrorInfo {
       return {
         isCanvasError: true,
         isPermissionError: false,
-        userFriendlyMessage: 'Canvas server error',
+        userFriendlyMessage: "Canvas server error",
         actionableGuidance:
           "There's an issue with the Canvas integration. Please try again in a few minutes.",
       }
@@ -84,8 +86,8 @@ export function analyzeCanvasError(error: unknown): CanvasErrorInfo {
     return {
       isCanvasError: true,
       isPermissionError: false,
-      userFriendlyMessage: 'Canvas connection issue',
-      actionableGuidance: 'Please check your Canvas connection and try again.',
+      userFriendlyMessage: "Canvas connection issue",
+      actionableGuidance: "Please check your Canvas connection and try again.",
     }
   }
 
@@ -93,8 +95,9 @@ export function analyzeCanvasError(error: unknown): CanvasErrorInfo {
   return {
     isCanvasError: false,
     isPermissionError: false,
-    userFriendlyMessage: 'An error occurred while loading data',
-    actionableGuidance: 'Please try again or contact support if the problem persists.',
+    userFriendlyMessage: "An error occurred while loading data",
+    actionableGuidance:
+      "Please try again or contact support if the problem persists.",
   }
 }
 
@@ -105,9 +108,9 @@ export function extractErrorDetails(error: unknown): ErrorDetails {
   if (error instanceof ApiError) {
     const errorBody = error.body as ApiErrorBody | undefined
     const errDetail = errorBody?.detail
-    let message = 'An API error occurred'
+    let message = "An API error occurred"
 
-    if (typeof errDetail === 'string') {
+    if (typeof errDetail === "string") {
       message = errDetail
     } else if (Array.isArray(errDetail) && errDetail.length > 0) {
       const firstError = errDetail[0]
@@ -117,8 +120,9 @@ export function extractErrorDetails(error: unknown): ErrorDetails {
     return {
       message,
       code: error.status,
-      isRetryable: error.status >= 500 || error.status === 408 || error.status === 429,
-      details: error.url ? `Request to ${error.url} failed` : undefined
+      isRetryable:
+        error.status >= 500 || error.status === 408 || error.status === 429,
+      details: error.url ? `Request to ${error.url} failed` : undefined,
     }
   }
 
@@ -126,20 +130,20 @@ export function extractErrorDetails(error: unknown): ErrorDetails {
     return {
       message: error.message,
       isRetryable: false,
-      details: error.stack
+      details: error.stack,
     }
   }
 
-  if (typeof error === 'string') {
+  if (typeof error === "string") {
     return {
       message: error,
-      isRetryable: false
+      isRetryable: false,
     }
   }
 
   return {
-    message: 'An unknown error occurred',
-    isRetryable: false
+    message: "An unknown error occurred",
+    isRetryable: false,
   }
 }
 
@@ -154,10 +158,10 @@ export function isNetworkError(error: unknown): boolean {
   if (error instanceof Error) {
     const message = error.message.toLowerCase()
     return (
-      message.includes('network') ||
-      message.includes('fetch') ||
-      message.includes('connection') ||
-      message.includes('timeout')
+      message.includes("network") ||
+      message.includes("fetch") ||
+      message.includes("connection") ||
+      message.includes("timeout")
     )
   }
 
@@ -179,11 +183,11 @@ export function isAuthError(error: unknown): boolean {
  */
 export function getUserFriendlyErrorMessage(error: unknown): string {
   if (isAuthError(error)) {
-    return 'You need to log in again to continue'
+    return "You need to log in again to continue"
   }
 
   if (isNetworkError(error)) {
-    return 'Network connection issue. Please check your internet connection and try again.'
+    return "Network connection issue. Please check your internet connection and try again."
   }
 
   const canvasInfo = analyzeCanvasError(error)
@@ -200,11 +204,11 @@ export function getUserFriendlyErrorMessage(error: unknown): string {
  */
 export function getErrorActionableGuidance(error: unknown): string {
   if (isAuthError(error)) {
-    return 'Please refresh the page and log in again.'
+    return "Please refresh the page and log in again."
   }
 
   if (isNetworkError(error)) {
-    return 'Check your internet connection and try again. If the problem persists, the service may be temporarily unavailable.'
+    return "Check your internet connection and try again. If the problem persists, the service may be temporarily unavailable."
   }
 
   const canvasInfo = analyzeCanvasError(error)
@@ -214,8 +218,8 @@ export function getErrorActionableGuidance(error: unknown): string {
 
   const details = extractErrorDetails(error)
   if (details.isRetryable) {
-    return 'This appears to be a temporary issue. Please try again in a few moments.'
+    return "This appears to be a temporary issue. Please try again in a few moments."
   }
 
-  return 'If this problem continues, please contact support for assistance.'
+  return "If this problem continues, please contact support for assistance."
 }

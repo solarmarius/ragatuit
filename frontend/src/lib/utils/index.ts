@@ -1,8 +1,8 @@
 // Quiz utilities
-export * from './quiz'
+export * from "./quiz"
 
 // Time utilities
-export * from './time'
+export * from "./time"
 
 // Error handling utilities
-export * from './errors'
+export * from "./errors"

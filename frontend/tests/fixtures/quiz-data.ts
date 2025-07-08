@@ -163,6 +163,13 @@ export const quizzesBeingGenerated = [
   },
 ] as Quiz[]
 
+// Quizzes that should actually be visible in the generation panel (after filtering)
+export const visibleQuizzesBeingGenerated = [
+  quizProcessingExtraction,
+  quizPendingGeneration,
+  quizProcessingGeneration,
+] as Quiz[]
+
 export const failedQuizzes = [
   quizFailedExtraction,
   quizFailedGeneration,

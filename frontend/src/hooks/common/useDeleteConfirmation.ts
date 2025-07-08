@@ -1,7 +1,7 @@
-import { useState } from 'react'
-import type { QueryKey } from '@tanstack/react-query'
+import type { QueryKey } from "@tanstack/react-query"
+import { useState } from "react"
 
-import { useApiMutation } from './useApiMutation'
+import { useApiMutation } from "./useApiMutation"
 
 interface UseDeleteConfirmationOptions {
   successMessage: string
@@ -15,7 +15,7 @@ interface UseDeleteConfirmationOptions {
  */
 export function useDeleteConfirmation(
   deleteFn: () => Promise<void>,
-  options: UseDeleteConfirmationOptions
+  options: UseDeleteConfirmationOptions,
 ) {
   const [isOpen, setIsOpen] = useState(false)
 

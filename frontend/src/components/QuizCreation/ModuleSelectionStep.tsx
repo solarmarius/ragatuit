@@ -1,12 +1,5 @@
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Alert,
-  Box,
-  Card,
-  HStack,
-  Text,
-  VStack,
-} from "@chakra-ui/react"
+import { Alert, Box, Card, HStack, Text, VStack } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import type React from "react"
 import { useCallback, useMemo } from "react"
@@ -57,19 +50,25 @@ export function ModuleSelectionStep({
     enabled: !!courseId && courseId > 0,
   })
 
-  const handleModuleToggle = useCallback((module: Module, checked: boolean) => {
-    const newSelectedModules = { ...selectedModules }
+  const handleModuleToggle = useCallback(
+    (module: Module, checked: boolean) => {
+      const newSelectedModules = { ...selectedModules }
 
-    if (checked) {
-      newSelectedModules[module.id] = module.name
-    } else {
-      delete newSelectedModules[module.id]
-    }
+      if (checked) {
+        newSelectedModules[module.id] = module.name
+      } else {
+        delete newSelectedModules[module.id]
+      }
 
-    onModulesSelect(newSelectedModules)
-  }, [selectedModules, onModulesSelect])
+      onModulesSelect(newSelectedModules)
+    },
+    [selectedModules, onModulesSelect],
+  )
 
-  const selectedCount = useMemo(() => Object.keys(selectedModules).length, [selectedModules])
+  const selectedCount = useMemo(
+    () => Object.keys(selectedModules).length,
+    [selectedModules],
+  )
 
   if (isLoading) {
     return (

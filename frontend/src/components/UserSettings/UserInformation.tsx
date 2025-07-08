@@ -1,12 +1,4 @@
-import {
-  Alert,
-  Box,
-  Button,
-  Flex,
-  Input,
-  Link,
-  Text,
-} from "@chakra-ui/react"
+import { Alert, Box, Button, Flex, Input, Link, Text } from "@chakra-ui/react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { type SubmitHandler, useForm } from "react-hook-form"
@@ -17,10 +9,10 @@ import {
   type UserUpdateMe,
   UsersService,
 } from "@/client"
-import { FormField, FormGroup } from "@/components/forms"
 import { PageHeader } from "@/components/common"
-import useAuth from "@/hooks/useCanvasAuth"
+import { FormField, FormGroup } from "@/components/forms"
 import { useCustomToast, useErrorHandler } from "@/hooks/common"
+import useAuth from "@/hooks/useCanvasAuth"
 
 const UserInformation = () => {
   const queryClient = useQueryClient()
