@@ -4,395 +4,390 @@
  * Schema for batch question generation.
  */
 export type BatchGenerationRequest = {
-  requests: Array<GenerationRequest>
-}
+    requests: Array<GenerationRequest>;
+};
 
 /**
  * Schema for batch generation responses.
  */
 export type BatchGenerationResponse = {
-  results: Array<GenerationResponse>
-  total_requests: number
-  successful_requests: number
-  failed_requests: number
-  total_questions_generated: number
-}
+    results: Array<GenerationResponse>;
+    total_requests: number;
+    successful_requests: number;
+    failed_requests: number;
+    total_questions_generated: number;
+};
 
 /**
  * Canvas course information.
  */
 export type CanvasCourse = {
-  id: number
-  name: string
-}
+    id: number;
+    name: string;
+};
 
 /**
  * Canvas module (chapter/section) information.
  */
 export type CanvasModule = {
-  id: number
-  name: string
-}
+    id: number;
+    name: string;
+};
 
 /**
  * Schema for question generation requests.
  */
 export type GenerationRequest = {
-  quiz_id: string
-  question_type: QuestionType
-  /**
-   * Number of questions to generate
-   */
-  target_count: number
-  difficulty?: QuestionDifficulty | null
-  tags?: Array<string> | null
-  custom_instructions?: string | null
-  provider_name?: string | null
-  workflow_name?: string | null
-  template_name?: string | null
-}
+    quiz_id: string;
+    question_type: QuestionType;
+    /**
+     * Number of questions to generate
+     */
+    target_count: number;
+    difficulty?: (QuestionDifficulty | null);
+    tags?: (Array<(string)> | null);
+    custom_instructions?: (string | null);
+    provider_name?: (string | null);
+    workflow_name?: (string | null);
+    template_name?: (string | null);
+};
 
 /**
  * Schema for question generation responses.
  */
 export type GenerationResponse = {
-  success: boolean
-  questions_generated: number
-  target_questions: number
-  error_message?: string | null
-  metadata?: {
-    [key: string]: unknown
-  }
-  generated_at: string
-}
+    success: boolean;
+    questions_generated: number;
+    target_questions: number;
+    error_message?: (string | null);
+    metadata?: {
+        [key: string]: unknown;
+    };
+    generated_at: string;
+};
 
 export type HTTPValidationError = {
-  detail?: Array<ValidationError>
-}
+    detail?: Array<ValidationError>;
+};
 
 /**
  * Schema for creating a new question.
  */
 export type QuestionCreateRequest = {
-  quiz_id: string
-  question_type: QuestionType
-  /**
-   * Question type-specific data
-   */
-  question_data: {
-    [key: string]: unknown
-  }
-  difficulty?: QuestionDifficulty | null
-  tags?: Array<string> | null
-}
+    quiz_id: string;
+    question_type: QuestionType;
+    /**
+     * Question type-specific data
+     */
+    question_data: {
+        [key: string]: unknown;
+    };
+    difficulty?: (QuestionDifficulty | null);
+    tags?: (Array<(string)> | null);
+};
 
 /**
  * Question difficulty levels.
  */
-export type QuestionDifficulty = "easy" | "medium" | "hard"
+export type QuestionDifficulty = 'easy' | 'medium' | 'hard';
 
 /**
  * Public question schema for API responses.
  */
 export type QuestionResponse = {
-  id: string
-  quiz_id: string
-  question_type: QuestionType
-  question_data: {
-    [key: string]: unknown
-  }
-  difficulty?: QuestionDifficulty | null
-  tags?: Array<string> | null
-  is_approved: boolean
-  approved_at?: string | null
-  created_at?: string | null
-  updated_at?: string | null
-  canvas_item_id?: string | null
-}
+    id: string;
+    quiz_id: string;
+    question_type: QuestionType;
+    question_data: {
+        [key: string]: unknown;
+    };
+    difficulty?: (QuestionDifficulty | null);
+    tags?: (Array<(string)> | null);
+    is_approved: boolean;
+    approved_at?: (string | null);
+    created_at?: (string | null);
+    updated_at?: (string | null);
+    canvas_item_id?: (string | null);
+};
 
 /**
  * Enumeration of supported question types.
  */
-export type QuestionType =
-  | "multiple_choice"
-  | "true_false"
-  | "short_answer"
-  | "essay"
-  | "fill_in_blank"
+export type QuestionType = 'multiple_choice' | 'short_answer' | 'fill_in_blank';
 
 /**
  * Schema for updating a question.
  */
 export type QuestionUpdateRequest = {
-  /**
-   * Updated question data
-   */
-  question_data?: {
-    [key: string]: unknown
-  } | null
-  difficulty?: QuestionDifficulty | null
-  tags?: Array<string> | null
-}
+    /**
+     * Updated question data
+     */
+    question_data?: ({
+    [key: string]: unknown;
+} | null);
+    difficulty?: (QuestionDifficulty | null);
+    tags?: (Array<(string)> | null);
+};
 
 /**
  * Quiz model representing a quiz with questions generated from Canvas content.
  */
 export type Quiz = {
-  id?: string
-  owner_id: string
-  canvas_course_id: number
-  canvas_course_name: string
-  selected_modules?: {
-    [key: string]: string
-  }
-  title: string
-  question_count?: number
-  llm_model?: string
-  llm_temperature?: number
-  /**
-   * Status of content extraction: pending, processing, completed, failed
-   */
-  content_extraction_status?: string
-  /**
-   * Status of LLM generation: pending, processing, completed, failed
-   */
-  llm_generation_status?: string
-  extracted_content?: {
-    [key: string]: unknown
-  } | null
-  /**
-   * Timestamp when content extraction was completed
-   */
-  content_extracted_at?: string | null
-  created_at?: string | null
-  updated_at?: string | null
-  /**
-   * Canvas quiz assignment ID after export
-   */
-  canvas_quiz_id?: string | null
-  /**
-   * Status of Canvas export: pending, processing, completed, failed
-   */
-  export_status?: string
-  /**
-   * Timestamp when quiz was exported to Canvas
-   */
-  exported_at?: string | null
-}
+    id?: string;
+    owner_id: string;
+    canvas_course_id: number;
+    canvas_course_name: string;
+    selected_modules?: {
+        [key: string]: (string);
+    };
+    title: string;
+    question_count?: number;
+    llm_model?: string;
+    llm_temperature?: number;
+    /**
+     * Status of content extraction: pending, processing, completed, failed
+     */
+    content_extraction_status?: string;
+    /**
+     * Status of LLM generation: pending, processing, completed, failed
+     */
+    llm_generation_status?: string;
+    extracted_content?: ({
+    [key: string]: unknown;
+} | null);
+    /**
+     * Timestamp when content extraction was completed
+     */
+    content_extracted_at?: (string | null);
+    created_at?: (string | null);
+    updated_at?: (string | null);
+    /**
+     * Canvas quiz assignment ID after export
+     */
+    canvas_quiz_id?: (string | null);
+    /**
+     * Status of Canvas export: pending, processing, completed, failed
+     */
+    export_status?: string;
+    /**
+     * Timestamp when quiz was exported to Canvas
+     */
+    exported_at?: (string | null);
+};
 
 /**
  * Schema for creating a new quiz.
  */
 export type QuizCreate = {
-  canvas_course_id: number
-  canvas_course_name: string
-  selected_modules: {
-    [key: string]: string
-  }
-  title: string
-  question_count?: number
-  llm_model?: string
-  llm_temperature?: number
-}
+    canvas_course_id: number;
+    canvas_course_name: string;
+    selected_modules: {
+        [key: string]: (string);
+    };
+    title: string;
+    question_count?: number;
+    llm_model?: string;
+    llm_temperature?: number;
+};
 
 /**
  * Public user information schema.
  */
 export type UserPublic = {
-  name: string
-  onboarding_completed: boolean
-}
+    name: string;
+    onboarding_completed: boolean;
+};
 
 /**
  * Schema for user self-update.
  */
 export type UserUpdateMe = {
-  name: string
-  onboarding_completed?: boolean | null
-}
+    name: string;
+    onboarding_completed?: (boolean | null);
+};
 
 export type ValidationError = {
-  loc: Array<string | number>
-  msg: string
-  type: string
-}
+    loc: Array<(string | number)>;
+    msg: string;
+    type: string;
+};
 
-export type AuthLoginCanvasResponse = unknown
+export type AuthLoginCanvasResponse = (unknown);
 
-export type AuthAuthCanvasResponse = unknown
+export type AuthAuthCanvasResponse = (unknown);
 
-export type AuthLogoutCanvasResponse = {
-  [key: string]: string
-}
+export type AuthLogoutCanvasResponse = ({
+    [key: string]: (string);
+});
 
-export type CanvasGetCoursesResponse = Array<CanvasCourse>
+export type CanvasGetCoursesResponse = (Array<CanvasCourse>);
 
 export type CanvasGetCourseModulesData = {
-  courseId: number
-}
+    courseId: number;
+};
 
-export type CanvasGetCourseModulesResponse = Array<CanvasModule>
+export type CanvasGetCourseModulesResponse = (Array<CanvasModule>);
 
 export type CanvasGetModuleItemsData = {
-  courseId: number
-  moduleId: number
-}
+    courseId: number;
+    moduleId: number;
+};
 
-export type CanvasGetModuleItemsResponse = Array<{
-  [key: string]: unknown
-}>
+export type CanvasGetModuleItemsResponse = (Array<{
+    [key: string]: unknown;
+}>);
 
 export type CanvasGetPageContentData = {
-  courseId: number
-  pageUrl: string
-}
+    courseId: number;
+    pageUrl: string;
+};
 
-export type CanvasGetPageContentResponse = {
-  [key: string]: unknown
-}
+export type CanvasGetPageContentResponse = ({
+    [key: string]: unknown;
+});
 
 export type CanvasGetFileInfoData = {
-  courseId: number
-  fileId: number
-}
+    courseId: number;
+    fileId: number;
+};
 
-export type CanvasGetFileInfoResponse = {
-  [key: string]: unknown
-}
+export type CanvasGetFileInfoResponse = ({
+    [key: string]: unknown;
+});
 
 export type QuestionsGetQuizQuestionsData = {
-  /**
-   * Only return approved questions
-   */
-  approvedOnly?: boolean
-  /**
-   * Maximum questions to return
-   */
-  limit?: number | null
-  /**
-   * Number of questions to skip
-   */
-  offset?: number
-  /**
-   * Filter by question type
-   */
-  questionType?: QuestionType | null
-  quizId: string
-}
+    /**
+     * Only return approved questions
+     */
+    approvedOnly?: boolean;
+    /**
+     * Maximum questions to return
+     */
+    limit?: (number | null);
+    /**
+     * Number of questions to skip
+     */
+    offset?: number;
+    /**
+     * Filter by question type
+     */
+    questionType?: (QuestionType | null);
+    quizId: string;
+};
 
-export type QuestionsGetQuizQuestionsResponse = Array<QuestionResponse>
+export type QuestionsGetQuizQuestionsResponse = (Array<QuestionResponse>);
 
 export type QuestionsCreateQuestionData = {
-  quizId: string
-  requestBody: QuestionCreateRequest
-}
+    quizId: string;
+    requestBody: QuestionCreateRequest;
+};
 
-export type QuestionsCreateQuestionResponse = QuestionResponse
+export type QuestionsCreateQuestionResponse = (QuestionResponse);
 
 export type QuestionsGetQuestionData = {
-  questionId: string
-  quizId: string
-}
+    questionId: string;
+    quizId: string;
+};
 
-export type QuestionsGetQuestionResponse = QuestionResponse
+export type QuestionsGetQuestionResponse = (QuestionResponse);
 
 export type QuestionsUpdateQuestionData = {
-  questionId: string
-  quizId: string
-  requestBody: QuestionUpdateRequest
-}
+    questionId: string;
+    quizId: string;
+    requestBody: QuestionUpdateRequest;
+};
 
-export type QuestionsUpdateQuestionResponse = QuestionResponse
+export type QuestionsUpdateQuestionResponse = (QuestionResponse);
 
 export type QuestionsDeleteQuestionData = {
-  questionId: string
-  quizId: string
-}
+    questionId: string;
+    quizId: string;
+};
 
-export type QuestionsDeleteQuestionResponse = {
-  [key: string]: string
-}
+export type QuestionsDeleteQuestionResponse = ({
+    [key: string]: (string);
+});
 
 export type QuestionsApproveQuestionData = {
-  questionId: string
-  quizId: string
-}
+    questionId: string;
+    quizId: string;
+};
 
-export type QuestionsApproveQuestionResponse = QuestionResponse
+export type QuestionsApproveQuestionResponse = (QuestionResponse);
 
 export type QuestionsGenerateQuestionsData = {
-  quizId: string
-  requestBody: GenerationRequest
-}
+    quizId: string;
+    requestBody: GenerationRequest;
+};
 
-export type QuestionsGenerateQuestionsResponse = GenerationResponse
+export type QuestionsGenerateQuestionsResponse = (GenerationResponse);
 
 export type QuestionsBatchGenerateQuestionsData = {
-  requestBody: BatchGenerationRequest
-}
+    requestBody: BatchGenerationRequest;
+};
 
-export type QuestionsBatchGenerateQuestionsResponse = BatchGenerationResponse
+export type QuestionsBatchGenerateQuestionsResponse = (BatchGenerationResponse);
 
-export type QuizGetUserQuizzesEndpointResponse = Array<Quiz>
+export type QuizGetUserQuizzesEndpointResponse = (Array<Quiz>);
 
 export type QuizCreateNewQuizData = {
-  requestBody: QuizCreate
-}
+    requestBody: QuizCreate;
+};
 
-export type QuizCreateNewQuizResponse = Quiz
+export type QuizCreateNewQuizResponse = (Quiz);
 
 export type QuizGetQuizData = {
-  quizId: string
-}
+    quizId: string;
+};
 
-export type QuizGetQuizResponse = Quiz
+export type QuizGetQuizResponse = (Quiz);
 
 export type QuizDeleteQuizEndpointData = {
-  quizId: string
-}
+    quizId: string;
+};
 
-export type QuizDeleteQuizEndpointResponse = unknown
+export type QuizDeleteQuizEndpointResponse = (unknown);
 
 export type QuizTriggerContentExtractionData = {
-  quizId: string
-}
+    quizId: string;
+};
 
-export type QuizTriggerContentExtractionResponse = {
-  [key: string]: string
-}
+export type QuizTriggerContentExtractionResponse = ({
+    [key: string]: (string);
+});
 
 export type QuizTriggerQuestionGenerationData = {
-  quizId: string
-}
+    quizId: string;
+};
 
-export type QuizTriggerQuestionGenerationResponse = {
-  [key: string]: string
-}
+export type QuizTriggerQuestionGenerationResponse = ({
+    [key: string]: (string);
+});
 
 export type QuizGetQuizQuestionStatsData = {
-  quizId: string
-}
+    quizId: string;
+};
 
-export type QuizGetQuizQuestionStatsResponse = {
-  [key: string]: number
-}
+export type QuizGetQuizQuestionStatsResponse = ({
+    [key: string]: (number);
+});
 
 export type QuizExportQuizToCanvasData = {
-  quizId: string
-}
+    quizId: string;
+};
 
-export type QuizExportQuizToCanvasResponse = {
-  [key: string]: string
-}
+export type QuizExportQuizToCanvasResponse = ({
+    [key: string]: (string);
+});
 
-export type UsersReadUserMeResponse = UserPublic
+export type UsersReadUserMeResponse = (UserPublic);
 
-export type UsersDeleteUserMeResponse = unknown
+export type UsersDeleteUserMeResponse = (unknown);
 
 export type UsersUpdateUserMeData = {
-  requestBody: UserUpdateMe
-}
+    requestBody: UserUpdateMe;
+};
 
-export type UsersUpdateUserMeResponse = UserPublic
+export type UsersUpdateUserMeResponse = (UserPublic);
 
-export type UtilsHealthCheckResponse = boolean
+export type UtilsHealthCheckResponse = (boolean);

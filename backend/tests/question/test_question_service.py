@@ -191,7 +191,7 @@ async def test_get_questions_by_quiz_basic(async_session):
         Question(
             id=uuid.uuid4(),
             quiz_id=quiz_id,
-            question_type=QuestionType.TRUE_FALSE,
+            question_type=QuestionType.SHORT_ANSWER,
             question_data={"question_text": "Test 2"},
             is_approved=True,
         ),
@@ -358,7 +358,7 @@ async def test_get_formatted_questions_with_filters(async_session):
         result = await get_formatted_questions_by_quiz(
             async_session,
             quiz_id,
-            question_type=QuestionType.TRUE_FALSE,
+            question_type=QuestionType.SHORT_ANSWER,
             approved_only=True,
             limit=5,
             offset=2,
@@ -830,7 +830,7 @@ async def test_question_lifecycle_save_to_export(async_session):
     "question_type,approved_only,expected_filter",
     [
         ("MULTIPLE_CHOICE", True, "mc_approved"),
-        ("TRUE_FALSE", False, "tf_all"),
+        ("SHORT_ANSWER", False, "sa_all"),
         (None, True, "all_approved"),
         (None, False, "all_questions"),
     ],

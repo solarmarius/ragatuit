@@ -31,9 +31,7 @@ export const STORAGE_KEYS = {
 
 export const QUESTION_TYPES = {
   MULTIPLE_CHOICE: "multiple_choice",
-  TRUE_FALSE: "true_false",
   SHORT_ANSWER: "short_answer",
-  ESSAY: "essay",
   FILL_IN_BLANK: "fill_in_blank",
 } as const
 

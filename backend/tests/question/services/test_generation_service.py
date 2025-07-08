@@ -327,7 +327,7 @@ async def test_batch_generate_questions_success(generation_service):
         },
         {
             "quiz_id": str(uuid.uuid4()),
-            "question_type": "true_false",
+            "question_type": "short_answer",
             "generation_parameters": {"target_count": 2, "difficulty": "easy"},
         },
     ]
@@ -363,7 +363,7 @@ async def test_batch_generate_questions_with_failures(generation_service):
         },
         {
             "quiz_id": "invalid_uuid",  # Invalid UUID
-            "question_type": "true_false",
+            "question_type": "short_answer",
             "generation_parameters": {"target_count": 2, "difficulty": "easy"},
         },
     ]
@@ -403,7 +403,7 @@ def test_get_generation_capabilities(generation_service):
     )
     generation_service.provider_registry.is_registered.return_value = True
 
-    mock_question_types = [QuestionType.MULTIPLE_CHOICE, QuestionType.TRUE_FALSE]
+    mock_question_types = [QuestionType.MULTIPLE_CHOICE, QuestionType.SHORT_ANSWER]
     generation_service.workflow_registry.get_available_question_types.return_value = (
         mock_question_types
     )
