@@ -15,6 +15,8 @@ from src.database import execute_in_transaction
 # Removed DI container import - GenerationOrchestrationService imported locally
 from src.question.types import GenerationParameters, QuestionType
 
+from .schemas import FailureReason, QuizStatus
+
 logger = get_logger("quiz_orchestrator")
 
 # Type aliases for dependency injection
@@ -117,9 +119,17 @@ async def orchestrate_quiz_content_extraction(
         if status == "completed" and content is not None:
             additional_fields["extracted_content"] = content
 
-        await update_quiz_status(
-            session, quiz_id, "content_extraction", status, **additional_fields
-        )
+
+        if status == "completed":
+            await update_quiz_status(
+                session, quiz_id, QuizStatus.READY_FOR_REVIEW, **additional_fields
+            )
+        elif status == "failed":
+            # Determine appropriate failure reason
+            failure_reason = FailureReason.CONTENT_EXTRACTION_ERROR
+            await update_quiz_status(
+                session, quiz_id, QuizStatus.FAILED, failure_reason, **additional_fields
+            )
 
     await execute_in_transaction(
         _save_extraction_result,
@@ -256,7 +266,12 @@ async def orchestrate_quiz_question_generation(
         """Save the generation result to the quiz."""
         from .service import update_quiz_status
 
-        await update_quiz_status(session, quiz_id, "llm_generation", status)
+
+        if status == "completed":
+            await update_quiz_status(session, quiz_id, QuizStatus.READY_FOR_REVIEW)
+        elif status == "failed":
+            failure_reason = FailureReason.LLM_GENERATION_ERROR
+            await update_quiz_status(session, quiz_id, QuizStatus.FAILED, failure_reason)
 
     await execute_in_transaction(
         _save_generation_result,
@@ -357,14 +372,13 @@ async def orchestrate_quiz_export_to_canvas(
             """Save the export results to the quiz."""
             from src.question import service as question_service
 
+            # Update quiz status
             from .service import update_quiz_status
 
-            # Update quiz status
             await update_quiz_status(
                 session,
                 quiz_id,
-                "export",
-                "completed",
+                QuizStatus.PUBLISHED,
                 canvas_quiz_id=canvas_quiz["id"],
             )
 
@@ -400,7 +414,8 @@ async def orchestrate_quiz_export_to_canvas(
             """Mark export as failed."""
             from .service import update_quiz_status
 
-            await update_quiz_status(session, quiz_id, "export", "failed")
+
+            await update_quiz_status(session, quiz_id, QuizStatus.FAILED, FailureReason.CANVAS_EXPORT_ERROR)
 
         try:
             await execute_in_transaction(
