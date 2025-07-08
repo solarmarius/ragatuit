@@ -1,9 +1,12 @@
 import type { QuestionResponse, QuestionUpdateRequest } from "@/client"
 import { FormField, FormGroup } from "@/components/forms"
 import { Radio, RadioGroup } from "@/components/ui/radio"
+import { type EssayFormData, essaySchema } from "@/lib/validation"
 import { extractQuestionData } from "@/types/questionTypes"
 import { Button, HStack, Input, Textarea } from "@chakra-ui/react"
-import { memo, useState } from "react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { memo } from "react"
+import { Controller, useForm } from "react-hook-form"
 import { ErrorEditor } from "./ErrorEditor"
 
 interface EssayEditorProps {
@@ -22,24 +25,29 @@ export const EssayEditor = memo(function EssayEditor({
   try {
     const essayData = extractQuestionData(question, "essay")
 
-    const [formData, setFormData] = useState({
-      questionText: essayData.question_text,
-      gradingRubric: essayData.grading_rubric || "",
-      maxWords: essayData.max_words?.toString() || "",
-      expectedLength: essayData.expected_length || "",
-      sampleAnswer: essayData.sample_answer || "",
+    const {
+      control,
+      handleSubmit,
+      formState: { errors, isDirty },
+    } = useForm<EssayFormData>({
+      resolver: zodResolver(essaySchema),
+      defaultValues: {
+        questionText: essayData.question_text,
+        gradingRubric: essayData.grading_rubric || "",
+        maxWords: essayData.max_words || null,
+        expectedLength: essayData.expected_length || "",
+        sampleAnswer: essayData.sample_answer || "",
+      },
     })
 
-    const handleSave = () => {
+    const onSubmit = (data: EssayFormData) => {
       const updateData: QuestionUpdateRequest = {
         question_data: {
-          question_text: formData.questionText,
-          grading_rubric: formData.gradingRubric || null,
-          max_words: formData.maxWords
-            ? Number.parseInt(formData.maxWords)
-            : null,
-          expected_length: formData.expectedLength || null,
-          sample_answer: formData.sampleAnswer || null,
+          question_text: data.questionText,
+          grading_rubric: data.gradingRubric || null,
+          max_words: data.maxWords,
+          expected_length: data.expectedLength || null,
+          sample_answer: data.sampleAnswer || null,
         },
       }
       onSave(updateData)
@@ -47,71 +55,113 @@ export const EssayEditor = memo(function EssayEditor({
 
     return (
       <FormGroup>
-        <FormField label="Question Text" isRequired>
-          <Textarea
-            value={formData.questionText}
-            onChange={(e) =>
-              setFormData({ ...formData, questionText: e.target.value })
-            }
-            placeholder="Enter question text..."
-            rows={3}
-          />
-        </FormField>
+        <Controller
+          name="questionText"
+          control={control}
+          render={({ field }) => (
+            <FormField
+              label="Question Text"
+              isRequired
+              error={errors.questionText?.message}
+            >
+              <Textarea
+                {...field}
+                placeholder="Enter question text..."
+                rows={3}
+              />
+            </FormField>
+          )}
+        />
 
-        <FormField label="Expected Length">
-          <RadioGroup
-            value={formData.expectedLength}
-            onValueChange={(details) =>
-              setFormData({ ...formData, expectedLength: details.value })
-            }
-          >
-            <HStack gap={4}>
-              <Radio value="">None</Radio>
-              <Radio value="short">Short</Radio>
-              <Radio value="medium">Medium</Radio>
-              <Radio value="long">Long</Radio>
-            </HStack>
-          </RadioGroup>
-        </FormField>
+        <Controller
+          name="expectedLength"
+          control={control}
+          render={({ field: { onChange, value } }) => (
+            <FormField
+              label="Expected Length"
+              error={errors.expectedLength?.message}
+            >
+              <RadioGroup
+                value={value}
+                onValueChange={(details) => onChange(details.value)}
+              >
+                <HStack gap={4}>
+                  <Radio value="">None</Radio>
+                  <Radio value="short">Short</Radio>
+                  <Radio value="medium">Medium</Radio>
+                  <Radio value="long">Long</Radio>
+                </HStack>
+              </RadioGroup>
+            </FormField>
+          )}
+        />
 
-        <FormField label="Maximum Words">
-          <Input
-            type="number"
-            value={formData.maxWords}
-            onChange={(e) =>
-              setFormData({ ...formData, maxWords: e.target.value })
-            }
-            placeholder="Enter maximum word count..."
-          />
-        </FormField>
+        <Controller
+          name="maxWords"
+          control={control}
+          render={({ field: { onChange, value, ...field } }) => (
+            <FormField
+              label="Maximum Words"
+              error={errors.maxWords?.message}
+              helperText="Optional limit on essay length"
+            >
+              <Input
+                {...field}
+                type="number"
+                value={value?.toString() || ""}
+                onChange={(e) =>
+                  onChange(e.target.value ? Number(e.target.value) : null)
+                }
+                placeholder="Enter maximum word count..."
+              />
+            </FormField>
+          )}
+        />
 
-        <FormField label="Grading Rubric">
-          <Textarea
-            value={formData.gradingRubric}
-            onChange={(e) =>
-              setFormData({ ...formData, gradingRubric: e.target.value })
-            }
-            placeholder="Enter grading criteria and rubric..."
-            rows={4}
-          />
-        </FormField>
+        <Controller
+          name="gradingRubric"
+          control={control}
+          render={({ field }) => (
+            <FormField
+              label="Grading Rubric"
+              error={errors.gradingRubric?.message}
+            >
+              <Textarea
+                {...field}
+                placeholder="Enter grading criteria and rubric..."
+                rows={4}
+              />
+            </FormField>
+          )}
+        />
 
-        <FormField label="Sample Answer">
-          <Textarea
-            value={formData.sampleAnswer}
-            onChange={(e) =>
-              setFormData({ ...formData, sampleAnswer: e.target.value })
-            }
-            placeholder="Enter a sample answer or key points..."
-            rows={4}
-          />
-        </FormField>
+        <Controller
+          name="sampleAnswer"
+          control={control}
+          render={({ field }) => (
+            <FormField
+              label="Sample Answer"
+              error={errors.sampleAnswer?.message}
+            >
+              <Textarea
+                {...field}
+                placeholder="Enter a sample answer or key points..."
+                rows={4}
+              />
+            </FormField>
+          )}
+        />
 
         <HStack gap={3} justify="end">
           <Button variant="outline" onClick={onCancel} disabled={isLoading}>
             Cancel
           </Button>
-          <Button colorScheme="blue" onClick={handleSave} loading={isLoading}>
+          <Button
+            colorScheme="blue"
+            onClick={handleSubmit(onSubmit)}
+            loading={isLoading}
+            disabled={!isDirty}
+          >
             Save Changes
           </Button>
         </HStack>

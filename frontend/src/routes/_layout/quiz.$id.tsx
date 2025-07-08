@@ -96,12 +96,12 @@ function QuizDetail() {
     if (!quiz.selected_modules) return {}
 
     // If it's already an object, use it directly
-    if (typeof quiz.selected_modules === 'object') {
+    if (typeof quiz.selected_modules === "object") {
       return quiz.selected_modules
     }
 
     // If it's a string, parse it as JSON
-    if (typeof quiz.selected_modules === 'string') {
+    if (typeof quiz.selected_modules === "string") {
       try {
         return JSON.parse(quiz.selected_modules)
       } catch {

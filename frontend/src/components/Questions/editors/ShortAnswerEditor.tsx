@@ -1,9 +1,12 @@
 import type { QuestionResponse, QuestionUpdateRequest } from "@/client"
 import { FormField, FormGroup } from "@/components/forms"
 import { Checkbox } from "@/components/ui/checkbox"
+import { type ShortAnswerFormData, shortAnswerSchema } from "@/lib/validation"
 import { extractQuestionData } from "@/types/questionTypes"
-import { Button, HStack, Input, Text, Textarea } from "@chakra-ui/react"
-import { memo, useState } from "react"
+import { Button, HStack, Input, Textarea } from "@chakra-ui/react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { memo } from "react"
+import { Controller, useForm } from "react-hook-form"
 import { ErrorEditor } from "./ErrorEditor"
 
 interface ShortAnswerEditorProps {
@@ -22,27 +25,34 @@ export const ShortAnswerEditor = memo(function ShortAnswerEditor({
   try {
     const saData = extractQuestionData(question, "short_answer")
 
-    const [formData, setFormData] = useState({
-      questionText: saData.question_text,
-      correctAnswer: saData.correct_answer,
-      answerVariations: saData.answer_variations?.join(", ") || "",
-      caseSensitive: saData.case_sensitive || false,
-      explanation: saData.explanation || "",
+    const {
+      control,
+      handleSubmit,
+      formState: { errors, isDirty },
+    } = useForm<ShortAnswerFormData>({
+      resolver: zodResolver(shortAnswerSchema),
+      defaultValues: {
+        questionText: saData.question_text,
+        correctAnswer: saData.correct_answer,
+        answerVariations: saData.answer_variations?.join(", ") || "",
+        caseSensitive: saData.case_sensitive || false,
+        explanation: saData.explanation || "",
+      },
     })
 
-    const handleSave = () => {
+    const onSubmit = (data: ShortAnswerFormData) => {
       const updateData: QuestionUpdateRequest = {
         question_data: {
-          question_text: formData.questionText,
-          correct_answer: formData.correctAnswer,
-          answer_variations: formData.answerVariations
-            ? formData.answerVariations
+          question_text: data.questionText,
+          correct_answer: data.correctAnswer,
+          answer_variations: data.answerVariations
+            ? data.answerVariations
                 .split(",")
                 .map((v) => v.trim())
                 .filter((v) => v)
             : undefined,
-          case_sensitive: formData.caseSensitive,
-          explanation: formData.explanation || null,
+          case_sensitive: data.caseSensitive,
+          explanation: data.explanation || null,
         },
       }
       onSave(updateData)
@@ -50,67 +60,94 @@ export const ShortAnswerEditor = memo(function ShortAnswerEditor({
 
     return (
       <FormGroup>
-        <FormField label="Question Text" isRequired>
-          <Textarea
-            value={formData.questionText}
-            onChange={(e) =>
-              setFormData({ ...formData, questionText: e.target.value })
-            }
-            placeholder="Enter question text..."
-            rows={3}
-          />
-        </FormField>
+        <Controller
+          name="questionText"
+          control={control}
+          render={({ field }) => (
+            <FormField
+              label="Question Text"
+              isRequired
+              error={errors.questionText?.message}
+            >
+              <Textarea
+                {...field}
+                placeholder="Enter question text..."
+                rows={3}
+              />
+            </FormField>
+          )}
+        />
 
-        <FormField label="Correct Answer" isRequired>
-          <Input
-            value={formData.correctAnswer}
-            onChange={(e) =>
-              setFormData({ ...formData, correctAnswer: e.target.value })
-            }
-            placeholder="Enter the correct answer..."
-          />
-        </FormField>
+        <Controller
+          name="correctAnswer"
+          control={control}
+          render={({ field }) => (
+            <FormField
+              label="Correct Answer"
+              isRequired
+              error={errors.correctAnswer?.message}
+            >
+              <Input {...field} placeholder="Enter the correct answer..." />
+            </FormField>
+          )}
+        />
 
-        <FormField label="Answer Variations">
-          <Input
-            value={formData.answerVariations}
-            onChange={(e) =>
-              setFormData({ ...formData, answerVariations: e.target.value })
-            }
-            placeholder="Enter variations separated by commas..."
-          />
-          <Text fontSize="xs" color="gray.600" mt={1}>
-            Separate multiple accepted variations with commas
-          </Text>
-        </FormField>
+        <Controller
+          name="answerVariations"
+          control={control}
+          render={({ field }) => (
+            <FormField
+              label="Answer Variations"
+              error={errors.answerVariations?.message}
+              helperText="Separate multiple accepted variations with commas"
+            >
+              <Input
+                {...field}
+                placeholder="Enter variations separated by commas..."
+              />
+            </FormField>
+          )}
+        />
 
-        <FormField>
-          <Checkbox
-            checked={formData.caseSensitive}
-            onCheckedChange={(e) =>
-              setFormData({ ...formData, caseSensitive: !!e.checked })
-            }
-          >
-            Case sensitive
-          </Checkbox>
-        </FormField>
+        <Controller
+          name="caseSensitive"
+          control={control}
+          render={({ field: { onChange, value } }) => (
+            <FormField error={errors.caseSensitive?.message}>
+              <Checkbox
+                checked={value}
+                onCheckedChange={(e) => onChange(!!e.checked)}
+              >
+                Case sensitive
+              </Checkbox>
+            </FormField>
+          )}
+        />
 
-        <FormField label="Explanation">
-          <Textarea
-            value={formData.explanation}
-            onChange={(e) =>
-              setFormData({ ...formData, explanation: e.target.value })
-            }
-            placeholder="Enter explanation for the answer..."
-            rows={2}
-          />
-        </FormField>
+        <Controller
+          name="explanation"
+          control={control}
+          render={({ field }) => (
+            <FormField label="Explanation" error={errors.explanation?.message}>
+              <Textarea
+                {...field}
+                placeholder="Enter explanation for the answer..."
+                rows={2}
+              />
+            </FormField>
+          )}
+        />
 
         <HStack gap={3} justify="end">
           <Button variant="outline" onClick={onCancel} disabled={isLoading}>
             Cancel
           </Button>
-          <Button colorScheme="blue" onClick={handleSave} loading={isLoading}>
+          <Button
+            colorScheme="blue"
+            onClick={handleSubmit(onSubmit)}
+            loading={isLoading}
+            disabled={!isDirty}
+          >
             Save Changes
           </Button>
         </HStack>

@@ -1,4 +1,4 @@
-import { Box } from "@chakra-ui/react"
+import { Box, Text } from "@chakra-ui/react"
 import type { ReactNode } from "react"
 import { FormError } from "./FormError"
 import { FormLabel } from "./FormLabel"
@@ -42,6 +42,15 @@ import { FormLabel } from "./FormLabel"
  * <FormField error={errors.terms?.message}>
  *   <Checkbox>I agree to the terms and conditions</Checkbox>
  * </FormField>
+ *
+ * // Field with helper text
+ * <FormField
+ *   label="Password"
+ *   helperText="Must be at least 8 characters"
+ *   error={errors.password?.message}
+ * >
+ *   <Input type="password" />
+ * </FormField>
  * ```
  */
 interface FormFieldProps {
@@ -51,6 +60,8 @@ interface FormFieldProps {
   label?: string
   /** Optional error message to display below the input */
   error?: string
+  /** Optional helper text to display below the input */
+  helperText?: string
   /** Whether the field is required (adds asterisk to label) */
   isRequired?: boolean
   /** ID to associate the label with the input element */
@@ -61,6 +72,7 @@ export function FormField({
   children,
   label,
   error,
+  helperText,
   isRequired = false,
   id,
 }: FormFieldProps) {
@@ -72,6 +84,11 @@ export function FormField({
         </FormLabel>
       )}
       {children}
+      {helperText && !error && (
+        <Text fontSize="sm" color="gray.500" mt={1}>
+          {helperText}
+        </Text>
+      )}
       {error && <FormError>{error}</FormError>}
     </Box>
   )
