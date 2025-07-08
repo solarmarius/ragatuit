@@ -9,7 +9,6 @@ import {
   quizProcessingGeneration,
   quizzesBeingGenerated,
   quizzesNeedingReview,
-  visibleQuizzesBeingGenerated,
 } from "../fixtures/quiz-data"
 
 test.describe("QuizGenerationPanel Component", () => {

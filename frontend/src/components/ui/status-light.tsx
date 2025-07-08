@@ -1,103 +1,79 @@
-import { PROCESSING_STATUSES, UI_SIZES } from "@/lib/constants"
+import { QUIZ_STATUS, UI_SIZES, UI_TEXT } from "@/lib/constants"
 import { Box } from "@chakra-ui/react"
+import type { QuizStatus } from "@/client/types.gen"
 
 /**
  * Props for the StatusLight component.
- * Displays a colored status indicator based on content extraction and question generation status.
+ * Displays a colored status indicator based on consolidated quiz status.
  *
  * Status colors:
- * - Red: Any process failed
- * - Green: Both processes completed successfully
- * - Orange: Processes are pending or in progress
+ * - 🔴 Red: failed - Any process failed
+ * - 🟠 Orange: created, extracting_content, generating_questions - Pending/In progress
+ * - 🟡 Yellow: exporting_to_canvas - Exporting to Canvas
+ * - 🟣 Purple: ready_for_review - Awaiting user review
+ * - 🟢 Green: published - Published to Canvas
  *
  * @example
  * ```tsx
- * // Basic usage with processing statuses
- * <StatusLight
- *   extractionStatus="completed"
- *   generationStatus="processing"
- * />
+ * // Basic usage with quiz status
+ * <StatusLight status="extracting_content" />
  *
  * // With quiz data
- * <StatusLight
- *   extractionStatus={quiz.content_extraction_status}
- *   generationStatus={quiz.llm_generation_status}
- * />
+ * <StatusLight status={quiz.status} />
  *
- * // All possible status combinations
- * <StatusLight
- *   extractionStatus="pending"     // waiting to start
- *   generationStatus="pending"
- * />
- * <StatusLight
- *   extractionStatus="processing"  // in progress
- *   generationStatus="pending"
- * />
- * <StatusLight
- *   extractionStatus="completed"   // success
- *   generationStatus="completed"
- * />
- * <StatusLight
- *   extractionStatus="failed"      // error state
- *   generationStatus="pending"
- * />
+ * // All possible statuses
+ * <StatusLight status="created" />           // Orange - Ready to start
+ * <StatusLight status="extracting_content" /> // Orange - Extracting content
+ * <StatusLight status="generating_questions" /> // Orange - Generating questions
+ * <StatusLight status="ready_for_review" />   // Purple - Ready for review
+ * <StatusLight status="exporting_to_canvas" /> // Yellow - Exporting to Canvas
+ * <StatusLight status="published" />          // Green - Published to Canvas
+ * <StatusLight status="failed" />             // Red - Failed
  * ```
  */
 interface StatusLightProps {
-  /** Status of content extraction process (pending, processing, completed, failed) */
-  extractionStatus: string
-  /** Status of LLM question generation process (pending, processing, completed, failed) */
-  generationStatus: string
+  /** Consolidated quiz status */
+  status: QuizStatus
 }
 
-export function StatusLight({
-  extractionStatus,
-  generationStatus,
-}: StatusLightProps) {
+export function StatusLight({ status }: StatusLightProps) {
   const getStatusColor = () => {
-    // Red: Something failed
-    if (
-      extractionStatus === PROCESSING_STATUSES.FAILED ||
-      generationStatus === PROCESSING_STATUSES.FAILED
-    ) {
-      return "red.500"
+    switch (status) {
+      case QUIZ_STATUS.FAILED:
+        return "red.500"
+      case QUIZ_STATUS.READY_FOR_REVIEW:
+        return "purple.500"
+      case QUIZ_STATUS.EXPORTING_TO_CANVAS:
+        return "yellow.500"
+      case QUIZ_STATUS.PUBLISHED:
+        return "green.500"
+      case QUIZ_STATUS.CREATED:
+      case QUIZ_STATUS.EXTRACTING_CONTENT:
+      case QUIZ_STATUS.GENERATING_QUESTIONS:
+      default:
+        return "orange.500"
     }
-
-    // Green: Questions have been generated (both completed)
-    if (
-      extractionStatus === PROCESSING_STATUSES.COMPLETED &&
-      generationStatus === PROCESSING_STATUSES.COMPLETED
-    ) {
-      return "green.500"
-    }
-
-    // Orange: Pending generation (any step is pending or processing)
-    return "orange.500"
   }
 
   const getStatusTitle = () => {
-    if (
-      extractionStatus === PROCESSING_STATUSES.FAILED ||
-      generationStatus === PROCESSING_STATUSES.FAILED
-    ) {
-      return "Generation failed"
+    switch (status) {
+      case QUIZ_STATUS.CREATED:
+        return UI_TEXT.STATUS.CREATED
+      case QUIZ_STATUS.EXTRACTING_CONTENT:
+        return UI_TEXT.STATUS.EXTRACTING_CONTENT
+      case QUIZ_STATUS.GENERATING_QUESTIONS:
+        return UI_TEXT.STATUS.GENERATING_QUESTIONS
+      case QUIZ_STATUS.READY_FOR_REVIEW:
+        return UI_TEXT.STATUS.READY_FOR_REVIEW
+      case QUIZ_STATUS.EXPORTING_TO_CANVAS:
+        return UI_TEXT.STATUS.EXPORTING_TO_CANVAS
+      case QUIZ_STATUS.PUBLISHED:
+        return UI_TEXT.STATUS.PUBLISHED
+      case QUIZ_STATUS.FAILED:
+        return UI_TEXT.STATUS.FAILED
+      default:
+        return "Unknown status"
     }
-
-    if (
-      extractionStatus === PROCESSING_STATUSES.COMPLETED &&
-      generationStatus === PROCESSING_STATUSES.COMPLETED
-    ) {
-      return "Questions generated successfully"
-    }
-
-    if (
-      extractionStatus === PROCESSING_STATUSES.PROCESSING ||
-      generationStatus === PROCESSING_STATUSES.PROCESSING
-    ) {
-      return "Generating questions..."
-    }
-
-    return "Waiting to generate questions"
   }
 
   return (

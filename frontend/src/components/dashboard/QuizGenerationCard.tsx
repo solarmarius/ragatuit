@@ -24,9 +24,9 @@ export const QuizGenerationCard = memo(function QuizGenerationCard({
     <Box
       p={4}
       border="1px solid"
-      borderColor={UI_COLORS.BORDER.PROCESSING}
+      borderColor={UI_COLORS.BORDER.ORANGE}
       borderRadius="md"
-      bg={UI_COLORS.BACKGROUND.PROCESSING}
+      bg={UI_COLORS.BACKGROUND.ORANGE}
       _hover={{ bg: "orange.100" }}
       transition="background-color 0.2s"
     >
