@@ -92,7 +92,7 @@ function CreateQuiz() {
 
       if (response) {
         showSuccessToast("Quiz created successfully!")
-        navigate({ to: `/quiz/${response.id}` })
+        navigate({ to: `/quiz/${response.id}`, params: { id: response.id! } })
       } else {
         throw new Error("Failed to create quiz")
       }
