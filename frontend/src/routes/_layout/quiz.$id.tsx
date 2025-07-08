@@ -19,7 +19,7 @@ import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenera
 import { QuestionReview } from "@/components/Questions/QuestionReview"
 import { QuestionStats } from "@/components/Questions/QuestionStats"
 import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirmation"
-import { StatusDescription } from "@/components/ui/status-description"
+import { QuizPhaseProgress } from "@/components/ui/quiz-phase-progress"
 import { StatusLight } from "@/components/ui/status-light"
 import { useFormattedDate, useQuizStatusPolling } from "@/hooks/common"
 import { QUIZ_STATUS, UI_SIZES } from "@/lib/constants"
@@ -271,19 +271,21 @@ function QuizDetail() {
                 </Card.Body>
               </Card.Root>
 
-              {/* Quiz Status */}
+              {/* Quiz Generation Progress */}
               <Card.Root>
                 <Card.Header>
                   <Text fontSize="xl" fontWeight="semibold">
-                    Quiz Status
+                    Quiz Generation Progress
                   </Text>
                 </Card.Header>
                 <Card.Body>
-                  <StatusDescription
+                  <QuizPhaseProgress
                     status={quiz.status || "created"}
                     failureReason={quiz.failure_reason}
-                    timestamp={quiz.last_status_update}
-                    detailed={true}
+                    contentExtractedAt={quiz.content_extracted_at}
+                    exportedAt={quiz.exported_at}
+                    lastStatusUpdate={quiz.last_status_update}
+                    showTimestamps={true}
                   />
                 </Card.Body>
               </Card.Root>
