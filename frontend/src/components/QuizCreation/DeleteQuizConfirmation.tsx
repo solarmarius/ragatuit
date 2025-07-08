@@ -16,8 +16,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
-import useCustomToast from "@/hooks/useCustomToast"
-import { handleError } from "@/utils"
+import { useCustomToast, useErrorHandler } from "@/hooks/common"
 
 interface DeleteQuizConfirmationProps {
   quizId: string
@@ -32,6 +31,7 @@ const DeleteQuizConfirmation = ({
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const { showSuccessToast } = useCustomToast()
+  const { handleError } = useErrorHandler()
   const {
     handleSubmit,
     formState: { isSubmitting },

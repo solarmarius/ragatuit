@@ -15,14 +15,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { useCustomToast, useErrorHandler } from "@/hooks/common"
 import useAuth from "@/hooks/useCanvasAuth"
-import useCustomToast from "@/hooks/useCustomToast"
-import { handleError } from "@/utils"
 
 const DeleteConfirmation = () => {
   const [isOpen, setIsOpen] = useState(false)
   const queryClient = useQueryClient()
   const { showSuccessToast } = useCustomToast()
+  const { handleError } = useErrorHandler()
   const {
     handleSubmit,
     formState: { isSubmitting },

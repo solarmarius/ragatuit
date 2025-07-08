@@ -1,4 +1,5 @@
-import { formatTimeAgo } from "@/utils/time"
+import { PROCESSING_STATUSES } from "@/lib/constants"
+import { formatTimeAgo } from "@/lib/utils"
 import { Text } from "@chakra-ui/react"
 
 interface StatusDescriptionProps {
@@ -18,7 +19,7 @@ export function StatusDescription({
     const isExport = type === "export"
 
     switch (status) {
-      case "pending":
+      case PROCESSING_STATUSES.PENDING:
         if (isExtraction)
           return "Waiting to extract content from selected modules"
         if (isGeneration) return "Waiting for content extraction to complete"
@@ -26,7 +27,7 @@ export function StatusDescription({
           return "Waiting for questions to be approved before export"
         return "Waiting to start"
 
-      case "processing":
+      case PROCESSING_STATUSES.PROCESSING:
         if (isExtraction)
           return "Extracting and cleaning content from Canvas pages. This may take a few minutes depending on the amount of content."
         if (isGeneration)
@@ -35,7 +36,7 @@ export function StatusDescription({
           return "Exporting quiz to Canvas. This includes creating the quiz and adding all approved questions."
         return "Processing..."
 
-      case "completed": {
+      case PROCESSING_STATUSES.COMPLETED: {
         const timeAgo = timestamp ? formatTimeAgo(timestamp) : ""
         if (isExtraction)
           return `Content extracted successfully${
@@ -52,7 +53,7 @@ export function StatusDescription({
         return "Completed"
       }
 
-      case "failed":
+      case PROCESSING_STATUSES.FAILED:
         if (isExtraction)
           return "Content extraction failed. This may be due to network issues, Canvas permissions, or content size limits. Try again or contact support if the issue persists."
         if (isGeneration)

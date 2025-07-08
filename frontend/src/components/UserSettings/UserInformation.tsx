@@ -1,13 +1,4 @@
-import {
-  Alert,
-  Box,
-  Button,
-  Flex,
-  Heading,
-  Input,
-  Link,
-  Text,
-} from "@chakra-ui/react"
+import { Alert, Box, Button, Flex, Input, Link, Text } from "@chakra-ui/react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { type SubmitHandler, useForm } from "react-hook-form"
@@ -18,14 +9,15 @@ import {
   type UserUpdateMe,
   UsersService,
 } from "@/client"
+import { PageHeader } from "@/components/Common"
+import { FormField, FormGroup } from "@/components/forms"
+import { useCustomToast, useErrorHandler } from "@/hooks/common"
 import useAuth from "@/hooks/useCanvasAuth"
-import useCustomToast from "@/hooks/useCustomToast"
-import { handleError } from "@/utils"
-import { Field } from "../ui/field"
 
 const UserInformation = () => {
   const queryClient = useQueryClient()
   const { showSuccessToast } = useCustomToast()
+  const { handleError } = useErrorHandler()
   const [editMode, setEditMode] = useState(false)
   const { user: currentUser } = useAuth()
   const {
@@ -71,55 +63,61 @@ const UserInformation = () => {
 
   return (
     <>
-      <Heading size="xl" pb={4}>
-        User Information
-      </Heading>
+      <PageHeader
+        title="User Information"
+        description="Manage your account details and preferences"
+      />
+
       <Box
         w={{ sm: "full", md: "sm" }}
         as="form"
         onSubmit={handleSubmit(onSubmit)}
       >
-        <Field label="Name">
-          {editMode ? (
-            <Input
-              {...register("name", { maxLength: 30 })}
-              type="text"
-              size="md"
-            />
-          ) : (
-            <Text
-              fontSize="md"
-              py={2}
-              color={!currentUser?.name ? "gray" : "inherit"}
-              truncate
-              maxW="sm"
-            >
-              {currentUser?.name || "N/A"}
-            </Text>
-          )}
-        </Field>
-        <Flex mt={4} gap={3}>
-          <Button
-            variant="solid"
-            onClick={toggleEditMode}
-            type={editMode ? "button" : "submit"}
-            loading={editMode ? isSubmitting : false}
-            disabled={editMode ? !isDirty || !getValues("name") : false}
-            colorPalette="blue"
-          >
-            {editMode ? "Save" : "Edit"}
-          </Button>
-          {editMode && (
+        <FormGroup>
+          <FormField label="Name" isRequired>
+            {editMode ? (
+              <Input
+                {...register("name", { maxLength: 30 })}
+                type="text"
+                size="md"
+                placeholder="Enter your name"
+              />
+            ) : (
+              <Text
+                fontSize="md"
+                py={2}
+                color={!currentUser?.name ? "gray" : "inherit"}
+                truncate
+                maxW="sm"
+              >
+                {currentUser?.name || "N/A"}
+              </Text>
+            )}
+          </FormField>
+
+          <Flex gap={3}>
             <Button
-              variant="subtle"
-              colorPalette="gray"
-              onClick={onCancel}
-              disabled={isSubmitting}
+              variant="solid"
+              onClick={toggleEditMode}
+              type={editMode ? "button" : "submit"}
+              loading={editMode ? isSubmitting : false}
+              disabled={editMode ? !isDirty || !getValues("name") : false}
+              colorPalette="blue"
             >
-              Cancel
+              {editMode ? "Save" : "Edit"}
             </Button>
-          )}
-        </Flex>
+            {editMode && (
+              <Button
+                variant="subtle"
+                colorPalette="gray"
+                onClick={onCancel}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+            )}
+          </Flex>
+        </FormGroup>
       </Box>
 
       <Alert.Root

@@ -5,12 +5,11 @@ import {
   Card,
   Container,
   HStack,
-  Skeleton,
   Tabs,
   Text,
   VStack,
 } from "@chakra-ui/react"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
 
@@ -19,20 +18,33 @@ import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenera
 import { QuestionReview } from "@/components/Questions/QuestionReview"
 import { QuestionStats } from "@/components/Questions/QuestionStats"
 import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirmation"
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { StatusDescription } from "@/components/ui/status-description"
 import { StatusLight } from "@/components/ui/status-light"
-import useCustomToast from "@/hooks/useCustomToast"
+import {
+  useApiMutation,
+  useFormattedDate,
+  useQuizStatusPolling,
+} from "@/hooks/common"
+import { UI_SIZES } from "@/lib/constants"
 
 export const Route = createFileRoute("/_layout/quiz/$id")({
   component: QuizDetail,
 })
 
+function DateDisplay({ date }: { date: string | null | undefined }) {
+  const formattedDate = useFormattedDate(date, "default")
+
+  if (!formattedDate) return <Text color="gray.500">Not available</Text>
+
+  return <Text color="gray.600">{formattedDate}</Text>
+}
+
 function QuizDetail() {
   const { id } = Route.useParams()
-  const { showErrorToast, showSuccessToast } = useCustomToast()
-  const queryClient = useQueryClient()
   const [currentTab, setCurrentTab] = useState("info")
+  const pollingInterval = useQuizStatusPolling()
 
   const {
     data: quiz,
@@ -41,53 +53,23 @@ function QuizDetail() {
   } = useQuery({
     queryKey: ["quiz", id],
     queryFn: async () => {
-      try {
-        const response = await QuizService.getQuiz({ quizId: id })
-        return response
-      } catch (err) {
-        showErrorToast("Failed to load quiz details")
-        throw err
-      }
+      const response = await QuizService.getQuiz({ quizId: id })
+      return response
     },
-    refetchInterval: (query) => {
-      // Poll every 5 seconds if any status is pending or processing
-      const data = query?.state?.data
-      if (data) {
-        const extractionStatus = data.content_extraction_status || "pending"
-        const generationStatus = data.llm_generation_status || "pending"
-        const exportStatus = data.export_status || "pending"
-
-        if (
-          extractionStatus === "pending" ||
-          extractionStatus === "processing" ||
-          generationStatus === "pending" ||
-          generationStatus === "processing" ||
-          exportStatus === "pending" ||
-          exportStatus === "processing"
-        ) {
-          return 5000 // 5 seconds
-        }
-      }
-      return false // Stop polling when all are completed or failed
-    },
+    refetchInterval: pollingInterval,
     refetchIntervalInBackground: false, // Only poll when tab is active
   })
 
   // Retry content extraction mutation
-  const retryExtractionMutation = useMutation({
-    mutationFn: async () => {
+  const retryExtractionMutation = useApiMutation(
+    async () => {
       return await QuizService.triggerContentExtraction({ quizId: id })
     },
-    onSuccess: () => {
-      showSuccessToast("Content extraction restarted")
-      queryClient.invalidateQueries({ queryKey: ["quiz", id] })
+    {
+      successMessage: "Content extraction restarted",
+      invalidateQueries: [["quiz", id]],
     },
-    onError: (error: any) => {
-      const message =
-        error?.body?.detail || "Failed to restart content extraction"
-      showErrorToast(message)
-    },
-  })
+  )
 
   if (isLoading) {
     return <QuizDetailSkeleton />
@@ -98,24 +80,41 @@ function QuizDetail() {
       <Container maxW="4xl" py={8}>
         <Card.Root>
           <Card.Body>
-            <VStack gap={4}>
-              <Text fontSize="xl" fontWeight="bold" color="red.500">
-                Quiz Not Found
-              </Text>
-              <Text color="gray.600">
-                The quiz you're looking for doesn't exist or you don't have
-                permission to view it.
-              </Text>
-            </VStack>
+            <ErrorState
+              title="Quiz Not Found"
+              message="The quiz you're looking for doesn't exist or you don't have permission to view it."
+              showRetry={false}
+            />
           </Card.Body>
         </Card.Root>
       </Container>
     )
   }
 
-  // Get selected modules (already an object from API)
-  const selectedModules = quiz.selected_modules || {}
-  const moduleNames = Object.values(selectedModules) as string[]
+  // Get selected modules - parse JSON string if needed
+  const selectedModules = (() => {
+    if (!quiz.selected_modules) return {}
+
+    // If it's already an object, use it directly
+    if (typeof quiz.selected_modules === "object") {
+      return quiz.selected_modules
+    }
+
+    // If it's a string, parse it as JSON
+    if (typeof quiz.selected_modules === "string") {
+      try {
+        return JSON.parse(quiz.selected_modules)
+      } catch {
+        return {}
+      }
+    }
+
+    return {}
+  })()
+
+  const moduleNames = Object.values(selectedModules).filter(
+    (value): value is string => typeof value === "string",
+  )
 
   // Check if quiz is ready for approval
   const isQuizReadyForApproval =
@@ -277,18 +276,7 @@ function QuizDetail() {
                         <Text fontWeight="medium" color="gray.700">
                           Created
                         </Text>
-                        <Text color="gray.600">
-                          {new Date(quiz.created_at).toLocaleDateString(
-                            "en-GB",
-                            {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            },
-                          )}
-                        </Text>
+                        <DateDisplay date={quiz.created_at} />
                       </HStack>
                     )}
 
@@ -297,18 +285,7 @@ function QuizDetail() {
                         <Text fontWeight="medium" color="gray.700">
                           Last Updated
                         </Text>
-                        <Text color="gray.600">
-                          {new Date(quiz.updated_at).toLocaleDateString(
-                            "en-GB",
-                            {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            },
-                          )}
-                        </Text>
+                        <DateDisplay date={quiz.updated_at} />
                       </HStack>
                     )}
                   </VStack>
@@ -347,7 +324,9 @@ function QuizDetail() {
                           colorScheme="blue"
                           variant="outline"
                           loading={retryExtractionMutation.isPending}
-                          onClick={() => retryExtractionMutation.mutate()}
+                          onClick={() =>
+                            retryExtractionMutation.mutate(undefined)
+                          }
                           mt={2}
                         >
                           Retry Content Extraction
@@ -410,15 +389,10 @@ function QuizDetail() {
               {quiz.llm_generation_status !== "completed" && (
                 <Card.Root>
                   <Card.Body>
-                    <VStack gap={4} textAlign="center">
-                      <Text fontSize="xl" fontWeight="bold" color="gray.500">
-                        Questions Not Available Yet
-                      </Text>
-                      <Text color="gray.600">
-                        Questions will appear here once the generation process
-                        is complete.
-                      </Text>
-                    </VStack>
+                    <EmptyState
+                      title="Questions Not Available Yet"
+                      description="Questions will appear here once the generation process is complete."
+                    />
                   </Card.Body>
                 </Card.Root>
               )}
@@ -436,21 +410,34 @@ function QuizDetailSkeleton() {
       <VStack gap={6} align="stretch">
         {/* Header Skeleton */}
         <Box>
-          <Skeleton height="40px" width="300px" mb={2} />
-          <Skeleton height="24px" width="150px" />
+          <LoadingSkeleton
+            height={UI_SIZES.SKELETON.HEIGHT.XXL}
+            width={UI_SIZES.SKELETON.WIDTH.TEXT_XL}
+          />
+          <Box mt={2}>
+            <LoadingSkeleton
+              height={UI_SIZES.SKELETON.HEIGHT.XL}
+              width={UI_SIZES.SKELETON.WIDTH.TEXT_MD}
+            />
+          </Box>
         </Box>
 
         {/* Cards Skeleton */}
         {[1, 2, 3, 4].map((i) => (
           <Card.Root key={i}>
             <Card.Header>
-              <Skeleton height="24px" width="200px" />
+              <LoadingSkeleton
+                height={UI_SIZES.SKELETON.HEIGHT.XL}
+                width={UI_SIZES.SKELETON.WIDTH.TEXT_LG}
+              />
             </Card.Header>
             <Card.Body>
               <VStack gap={3} align="stretch">
-                <Skeleton height="20px" width="100%" />
-                <Skeleton height="20px" width="80%" />
-                <Skeleton height="20px" width="60%" />
+                <LoadingSkeleton
+                  height={UI_SIZES.SKELETON.HEIGHT.LG}
+                  width={UI_SIZES.SKELETON.WIDTH.FULL}
+                  lines={3}
+                />
               </VStack>
             </Card.Body>
           </Card.Root>

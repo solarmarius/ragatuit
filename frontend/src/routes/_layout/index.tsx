@@ -6,18 +6,19 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react"
-import { useQuery } from "@tanstack/react-query"
 import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
 
-import { QuizService } from "@/client"
-import { HelpPanel } from "@/components/Dashboard/HelpPanel"
-import { QuizGenerationPanel } from "@/components/Dashboard/QuizGenerationPanel"
-import { QuizReviewPanel } from "@/components/Dashboard/QuizReviewPanel"
 import { OnboardingModal } from "@/components/Onboarding/OnboardingModal"
+import { ErrorState } from "@/components/Common"
+import {
+  HelpPanel,
+  QuizGenerationPanel,
+  QuizReviewPanel,
+} from "@/components/dashboard"
 import { Button } from "@/components/ui/button"
-import useAuth from "@/hooks/useCanvasAuth"
-import useCustomToast from "@/hooks/useCustomToast"
-import { useOnboarding } from "@/hooks/useOnboarding"
+import { useUserQuizzes } from "@/hooks/api"
+import { useAuth } from "@/hooks/auth"
+import { useCustomToast, useOnboarding } from "@/hooks/common"
 
 export const Route = createFileRoute("/_layout/")({
   component: Dashboard,
@@ -35,37 +36,17 @@ function Dashboard() {
     skipOnboarding,
   } = useOnboarding()
 
-  const {
-    data: quizzes,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ["user-quizzes"],
-    queryFn: async () => {
-      try {
-        const response = await QuizService.getUserQuizzesEndpoint()
-        return response
-      } catch (err) {
-        showErrorToast("Failed to load quizzes")
-        throw err
-      }
-    },
-  })
+  const { data: quizzes, isLoading, error } = useUserQuizzes()
 
   if (error) {
+    showErrorToast("Failed to load quizzes")
     return (
       <Container maxW="6xl" py={8}>
-        <VStack gap={6} align="stretch">
-          <Box>
-            <Text fontSize="3xl" fontWeight="bold" color="red.500">
-              Error Loading Dashboard
-            </Text>
-            <Text color="gray.600">
-              There was an error loading your dashboard. Please try refreshing
-              the page.
-            </Text>
-          </Box>
-        </VStack>
+        <ErrorState
+          title="Error Loading Dashboard"
+          message="There was an error loading your dashboard. Please try refreshing the page."
+          showRetry={false}
+        />
       </Container>
     )
   }

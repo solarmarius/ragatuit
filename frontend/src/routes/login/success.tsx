@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router"
 
 export const Route = createFileRoute("/login/success")({
   beforeLoad: ({ search }) => {
-    const token = search.token as string
+    const token = typeof search.token === "string" ? search.token : undefined
 
     if (token) {
       localStorage.setItem("access_token", token)
@@ -20,7 +20,7 @@ export const Route = createFileRoute("/login/success")({
   component: () => <div />,
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      token: search.token as string | undefined,
+      token: typeof search.token === "string" ? search.token : undefined,
     }
   },
 })

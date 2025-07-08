@@ -1,18 +1,12 @@
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Alert,
-  Box,
-  Card,
-  HStack,
-  Skeleton,
-  Text,
-  VStack,
-} from "@chakra-ui/react"
+import { Alert, Box, Card, HStack, Text, VStack } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import type React from "react"
+import { useCallback, useMemo } from "react"
 
 import { CanvasService } from "@/client"
-import { analyzeCanvasError } from "@/utils"
+import { LoadingSkeleton } from "@/components/Common"
+import { analyzeCanvasError } from "@/lib/utils"
 
 interface Module {
   id: number
@@ -56,17 +50,25 @@ export function ModuleSelectionStep({
     enabled: !!courseId && courseId > 0,
   })
 
-  const handleModuleToggle = (module: Module, checked: boolean) => {
-    const newSelectedModules = { ...selectedModules }
+  const handleModuleToggle = useCallback(
+    (module: Module, checked: boolean) => {
+      const newSelectedModules = { ...selectedModules }
 
-    if (checked) {
-      newSelectedModules[module.id] = module.name
-    } else {
-      delete newSelectedModules[module.id]
-    }
+      if (checked) {
+        newSelectedModules[module.id] = module.name
+      } else {
+        delete newSelectedModules[module.id]
+      }
 
-    onModulesSelect(newSelectedModules)
-  }
+      onModulesSelect(newSelectedModules)
+    },
+    [selectedModules, onModulesSelect],
+  )
+
+  const selectedCount = useMemo(
+    () => Object.keys(selectedModules).length,
+    [selectedModules],
+  )
 
   if (isLoading) {
     return (
@@ -74,9 +76,7 @@ export function ModuleSelectionStep({
         <Text fontSize="lg" fontWeight="semibold">
           Loading course modules...
         </Text>
-        {[1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} height="60px" borderRadius="md" />
-        ))}
+        <LoadingSkeleton height="60px" lines={4} />
       </VStack>
     )
   }
@@ -110,9 +110,6 @@ export function ModuleSelectionStep({
       </Alert.Root>
     )
   }
-
-  const selectedModuleIds = Object.keys(selectedModules).map(Number)
-  const selectedCount = selectedModuleIds.length
 
   return (
     <VStack gap={4} align="stretch">

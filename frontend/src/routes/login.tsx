@@ -24,7 +24,7 @@ export const Route = createFileRoute("/login")({
   },
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      error: search.error as string | undefined,
+      error: typeof search.error === "string" ? search.error : undefined,
     }
   },
 })

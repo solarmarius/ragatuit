@@ -1,5 +1,5 @@
+import { FormField, FormGroup } from "@/components/forms"
 import { Button } from "@/components/ui/button"
-import { Field } from "@/components/ui/field"
 import {
   Box,
   Card,
@@ -61,9 +61,8 @@ export function QuizSettingsStep({
   }
 
   return (
-    <VStack gap={6} align="stretch">
-      {/* Question Count */}
-      <Field label="Question Count">
+    <FormGroup gap={6}>
+      <FormField label="Question Count" isRequired>
         <Box maxW="300px">
           <Input
             type="number"
@@ -75,12 +74,13 @@ export function QuizSettingsStep({
             }
             min={1}
             max={200}
+            placeholder="Enter number of questions"
           />
           <Text fontSize="sm" color="gray.600" mt={2}>
             Number of questions to generate (1-200)
           </Text>
         </Box>
-      </Field>
+      </FormField>
 
       {/* LLM Settings Tabs */}
       <Box>
@@ -141,11 +141,7 @@ export function QuizSettingsStep({
                     Advanced Configuration
                   </Text>
 
-                  {/* Model Selection */}
-                  <Box>
-                    <Text fontWeight="medium" mb={2}>
-                      Model
-                    </Text>
+                  <FormField label="Model" isRequired>
                     <Select.Root
                       collection={SUPPORTED_MODELS}
                       value={[currentSettings.llmModel]}
@@ -178,45 +174,45 @@ export function QuizSettingsStep({
                     <Text fontSize="sm" color="gray.500" mt={1}>
                       Choose the OpenAI model for question generation
                     </Text>
-                  </Box>
+                  </FormField>
 
-                  {/* Temperature Slider */}
-                  <Box>
-                    <HStack justify="space-between" mb={2}>
-                      <Text fontWeight="medium">Temperature</Text>
-                      <Text fontSize="sm" color="gray.600">
-                        {currentSettings.llmTemperature}
-                      </Text>
-                    </HStack>
-                    <Slider.Root
-                      value={[currentSettings.llmTemperature]}
-                      onValueChange={(e) =>
-                        updateSettings({ llmTemperature: e.value[0] })
-                      }
-                      min={0}
-                      max={2}
-                      step={0.1}
-                      size="sm"
-                    >
-                      <Slider.Control>
-                        <Slider.Track>
-                          <Slider.Range />
-                        </Slider.Track>
-                        <Slider.Thumb index={0} />
-                      </Slider.Control>
-                    </Slider.Root>
-                    <HStack justify="space-between" mt={1}>
-                      <Text fontSize="xs" color="gray.500">
-                        More Focused (0.0)
-                      </Text>
-                      <Text fontSize="xs" color="gray.500">
-                        More Creative (2.0)
-                      </Text>
-                    </HStack>
-                    <Text fontSize="sm" color="gray.500" mt={2}>
+                  <FormField label="Temperature" isRequired>
+                    <VStack gap={2} align="stretch">
+                      <HStack justify="space-between">
+                        <Text fontSize="sm" color="gray.600">
+                          Current: {currentSettings.llmTemperature}
+                        </Text>
+                      </HStack>
+                      <Slider.Root
+                        value={[currentSettings.llmTemperature]}
+                        onValueChange={(e) =>
+                          updateSettings({ llmTemperature: e.value[0] })
+                        }
+                        min={0}
+                        max={2}
+                        step={0.1}
+                        size="sm"
+                      >
+                        <Slider.Control>
+                          <Slider.Track>
+                            <Slider.Range />
+                          </Slider.Track>
+                          <Slider.Thumb index={0} />
+                        </Slider.Control>
+                      </Slider.Root>
+                      <HStack justify="space-between">
+                        <Text fontSize="xs" color="gray.500">
+                          More Focused (0.0)
+                        </Text>
+                        <Text fontSize="xs" color="gray.500">
+                          More Creative (2.0)
+                        </Text>
+                      </HStack>
+                    </VStack>
+                    <Text fontSize="sm" color="gray.500" mt={1}>
                       Controls creativity vs consistency in question generation
                     </Text>
-                  </Box>
+                  </FormField>
                   <Button
                     variant="outline"
                     size="sm"
@@ -235,6 +231,6 @@ export function QuizSettingsStep({
           )}
         </VStack>
       </Box>
-    </VStack>
+    </FormGroup>
   )
 }

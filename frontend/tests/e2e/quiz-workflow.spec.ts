@@ -127,8 +127,9 @@ test.describe("Quiz Workflow End-to-End", () => {
     await page.waitForLoadState("networkidle")
     await expect(page.getByText("Quiz Settings")).toBeVisible()
 
-    // Adjust question count
-    await page.getByLabel("Question Count").fill("50")
+    // Adjust question count - use placeholder text to find the input
+    const questionCountInput = page.getByPlaceholder("Enter number of questions")
+    await questionCountInput.fill("50")
 
     // Click on "Advanced settings" tab to access LLM model and temperature
     await page.getByText("Advanced Settings").click()
@@ -158,10 +159,10 @@ test.describe("Quiz Workflow End-to-End", () => {
             title: "My ML Quiz",
             canvas_course_id: 12345,
             canvas_course_name: "Machine Learning Fundamentals",
-            selected_modules: JSON.stringify({
+            selected_modules: {
               "173467": "Introduction to Neural Networks",
               "173468": "Deep Learning Concepts",
-            }),
+            },
             question_count: 50,
             llm_model: "gpt-4o",
             llm_temperature: 0.7,
@@ -189,10 +190,10 @@ test.describe("Quiz Workflow End-to-End", () => {
           title: "My ML Quiz",
           canvas_course_id: 12345,
           canvas_course_name: "Machine Learning Fundamentals",
-          selected_modules: JSON.stringify({
+          selected_modules: {
             "173467": "Introduction to Neural Networks",
             "173468": "Deep Learning Concepts",
-          }),
+          },
           question_count: 50,
           llm_model: "gpt-4o",
           llm_temperature: 0.7,
@@ -229,7 +230,7 @@ test.describe("Quiz Workflow End-to-End", () => {
             title: "Existing Quiz",
             canvas_course_id: 12345,
             canvas_course_name: "Test Course",
-            selected_modules: '{"173467": "Module 1", "173468": "Module 2"}',
+            selected_modules: { "173467": "Module 1", "173468": "Module 2" },
             question_count: 75,
             llm_model: "o3",
             llm_temperature: 0.3,
@@ -251,10 +252,10 @@ test.describe("Quiz Workflow End-to-End", () => {
           title: "Existing Quiz",
           canvas_course_id: 12345,
           canvas_course_name: "Test Course",
-          selected_modules: JSON.stringify({
+          selected_modules: {
             "173467": "Module 1",
             "173468": "Module 2",
-          }),
+          },
           question_count: 75,
           llm_model: "o3",
           llm_temperature: 0.3,
@@ -333,7 +334,7 @@ test.describe("Quiz Workflow End-to-End", () => {
             title: "Mobile Test Quiz",
             canvas_course_id: 12345,
             canvas_course_name: "Mobile Test Course",
-            selected_modules: '{"173467": "Mobile Module"}',
+            selected_modules: { "173467": "Mobile Module" },
             question_count: 50,
             llm_model: "gpt-4o",
             llm_temperature: 0.5,
@@ -372,7 +373,7 @@ test.describe("Quiz Workflow End-to-End", () => {
             title: "Keyboard Test Quiz",
             canvas_course_id: 12345,
             canvas_course_name: "Test Course",
-            selected_modules: '{"173467": "Module 1"}',
+            selected_modules: { "173467": "Module 1" },
             question_count: 50,
             llm_model: "gpt-4o",
             llm_temperature: 0.5,
