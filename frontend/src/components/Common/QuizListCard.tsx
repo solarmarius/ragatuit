@@ -5,7 +5,6 @@ import { memo } from "react"
 import type { Quiz } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import { StatusLight } from "@/components/ui/status-light"
-import { PROCESSING_STATUSES } from "@/lib/constants"
 
 interface QuizListCardProps {
   quiz: Quiz
@@ -41,14 +40,7 @@ export const QuizListCard = memo(function QuizListCard({
             <Text fontWeight="medium" fontSize="sm" lineHeight="tight" truncate>
               {quiz.title}
             </Text>
-            <StatusLight
-              extractionStatus={
-                quiz.content_extraction_status || PROCESSING_STATUSES.PENDING
-              }
-              generationStatus={
-                quiz.llm_generation_status || PROCESSING_STATUSES.PENDING
-              }
-            />
+            <StatusLight status={quiz.status || "created"} />
           </HStack>
           {showCourseInfo && (
             <Text fontSize="xs" color="gray.600" truncate>

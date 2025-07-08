@@ -1,6 +1,6 @@
+import type { QuizStatus } from "@/client/types.gen"
 import { QUIZ_STATUS, UI_SIZES, UI_TEXT } from "@/lib/constants"
 import { Box } from "@chakra-ui/react"
-import type { QuizStatus } from "@/client/types.gen"
 
 /**
  * Props for the StatusLight component.
@@ -47,9 +47,6 @@ export function StatusLight({ status }: StatusLightProps) {
         return "yellow.500"
       case QUIZ_STATUS.PUBLISHED:
         return "green.500"
-      case QUIZ_STATUS.CREATED:
-      case QUIZ_STATUS.EXTRACTING_CONTENT:
-      case QUIZ_STATUS.GENERATING_QUESTIONS:
       default:
         return "orange.500"
     }

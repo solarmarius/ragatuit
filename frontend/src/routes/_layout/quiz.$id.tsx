@@ -14,20 +14,15 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
 
 import { QuizService } from "@/client"
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common"
 import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenerationTrigger"
 import { QuestionReview } from "@/components/Questions/QuestionReview"
 import { QuestionStats } from "@/components/Questions/QuestionStats"
 import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirmation"
-import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common"
-import { StatusBadge } from "@/components/ui/status-badge"
 import { StatusDescription } from "@/components/ui/status-description"
 import { StatusLight } from "@/components/ui/status-light"
-import {
-  useApiMutation,
-  useFormattedDate,
-  useQuizStatusPolling,
-} from "@/hooks/common"
-import { UI_SIZES } from "@/lib/constants"
+import { useFormattedDate, useQuizStatusPolling } from "@/hooks/common"
+import { QUIZ_STATUS, UI_SIZES } from "@/lib/constants"
 
 export const Route = createFileRoute("/_layout/quiz/$id")({
   component: QuizDetail,
@@ -59,17 +54,6 @@ function QuizDetail() {
     refetchInterval: pollingInterval,
     refetchIntervalInBackground: false, // Only poll when tab is active
   })
-
-  // Retry content extraction mutation
-  const retryExtractionMutation = useApiMutation(
-    async () => {
-      return await QuizService.triggerContentExtraction({ quizId: id })
-    },
-    {
-      successMessage: "Content extraction restarted",
-      invalidateQueries: [["quiz", id]],
-    },
-  )
 
   if (isLoading) {
     return <QuizDetailSkeleton />
@@ -117,9 +101,7 @@ function QuizDetail() {
   )
 
   // Check if quiz is ready for approval
-  const isQuizReadyForApproval =
-    quiz.content_extraction_status === "completed" &&
-    quiz.llm_generation_status === "completed"
+  const isQuizReadyForApproval = quiz.status === QUIZ_STATUS.READY_FOR_REVIEW
 
   const handleApproveQuiz = () => {
     setCurrentTab("questions")
@@ -135,10 +117,7 @@ function QuizDetail() {
               <Text fontSize="3xl" fontWeight="bold">
                 {quiz.title}
               </Text>
-              <StatusLight
-                extractionStatus={quiz.content_extraction_status || "pending"}
-                generationStatus={quiz.llm_generation_status || "pending"}
-              />
+              <StatusLight status={quiz.status || "created"} />
             </HStack>
             <HStack gap={3}>
               {isQuizReadyForApproval && (
@@ -292,79 +271,20 @@ function QuizDetail() {
                 </Card.Body>
               </Card.Root>
 
-              {/* Quiz Generation Status */}
+              {/* Quiz Status */}
               <Card.Root>
                 <Card.Header>
                   <Text fontSize="xl" fontWeight="semibold">
-                    Quiz Generation Status
+                    Quiz Status
                   </Text>
                 </Card.Header>
                 <Card.Body>
-                  <VStack gap={4} align="stretch">
-                    {/* Content Extraction Status */}
-                    <Box>
-                      <HStack justify="space-between" mb={2}>
-                        <Text fontWeight="medium" color="gray.700">
-                          Content Extraction
-                        </Text>
-                        <StatusBadge
-                          status={quiz.content_extraction_status || "pending"}
-                        />
-                      </HStack>
-                      <StatusDescription
-                        status={quiz.content_extraction_status || "pending"}
-                        type="extraction"
-                        timestamp={quiz.content_extracted_at || null}
-                      />
-
-                      {/* Retry button for failed content extraction */}
-                      {quiz.content_extraction_status === "failed" && (
-                        <Button
-                          size="sm"
-                          colorScheme="blue"
-                          variant="outline"
-                          loading={retryExtractionMutation.isPending}
-                          onClick={() =>
-                            retryExtractionMutation.mutate(undefined)
-                          }
-                          mt={2}
-                        >
-                          Retry Content Extraction
-                        </Button>
-                      )}
-                    </Box>
-
-                    {/* LLM Generation Status */}
-                    <Box>
-                      <HStack justify="space-between" mb={2}>
-                        <Text fontWeight="medium" color="gray.700">
-                          Question Generation
-                        </Text>
-                        <StatusBadge
-                          status={quiz.llm_generation_status || "pending"}
-                        />
-                      </HStack>
-                      <StatusDescription
-                        status={quiz.llm_generation_status || "pending"}
-                        type="generation"
-                      />
-                    </Box>
-
-                    {/* Canvas Export Status */}
-                    <Box>
-                      <HStack justify="space-between" mb={2}>
-                        <Text fontWeight="medium" color="gray.700">
-                          Canvas Export
-                        </Text>
-                        <StatusBadge status={quiz.export_status || "pending"} />
-                      </HStack>
-                      <StatusDescription
-                        status={quiz.export_status || "pending"}
-                        type="export"
-                        timestamp={quiz.exported_at || null}
-                      />
-                    </Box>
-                  </VStack>
+                  <StatusDescription
+                    status={quiz.status || "created"}
+                    failureReason={quiz.failure_reason}
+                    timestamp={quiz.last_status_update}
+                    detailed={true}
+                  />
                 </Card.Body>
               </Card.Root>
 
@@ -376,26 +296,32 @@ function QuizDetail() {
           <Tabs.Content value="questions">
             <VStack gap={6} align="stretch" mt={6}>
               {/* Question Statistics */}
-              {quiz.llm_generation_status === "completed" && (
+              {(quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
+                quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS ||
+                quiz.status === QUIZ_STATUS.PUBLISHED) && (
                 <QuestionStats quiz={quiz} />
               )}
 
               {/* Question Review */}
-              {quiz.llm_generation_status === "completed" && (
+              {(quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
+                quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS ||
+                quiz.status === QUIZ_STATUS.PUBLISHED) && (
                 <QuestionReview quizId={id} />
               )}
 
               {/* Message when questions aren't ready */}
-              {quiz.llm_generation_status !== "completed" && (
-                <Card.Root>
-                  <Card.Body>
-                    <EmptyState
-                      title="Questions Not Available Yet"
-                      description="Questions will appear here once the generation process is complete."
-                    />
-                  </Card.Body>
-                </Card.Root>
-              )}
+              {quiz.status !== QUIZ_STATUS.READY_FOR_REVIEW &&
+                quiz.status !== QUIZ_STATUS.EXPORTING_TO_CANVAS &&
+                quiz.status !== QUIZ_STATUS.PUBLISHED && (
+                  <Card.Root>
+                    <Card.Body>
+                      <EmptyState
+                        title="Questions Not Available Yet"
+                        description="Questions will appear here once the generation process is complete."
+                      />
+                    </Card.Body>
+                  </Card.Root>
+                )}
             </VStack>
           </Tabs.Content>
         </Tabs.Root>

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test"
 
 test.describe("Quiz List Content Extraction Status", () => {
   test.beforeEach(async ({ page }) => {
@@ -11,12 +11,12 @@ test.describe("Quiz List Content Extraction Status", () => {
           name: "Test User",
           onboarding_completed: true,
         }),
-      });
-    });
+      })
+    })
 
     // Navigate to the quiz list page
-    await page.goto("/quizzes");
-  });
+    await page.goto("/quizzes")
+  })
 
   test("should display status column with all status combinations", async ({
     page,
@@ -82,86 +82,84 @@ test.describe("Quiz List Content Extraction Status", () => {
         updated_at: "2024-01-13T14:15:00Z",
         owner_id: "user123",
       },
-    ];
+    ]
 
     await page.route("**/api/v1/quiz/", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(mockQuizzes),
-      });
-    });
+      })
+    })
 
-    await page.reload();
-    await page.waitForLoadState("networkidle");
+    await page.reload()
+    await page.waitForLoadState("networkidle")
 
     // Wait for the table to load by checking for a quiz title first
-    await expect(page.getByText("Pending Quiz")).toBeVisible();
+    await expect(page.getByText("Pending Quiz")).toBeVisible()
 
     // Check that Status column header exists
-    await expect(page.locator("th").filter({ hasText: "Status" })).toBeVisible();
+    await expect(page.locator("th").filter({ hasText: "Status" })).toBeVisible()
 
     // Check each quiz row has correct status display
     // Pending Quiz
     const pendingRow = page.locator("tr", {
       has: page.getByText("Pending Quiz"),
-    });
+    })
     await expect(
-      pendingRow.locator('[title="Waiting to generate questions"]')
-    ).toBeVisible();
+      pendingRow.locator('[title="Waiting to generate questions"]'),
+    ).toBeVisible()
     await expect(
       pendingRow
         .locator("td")
         .filter({
           has: page.locator('[title="Waiting to generate questions"]'),
         })
-        .getByText("Pending")
-    ).toBeVisible();
+        .getByText("Pending"),
+    ).toBeVisible()
 
     // Processing Quiz
     const processingRow = page.locator("tr", {
       has: page.getByText("Processing Quiz"),
-    });
+    })
     await expect(
-      processingRow.locator('[title="Generating questions..."]')
-    ).toBeVisible();
+      processingRow.locator('[title="Generating questions..."]'),
+    ).toBeVisible()
     await expect(
       processingRow
         .locator("td")
         .filter({ has: page.locator('[title="Generating questions..."]') })
-        .getByText("Processing")
-    ).toBeVisible();
+        .getByText("Processing"),
+    ).toBeVisible()
 
     // Completed Quiz
     const completedRow = page.locator("tr", {
       has: page.getByText("Completed Quiz"),
-    });
+    })
     await expect(
-      completedRow.locator('[title="Questions generated successfully"]')
-    ).toBeVisible();
+      completedRow.locator('[title="Questions generated successfully"]'),
+    ).toBeVisible()
     await expect(
       completedRow
         .locator("td")
         .filter({
           has: page.locator('[title="Questions generated successfully"]'),
         })
-        .getByText("Ready for Review")
-    ).toBeVisible();
+        .getByText("Ready for Review"),
+    ).toBeVisible()
 
     // Failed Quiz
     const failedRow = page.locator("tr", {
       has: page.getByText("Failed Quiz"),
-    });
-    await expect(
-      failedRow.locator('[title="Generation failed"]')
-    ).toBeVisible();
+    })
+    await expect(failedRow.locator('[title="Generation failed"]')).toBeVisible()
     await expect(
       failedRow
         .locator("td")
         .filter({ has: page.locator('[title="Generation failed"]') })
-        .getByText("Failed")
-    ).toBeVisible();
-  });
+        .getByText("Failed"),
+    ).toBeVisible()
+  })
 
   test("should display correct status lights colors", async ({ page }) => {
     const mockQuizzes = [
@@ -210,38 +208,35 @@ test.describe("Quiz List Content Extraction Status", () => {
         updated_at: "2024-01-14T09:20:00Z",
         owner_id: "user123",
       },
-    ];
+    ]
 
     await page.route("**/api/v1/quiz/", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(mockQuizzes),
-      });
-    });
+      })
+    })
 
-    await page.reload();
+    await page.reload()
 
     // Green status (completed)
     const greenLight = page.locator(
-      '[title="Questions generated successfully"]'
-    );
-    await expect(greenLight).toBeVisible();
-    await expect(greenLight).toHaveCSS("background-color", "rgb(34, 197, 94)"); // green.500
+      '[title="Questions generated successfully"]',
+    )
+    await expect(greenLight).toBeVisible()
+    await expect(greenLight).toHaveCSS("background-color", "rgb(34, 197, 94)") // green.500
 
     // Orange status (processing)
-    const orangeLight = page.locator('[title="Generating questions..."]');
-    await expect(orangeLight).toBeVisible();
-    await expect(orangeLight).toHaveCSS(
-      "background-color",
-      "rgb(249, 115, 22)"
-    ); // orange.500
+    const orangeLight = page.locator('[title="Generating questions..."]')
+    await expect(orangeLight).toBeVisible()
+    await expect(orangeLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
 
     // Red status (failed)
-    const redLight = page.locator('[title="Generation failed"]');
-    await expect(redLight).toBeVisible();
-    await expect(redLight).toHaveCSS("background-color", "rgb(239, 68, 68)"); // red.500
-  });
+    const redLight = page.locator('[title="Generation failed"]')
+    await expect(redLight).toBeVisible()
+    await expect(redLight).toHaveCSS("background-color", "rgb(239, 68, 68)") // red.500
+  })
 
   test("should handle missing status fields gracefully", async ({ page }) => {
     const mockQuizzes = [
@@ -274,28 +269,26 @@ test.describe("Quiz List Content Extraction Status", () => {
         updated_at: "2024-01-15T12:30:00Z",
         owner_id: "user123",
       },
-    ];
+    ]
 
     await page.route("**/api/v1/quiz/", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(mockQuizzes),
-      });
-    });
+      })
+    })
 
-    await page.reload();
+    await page.reload()
 
     // Both should default to pending status (orange light)
-    const orangeLights = page.locator(
-      '[title="Waiting to generate questions"]'
-    );
-    await expect(orangeLights).toHaveCount(2);
+    const orangeLights = page.locator('[title="Waiting to generate questions"]')
+    await expect(orangeLights).toHaveCount(2)
 
     // Check status text specifically in the Status column (5th column, index 4)
-    const statusCells = page.locator("tbody tr td:nth-child(5)");
-    await expect(statusCells.filter({ hasText: "Pending" })).toHaveCount(2);
-  });
+    const statusCells = page.locator("tbody tr td:nth-child(5)")
+    await expect(statusCells.filter({ hasText: "Pending" })).toHaveCount(2)
+  })
 
   test("should display correct status text for different combinations", async ({
     page,
@@ -336,10 +329,10 @@ test.describe("Quiz List Content Extraction Status", () => {
         generation: "failed",
         expectedText: "Failed",
       },
-    ];
+    ]
 
     for (let i = 0; i < testCases.length; i++) {
-      const testCase = testCases[i];
+      const testCase = testCases[i]
       const mockQuiz = {
         id: `123e4567-e89b-12d3-a456-42661417400${i}`,
         title: `Status Test ${testCase.extraction}-${testCase.generation}`,
@@ -354,26 +347,26 @@ test.describe("Quiz List Content Extraction Status", () => {
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
-      };
+      }
 
       await page.route("**/api/v1/quiz/", async (route) => {
         await route.fulfill({
           status: 200,
           contentType: "application/json",
           body: JSON.stringify([mockQuiz]),
-        });
-      });
+        })
+      })
 
-      await page.reload();
+      await page.reload()
 
       // Check the status text in the status column
-      const row = page.locator("tr", { has: page.getByText(mockQuiz.title) });
+      const row = page.locator("tr", { has: page.getByText(mockQuiz.title) })
       // Look specifically in the Status column (5th column, index 4)
       await expect(
-        row.locator("td").nth(4).getByText(testCase.expectedText)
-      ).toBeVisible();
+        row.locator("td").nth(4).getByText(testCase.expectedText),
+      ).toBeVisible()
     }
-  });
+  })
 
   test("should maintain status column alignment and styling", async ({
     page,
@@ -394,17 +387,17 @@ test.describe("Quiz List Content Extraction Status", () => {
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
       },
-    ];
+    ]
 
     await page.route("**/api/v1/quiz/", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(mockQuizzes),
-      });
-    });
+      })
+    })
 
-    await page.reload();
+    await page.reload()
 
     // Check that status light and text are properly aligned
     const statusCell = page
@@ -412,20 +405,20 @@ test.describe("Quiz List Content Extraction Status", () => {
       .locator("td")
       .filter({
         has: page.locator('[title="Questions generated successfully"]'),
-      });
+      })
 
-    await expect(statusCell).toBeVisible();
+    await expect(statusCell).toBeVisible()
 
     // Verify both status light and text are in the same cell
     await expect(
-      statusCell.locator('[title="Questions generated successfully"]')
-    ).toBeVisible();
-    await expect(statusCell.getByText("Ready for Review")).toBeVisible();
+      statusCell.locator('[title="Questions generated successfully"]'),
+    ).toBeVisible()
+    await expect(statusCell.getByText("Ready for Review")).toBeVisible()
 
     // Check horizontal alignment - status light and text should be in a horizontal container
-    const statusContainer = statusCell.locator("div, span").first();
-    await expect(statusContainer).toBeVisible();
-  });
+    const statusContainer = statusCell.locator("div, span").first()
+    await expect(statusContainer).toBeVisible()
+  })
 
   test("should display status column in correct table position", async ({
     page,
@@ -446,32 +439,32 @@ test.describe("Quiz List Content Extraction Status", () => {
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
       },
-    ];
+    ]
 
     await page.route("**/api/v1/quiz/", async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(mockQuizzes),
-      });
-    });
+      })
+    })
 
-    await page.reload();
+    await page.reload()
 
     // Check table headers order
-    const headers = page.locator("th");
-    await expect(headers.nth(0)).toContainText("Quiz Title");
-    await expect(headers.nth(1)).toContainText("Course");
-    await expect(headers.nth(2)).toContainText("Questions");
-    await expect(headers.nth(3)).toContainText("LLM Model");
-    await expect(headers.nth(4)).toContainText("Status");
-    await expect(headers.nth(5)).toContainText("Created");
-    await expect(headers.nth(6)).toContainText("Actions");
+    const headers = page.locator("th")
+    await expect(headers.nth(0)).toContainText("Quiz Title")
+    await expect(headers.nth(1)).toContainText("Course")
+    await expect(headers.nth(2)).toContainText("Questions")
+    await expect(headers.nth(3)).toContainText("LLM Model")
+    await expect(headers.nth(4)).toContainText("Status")
+    await expect(headers.nth(5)).toContainText("Created")
+    await expect(headers.nth(6)).toContainText("Actions")
 
     // Check that Status column is the 5th column (index 4)
-    const statusHeader = headers.nth(4);
-    await expect(statusHeader).toContainText("Status");
-  });
+    const statusHeader = headers.nth(4)
+    await expect(statusHeader).toContainText("Status")
+  })
 
   test("should handle status updates in quiz list", async ({ page }) => {
     // Start with completed status quiz directly for this test
@@ -489,27 +482,27 @@ test.describe("Quiz List Content Extraction Status", () => {
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
-    };
+    }
 
     await page.route("**/api/v1/quiz/", async (route) => {
-      console.log("Mock route hit for status update test");
+      console.log("Mock route hit for status update test")
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify([mockQuiz]),
-      });
-    });
+      })
+    })
 
-    await page.reload();
-    await page.waitForLoadState("networkidle");
+    await page.reload()
+    await page.waitForLoadState("networkidle")
 
     // Wait for the quiz to load first
-    await expect(page.getByText("Status Update Quiz")).toBeVisible();
+    await expect(page.getByText("Status Update Quiz")).toBeVisible()
 
     // Should now show completed status
-    await expect(page.getByText("Ready for Review")).toBeVisible();
+    await expect(page.getByText("Ready for Review")).toBeVisible()
     await expect(
-      page.locator('[title="Questions generated successfully"]')
-    ).toBeVisible();
-  });
-});
+      page.locator('[title="Questions generated successfully"]'),
+    ).toBeVisible()
+  })
+})

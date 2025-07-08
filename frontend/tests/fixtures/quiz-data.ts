@@ -18,13 +18,13 @@ const baseQuiz = {
   updated_at: "2024-01-16T14:20:00Z",
 }
 
-// Quiz needing review (both statuses completed)
+// Quiz needing review (ready for review status)
 export const quizNeedingReview: Quiz = {
   ...baseQuiz,
   id: "quiz-review-1",
   title: "Machine Learning Fundamentals",
-  content_extraction_status: "completed",
-  llm_generation_status: "completed",
+  status: "ready_for_review",
+  last_status_update: "2024-01-15T11:00:00Z",
   content_extracted_at: "2024-01-15T11:00:00Z",
 }
 
@@ -34,53 +34,53 @@ export const secondQuizNeedingReview: Quiz = {
   title: "Python Programming Basics",
   canvas_course_name: "CS101",
   question_count: 25,
-  content_extraction_status: "completed",
-  llm_generation_status: "completed",
+  status: "ready_for_review",
+  last_status_update: "2024-01-14T09:30:00Z",
   content_extracted_at: "2024-01-14T09:30:00Z",
 }
 
-// Quiz being generated (pending content extraction)
+// Quiz created (ready to start)
 export const quizPendingExtraction: Quiz = {
   ...baseQuiz,
   id: "quiz-pending-1",
   title: "Database Design Principles",
   canvas_course_name: "Database Systems",
-  content_extraction_status: "pending",
-  llm_generation_status: "pending",
+  status: "created",
+  last_status_update: "2024-01-15T10:30:00Z",
   question_count: 30,
 }
 
-// Quiz with processing content extraction
+// Quiz extracting content
 export const quizProcessingExtraction: Quiz = {
   ...baseQuiz,
   id: "quiz-processing-1",
   title: "Web Development Concepts",
   canvas_course_name: "Web Dev 101",
-  content_extraction_status: "processing",
-  llm_generation_status: "pending",
+  status: "extracting_content",
+  last_status_update: "2024-01-15T11:15:00Z",
   question_count: 40,
 }
 
-// Quiz pending LLM generation (extraction completed)
+// Quiz generating questions
 export const quizPendingGeneration: Quiz = {
   ...baseQuiz,
   id: "quiz-pending-gen-1",
   title: "Software Engineering Practices",
   canvas_course_name: "Software Engineering",
-  content_extraction_status: "completed",
-  llm_generation_status: "pending",
+  status: "generating_questions",
+  last_status_update: "2024-01-15T12:15:00Z",
   content_extracted_at: "2024-01-15T12:15:00Z",
   question_count: 35,
 }
 
-// Quiz with processing LLM generation
+// Quiz generating questions
 export const quizProcessingGeneration: Quiz = {
   ...baseQuiz,
   id: "quiz-processing-gen-1",
   title: "Data Structures and Algorithms",
   canvas_course_name: "CS201",
-  content_extraction_status: "completed",
-  llm_generation_status: "processing",
+  status: "generating_questions",
+  last_status_update: "2024-01-15T10:45:00Z",
   content_extracted_at: "2024-01-15T10:45:00Z",
   question_count: 60,
 }
@@ -90,8 +90,9 @@ export const quizFailedExtraction: Quiz = {
   ...baseQuiz,
   id: "quiz-failed-1",
   title: "Failed Content Extraction",
-  content_extraction_status: "failed",
-  llm_generation_status: "pending",
+  status: "failed",
+  failure_reason: "content_extraction_error",
+  last_status_update: "2024-01-15T10:30:00Z",
   question_count: 20,
 }
 
@@ -99,8 +100,9 @@ export const quizFailedGeneration: Quiz = {
   ...baseQuiz,
   id: "quiz-failed-2",
   title: "Failed Question Generation",
-  content_extraction_status: "completed",
-  llm_generation_status: "failed",
+  status: "failed",
+  failure_reason: "llm_generation_error",
+  last_status_update: "2024-01-15T10:00:00Z",
   content_extracted_at: "2024-01-15T10:00:00Z",
   question_count: 45,
 }
@@ -114,8 +116,8 @@ export const quizzesNeedingReview = [
     id: "quiz-review-3",
     title: "Advanced JavaScript",
     canvas_course_name: "Frontend Development",
-    content_extraction_status: "completed",
-    llm_generation_status: "completed",
+    status: "ready_for_review",
+    last_status_update: "2024-01-15T13:00:00Z",
     question_count: 15,
   },
   {
@@ -123,8 +125,8 @@ export const quizzesNeedingReview = [
     id: "quiz-review-4",
     title: "React Component Design",
     canvas_course_name: "React Course",
-    content_extraction_status: "completed",
-    llm_generation_status: "completed",
+    status: "ready_for_review",
+    last_status_update: "2024-01-15T14:00:00Z",
     question_count: 35,
   },
   {
@@ -132,8 +134,8 @@ export const quizzesNeedingReview = [
     id: "quiz-review-5",
     title: "Node.js Backend Development",
     canvas_course_name: "Backend Systems",
-    content_extraction_status: "completed",
-    llm_generation_status: "completed",
+    status: "ready_for_review",
+    last_status_update: "2024-01-15T15:00:00Z",
     question_count: 40,
   },
   {
@@ -141,8 +143,8 @@ export const quizzesNeedingReview = [
     id: "quiz-review-6",
     title: "Additional Quiz for Overflow Test",
     canvas_course_name: "Extra Course",
-    content_extraction_status: "completed",
-    llm_generation_status: "completed",
+    status: "ready_for_review",
+    last_status_update: "2024-01-15T16:00:00Z",
     question_count: 10,
   },
 ] as Quiz[]
@@ -157,8 +159,8 @@ export const quizzesBeingGenerated = [
     id: "quiz-gen-5",
     title: "Additional Generating Quiz",
     canvas_course_name: "Another Course",
-    content_extraction_status: "pending",
-    llm_generation_status: "pending",
+    status: "created",
+    last_status_update: "2024-01-15T17:00:00Z",
     question_count: 25,
   },
 ] as Quiz[]
@@ -189,8 +191,8 @@ export const quizWithLongTitle: Quiz = {
   id: "quiz-long-title",
   title:
     "This is a very long quiz title that should be truncated when displayed in the dashboard cards to test the text overflow handling",
-  content_extraction_status: "completed",
-  llm_generation_status: "completed",
+  status: "ready_for_review",
+  last_status_update: "2024-01-15T18:00:00Z",
   question_count: 100,
 }
 

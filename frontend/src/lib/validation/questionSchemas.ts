@@ -24,7 +24,6 @@ export const mcqSchema = z.object({
 
 export type MCQFormData = z.infer<typeof mcqSchema>
 
-
 // Short Answer Question Schema
 export const shortAnswerSchema = z.object({
   questionText: nonEmptyString,
@@ -35,7 +34,6 @@ export const shortAnswerSchema = z.object({
 })
 
 export type ShortAnswerFormData = z.infer<typeof shortAnswerSchema>
-
 
 // Fill in the Blank Question Schema
 export const fillInBlankSchema = z.object({

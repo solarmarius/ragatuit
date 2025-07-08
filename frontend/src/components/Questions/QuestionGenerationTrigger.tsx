@@ -4,6 +4,7 @@ import { MdAutoAwesome } from "react-icons/md"
 
 import { type GenerationRequest, QuestionsService, type Quiz } from "@/client"
 import { useCustomToast, useErrorHandler } from "@/hooks/common"
+import { QUIZ_STATUS } from "@/lib/constants"
 
 interface QuestionGenerationTriggerProps {
   quiz: Quiz
@@ -51,16 +52,9 @@ export function QuestionGenerationTrigger({
     return null
   }
 
-  // Don't show if content extraction isn't completed
-  if (quiz.content_extraction_status !== "completed") {
-    return null
-  }
-
-  // Don't show if generation is already processing or completed
-  if (
-    quiz.llm_generation_status === "processing" ||
-    quiz.llm_generation_status === "completed"
-  ) {
+  // Only show if content extraction is completed and we're ready to generate questions
+  // This component should trigger the generation process
+  if (quiz.status !== QUIZ_STATUS.EXTRACTING_CONTENT) {
     return null
   }
 
@@ -107,21 +101,6 @@ export function QuestionGenerationTrigger({
             <MdAutoAwesome />
             Generate Questions
           </Button>
-
-          {quiz.llm_generation_status === "failed" && (
-            <Box
-              p={3}
-              bg="red.50"
-              borderRadius="md"
-              border="1px solid"
-              borderColor="red.200"
-            >
-              <Text fontSize="sm" color="red.700" textAlign="center">
-                Previous generation attempt failed. Click "Generate Questions"
-                to retry.
-              </Text>
-            </Box>
-          )}
         </VStack>
       </Card.Body>
     </Card.Root>

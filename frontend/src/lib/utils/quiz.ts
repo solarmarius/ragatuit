@@ -14,9 +14,11 @@ import { QUIZ_STATUS, UI_TEXT } from "@/lib/constants"
  */
 export function getQuizzesBeingGenerated(quizzes: Quiz[]): Quiz[] {
   return quizzes.filter((quiz) => {
-    return quiz.status === QUIZ_STATUS.CREATED ||
-           quiz.status === QUIZ_STATUS.EXTRACTING_CONTENT ||
-           quiz.status === QUIZ_STATUS.GENERATING_QUESTIONS
+    return (
+      quiz.status === QUIZ_STATUS.CREATED ||
+      quiz.status === QUIZ_STATUS.EXTRACTING_CONTENT ||
+      quiz.status === QUIZ_STATUS.GENERATING_QUESTIONS
+    )
   })
 }
 
@@ -82,9 +84,6 @@ export function getQuizStatusColor(quiz: Quiz): string {
       return "yellow"
     case QUIZ_STATUS.PUBLISHED:
       return "green"
-    case QUIZ_STATUS.CREATED:
-    case QUIZ_STATUS.EXTRACTING_CONTENT:
-    case QUIZ_STATUS.GENERATING_QUESTIONS:
     default:
       return "orange"
   }
@@ -138,9 +137,11 @@ export function isQuizComplete(quiz: Quiz): boolean {
  * Check if a quiz is currently being processed
  */
 export function isQuizProcessing(quiz: Quiz): boolean {
-  return quiz.status === QUIZ_STATUS.EXTRACTING_CONTENT ||
-         quiz.status === QUIZ_STATUS.GENERATING_QUESTIONS ||
-         quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS
+  return (
+    quiz.status === QUIZ_STATUS.EXTRACTING_CONTENT ||
+    quiz.status === QUIZ_STATUS.GENERATING_QUESTIONS ||
+    quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS
+  )
 }
 
 /**
@@ -209,14 +210,22 @@ export function sortQuizzesByStatus(quizzes: Quiz[]): Quiz[] {
     const getPriority = (quiz: Quiz) => {
       if (!quiz.status) return 99
       switch (quiz.status) {
-        case QUIZ_STATUS.FAILED: return 0
-        case QUIZ_STATUS.EXTRACTING_CONTENT: return 1
-        case QUIZ_STATUS.GENERATING_QUESTIONS: return 2
-        case QUIZ_STATUS.EXPORTING_TO_CANVAS: return 3
-        case QUIZ_STATUS.CREATED: return 4
-        case QUIZ_STATUS.READY_FOR_REVIEW: return 5
-        case QUIZ_STATUS.PUBLISHED: return 6
-        default: return 99
+        case QUIZ_STATUS.FAILED:
+          return 0
+        case QUIZ_STATUS.EXTRACTING_CONTENT:
+          return 1
+        case QUIZ_STATUS.GENERATING_QUESTIONS:
+          return 2
+        case QUIZ_STATUS.EXPORTING_TO_CANVAS:
+          return 3
+        case QUIZ_STATUS.CREATED:
+          return 4
+        case QUIZ_STATUS.READY_FOR_REVIEW:
+          return 5
+        case QUIZ_STATUS.PUBLISHED:
+          return 6
+        default:
+          return 99
       }
     }
 

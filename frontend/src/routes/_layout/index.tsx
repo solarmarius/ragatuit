@@ -8,8 +8,8 @@ import {
 } from "@chakra-ui/react"
 import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
 
-import { OnboardingModal } from "@/components/Onboarding/OnboardingModal"
 import { ErrorState } from "@/components/Common"
+import { OnboardingModal } from "@/components/Onboarding/OnboardingModal"
 import {
   HelpPanel,
   QuizGenerationPanel,

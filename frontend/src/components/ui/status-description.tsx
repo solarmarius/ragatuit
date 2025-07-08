@@ -1,7 +1,7 @@
+import type { FailureReason, QuizStatus } from "@/client/types.gen"
 import { QUIZ_STATUS, UI_TEXT } from "@/lib/constants"
 import { formatTimeAgo } from "@/lib/utils"
 import { Text } from "@chakra-ui/react"
-import type { QuizStatus, FailureReason } from "@/client/types.gen"
 
 interface StatusDescriptionProps {
   /** Current quiz status */
@@ -51,19 +51,28 @@ export function StatusDescription({
 
       case QUIZ_STATUS.PUBLISHED:
         return detailed
-          ? `Quiz exported to Canvas successfully${timeAgo ? ` (${timeAgo})` : ""}`
+          ? `Quiz exported to Canvas successfully${
+              timeAgo ? ` (${timeAgo})` : ""
+            }`
           : UI_TEXT.STATUS.PUBLISHED
 
       case QUIZ_STATUS.FAILED:
         if (detailed && failureReason) {
           const errorMessages = {
-            content_extraction_error: "Content extraction failed. This may be due to network issues, Canvas permissions, or content size limits.",
-            no_content_found: "No content found in the selected modules. Please check your module selection.",
-            llm_generation_error: "Question generation failed. This may be due to LLM service issues or content processing errors.",
-            no_questions_generated: "No questions could be generated from the extracted content. Please try different modules.",
-            canvas_export_error: "Quiz export to Canvas failed. This may be due to Canvas API issues or permissions.",
-            network_error: "Network error occurred. Please check your connection and try again.",
-            validation_error: "Validation error occurred. Please check your quiz settings.",
+            content_extraction_error:
+              "Content extraction failed. This may be due to network issues, Canvas permissions, or content size limits.",
+            no_content_found:
+              "No content found in the selected modules. Please check your module selection.",
+            llm_generation_error:
+              "Question generation failed. This may be due to LLM service issues or content processing errors.",
+            no_questions_generated:
+              "No questions could be generated from the extracted content. Please try different modules.",
+            canvas_export_error:
+              "Quiz export to Canvas failed. This may be due to Canvas API issues or permissions.",
+            network_error:
+              "Network error occurred. Please check your connection and try again.",
+            validation_error:
+              "Validation error occurred. Please check your quiz settings.",
           }
           return errorMessages[failureReason] || "Process failed"
         }

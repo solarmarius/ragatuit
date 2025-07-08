@@ -5,7 +5,6 @@ import { memo } from "react"
 import type { Quiz } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import { StatusLight } from "@/components/ui/status-light"
-import { PROCESSING_STATUSES } from "@/lib/constants"
 import {
   formatDate,
   getQuizStatusText,
@@ -51,14 +50,7 @@ export const QuizTableRow = memo(function QuizTableRow({
       </Table.Cell>
       <Table.Cell>
         <HStack gap={2} align="center">
-          <StatusLight
-            extractionStatus={
-              quiz.content_extraction_status || PROCESSING_STATUSES.PENDING
-            }
-            generationStatus={
-              quiz.llm_generation_status || PROCESSING_STATUSES.PENDING
-            }
-          />
+          <StatusLight status={quiz.status || "created"} />
           <Text fontSize="sm" color="gray.600">
             {getQuizStatusText(quiz)}
           </Text>
@@ -72,7 +64,9 @@ export const QuizTableRow = memo(function QuizTableRow({
       <Table.Cell>
         <HStack gap={2}>
           <Button size="sm" variant="outline" asChild>
-            <RouterLink to={`/quiz/${quiz.id}`} params={{ id: quiz.id! }}>View</RouterLink>
+            <RouterLink to={`/quiz/${quiz.id}`} params={{ id: quiz.id! }}>
+              View
+            </RouterLink>
           </Button>
         </HStack>
       </Table.Cell>

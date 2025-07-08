@@ -5,8 +5,8 @@ import { memo } from "react"
 import type { Quiz } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import { StatusLight } from "@/components/ui/status-light"
-import { PROCESSING_STATUSES, UI_COLORS, UI_TEXT } from "@/lib/constants"
-import { getQuizStatusText, getQuizProgressPercentage } from "@/lib/utils"
+import { UI_COLORS, UI_TEXT } from "@/lib/constants"
+import { getQuizProgressPercentage, getQuizStatusText } from "@/lib/utils"
 import { QuizBadges } from "./QuizBadges"
 import { QuizProgressIndicator } from "./QuizProgressIndicator"
 
@@ -42,14 +42,7 @@ export const QuizGenerationCard = memo(function QuizGenerationCard({
             </Text>
           </VStack>
           <HStack gap={2}>
-            <StatusLight
-              extractionStatus={
-                quiz.content_extraction_status || PROCESSING_STATUSES.PENDING
-              }
-              generationStatus={
-                quiz.llm_generation_status || PROCESSING_STATUSES.PENDING
-              }
-            />
+            <StatusLight status={quiz.status || "created"} />
           </HStack>
         </HStack>
 
