@@ -66,7 +66,18 @@ export function getPublishedQuizzes(quizzes: Quiz[]): Quiz[] {
 export function getQuizStatusText(quiz: Quiz): string {
   if (!quiz.status) return "Unknown"
 
-  return UI_TEXT.STATUS[quiz.status as keyof typeof UI_TEXT.STATUS] || "Unknown"
+  // Map lowercase status values to uppercase UI_TEXT keys
+  const statusMapping = {
+    [QUIZ_STATUS.CREATED]: UI_TEXT.STATUS.CREATED,
+    [QUIZ_STATUS.EXTRACTING_CONTENT]: UI_TEXT.STATUS.EXTRACTING_CONTENT,
+    [QUIZ_STATUS.GENERATING_QUESTIONS]: UI_TEXT.STATUS.GENERATING_QUESTIONS,
+    [QUIZ_STATUS.READY_FOR_REVIEW]: UI_TEXT.STATUS.READY_FOR_REVIEW,
+    [QUIZ_STATUS.EXPORTING_TO_CANVAS]: UI_TEXT.STATUS.EXPORTING_TO_CANVAS,
+    [QUIZ_STATUS.PUBLISHED]: UI_TEXT.STATUS.PUBLISHED,
+    [QUIZ_STATUS.FAILED]: UI_TEXT.STATUS.FAILED,
+  }
+
+  return statusMapping[quiz.status as keyof typeof statusMapping] || "Unknown"
 }
 
 /**
