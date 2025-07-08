@@ -11,7 +11,7 @@ from sqlmodel import Session, select
 from src.config import get_logger
 
 from .models import Quiz
-from .schemas import QuizCreate, Status
+from .schemas import QuizCreate, QuizStatus, FailureReason
 from .validators import (
     validate_quiz_for_content_extraction,
     validate_quiz_for_question_generation,
@@ -222,10 +222,12 @@ def prepare_content_extraction(
     """
     quiz = validate_quiz_for_content_extraction(session, quiz_id, user_id)
 
-    # Reset extraction status to pending
-    quiz.content_extraction_status = Status.PENDING
+    # Reset to extracting content status
+    quiz.status = QuizStatus.EXTRACTING_CONTENT
+    quiz.failure_reason = None
     quiz.extracted_content = None
     quiz.content_extracted_at = None
+    quiz.last_status_update = datetime.now(timezone.utc)
     session.add(quiz)
     session.commit()
 
@@ -253,8 +255,10 @@ def prepare_question_generation(
     """
     quiz = validate_quiz_for_question_generation(session, quiz_id, user_id)
 
-    # Reset generation status to pending
-    quiz.llm_generation_status = Status.PENDING
+    # Set to generating questions status
+    quiz.status = QuizStatus.GENERATING_QUESTIONS
+    quiz.failure_reason = None
+    quiz.last_status_update = datetime.now(timezone.utc)
     session.add(quiz)
     session.commit()
 
@@ -289,17 +293,30 @@ async def reserve_quiz_job(
         )
         return None
 
-    # Check current status based on job type
+    # Check current status and transition based on job type
     if job_type == "extraction":
-        if quiz.content_extraction_status in ["processing", "completed"]:
+        if quiz.status in [QuizStatus.EXTRACTING_CONTENT, QuizStatus.GENERATING_QUESTIONS, QuizStatus.READY_FOR_REVIEW, QuizStatus.EXPORTING_TO_CANVAS, QuizStatus.PUBLISHED]:
             logger.info(
                 "job_already_taken",
                 quiz_id=str(quiz_id),
                 job_type=job_type,
-                current_status=quiz.content_extraction_status,
+                current_status=quiz.status,
             )
             return None
-        quiz.content_extraction_status = "processing"
+        
+        # Transition to extracting content
+        if not _is_valid_transition(quiz.status, QuizStatus.EXTRACTING_CONTENT):
+            logger.warning(
+                "invalid_status_transition",
+                quiz_id=str(quiz_id),
+                from_status=quiz.status,
+                to_status=QuizStatus.EXTRACTING_CONTENT,
+            )
+            return None
+            
+        quiz.status = QuizStatus.EXTRACTING_CONTENT
+        quiz.failure_reason = None
+        quiz.last_status_update = datetime.now(timezone.utc)
         settings = {
             "target_questions": quiz.question_count,
             "llm_model": quiz.llm_model,
@@ -307,19 +324,40 @@ async def reserve_quiz_job(
         }
 
     elif job_type == "generation":
-        if quiz.llm_generation_status in ["processing", "completed"]:
+        if quiz.status in [QuizStatus.GENERATING_QUESTIONS, QuizStatus.READY_FOR_REVIEW, QuizStatus.EXPORTING_TO_CANVAS, QuizStatus.PUBLISHED]:
             logger.info(
                 "job_already_taken",
                 quiz_id=str(quiz_id),
                 job_type=job_type,
-                current_status=quiz.llm_generation_status,
+                current_status=quiz.status,
             )
             return None
-        quiz.llm_generation_status = "processing"
+            
+        # Check if content extraction completed first
+        if quiz.status not in [QuizStatus.EXTRACTING_CONTENT, QuizStatus.FAILED]:  # Must have completed extraction
+            logger.warning(
+                "generation_requires_extracted_content",
+                quiz_id=str(quiz_id),
+                current_status=quiz.status,
+            )
+            return None
+            
+        if not _is_valid_transition(quiz.status, QuizStatus.GENERATING_QUESTIONS):
+            logger.warning(
+                "invalid_status_transition",
+                quiz_id=str(quiz_id),
+                from_status=quiz.status,
+                to_status=QuizStatus.GENERATING_QUESTIONS,
+            )
+            return None
+            
+        quiz.status = QuizStatus.GENERATING_QUESTIONS
+        quiz.failure_reason = None
+        quiz.last_status_update = datetime.now(timezone.utc)
         settings = {}
 
     elif job_type == "export":
-        if quiz.export_status == "completed" and quiz.canvas_quiz_id:
+        if quiz.status == QuizStatus.PUBLISHED and quiz.canvas_quiz_id:
             logger.warning(
                 "quiz_already_exported",
                 quiz_id=str(quiz_id),
@@ -331,14 +369,27 @@ async def reserve_quiz_job(
                 "course_id": quiz.canvas_course_id,
                 "title": quiz.title,
             }
-        if quiz.export_status == "processing":
+            
+        if quiz.status == QuizStatus.EXPORTING_TO_CANVAS:
             logger.warning(
                 "export_already_processing",
                 quiz_id=str(quiz_id),
-                current_status=quiz.export_status,
+                current_status=quiz.status,
             )
             return None
-        quiz.export_status = "processing"
+            
+        if not _is_valid_transition(quiz.status, QuizStatus.EXPORTING_TO_CANVAS):
+            logger.warning(
+                "invalid_status_transition",
+                quiz_id=str(quiz_id),
+                from_status=quiz.status,
+                to_status=QuizStatus.EXPORTING_TO_CANVAS,
+            )
+            return None
+            
+        quiz.status = QuizStatus.EXPORTING_TO_CANVAS
+        quiz.failure_reason = None
+        quiz.last_status_update = datetime.now(timezone.utc)
         settings = {
             "already_exported": False,
             "course_id": quiz.canvas_course_id,
@@ -356,18 +407,18 @@ async def reserve_quiz_job(
 async def update_quiz_status(
     session: AsyncSession,
     quiz_id: UUID,
-    status_type: str,
-    status_value: str,
+    new_status: QuizStatus,
+    failure_reason: FailureReason | None = None,
     **additional_fields: Any,
 ) -> None:
     """
-    Update quiz status fields in a transaction.
+    Update quiz status using consolidated status system.
 
     Args:
         session: Async database session
         quiz_id: Quiz ID
-        status_type: Type of status ('content_extraction', 'llm_generation', 'export')
-        status_value: Status value ('pending', 'processing', 'completed', 'failed')
+        new_status: New status to set
+        failure_reason: Failure reason if status is FAILED
         **additional_fields: Additional fields to update (e.g., extracted_content, canvas_quiz_id)
     """
     quiz = await get_quiz_for_update(session, quiz_id)
@@ -375,26 +426,124 @@ async def update_quiz_status(
         logger.error("quiz_not_found_during_status_update", quiz_id=str(quiz_id))
         return
 
-    # Update status based on type
-    if status_type == "content_extraction":
-        quiz.content_extraction_status = status_value
-        if status_value == "completed" and "extracted_content" in additional_fields:
-            quiz.extracted_content = additional_fields["extracted_content"]
-            quiz.content_extracted_at = datetime.now(timezone.utc)
+    # Validate status transition
+    if not _is_valid_transition(quiz.status, new_status):
+        logger.warning(
+            "invalid_status_transition_attempted",
+            quiz_id=str(quiz_id),
+            from_status=quiz.status,
+            to_status=new_status,
+        )
+        return
 
-    elif status_type == "llm_generation":
-        quiz.llm_generation_status = status_value
+    # Update the status
+    quiz.status = new_status
+    quiz.last_status_update = datetime.now(timezone.utc)
+    
+    # Handle failure case
+    if new_status == QuizStatus.FAILED:
+        quiz.failure_reason = failure_reason
+    else:
+        quiz.failure_reason = None
 
-    elif status_type == "export":
-        quiz.export_status = status_value
-        if status_value == "completed":
-            if "canvas_quiz_id" in additional_fields:
-                quiz.canvas_quiz_id = additional_fields["canvas_quiz_id"]
-            quiz.exported_at = datetime.now(timezone.utc)
+    # Handle specific status transitions and additional fields
+    if new_status == QuizStatus.READY_FOR_REVIEW and "extracted_content" in additional_fields:
+        quiz.extracted_content = additional_fields["extracted_content"]
+        quiz.content_extracted_at = datetime.now(timezone.utc)
+        
+    elif new_status == QuizStatus.PUBLISHED:
+        if "canvas_quiz_id" in additional_fields:
+            quiz.canvas_quiz_id = additional_fields["canvas_quiz_id"]
+        quiz.exported_at = datetime.now(timezone.utc)
 
     logger.debug(
         "quiz_status_updated",
         quiz_id=str(quiz_id),
-        status_type=status_type,
-        status_value=status_value,
+        new_status=new_status,
+        failure_reason=failure_reason,
     )
+
+
+async def set_quiz_failed(
+    session: AsyncSession,
+    quiz_id: UUID,
+    failure_reason: FailureReason,
+) -> None:
+    """
+    Set quiz status to failed with specific failure reason.
+
+    Args:
+        session: Async database session
+        quiz_id: Quiz ID
+        failure_reason: Reason for failure
+    """
+    await update_quiz_status(session, quiz_id, QuizStatus.FAILED, failure_reason)
+
+
+async def reset_quiz_for_retry(
+    session: AsyncSession,
+    quiz_id: UUID,
+    retry_from_status: QuizStatus,
+) -> None:
+    """
+    Reset quiz to allow retry from specific status.
+
+    Args:
+        session: Async database session
+        quiz_id: Quiz ID
+        retry_from_status: Status to reset to for retry
+    """
+    quiz = await get_quiz_for_update(session, quiz_id)
+    if not quiz:
+        logger.error("quiz_not_found_for_retry", quiz_id=str(quiz_id))
+        return
+
+    # Only allow retry from failed status
+    if quiz.status != QuizStatus.FAILED:
+        logger.warning(
+            "retry_attempted_from_non_failed_status",
+            quiz_id=str(quiz_id),
+            current_status=quiz.status,
+        )
+        return
+
+    # Determine appropriate retry status based on failure reason
+    if retry_from_status in [QuizStatus.CREATED, QuizStatus.EXTRACTING_CONTENT]:
+        # Clear content extraction results
+        quiz.extracted_content = None
+        quiz.content_extracted_at = None
+        
+    await update_quiz_status(session, quiz_id, retry_from_status)
+    
+    logger.info(
+        "quiz_reset_for_retry",
+        quiz_id=str(quiz_id),
+        retry_from_status=retry_from_status,
+        previous_failure_reason=quiz.failure_reason,
+    )
+
+
+def _is_valid_transition(from_status: QuizStatus, to_status: QuizStatus) -> bool:
+    """
+    Check if a status transition is valid according to the quiz state machine.
+
+    Args:
+        from_status: Current status
+        to_status: Target status
+
+    Returns:
+        True if transition is valid
+    """
+    # Define valid transitions
+    valid_transitions = {
+        QuizStatus.CREATED: [QuizStatus.EXTRACTING_CONTENT, QuizStatus.FAILED],
+        QuizStatus.EXTRACTING_CONTENT: [QuizStatus.READY_FOR_REVIEW, QuizStatus.GENERATING_QUESTIONS, QuizStatus.FAILED],
+        QuizStatus.GENERATING_QUESTIONS: [QuizStatus.READY_FOR_REVIEW, QuizStatus.FAILED],
+        QuizStatus.READY_FOR_REVIEW: [QuizStatus.GENERATING_QUESTIONS, QuizStatus.EXPORTING_TO_CANVAS, QuizStatus.FAILED],
+        QuizStatus.EXPORTING_TO_CANVAS: [QuizStatus.PUBLISHED, QuizStatus.FAILED],
+        QuizStatus.PUBLISHED: [QuizStatus.FAILED],  # Can fail after publishing
+        QuizStatus.FAILED: [QuizStatus.CREATED, QuizStatus.EXTRACTING_CONTENT, QuizStatus.GENERATING_QUESTIONS, QuizStatus.READY_FOR_REVIEW],  # Can retry from various states
+    }
+    
+    allowed_next_states = valid_transitions.get(from_status, [])
+    return to_status in allowed_next_states
