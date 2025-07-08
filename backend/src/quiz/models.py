@@ -1,7 +1,7 @@
 """Quiz database models."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import field_validator
@@ -12,6 +12,8 @@ from sqlmodel import Field, Relationship, SQLModel
 if TYPE_CHECKING:
     from src.auth.models import User
     from src.question.models import Question
+
+from .schemas import FailureReason, QuizStatus
 
 
 class Quiz(SQLModel, table=True):
@@ -31,14 +33,40 @@ class Quiz(SQLModel, table=True):
     question_count: int = Field(default=100, ge=1, le=200)
     llm_model: str = Field(default="o3")
     llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
+    status: QuizStatus = Field(
+        default=QuizStatus.CREATED,
+        description="Consolidated quiz status",
+        index=True,
+    )
+    failure_reason: FailureReason | None = Field(
+        default=None,
+        description="Specific failure reason when status is failed",
+        index=True,
+    )
+    last_status_update: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        description="Timestamp of last status update",
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False,
+            server_default=func.now(),
+            index=True,
+        ),
+    )
+    # Legacy fields for backwards compatibility during migration
     content_extraction_status: str = Field(
         default="pending",
-        description="Status of content extraction: pending, processing, completed, failed",
+        description="Legacy field - will be removed after migration",
         index=True,
     )
     llm_generation_status: str = Field(
         default="pending",
-        description="Status of LLM generation: pending, processing, completed, failed",
+        description="Legacy field - will be removed after migration",
+        index=True,
+    )
+    export_status: str = Field(
+        default="pending",
+        description="Legacy field - will be removed after migration",
         index=True,
     )
     extracted_content: dict[str, Any] | None = Field(
@@ -65,11 +93,6 @@ class Quiz(SQLModel, table=True):
     )
     canvas_quiz_id: str | None = Field(
         default=None, description="Canvas quiz assignment ID after export"
-    )
-    export_status: str = Field(
-        default="pending",
-        description="Status of Canvas export: pending, processing, completed, failed",
-        index=True,
     )
     exported_at: datetime | None = Field(
         sa_column=Column(DateTime(timezone=True), nullable=True),
