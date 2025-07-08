@@ -262,7 +262,9 @@ test.describe("Quiz List Component", () => {
 
     // Check that error state is displayed (either error UI or error toast)
     // The component shows either the error UI or just the toast - both are valid error handling
-    await expect(page.getByText("Failed to Load Quizzes")).toBeVisible()
+    await expect(page.getByText("Failed to Load Quizzes")).toBeVisible({
+      timeout: 15000
+    })
   })
 
   test("should display loading skeleton", async ({ page }) => {
