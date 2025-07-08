@@ -1,7 +1,7 @@
 """Quiz database models."""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import TYPE_CHECKING, Any, Optional
 
 from pydantic import field_validator
@@ -44,30 +44,12 @@ class Quiz(SQLModel, table=True):
         index=True,
     )
     last_status_update: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc),
-        description="Timestamp of last status update",
+        default=None,
         sa_column=Column(
             DateTime(timezone=True),
-            nullable=False,
             server_default=func.now(),
-            index=True,
+            nullable=False,
         ),
-    )
-    # Legacy fields for backwards compatibility during migration
-    content_extraction_status: str = Field(
-        default="pending",
-        description="Legacy field - will be removed after migration",
-        index=True,
-    )
-    llm_generation_status: str = Field(
-        default="pending",
-        description="Legacy field - will be removed after migration",
-        index=True,
-    )
-    export_status: str = Field(
-        default="pending",
-        description="Legacy field - will be removed after migration",
-        index=True,
     )
     extracted_content: dict[str, Any] | None = Field(
         default=None, sa_column=Column(JSONB, nullable=True)
