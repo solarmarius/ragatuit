@@ -6,7 +6,7 @@ import type { Quiz } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import { StatusLight } from "@/components/ui/status-light"
 import { PROCESSING_STATUSES, UI_COLORS, UI_TEXT } from "@/lib/constants"
-import { getQuizProcessingPhase, getQuizProgressPercentage } from "@/lib/utils"
+import { getQuizStatusText, getQuizProgressPercentage } from "@/lib/utils"
 import { QuizBadges } from "./QuizBadges"
 import { QuizProgressIndicator } from "./QuizProgressIndicator"
 
@@ -17,7 +17,7 @@ interface QuizGenerationCardProps {
 export const QuizGenerationCard = memo(function QuizGenerationCard({
   quiz,
 }: QuizGenerationCardProps) {
-  const processingPhase = getQuizProcessingPhase(quiz)
+  const statusText = getQuizStatusText(quiz)
   const progressPercentage = getQuizProgressPercentage(quiz)
 
   return (
@@ -55,7 +55,7 @@ export const QuizGenerationCard = memo(function QuizGenerationCard({
 
         {/* Progress indicator */}
         <QuizProgressIndicator
-          processingPhase={processingPhase}
+          processingPhase={statusText}
           progressPercentage={progressPercentage}
         />
 

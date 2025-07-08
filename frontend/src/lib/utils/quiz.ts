@@ -1,21 +1,9 @@
 import type { Quiz } from "@/client/types.gen"
-import { PROCESSING_STATUSES } from "@/lib/constants"
+import { QUIZ_STATUS, UI_TEXT } from "@/lib/constants"
 
 /**
  * Quiz utility functions for status handling, filtering, and processing
  */
-
-export type QuizStatusType = "pending" | "processing" | "completed" | "failed"
-
-/**
- * Get quiz statuses with fallback defaults
- */
-function getQuizStatuses(quiz: Quiz) {
-  return {
-    extraction: quiz.content_extraction_status || PROCESSING_STATUSES.PENDING,
-    generation: quiz.llm_generation_status || PROCESSING_STATUSES.PENDING,
-  }
-}
 
 // =============================================================================
 // Quiz Filtering Functions
@@ -26,27 +14,18 @@ function getQuizStatuses(quiz: Quiz) {
  */
 export function getQuizzesBeingGenerated(quizzes: Quiz[]): Quiz[] {
   return quizzes.filter((quiz) => {
-    const { extraction, generation } = getQuizStatuses(quiz)
-
-    return (
-      extraction === PROCESSING_STATUSES.PROCESSING ||
-      generation === PROCESSING_STATUSES.PROCESSING ||
-      (extraction === PROCESSING_STATUSES.COMPLETED &&
-        generation === PROCESSING_STATUSES.PENDING)
-    )
+    return quiz.status === QUIZ_STATUS.CREATED ||
+           quiz.status === QUIZ_STATUS.EXTRACTING_CONTENT ||
+           quiz.status === QUIZ_STATUS.GENERATING_QUESTIONS
   })
 }
 
 /**
- * Get quizzes that need review (both extraction and generation are completed)
+ * Get quizzes that need review (questions generated, awaiting approval)
  */
 export function getQuizzesNeedingReview(quizzes: Quiz[]): Quiz[] {
   return quizzes.filter((quiz) => {
-    const { extraction, generation } = getQuizStatuses(quiz)
-    return (
-      extraction === PROCESSING_STATUSES.COMPLETED &&
-      generation === PROCESSING_STATUSES.COMPLETED
-    )
+    return quiz.status === QUIZ_STATUS.READY_FOR_REVIEW
   })
 }
 
@@ -62,11 +41,16 @@ export function getFailedQuizzes(quizzes: Quiz[]): Quiz[] {
  */
 export function getPendingQuizzes(quizzes: Quiz[]): Quiz[] {
   return quizzes.filter((quiz) => {
-    const { extraction, generation } = getQuizStatuses(quiz)
-    return (
-      extraction === PROCESSING_STATUSES.PENDING &&
-      generation === PROCESSING_STATUSES.PENDING
-    )
+    return quiz.status === QUIZ_STATUS.CREATED
+  })
+}
+
+/**
+ * Get quizzes that are published to Canvas
+ */
+export function getPublishedQuizzes(quizzes: Quiz[]): Quiz[] {
+  return quizzes.filter((quiz) => {
+    return quiz.status === QUIZ_STATUS.PUBLISHED
   })
 }
 
@@ -75,132 +59,61 @@ export function getPendingQuizzes(quizzes: Quiz[]): Quiz[] {
 // =============================================================================
 
 /**
- * Get the current processing phase for a quiz being generated
- */
-export function getQuizProcessingPhase(quiz: Quiz): string {
-  const { extraction, generation } = getQuizStatuses(quiz)
-
-  if (
-    extraction === PROCESSING_STATUSES.FAILED ||
-    generation === PROCESSING_STATUSES.FAILED
-  ) {
-    return "Failed"
-  }
-
-  if (
-    extraction === PROCESSING_STATUSES.COMPLETED &&
-    generation === PROCESSING_STATUSES.COMPLETED
-  ) {
-    return "Complete"
-  }
-
-  if (extraction === PROCESSING_STATUSES.PROCESSING) {
-    return "Extracting content..."
-  }
-
-  if (generation === PROCESSING_STATUSES.PROCESSING) {
-    return "Generating questions..."
-  }
-
-  if (
-    extraction === PROCESSING_STATUSES.COMPLETED &&
-    generation === PROCESSING_STATUSES.PENDING
-  ) {
-    return "Ready for generation"
-  }
-
-  return "Pending"
-}
-
-/**
  * Get human-readable status text for a quiz
  */
 export function getQuizStatusText(quiz: Quiz): string {
-  const { extraction, generation } = getQuizStatuses(quiz)
+  if (!quiz.status) return "Unknown"
 
-  if (
-    extraction === PROCESSING_STATUSES.FAILED ||
-    generation === PROCESSING_STATUSES.FAILED
-  ) {
-    return "Failed"
-  }
-
-  if (
-    extraction === PROCESSING_STATUSES.COMPLETED &&
-    generation === PROCESSING_STATUSES.COMPLETED
-  ) {
-    return "Ready for Review"
-  }
-
-  if (
-    extraction === PROCESSING_STATUSES.PROCESSING ||
-    generation === PROCESSING_STATUSES.PROCESSING
-  ) {
-    return "Processing"
-  }
-
-  return "Pending"
+  return UI_TEXT.STATUS[quiz.status as keyof typeof UI_TEXT.STATUS] || "Unknown"
 }
 
 /**
  * Get color scheme for quiz status
  */
 export function getQuizStatusColor(quiz: Quiz): string {
-  const { extraction, generation } = getQuizStatuses(quiz)
+  if (!quiz.status) return "gray"
 
-  if (
-    extraction === PROCESSING_STATUSES.FAILED ||
-    generation === PROCESSING_STATUSES.FAILED
-  ) {
-    return "red"
+  switch (quiz.status) {
+    case QUIZ_STATUS.FAILED:
+      return "red"
+    case QUIZ_STATUS.READY_FOR_REVIEW:
+      return "purple"
+    case QUIZ_STATUS.EXPORTING_TO_CANVAS:
+      return "yellow"
+    case QUIZ_STATUS.PUBLISHED:
+      return "green"
+    case QUIZ_STATUS.CREATED:
+    case QUIZ_STATUS.EXTRACTING_CONTENT:
+    case QUIZ_STATUS.GENERATING_QUESTIONS:
+    default:
+      return "orange"
   }
-
-  if (
-    extraction === PROCESSING_STATUSES.COMPLETED &&
-    generation === PROCESSING_STATUSES.COMPLETED
-  ) {
-    return "green"
-  }
-
-  return "orange"
 }
 
 /**
  * Calculate quiz processing progress percentage
  */
 export function getQuizProgressPercentage(quiz: Quiz): number {
-  const { extraction, generation } = getQuizStatuses(quiz)
+  if (!quiz.status) return 0
 
-  if (
-    extraction === PROCESSING_STATUSES.FAILED ||
-    generation === PROCESSING_STATUSES.FAILED
-  ) {
-    return 0
+  switch (quiz.status) {
+    case QUIZ_STATUS.CREATED:
+      return 0
+    case QUIZ_STATUS.EXTRACTING_CONTENT:
+      return 25
+    case QUIZ_STATUS.GENERATING_QUESTIONS:
+      return 50
+    case QUIZ_STATUS.READY_FOR_REVIEW:
+      return 75
+    case QUIZ_STATUS.EXPORTING_TO_CANVAS:
+      return 90
+    case QUIZ_STATUS.PUBLISHED:
+      return 100
+    case QUIZ_STATUS.FAILED:
+      return 0
+    default:
+      return 0
   }
-
-  if (
-    extraction === PROCESSING_STATUSES.COMPLETED &&
-    generation === PROCESSING_STATUSES.COMPLETED
-  ) {
-    return 100
-  }
-
-  if (extraction === PROCESSING_STATUSES.PROCESSING) {
-    return 25
-  }
-
-  if (
-    extraction === PROCESSING_STATUSES.COMPLETED &&
-    generation === PROCESSING_STATUSES.PENDING
-  ) {
-    return 50
-  }
-
-  if (generation === PROCESSING_STATUSES.PROCESSING) {
-    return 75
-  }
-
-  return 0
 }
 
 // =============================================================================
@@ -208,47 +121,54 @@ export function getQuizProgressPercentage(quiz: Quiz): number {
 // =============================================================================
 
 /**
- * Check if a quiz has any failed status
+ * Check if a quiz has failed
  */
 export function hasQuizFailed(quiz: Quiz): boolean {
-  const { extraction, generation } = getQuizStatuses(quiz)
-  return (
-    extraction === PROCESSING_STATUSES.FAILED ||
-    generation === PROCESSING_STATUSES.FAILED
-  )
+  return quiz.status === QUIZ_STATUS.FAILED
 }
 
 /**
- * Check if a quiz is completely done (both extraction and generation completed)
+ * Check if a quiz is completely done (published to Canvas)
  */
 export function isQuizComplete(quiz: Quiz): boolean {
-  const { extraction, generation } = getQuizStatuses(quiz)
-  return (
-    extraction === PROCESSING_STATUSES.COMPLETED &&
-    generation === PROCESSING_STATUSES.COMPLETED
-  )
+  return quiz.status === QUIZ_STATUS.PUBLISHED
 }
 
 /**
  * Check if a quiz is currently being processed
  */
 export function isQuizProcessing(quiz: Quiz): boolean {
-  const { extraction, generation } = getQuizStatuses(quiz)
-  return (
-    extraction === PROCESSING_STATUSES.PROCESSING ||
-    generation === PROCESSING_STATUSES.PROCESSING
-  )
+  return quiz.status === QUIZ_STATUS.EXTRACTING_CONTENT ||
+         quiz.status === QUIZ_STATUS.GENERATING_QUESTIONS ||
+         quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS
 }
 
 /**
  * Check if a quiz is pending processing
  */
 export function isQuizPending(quiz: Quiz): boolean {
-  const { extraction, generation } = getQuizStatuses(quiz)
-  return (
-    extraction === PROCESSING_STATUSES.PENDING &&
-    generation === PROCESSING_STATUSES.PENDING
-  )
+  return quiz.status === QUIZ_STATUS.CREATED
+}
+
+/**
+ * Check if a quiz is ready for review
+ */
+export function isQuizReadyForReview(quiz: Quiz): boolean {
+  return quiz.status === QUIZ_STATUS.READY_FOR_REVIEW
+}
+
+/**
+ * Check if a quiz is ready for export
+ */
+export function isQuizReadyForExport(quiz: Quiz): boolean {
+  return quiz.status === QUIZ_STATUS.READY_FOR_REVIEW
+}
+
+/**
+ * Check if a quiz can be retried
+ */
+export function canQuizBeRetried(quiz: Quiz): boolean {
+  return quiz.status === QUIZ_STATUS.FAILED
 }
 
 // =============================================================================
@@ -282,16 +202,22 @@ export function sortQuizzesByDate(quizzes: Quiz[]): Quiz[] {
 }
 
 /**
- * Sort quizzes by status priority (failed -> processing -> pending -> complete)
+ * Sort quizzes by status priority (failed -> processing -> pending -> review -> published)
  */
 export function sortQuizzesByStatus(quizzes: Quiz[]): Quiz[] {
   return [...quizzes].sort((a, b) => {
     const getPriority = (quiz: Quiz) => {
-      if (hasQuizFailed(quiz)) return 0
-      if (isQuizProcessing(quiz)) return 1
-      if (isQuizPending(quiz)) return 2
-      if (isQuizComplete(quiz)) return 3
-      return 4
+      if (!quiz.status) return 99
+      switch (quiz.status) {
+        case QUIZ_STATUS.FAILED: return 0
+        case QUIZ_STATUS.EXTRACTING_CONTENT: return 1
+        case QUIZ_STATUS.GENERATING_QUESTIONS: return 2
+        case QUIZ_STATUS.EXPORTING_TO_CANVAS: return 3
+        case QUIZ_STATUS.CREATED: return 4
+        case QUIZ_STATUS.READY_FOR_REVIEW: return 5
+        case QUIZ_STATUS.PUBLISHED: return 6
+        default: return 99
+      }
     }
 
     return getPriority(a) - getPriority(b)
