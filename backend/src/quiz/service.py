@@ -296,7 +296,13 @@ async def reserve_quiz_job(
 
     # Check current status and transition based on job type
     if job_type == "extraction":
-        if quiz.status in [QuizStatus.EXTRACTING_CONTENT, QuizStatus.GENERATING_QUESTIONS, QuizStatus.READY_FOR_REVIEW, QuizStatus.EXPORTING_TO_CANVAS, QuizStatus.PUBLISHED]:
+        if quiz.status in [
+            QuizStatus.EXTRACTING_CONTENT,
+            QuizStatus.GENERATING_QUESTIONS,
+            QuizStatus.READY_FOR_REVIEW,
+            QuizStatus.EXPORTING_TO_CANVAS,
+            QuizStatus.PUBLISHED,
+        ]:
             logger.info(
                 "job_already_taken",
                 quiz_id=str(quiz_id),
@@ -325,7 +331,12 @@ async def reserve_quiz_job(
         }
 
     elif job_type == "generation":
-        if quiz.status in [QuizStatus.GENERATING_QUESTIONS, QuizStatus.READY_FOR_REVIEW, QuizStatus.EXPORTING_TO_CANVAS, QuizStatus.PUBLISHED]:
+        if quiz.status in [
+            QuizStatus.GENERATING_QUESTIONS,
+            QuizStatus.READY_FOR_REVIEW,
+            QuizStatus.EXPORTING_TO_CANVAS,
+            QuizStatus.PUBLISHED,
+        ]:
             logger.info(
                 "job_already_taken",
                 quiz_id=str(quiz_id),
@@ -335,7 +346,10 @@ async def reserve_quiz_job(
             return None
 
         # Check if content extraction completed first
-        if quiz.status not in [QuizStatus.EXTRACTING_CONTENT, QuizStatus.FAILED]:  # Must have completed extraction
+        if quiz.status not in [
+            QuizStatus.EXTRACTING_CONTENT,
+            QuizStatus.FAILED,
+        ]:  # Must have completed extraction
             logger.warning(
                 "generation_requires_extracted_content",
                 quiz_id=str(quiz_id),
@@ -448,7 +462,10 @@ async def update_quiz_status(
         quiz.failure_reason = None
 
     # Handle specific status transitions and additional fields
-    if new_status == QuizStatus.READY_FOR_REVIEW and "extracted_content" in additional_fields:
+    if (
+        new_status == QuizStatus.READY_FOR_REVIEW
+        and "extracted_content" in additional_fields
+    ):
         quiz.extracted_content = additional_fields["extracted_content"]
         quiz.content_extracted_at = datetime.now(timezone.utc)
 
@@ -522,5 +539,3 @@ async def reset_quiz_for_retry(
         retry_from_status=retry_from_status,
         previous_failure_reason=quiz.failure_reason,
     )
-
-

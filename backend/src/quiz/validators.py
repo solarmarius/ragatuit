@@ -266,12 +266,28 @@ def validate_status_transition(current: QuizStatus, target: QuizStatus) -> bool:
     # Define valid transitions
     valid_transitions = {
         QuizStatus.CREATED: [QuizStatus.EXTRACTING_CONTENT, QuizStatus.FAILED],
-        QuizStatus.EXTRACTING_CONTENT: [QuizStatus.READY_FOR_REVIEW, QuizStatus.GENERATING_QUESTIONS, QuizStatus.FAILED],
-        QuizStatus.GENERATING_QUESTIONS: [QuizStatus.READY_FOR_REVIEW, QuizStatus.FAILED],
-        QuizStatus.READY_FOR_REVIEW: [QuizStatus.GENERATING_QUESTIONS, QuizStatus.EXPORTING_TO_CANVAS, QuizStatus.FAILED],
+        QuizStatus.EXTRACTING_CONTENT: [
+            QuizStatus.READY_FOR_REVIEW,
+            QuizStatus.GENERATING_QUESTIONS,
+            QuizStatus.FAILED,
+        ],
+        QuizStatus.GENERATING_QUESTIONS: [
+            QuizStatus.READY_FOR_REVIEW,
+            QuizStatus.FAILED,
+        ],
+        QuizStatus.READY_FOR_REVIEW: [
+            QuizStatus.GENERATING_QUESTIONS,
+            QuizStatus.EXPORTING_TO_CANVAS,
+            QuizStatus.FAILED,
+        ],
         QuizStatus.EXPORTING_TO_CANVAS: [QuizStatus.PUBLISHED, QuizStatus.FAILED],
         QuizStatus.PUBLISHED: [QuizStatus.FAILED],  # Can fail after publishing
-        QuizStatus.FAILED: [QuizStatus.CREATED, QuizStatus.EXTRACTING_CONTENT, QuizStatus.GENERATING_QUESTIONS, QuizStatus.READY_FOR_REVIEW],  # Can retry from various states
+        QuizStatus.FAILED: [
+            QuizStatus.CREATED,
+            QuizStatus.EXTRACTING_CONTENT,
+            QuizStatus.GENERATING_QUESTIONS,
+            QuizStatus.READY_FOR_REVIEW,
+        ],  # Can retry from various states
     }
 
     allowed_next_states = valid_transitions.get(current, [])
@@ -295,7 +311,7 @@ def get_quiz_processing_phase(quiz: Quiz) -> str:
         QuizStatus.READY_FOR_REVIEW: "Ready for question review",
         QuizStatus.EXPORTING_TO_CANVAS: "Exporting to Canvas",
         QuizStatus.PUBLISHED: "Published to Canvas",
-        QuizStatus.FAILED: "Generation failed"
+        QuizStatus.FAILED: "Generation failed",
     }
     return phase_map.get(quiz.status, "Unknown")
 
@@ -313,7 +329,7 @@ def is_quiz_processing(quiz: Quiz) -> bool:
     return quiz.status in [
         QuizStatus.EXTRACTING_CONTENT,
         QuizStatus.GENERATING_QUESTIONS,
-        QuizStatus.EXPORTING_TO_CANVAS
+        QuizStatus.EXPORTING_TO_CANVAS,
     ]
 
 

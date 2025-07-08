@@ -119,10 +119,9 @@ async def orchestrate_quiz_content_extraction(
         if status == "completed" and content is not None:
             additional_fields["extracted_content"] = content
 
-
         if status == "completed":
             await update_quiz_status(
-                session, quiz_id, QuizStatus.READY_FOR_REVIEW, **additional_fields
+                session, quiz_id, QuizStatus.READY_FOR_REVIEW, None, **additional_fields
             )
         elif status == "failed":
             # Determine appropriate failure reason
@@ -266,12 +265,13 @@ async def orchestrate_quiz_question_generation(
         """Save the generation result to the quiz."""
         from .service import update_quiz_status
 
-
         if status == "completed":
             await update_quiz_status(session, quiz_id, QuizStatus.READY_FOR_REVIEW)
         elif status == "failed":
             failure_reason = FailureReason.LLM_GENERATION_ERROR
-            await update_quiz_status(session, quiz_id, QuizStatus.FAILED, failure_reason)
+            await update_quiz_status(
+                session, quiz_id, QuizStatus.FAILED, failure_reason
+            )
 
     await execute_in_transaction(
         _save_generation_result,
@@ -414,8 +414,9 @@ async def orchestrate_quiz_export_to_canvas(
             """Mark export as failed."""
             from .service import update_quiz_status
 
-
-            await update_quiz_status(session, quiz_id, QuizStatus.FAILED, FailureReason.CANVAS_EXPORT_ERROR)
+            await update_quiz_status(
+                session, quiz_id, QuizStatus.FAILED, FailureReason.CANVAS_EXPORT_ERROR
+            )
 
         try:
             await execute_in_transaction(

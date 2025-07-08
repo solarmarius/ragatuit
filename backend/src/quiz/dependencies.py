@@ -11,7 +11,14 @@ from src.config import get_logger
 from src.database import SessionDep
 
 from .models import Quiz
+from .schemas import QuizStatus
 from .service import get_quiz_by_id
+from .validators import (
+    is_quiz_processing,
+    is_quiz_ready_for_export,
+    is_quiz_ready_for_extraction,
+    is_quiz_ready_for_generation,
+)
 
 logger = get_logger("quiz_dependencies")
 
@@ -108,17 +115,37 @@ def validate_content_extraction_ready(quiz: Quiz) -> None:
         quiz: Quiz to validate
 
     Raises:
-        HTTPException: 409 if extraction already in progress
+        HTTPException: 409 if extraction already in progress or not ready
     """
-    if quiz.content_extraction_status == "processing":
-        logger.warning(
-            "content_extraction_already_in_progress",
-            quiz_id=str(quiz.id),
-            current_status=quiz.content_extraction_status,
-        )
-        raise HTTPException(
-            status_code=409, detail="Content extraction is already in progress"
-        )
+    if not is_quiz_ready_for_extraction(quiz):
+        if quiz.status == QuizStatus.EXTRACTING_CONTENT:
+            logger.warning(
+                "content_extraction_already_in_progress",
+                quiz_id=str(quiz.id),
+                current_status=quiz.status,
+            )
+            raise HTTPException(
+                status_code=409, detail="Content extraction is already in progress"
+            )
+        elif is_quiz_processing(quiz):
+            logger.warning(
+                "content_extraction_not_ready_processing",
+                quiz_id=str(quiz.id),
+                current_status=quiz.status,
+            )
+            raise HTTPException(
+                status_code=409, detail="Quiz is currently being processed"
+            )
+        else:
+            logger.warning(
+                "content_extraction_not_ready",
+                quiz_id=str(quiz.id),
+                current_status=quiz.status,
+            )
+            raise HTTPException(
+                status_code=409,
+                detail="Content extraction is not available in current state",
+            )
 
 
 def validate_question_generation_ready(quiz: Quiz) -> None:
@@ -132,26 +159,36 @@ def validate_question_generation_ready(quiz: Quiz) -> None:
         HTTPException: 400 if content extraction not completed
         HTTPException: 409 if generation already in progress
     """
-    if quiz.content_extraction_status != "completed":
-        logger.warning(
-            "question_generation_content_not_ready",
-            quiz_id=str(quiz.id),
-            content_status=quiz.content_extraction_status,
-        )
-        raise HTTPException(
-            status_code=400,
-            detail="Content extraction must be completed before generating questions",
-        )
-
-    if quiz.llm_generation_status == "processing":
-        logger.warning(
-            "question_generation_already_in_progress",
-            quiz_id=str(quiz.id),
-            current_status=quiz.llm_generation_status,
-        )
-        raise HTTPException(
-            status_code=409, detail="Question generation is already in progress"
-        )
+    if not is_quiz_ready_for_generation(quiz):
+        if quiz.status == QuizStatus.GENERATING_QUESTIONS:
+            logger.warning(
+                "question_generation_already_in_progress",
+                quiz_id=str(quiz.id),
+                current_status=quiz.status,
+            )
+            raise HTTPException(
+                status_code=409, detail="Question generation is already in progress"
+            )
+        elif quiz.status in [QuizStatus.CREATED, QuizStatus.FAILED]:
+            logger.warning(
+                "question_generation_content_not_ready",
+                quiz_id=str(quiz.id),
+                current_status=quiz.status,
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="Content extraction must be completed before generating questions",
+            )
+        else:
+            logger.warning(
+                "question_generation_not_ready",
+                quiz_id=str(quiz.id),
+                current_status=quiz.status,
+            )
+            raise HTTPException(
+                status_code=409,
+                detail="Question generation is not available in current state",
+            )
 
 
 def validate_export_ready(quiz: Quiz) -> None:
@@ -164,24 +201,31 @@ def validate_export_ready(quiz: Quiz) -> None:
     Raises:
         HTTPException: 409 if already exported or export in progress
     """
-    if quiz.export_status == "completed" and quiz.canvas_quiz_id:
-        logger.warning(
-            "quiz_export_already_completed",
-            quiz_id=str(quiz.id),
-            canvas_quiz_id=quiz.canvas_quiz_id,
-        )
-        raise HTTPException(
-            status_code=409, detail="Quiz has already been exported to Canvas"
-        )
-
-    if quiz.export_status == "processing":
-        logger.warning(
-            "quiz_export_already_in_progress",
-            quiz_id=str(quiz.id),
-        )
-        raise HTTPException(
-            status_code=409, detail="Quiz export is already in progress"
-        )
+    if not is_quiz_ready_for_export(quiz):
+        if quiz.status == QuizStatus.PUBLISHED and quiz.canvas_quiz_id:
+            logger.warning(
+                "quiz_export_already_completed",
+                quiz_id=str(quiz.id),
+                canvas_quiz_id=quiz.canvas_quiz_id,
+            )
+            raise HTTPException(
+                status_code=409, detail="Quiz has already been exported to Canvas"
+            )
+        elif quiz.status == QuizStatus.EXPORTING_TO_CANVAS:
+            logger.warning(
+                "quiz_export_already_in_progress",
+                quiz_id=str(quiz.id),
+            )
+            raise HTTPException(
+                status_code=409, detail="Quiz export is already in progress"
+            )
+        else:
+            logger.warning(
+                "quiz_export_not_ready",
+                quiz_id=str(quiz.id),
+                current_status=quiz.status,
+            )
+            raise HTTPException(status_code=409, detail="Quiz is not ready for export")
 
 
 async def validate_quiz_has_approved_questions(
