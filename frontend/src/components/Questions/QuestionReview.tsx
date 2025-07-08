@@ -17,7 +17,7 @@ import {
   type QuestionUpdateRequest,
   QuestionsService,
 } from "@/client"
-import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/common"
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common"
 import {
   useApiMutation,
   useEditingState,

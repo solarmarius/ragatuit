@@ -18,7 +18,7 @@ import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenera
 import { QuestionReview } from "@/components/Questions/QuestionReview"
 import { QuestionStats } from "@/components/Questions/QuestionStats"
 import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirmation"
-import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/common"
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { StatusDescription } from "@/components/ui/status-description"
 import { StatusLight } from "@/components/ui/status-light"

@@ -5,7 +5,7 @@ import type React from "react"
 import { useCallback, useMemo } from "react"
 
 import { CanvasService } from "@/client"
-import { LoadingSkeleton } from "@/components/common"
+import { LoadingSkeleton } from "@/components/Common"
 import { analyzeCanvasError } from "@/lib/utils"
 
 interface Module {

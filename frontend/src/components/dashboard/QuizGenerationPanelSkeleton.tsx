@@ -1,4 +1,4 @@
-import { LoadingSkeleton } from "@/components/common"
+import { LoadingSkeleton } from "@/components/Common"
 import { UI_COLORS, UI_SIZES } from "@/lib/constants"
 import { Box, Card, HStack, VStack } from "@chakra-ui/react"
 

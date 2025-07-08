@@ -13,7 +13,7 @@ import { memo, useMemo } from "react"
 import { SiCanvas } from "react-icons/si"
 
 import { type Quiz, QuizService } from "@/client"
-import { ErrorState, LoadingSkeleton } from "@/components/common"
+import { ErrorState, LoadingSkeleton } from "@/components/Common"
 import { useCustomToast, useErrorHandler } from "@/hooks/common"
 import { UI_SIZES } from "@/lib/constants"
 import {

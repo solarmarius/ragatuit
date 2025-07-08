@@ -1,4 +1,4 @@
-import { ErrorState } from "@/components/common"
+import { ErrorState } from "@/components/Common"
 import { Button, HStack } from "@chakra-ui/react"
 import { memo } from "react"
 

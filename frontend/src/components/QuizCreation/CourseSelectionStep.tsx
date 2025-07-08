@@ -11,7 +11,7 @@ import {
 import { useQuery } from "@tanstack/react-query"
 
 import { CanvasService } from "@/client"
-import { LoadingSkeleton } from "@/components/common"
+import { LoadingSkeleton } from "@/components/Common"
 import { Field } from "@/components/ui/field"
 import { analyzeCanvasError } from "@/lib/utils"
 

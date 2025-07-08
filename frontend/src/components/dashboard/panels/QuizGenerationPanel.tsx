@@ -3,7 +3,7 @@ import { Link as RouterLink } from "@tanstack/react-router"
 import { memo, useMemo } from "react"
 
 import type { Quiz } from "@/client/types.gen"
-import { EmptyState } from "@/components/common"
+import { EmptyState } from "@/components/Common"
 import { Button } from "@/components/ui/button"
 import { UI_SIZES, UI_TEXT } from "@/lib/constants"
 import { getQuizzesBeingGenerated } from "@/lib/utils"

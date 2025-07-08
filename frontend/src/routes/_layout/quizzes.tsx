@@ -7,7 +7,7 @@ import {
   LoadingSkeleton,
   QuizTable,
   QuizTableSkeleton,
-} from "@/components/common"
+} from "@/components/Common"
 import { Button } from "@/components/ui/button"
 import { useUserQuizzes } from "@/hooks/api"
 import { useErrorHandler } from "@/hooks/common"

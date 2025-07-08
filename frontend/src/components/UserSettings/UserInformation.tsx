@@ -9,7 +9,7 @@ import {
   type UserUpdateMe,
   UsersService,
 } from "@/client"
-import { PageHeader } from "@/components/common"
+import { PageHeader } from "@/components/Common"
 import { FormField, FormGroup } from "@/components/forms"
 import { useCustomToast, useErrorHandler } from "@/hooks/common"
 import useAuth from "@/hooks/useCanvasAuth"

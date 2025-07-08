@@ -9,7 +9,7 @@ import {
 import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
 
 import { OnboardingModal } from "@/components/Onboarding/OnboardingModal"
-import { ErrorState } from "@/components/common"
+import { ErrorState } from "@/components/Common"
 import {
   HelpPanel,
   QuizGenerationPanel,
