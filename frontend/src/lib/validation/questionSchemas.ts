@@ -24,16 +24,6 @@ export const mcqSchema = z.object({
 
 export type MCQFormData = z.infer<typeof mcqSchema>
 
-// True/False Question Schema
-export const trueFalseSchema = z.object({
-  questionText: nonEmptyString,
-  correctAnswer: z.boolean({
-    required_error: "Please select the correct answer",
-  }),
-  explanation: optionalString,
-})
-
-export type TrueFalseFormData = z.infer<typeof trueFalseSchema>
 
 // Short Answer Question Schema
 export const shortAnswerSchema = z.object({
@@ -46,21 +36,6 @@ export const shortAnswerSchema = z.object({
 
 export type ShortAnswerFormData = z.infer<typeof shortAnswerSchema>
 
-// Essay Question Schema
-export const essaySchema = z.object({
-  questionText: nonEmptyString,
-  gradingRubric: optionalString,
-  maxWords: z
-    .number()
-    .min(1, "Must be at least 1 word")
-    .max(10000, "Must be less than 10,000 words")
-    .optional()
-    .nullable(),
-  expectedLength: z.enum(["", "short", "medium", "long"]).default(""),
-  sampleAnswer: optionalString,
-})
-
-export type EssayFormData = z.infer<typeof essaySchema>
 
 // Fill in the Blank Question Schema
 export const fillInBlankSchema = z.object({
@@ -95,12 +70,8 @@ export function getSchemaByType(type: string) {
   switch (type) {
     case "multiple_choice":
       return mcqSchema
-    case "true_false":
-      return trueFalseSchema
     case "short_answer":
       return shortAnswerSchema
-    case "essay":
-      return essaySchema
     case "fill_in_blank":
       return fillInBlankSchema
     default:
@@ -111,15 +82,11 @@ export function getSchemaByType(type: string) {
 // Helper function to get form data type by question type
 export type FormDataByType<T extends string> = T extends "multiple_choice"
   ? MCQFormData
-  : T extends "true_false"
-    ? TrueFalseFormData
-    : T extends "short_answer"
-      ? ShortAnswerFormData
-      : T extends "essay"
-        ? EssayFormData
-        : T extends "fill_in_blank"
-          ? FillInBlankFormData
-          : never
+  : T extends "short_answer"
+    ? ShortAnswerFormData
+    : T extends "fill_in_blank"
+      ? FillInBlankFormData
+      : never
 
 // Common validation messages
 export const validationMessages = {

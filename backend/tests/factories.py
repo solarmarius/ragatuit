@@ -136,16 +136,6 @@ class QuestionFactory(BaseFactory):
             is_approved=True,
             approved_at=LazyAttribute(lambda obj: datetime.now(timezone.utc)),
         )
-        true_false = factory.Trait(
-            question_type=QuestionType.TRUE_FALSE,
-            question_data=factory.LazyFunction(
-                lambda: {
-                    "question_text": "The Earth is flat.",
-                    "is_true": False,
-                    "explanation": "The Earth is roughly spherical in shape.",
-                }
-            ),
-        )
         short_answer = factory.Trait(
             question_type=QuestionType.SHORT_ANSWER,
             question_data=factory.LazyFunction(
