@@ -11,10 +11,11 @@ from sqlmodel import Session, select
 from src.config import get_logger
 
 from .models import Quiz
-from .schemas import QuizCreate, QuizStatus, FailureReason
+from .schemas import FailureReason, QuizCreate, QuizStatus
 from .validators import (
     validate_quiz_for_content_extraction,
     validate_quiz_for_question_generation,
+    validate_status_transition,
 )
 
 logger = get_logger("quiz_service")
@@ -303,9 +304,9 @@ async def reserve_quiz_job(
                 current_status=quiz.status,
             )
             return None
-        
+
         # Transition to extracting content
-        if not _is_valid_transition(quiz.status, QuizStatus.EXTRACTING_CONTENT):
+        if not validate_status_transition(quiz.status, QuizStatus.EXTRACTING_CONTENT):
             logger.warning(
                 "invalid_status_transition",
                 quiz_id=str(quiz_id),
@@ -313,7 +314,7 @@ async def reserve_quiz_job(
                 to_status=QuizStatus.EXTRACTING_CONTENT,
             )
             return None
-            
+
         quiz.status = QuizStatus.EXTRACTING_CONTENT
         quiz.failure_reason = None
         quiz.last_status_update = datetime.now(timezone.utc)
@@ -332,7 +333,7 @@ async def reserve_quiz_job(
                 current_status=quiz.status,
             )
             return None
-            
+
         # Check if content extraction completed first
         if quiz.status not in [QuizStatus.EXTRACTING_CONTENT, QuizStatus.FAILED]:  # Must have completed extraction
             logger.warning(
@@ -341,8 +342,8 @@ async def reserve_quiz_job(
                 current_status=quiz.status,
             )
             return None
-            
-        if not _is_valid_transition(quiz.status, QuizStatus.GENERATING_QUESTIONS):
+
+        if not validate_status_transition(quiz.status, QuizStatus.GENERATING_QUESTIONS):
             logger.warning(
                 "invalid_status_transition",
                 quiz_id=str(quiz_id),
@@ -350,7 +351,7 @@ async def reserve_quiz_job(
                 to_status=QuizStatus.GENERATING_QUESTIONS,
             )
             return None
-            
+
         quiz.status = QuizStatus.GENERATING_QUESTIONS
         quiz.failure_reason = None
         quiz.last_status_update = datetime.now(timezone.utc)
@@ -369,7 +370,7 @@ async def reserve_quiz_job(
                 "course_id": quiz.canvas_course_id,
                 "title": quiz.title,
             }
-            
+
         if quiz.status == QuizStatus.EXPORTING_TO_CANVAS:
             logger.warning(
                 "export_already_processing",
@@ -377,8 +378,8 @@ async def reserve_quiz_job(
                 current_status=quiz.status,
             )
             return None
-            
-        if not _is_valid_transition(quiz.status, QuizStatus.EXPORTING_TO_CANVAS):
+
+        if not validate_status_transition(quiz.status, QuizStatus.EXPORTING_TO_CANVAS):
             logger.warning(
                 "invalid_status_transition",
                 quiz_id=str(quiz_id),
@@ -386,7 +387,7 @@ async def reserve_quiz_job(
                 to_status=QuizStatus.EXPORTING_TO_CANVAS,
             )
             return None
-            
+
         quiz.status = QuizStatus.EXPORTING_TO_CANVAS
         quiz.failure_reason = None
         quiz.last_status_update = datetime.now(timezone.utc)
@@ -427,7 +428,7 @@ async def update_quiz_status(
         return
 
     # Validate status transition
-    if not _is_valid_transition(quiz.status, new_status):
+    if not validate_status_transition(quiz.status, new_status):
         logger.warning(
             "invalid_status_transition_attempted",
             quiz_id=str(quiz_id),
@@ -439,7 +440,7 @@ async def update_quiz_status(
     # Update the status
     quiz.status = new_status
     quiz.last_status_update = datetime.now(timezone.utc)
-    
+
     # Handle failure case
     if new_status == QuizStatus.FAILED:
         quiz.failure_reason = failure_reason
@@ -450,7 +451,7 @@ async def update_quiz_status(
     if new_status == QuizStatus.READY_FOR_REVIEW and "extracted_content" in additional_fields:
         quiz.extracted_content = additional_fields["extracted_content"]
         quiz.content_extracted_at = datetime.now(timezone.utc)
-        
+
     elif new_status == QuizStatus.PUBLISHED:
         if "canvas_quiz_id" in additional_fields:
             quiz.canvas_quiz_id = additional_fields["canvas_quiz_id"]
@@ -512,9 +513,9 @@ async def reset_quiz_for_retry(
         # Clear content extraction results
         quiz.extracted_content = None
         quiz.content_extracted_at = None
-        
+
     await update_quiz_status(session, quiz_id, retry_from_status)
-    
+
     logger.info(
         "quiz_reset_for_retry",
         quiz_id=str(quiz_id),
@@ -523,27 +524,3 @@ async def reset_quiz_for_retry(
     )
 
 
-def _is_valid_transition(from_status: QuizStatus, to_status: QuizStatus) -> bool:
-    """
-    Check if a status transition is valid according to the quiz state machine.
-
-    Args:
-        from_status: Current status
-        to_status: Target status
-
-    Returns:
-        True if transition is valid
-    """
-    # Define valid transitions
-    valid_transitions = {
-        QuizStatus.CREATED: [QuizStatus.EXTRACTING_CONTENT, QuizStatus.FAILED],
-        QuizStatus.EXTRACTING_CONTENT: [QuizStatus.READY_FOR_REVIEW, QuizStatus.GENERATING_QUESTIONS, QuizStatus.FAILED],
-        QuizStatus.GENERATING_QUESTIONS: [QuizStatus.READY_FOR_REVIEW, QuizStatus.FAILED],
-        QuizStatus.READY_FOR_REVIEW: [QuizStatus.GENERATING_QUESTIONS, QuizStatus.EXPORTING_TO_CANVAS, QuizStatus.FAILED],
-        QuizStatus.EXPORTING_TO_CANVAS: [QuizStatus.PUBLISHED, QuizStatus.FAILED],
-        QuizStatus.PUBLISHED: [QuizStatus.FAILED],  # Can fail after publishing
-        QuizStatus.FAILED: [QuizStatus.CREATED, QuizStatus.EXTRACTING_CONTENT, QuizStatus.GENERATING_QUESTIONS, QuizStatus.READY_FOR_REVIEW],  # Can retry from various states
-    }
-    
-    allowed_next_states = valid_transitions.get(from_status, [])
-    return to_status in allowed_next_states
