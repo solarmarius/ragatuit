@@ -72,12 +72,12 @@ test.describe("QuizGenerationPanel Component", () => {
     await expect(page.getByText("Quizzes Being Generated")).toBeVisible()
     await expect(page.getByText("Quizzes currently in progress")).toBeVisible()
 
-    // Check badge count (should be 3 from visible quizzes)
+    // Check badge count (should be 5 from all being generated quizzes)
     const generationPanel = page
       .locator('text="Quizzes Being Generated"')
       .locator("..")
     const badge = generationPanel.locator("text=/^\\d+$/")
-    await expect(badge).toContainText("3")
+    await expect(badge).toContainText("5")
   })
 
   test("should display quiz cards with correct information", async ({
@@ -115,21 +115,20 @@ test.describe("QuizGenerationPanel Component", () => {
 
     await page.reload()
 
-    // Check different processing phase messages - only for visible quizzes
-    // quizPendingExtraction won't be visible since both statuses are pending
-    await expect(page.getByText("Extracting content...")).toBeVisible()
-    await expect(page.getByText("Ready for generation")).toBeVisible()
-    await expect(page.getByText("Generating questions...")).toBeVisible()
+    // Check different processing phase messages for consolidated status system
+    await expect(page.getByText("Ready to Start")).toBeVisible() // created status
+    await expect(page.getByText("Extracting Content")).toBeVisible() // extracting_content status
+    await expect(page.getByText("Generating Questions").first()).toBeVisible() // generating_questions status
   })
 
   test("should display progress bars with correct percentages", async ({
     page,
   }) => {
     const testQuizzes = [
-      quizPendingExtraction, // 0% - but won't be visible
-      quizProcessingExtraction, // 25%
-      quizPendingGeneration, // 50%
-      quizProcessingGeneration, // 75%
+      quizPendingExtraction, // 0% - created status
+      quizProcessingExtraction, // 25% - extracting_content status
+      quizPendingGeneration, // 50% - generating_questions status
+      quizProcessingGeneration, // 50% - generating_questions status
     ]
 
     await page.route("**/api/v1/quiz/", async (route) => {
@@ -138,17 +137,16 @@ test.describe("QuizGenerationPanel Component", () => {
 
     await page.reload()
 
-    // Check progress percentages using more specific selectors
-    // quizPendingExtraction won't be visible, so no 0%
-    await expect(page.getByText("25%").first()).toBeVisible()
-    await expect(page.getByText("50%").first()).toBeVisible()
-    await expect(page.getByText("75%").first()).toBeVisible()
+    // Check progress percentages for consolidated status system
+    await expect(page.getByText("0%").first()).toBeVisible() // created status
+    await expect(page.getByText("25%").first()).toBeVisible() // extracting_content status
+    await expect(page.getByText("50%").first()).toBeVisible() // generating_questions status
 
     // Check that progress elements are present (Progress.Root elements)
     const progressElements = page.locator(
       '[data-part="root"][data-scope="progress"]',
     )
-    await expect(progressElements).toHaveCount(3)
+    await expect(progressElements).toHaveCount(4) // 4 quizzes in testQuizzes array
   })
 
   test("should display status lights for processing quizzes", async ({
@@ -204,8 +202,8 @@ test.describe("QuizGenerationPanel Component", () => {
 
     await firstDetailsButton.click()
 
-    // Should navigate to quiz detail page (first visible quiz is processing-1)
-    await expect(page).toHaveURL(/\/quiz\/quiz-processing-1/)
+    // Should navigate to quiz detail page (first quiz is pending-1)
+    await expect(page).toHaveURL(/\/quiz\/quiz-pending-1/)
   })
 
   test("should navigate to create quiz from empty state", async ({ page }) => {

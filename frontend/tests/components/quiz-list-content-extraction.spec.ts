@@ -24,15 +24,15 @@ test.describe("Quiz List Content Extraction Status", () => {
     const mockQuizzes = [
       {
         id: "123e4567-e89b-12d3-a456-426614174001",
-        title: "Pending Quiz",
+        title: "Created Quiz",
         canvas_course_id: 12345,
         canvas_course_name: "Test Course 1",
         selected_modules: { "173467": "Module 1" },
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
-        content_extraction_status: "pending",
-        llm_generation_status: "pending",
+        status: "created",
+        last_status_update: "2024-01-15T10:30:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
@@ -46,23 +46,24 @@ test.describe("Quiz List Content Extraction Status", () => {
         question_count: 25,
         llm_model: "o3",
         llm_temperature: 0.5,
-        content_extraction_status: "processing",
-        llm_generation_status: "pending",
+        status: "extracting_content",
+        last_status_update: "2024-01-15T12:30:00Z",
         created_at: "2024-01-14T08:15:00Z",
         updated_at: "2024-01-15T12:30:00Z",
         owner_id: "user123",
       },
       {
         id: "123e4567-e89b-12d3-a456-426614174003",
-        title: "Completed Quiz",
+        title: "Ready for Review Quiz",
         canvas_course_id: 12347,
         canvas_course_name: "Test Course 3",
         selected_modules: { "173469": "Module 3" },
         question_count: 75,
         llm_model: "gpt-4",
         llm_temperature: 0.7,
-        content_extraction_status: "completed",
-        llm_generation_status: "completed",
+        status: "ready_for_review",
+        content_extracted_at: "2024-01-13T17:00:00Z",
+        last_status_update: "2024-01-14T09:20:00Z",
         created_at: "2024-01-13T16:45:00Z",
         updated_at: "2024-01-14T09:20:00Z",
         owner_id: "user123",
@@ -76,8 +77,9 @@ test.describe("Quiz List Content Extraction Status", () => {
         question_count: 30,
         llm_model: "gpt-4o",
         llm_temperature: 0.2,
-        content_extraction_status: "failed",
-        llm_generation_status: "pending",
+        status: "failed",
+        failure_reason: "content_extraction_error",
+        last_status_update: "2024-01-13T14:15:00Z",
         created_at: "2024-01-12T11:00:00Z",
         updated_at: "2024-01-13T14:15:00Z",
         owner_id: "user123",
@@ -96,26 +98,26 @@ test.describe("Quiz List Content Extraction Status", () => {
     await page.waitForLoadState("networkidle")
 
     // Wait for the table to load by checking for a quiz title first
-    await expect(page.getByText("Pending Quiz")).toBeVisible()
+    await expect(page.locator("tbody tr").first()).toBeVisible()
 
     // Check that Status column header exists
     await expect(page.locator("th").filter({ hasText: "Status" })).toBeVisible()
 
     // Check each quiz row has correct status display
-    // Pending Quiz
-    const pendingRow = page.locator("tr", {
-      has: page.getByText("Pending Quiz"),
+    // Created Quiz
+    const createdRow = page.locator("tr", {
+      has: page.getByText("Created Quiz"),
     })
     await expect(
-      pendingRow.locator('[title="Waiting to generate questions"]'),
+      createdRow.locator('[title="Ready to Start"]'),
     ).toBeVisible()
     await expect(
-      pendingRow
+      createdRow
         .locator("td")
         .filter({
-          has: page.locator('[title="Waiting to generate questions"]'),
+          has: page.locator('[title="Ready to Start"]'),
         })
-        .getByText("Pending"),
+        .getByText("Ready to Start"),
     ).toBeVisible()
 
     // Processing Quiz
@@ -123,27 +125,27 @@ test.describe("Quiz List Content Extraction Status", () => {
       has: page.getByText("Processing Quiz"),
     })
     await expect(
-      processingRow.locator('[title="Generating questions..."]'),
+      processingRow.locator('[title="Extracting Content"]'),
     ).toBeVisible()
     await expect(
       processingRow
         .locator("td")
-        .filter({ has: page.locator('[title="Generating questions..."]') })
-        .getByText("Processing"),
+        .filter({ has: page.locator('[title="Extracting Content"]') })
+        .getByText("Extracting Content"),
     ).toBeVisible()
 
-    // Completed Quiz
-    const completedRow = page.locator("tr", {
-      has: page.getByText("Completed Quiz"),
+    // Ready for Review Quiz
+    const readyRow = page.locator("tr", {
+      has: page.getByText("Ready for Review Quiz"),
     })
     await expect(
-      completedRow.locator('[title="Questions generated successfully"]'),
+      readyRow.locator('[title="Ready for Review"]'),
     ).toBeVisible()
     await expect(
-      completedRow
+      readyRow
         .locator("td")
         .filter({
-          has: page.locator('[title="Questions generated successfully"]'),
+          has: page.locator('[title="Ready for Review"]'),
         })
         .getByText("Ready for Review"),
     ).toBeVisible()
@@ -152,11 +154,11 @@ test.describe("Quiz List Content Extraction Status", () => {
     const failedRow = page.locator("tr", {
       has: page.getByText("Failed Quiz"),
     })
-    await expect(failedRow.locator('[title="Generation failed"]')).toBeVisible()
+    await expect(failedRow.locator('[title="Failed"]')).toBeVisible()
     await expect(
       failedRow
         .locator("td")
-        .filter({ has: page.locator('[title="Generation failed"]') })
+        .filter({ has: page.locator('[title="Failed"]') })
         .getByText("Failed"),
     ).toBeVisible()
   })
@@ -165,15 +167,16 @@ test.describe("Quiz List Content Extraction Status", () => {
     const mockQuizzes = [
       {
         id: "123e4567-e89b-12d3-a456-426614174001",
-        title: "Green Status Quiz",
+        title: "Purple Status Quiz",
         canvas_course_id: 12345,
         canvas_course_name: "Test Course",
         selected_modules: { "173467": "Module 1" },
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
-        content_extraction_status: "completed",
-        llm_generation_status: "completed",
+        status: "ready_for_review",
+        content_extracted_at: "2024-01-15T11:00:00Z",
+        last_status_update: "2024-01-16T14:20:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
@@ -187,8 +190,8 @@ test.describe("Quiz List Content Extraction Status", () => {
         question_count: 25,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
-        content_extraction_status: "processing",
-        llm_generation_status: "pending",
+        status: "extracting_content",
+        last_status_update: "2024-01-15T12:30:00Z",
         created_at: "2024-01-14T08:15:00Z",
         updated_at: "2024-01-15T12:30:00Z",
         owner_id: "user123",
@@ -202,8 +205,9 @@ test.describe("Quiz List Content Extraction Status", () => {
         question_count: 75,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
-        content_extraction_status: "failed",
-        llm_generation_status: "pending",
+        status: "failed",
+        failure_reason: "content_extraction_error",
+        last_status_update: "2024-01-14T09:20:00Z",
         created_at: "2024-01-13T16:45:00Z",
         updated_at: "2024-01-14T09:20:00Z",
         owner_id: "user123",
@@ -220,20 +224,20 @@ test.describe("Quiz List Content Extraction Status", () => {
 
     await page.reload()
 
-    // Green status (completed)
-    const greenLight = page.locator(
-      '[title="Questions generated successfully"]',
+    // Purple status (ready for review)
+    const purpleLight = page.locator(
+      '[title="Ready for Review"]',
     )
-    await expect(greenLight).toBeVisible()
-    await expect(greenLight).toHaveCSS("background-color", "rgb(34, 197, 94)") // green.500
+    await expect(purpleLight).toBeVisible()
+    await expect(purpleLight).toHaveCSS("background-color", "rgb(168, 85, 247)") // purple.500
 
-    // Orange status (processing)
-    const orangeLight = page.locator('[title="Generating questions..."]')
+    // Orange status (extracting content)
+    const orangeLight = page.locator('[title="Extracting Content"]')
     await expect(orangeLight).toBeVisible()
     await expect(orangeLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
 
     // Red status (failed)
-    const redLight = page.locator('[title="Generation failed"]')
+    const redLight = page.locator('[title="Failed"]')
     await expect(redLight).toBeVisible()
     await expect(redLight).toHaveCSS("background-color", "rgb(239, 68, 68)") // red.500
   })
@@ -249,7 +253,7 @@ test.describe("Quiz List Content Extraction Status", () => {
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
-        // Missing content_extraction_status and llm_generation_status
+        // Missing status field - should default to created
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
@@ -263,8 +267,7 @@ test.describe("Quiz List Content Extraction Status", () => {
         question_count: 25,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
-        content_extraction_status: null,
-        llm_generation_status: null,
+        status: null,
         created_at: "2024-01-14T08:15:00Z",
         updated_at: "2024-01-15T12:30:00Z",
         owner_id: "user123",
@@ -281,13 +284,13 @@ test.describe("Quiz List Content Extraction Status", () => {
 
     await page.reload()
 
-    // Both should default to pending status (orange light)
-    const orangeLights = page.locator('[title="Waiting to generate questions"]')
+    // Both should default to created status (orange light)
+    const orangeLights = page.locator('[title="Ready to Start"]')
     await expect(orangeLights).toHaveCount(2)
 
     // Check status text specifically in the Status column (5th column, index 4)
     const statusCells = page.locator("tbody tr td:nth-child(5)")
-    await expect(statusCells.filter({ hasText: "Pending" })).toHaveCount(2)
+    await expect(statusCells.filter({ hasText: "Ready to Start" })).toHaveCount(2)
   })
 
   test("should display correct status text for different combinations", async ({
@@ -295,38 +298,37 @@ test.describe("Quiz List Content Extraction Status", () => {
   }) => {
     const testCases = [
       {
-        extraction: "pending",
-        generation: "pending",
-        expectedText: "Pending",
+        status: "created",
+        expectedText: "Ready to Start",
       },
       {
-        extraction: "processing",
-        generation: "pending",
-        expectedText: "Processing",
+        status: "extracting_content",
+        expectedText: "Extracting Content",
       },
       {
-        extraction: "completed",
-        generation: "pending",
-        expectedText: "Pending",
+        status: "generating_questions",
+        expectedText: "Generating Questions",
       },
       {
-        extraction: "completed",
-        generation: "processing",
-        expectedText: "Processing",
-      },
-      {
-        extraction: "completed",
-        generation: "completed",
+        status: "ready_for_review",
         expectedText: "Ready for Review",
       },
       {
-        extraction: "failed",
-        generation: "pending",
+        status: "exporting_to_canvas",
+        expectedText: "Exporting to Canvas",
+      },
+      {
+        status: "published",
+        expectedText: "Published to Canvas",
+      },
+      {
+        status: "failed",
+        failure_reason: "content_extraction_error",
         expectedText: "Failed",
       },
       {
-        extraction: "completed",
-        generation: "failed",
+        status: "failed",
+        failure_reason: "llm_generation_error",
         expectedText: "Failed",
       },
     ]
@@ -335,15 +337,16 @@ test.describe("Quiz List Content Extraction Status", () => {
       const testCase = testCases[i]
       const mockQuiz = {
         id: `123e4567-e89b-12d3-a456-42661417400${i}`,
-        title: `Status Test ${testCase.extraction}-${testCase.generation}`,
+        title: `Status Test ${testCase.status}`,
         canvas_course_id: 12345 + i,
         canvas_course_name: "Test Course",
         selected_modules: { "173467": "Module 1" },
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
-        content_extraction_status: testCase.extraction,
-        llm_generation_status: testCase.generation,
+        status: testCase.status,
+        ...(testCase.failure_reason && { failure_reason: testCase.failure_reason }),
+        last_status_update: "2024-01-16T14:20:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
@@ -381,8 +384,9 @@ test.describe("Quiz List Content Extraction Status", () => {
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
-        content_extraction_status: "completed",
-        llm_generation_status: "completed",
+        status: "ready_for_review",
+        content_extracted_at: "2024-01-15T11:00:00Z",
+        last_status_update: "2024-01-16T14:20:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
@@ -404,14 +408,14 @@ test.describe("Quiz List Content Extraction Status", () => {
       .locator("tr", { has: page.getByText("Alignment Test Quiz") })
       .locator("td")
       .filter({
-        has: page.locator('[title="Questions generated successfully"]'),
+        has: page.locator('[title="Ready for Review"]'),
       })
 
     await expect(statusCell).toBeVisible()
 
     // Verify both status light and text are in the same cell
     await expect(
-      statusCell.locator('[title="Questions generated successfully"]'),
+      statusCell.locator('[title="Ready for Review"]'),
     ).toBeVisible()
     await expect(statusCell.getByText("Ready for Review")).toBeVisible()
 
@@ -433,8 +437,8 @@ test.describe("Quiz List Content Extraction Status", () => {
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
-        content_extraction_status: "pending",
-        llm_generation_status: "pending",
+        status: "created",
+        last_status_update: "2024-01-16T14:20:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
@@ -467,7 +471,7 @@ test.describe("Quiz List Content Extraction Status", () => {
   })
 
   test("should handle status updates in quiz list", async ({ page }) => {
-    // Start with completed status quiz directly for this test
+    // Start with ready for review status quiz directly for this test
     const mockQuiz = {
       id: "123e4567-e89b-12d3-a456-426614174001",
       title: "Status Update Quiz",
@@ -477,8 +481,9 @@ test.describe("Quiz List Content Extraction Status", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      content_extraction_status: "completed",
-      llm_generation_status: "completed",
+      status: "ready_for_review",
+      content_extracted_at: "2024-01-15T11:00:00Z",
+      last_status_update: "2024-01-16T14:20:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -499,10 +504,10 @@ test.describe("Quiz List Content Extraction Status", () => {
     // Wait for the quiz to load first
     await expect(page.getByText("Status Update Quiz")).toBeVisible()
 
-    // Should now show completed status
+    // Should now show ready for review status
     await expect(page.getByText("Ready for Review")).toBeVisible()
     await expect(
-      page.locator('[title="Questions generated successfully"]'),
+      page.locator('[title="Ready for Review"]'),
     ).toBeVisible()
   })
 })

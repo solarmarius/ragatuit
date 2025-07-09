@@ -64,7 +64,7 @@ export function getPublishedQuizzes(quizzes: Quiz[]): Quiz[] {
  * Get human-readable status text for a quiz
  */
 export function getQuizStatusText(quiz: Quiz): string {
-  if (!quiz.status) return "Unknown"
+  if (!quiz.status) return UI_TEXT.STATUS.CREATED // Default to "Ready to Start"
 
   // Map lowercase status values to uppercase UI_TEXT keys
   const statusMapping = {
@@ -77,7 +77,7 @@ export function getQuizStatusText(quiz: Quiz): string {
     [QUIZ_STATUS.FAILED]: UI_TEXT.STATUS.FAILED,
   }
 
-  return statusMapping[quiz.status as keyof typeof statusMapping] || "Unknown"
+  return statusMapping[quiz.status as keyof typeof statusMapping] || UI_TEXT.STATUS.CREATED
 }
 
 /**

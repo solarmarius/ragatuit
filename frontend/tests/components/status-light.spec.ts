@@ -28,8 +28,9 @@ test.describe("StatusLight Component", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      content_extraction_status: "failed",
-      llm_generation_status: "pending",
+      status: "failed",
+      failure_reason: "content_extraction_error",
+      last_status_update: "2024-01-16T14:20:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -46,7 +47,7 @@ test.describe("StatusLight Component", () => {
     await page.goto(`/quiz/${mockQuizId}`)
 
     // Check that the status light is present and has red color
-    const statusLight = page.locator('[title="Generation failed"]')
+    const statusLight = page.locator('[title="Failed"]')
     await expect(statusLight).toBeVisible()
     await expect(statusLight).toHaveCSS("background-color", "rgb(239, 68, 68)") // red.500
   })
@@ -64,8 +65,10 @@ test.describe("StatusLight Component", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      content_extraction_status: "completed",
-      llm_generation_status: "failed",
+      status: "failed",
+      failure_reason: "llm_generation_error",
+      content_extracted_at: "2024-01-15T11:00:00Z",
+      last_status_update: "2024-01-16T14:20:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -82,26 +85,27 @@ test.describe("StatusLight Component", () => {
     await page.goto(`/quiz/${mockQuizId}`)
 
     // Check that the status light is present and has red color
-    const statusLight = page.locator('[title="Generation failed"]')
+    const statusLight = page.locator('[title="Failed"]')
     await expect(statusLight).toBeVisible()
     await expect(statusLight).toHaveCSS("background-color", "rgb(239, 68, 68)") // red.500
   })
 
-  test("should display green light when both processes completed", async ({
+  test("should display purple light when ready for review", async ({
     page,
   }) => {
     const mockQuizId = "123e4567-e89b-12d3-a456-426614174000"
     const mockQuiz = {
       id: mockQuizId,
-      title: "Completed Quiz",
+      title: "Ready for Review Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
       selected_modules: '{"173467": "Module 1"}',
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      content_extraction_status: "completed",
-      llm_generation_status: "completed",
+      status: "ready_for_review",
+      content_extracted_at: "2024-01-15T11:00:00Z",
+      last_status_update: "2024-01-16T14:20:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -117,12 +121,12 @@ test.describe("StatusLight Component", () => {
 
     await page.goto(`/quiz/${mockQuizId}`)
 
-    // Check that the status light is present and has green color
+    // Check that the status light is present and has purple color
     const statusLight = page.locator(
-      '[title="Questions generated successfully"]',
+      '[title="Ready for Review"]',
     )
     await expect(statusLight).toBeVisible()
-    await expect(statusLight).toHaveCSS("background-color", "rgb(34, 197, 94)") // green.500
+    await expect(statusLight).toHaveCSS("background-color", "rgb(168, 85, 247)") // purple.500
   })
 
   test("should display orange light when content extraction is processing", async ({
@@ -138,8 +142,8 @@ test.describe("StatusLight Component", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      content_extraction_status: "processing",
-      llm_generation_status: "pending",
+      status: "extracting_content",
+      last_status_update: "2024-01-16T14:20:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -156,7 +160,7 @@ test.describe("StatusLight Component", () => {
     await page.goto(`/quiz/${mockQuizId}`)
 
     // Check that the status light is present and has orange color
-    const statusLight = page.locator('[title="Generating questions..."]')
+    const statusLight = page.locator('[title="Extracting Content"]')
     await expect(statusLight).toBeVisible()
     await expect(statusLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
   })
@@ -174,8 +178,9 @@ test.describe("StatusLight Component", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      content_extraction_status: "completed",
-      llm_generation_status: "processing",
+      status: "generating_questions",
+      content_extracted_at: "2024-01-15T11:00:00Z",
+      last_status_update: "2024-01-16T14:20:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -192,26 +197,26 @@ test.describe("StatusLight Component", () => {
     await page.goto(`/quiz/${mockQuizId}`)
 
     // Check that the status light is present and has orange color
-    const statusLight = page.locator('[title="Generating questions..."]')
+    const statusLight = page.locator('[title="Generating Questions"]')
     await expect(statusLight).toBeVisible()
     await expect(statusLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
   })
 
-  test("should display orange light when both processes are pending", async ({
+  test("should display orange light when quiz is created", async ({
     page,
   }) => {
     const mockQuizId = "123e4567-e89b-12d3-a456-426614174000"
     const mockQuiz = {
       id: mockQuizId,
-      title: "Pending Quiz",
+      title: "Created Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
       selected_modules: '{"173467": "Module 1"}',
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      content_extraction_status: "pending",
-      llm_generation_status: "pending",
+      status: "created",
+      last_status_update: "2024-01-16T14:20:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -228,26 +233,27 @@ test.describe("StatusLight Component", () => {
     await page.goto(`/quiz/${mockQuizId}`)
 
     // Check that the status light is present and has orange color
-    const statusLight = page.locator('[title="Waiting to generate questions"]')
+    const statusLight = page.locator('[title="Ready to Start"]')
     await expect(statusLight).toBeVisible()
     await expect(statusLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
   })
 
-  test("should display orange light when extraction completed but generation pending", async ({
+  test("should display yellow light when exporting to canvas", async ({
     page,
   }) => {
     const mockQuizId = "123e4567-e89b-12d3-a456-426614174000"
     const mockQuiz = {
       id: mockQuizId,
-      title: "Mixed Status Quiz",
+      title: "Exporting Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
       selected_modules: '{"173467": "Module 1"}',
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      content_extraction_status: "completed",
-      llm_generation_status: "pending",
+      status: "exporting_to_canvas",
+      content_extracted_at: "2024-01-15T11:00:00Z",
+      last_status_update: "2024-01-16T14:20:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -263,26 +269,29 @@ test.describe("StatusLight Component", () => {
 
     await page.goto(`/quiz/${mockQuizId}`)
 
-    // Check that the status light is present and has orange color
-    const statusLight = page.locator('[title="Waiting to generate questions"]')
+    // Check that the status light is present and has yellow color
+    const statusLight = page.locator('[title="Exporting to Canvas"]')
     await expect(statusLight).toBeVisible()
-    await expect(statusLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
+    await expect(statusLight).toHaveCSS("background-color", "rgb(234, 179, 8)") // yellow.500
   })
 
-  test("should handle missing status fields gracefully", async ({ page }) => {
+  test("should display green light when published", async ({ page }) => {
     const mockQuizId = "123e4567-e89b-12d3-a456-426614174000"
     const mockQuiz = {
       id: mockQuizId,
-      title: "Missing Status Quiz",
+      title: "Published Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
       selected_modules: '{"173467": "Module 1"}',
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      // Missing content_extraction_status and llm_generation_status
+      status: "published",
+      content_extracted_at: "2024-01-15T11:00:00Z",
+      exported_at: "2024-01-16T15:00:00Z",
+      last_status_update: "2024-01-16T15:00:00Z",
       created_at: "2024-01-15T10:30:00Z",
-      updated_at: "2024-01-16T14:20:00Z",
+      updated_at: "2024-01-16T15:00:00Z",
       owner_id: "user123",
     }
 
@@ -296,10 +305,10 @@ test.describe("StatusLight Component", () => {
 
     await page.goto(`/quiz/${mockQuizId}`)
 
-    // Should default to pending and show orange light
-    const statusLight = page.locator('[title="Waiting to generate questions"]')
+    // Should show green light for published status
+    const statusLight = page.locator('[title="Published to Canvas"]')
     await expect(statusLight).toBeVisible()
-    await expect(statusLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
+    await expect(statusLight).toHaveCSS("background-color", "rgb(34, 197, 94)") // green.500
   })
 
   test("should have correct visual styling", async ({ page }) => {
@@ -313,8 +322,8 @@ test.describe("StatusLight Component", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      content_extraction_status: "pending",
-      llm_generation_status: "pending",
+      status: "created",
+      last_status_update: "2024-01-16T14:20:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -330,7 +339,7 @@ test.describe("StatusLight Component", () => {
 
     await page.goto(`/quiz/${mockQuizId}`)
 
-    const statusLight = page.locator('[title="Waiting to generate questions"]')
+    const statusLight = page.locator('[title="Ready to Start"]')
     await expect(statusLight).toBeVisible()
 
     // Check dimensions

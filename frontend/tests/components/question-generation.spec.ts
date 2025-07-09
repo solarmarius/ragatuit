@@ -18,7 +18,7 @@ test.describe("Question Generation Components", () => {
   })
 
   test.describe("QuestionGenerationTrigger", () => {
-    test("should show trigger button when content extraction is complete but generation is not", async ({
+    test("should show trigger button when generation failed", async ({
       page,
     }) => {
       const mockQuiz = {
@@ -30,8 +30,10 @@ test.describe("Question Generation Components", () => {
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.5,
-        content_extraction_status: "completed",
-        llm_generation_status: "pending",
+        status: "failed",
+        failure_reason: "llm_generation_error",
+        last_status_update: "2024-01-16T14:20:00Z",
+        content_extracted_at: "2024-01-15T11:00:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
@@ -49,10 +51,10 @@ test.describe("Question Generation Components", () => {
 
       // Check trigger button is visible
       const triggerButton = page.getByRole("button", {
-        name: /Generate Questions/i,
+        name: /Retry Question Generation/i,
       })
       await expect(triggerButton).toBeVisible()
-      await expect(triggerButton).toContainText("Generate Questions")
+      await expect(triggerButton).toContainText("Retry Question Generation")
     })
 
     test("should not show trigger button when generation is in progress", async ({
@@ -67,8 +69,9 @@ test.describe("Question Generation Components", () => {
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.5,
-        content_extraction_status: "completed",
-        llm_generation_status: "processing",
+        status: "generating_questions",
+        last_status_update: "2024-01-16T14:20:00Z",
+        content_extracted_at: "2024-01-15T11:00:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
@@ -102,8 +105,9 @@ test.describe("Question Generation Components", () => {
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.5,
-        content_extraction_status: "completed",
-        llm_generation_status: "completed",
+        status: "ready_for_review",
+        last_status_update: "2024-01-16T14:20:00Z",
+        content_extracted_at: "2024-01-15T11:00:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
@@ -156,8 +160,9 @@ test.describe("Question Generation Components", () => {
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.5,
-        content_extraction_status: "completed",
-        llm_generation_status: "completed",
+        status: "ready_for_review",
+        last_status_update: "2024-01-16T14:20:00Z",
+        content_extracted_at: "2024-01-15T11:00:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
@@ -209,8 +214,9 @@ test.describe("Question Generation Components", () => {
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.5,
-        content_extraction_status: "completed",
-        llm_generation_status: "completed",
+        status: "ready_for_review",
+        last_status_update: "2024-01-16T14:20:00Z",
+        content_extracted_at: "2024-01-15T11:00:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
@@ -264,8 +270,9 @@ test.describe("Question Generation Components", () => {
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.5,
-        content_extraction_status: "completed",
-        llm_generation_status: "completed",
+        status: "ready_for_review",
+        last_status_update: "2024-01-16T14:20:00Z",
+        content_extracted_at: "2024-01-15T11:00:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
@@ -310,8 +317,9 @@ test.describe("Question Generation Components", () => {
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.5,
-        content_extraction_status: "completed",
-        llm_generation_status: "completed",
+        status: "ready_for_review",
+        last_status_update: "2024-01-16T14:20:00Z",
+        content_extracted_at: "2024-01-15T11:00:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
@@ -359,8 +367,9 @@ test.describe("Question Generation Components", () => {
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.5,
-        content_extraction_status: "completed",
-        llm_generation_status: "completed",
+        status: "ready_for_review",
+        last_status_update: "2024-01-16T14:20:00Z",
+        content_extracted_at: "2024-01-15T11:00:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",

@@ -403,8 +403,9 @@ test.describe("Quiz Detail Component", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.5,
-      content_extraction_status: "completed",
-      llm_generation_status: "completed",
+      status: "ready_for_review",
+      last_status_update: "2024-01-16T14:20:00Z",
+      content_extracted_at: "2024-01-15T11:00:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -446,8 +447,9 @@ test.describe("Quiz Detail Component", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.5,
-      content_extraction_status: "completed",
-      llm_generation_status: "completed",
+      status: "ready_for_review",
+      last_status_update: "2024-01-16T14:20:00Z",
+      content_extracted_at: "2024-01-15T11:00:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -507,8 +509,9 @@ test.describe("Quiz Detail Component", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.5,
-      content_extraction_status: "completed",
-      llm_generation_status: "completed",
+      status: "ready_for_review",
+      last_status_update: "2024-01-16T14:20:00Z",
+      content_extracted_at: "2024-01-15T11:00:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -550,8 +553,9 @@ test.describe("Quiz Detail Component", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.5,
-      content_extraction_status: "processing",
-      llm_generation_status: "pending",
+      status: "generating_questions",
+      last_status_update: "2024-01-16T14:20:00Z",
+      content_extracted_at: "2024-01-15T11:00:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -576,7 +580,7 @@ test.describe("Quiz Detail Component", () => {
   test("should show Review Quiz button only when both statuses are completed", async ({
     page,
   }) => {
-    // Test case 1: Only content extraction is complete
+    // Test case 1: Questions are still being generated
     const mockQuizPartial = {
       id: mockQuizId,
       title: "Partial Complete Quiz",
@@ -586,8 +590,9 @@ test.describe("Quiz Detail Component", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.5,
-      content_extraction_status: "completed",
-      llm_generation_status: "processing",
+      status: "generating_questions",
+      last_status_update: "2024-01-16T14:20:00Z",
+      content_extracted_at: "2024-01-15T11:00:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -611,7 +616,7 @@ test.describe("Quiz Detail Component", () => {
     // Test case 2: Both are complete
     const mockQuizComplete = {
       ...mockQuizPartial,
-      llm_generation_status: "completed",
+      status: "ready_for_review",
     }
 
     await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
