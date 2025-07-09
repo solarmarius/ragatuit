@@ -44,3 +44,10 @@ MIN_TITLE_LENGTH = 1
 # Background task settings
 TRANSACTION_ISOLATION_LEVEL = "REPEATABLE READ"
 TRANSACTION_RETRIES = 3
+
+# Operation timeouts (in seconds)
+OPERATION_TIMEOUTS = {
+    "content_extraction": 300,  # 5 minutes timeout for content extraction
+    "question_generation": 600,  # 10 minutes timeout for question generation
+    "canvas_export": 180,  # 3 minutes timeout for Canvas export
+}

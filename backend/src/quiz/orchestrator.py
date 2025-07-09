@@ -17,6 +17,7 @@ from src.database import execute_in_transaction
 # Removed DI container import - GenerationOrchestrationService imported locally
 from src.question.types import GenerationParameters, QuestionType
 
+from .constants import OPERATION_TIMEOUTS
 from .exceptions import OrchestrationTimeoutError
 from .schemas import FailureReason, QuizStatus
 
@@ -78,7 +79,7 @@ QuizCreatorFunc = Callable[[str, int, str, int], Any]
 QuestionExporterFunc = Callable[[str, int, str, list[dict[str, Any]]], Any]
 
 
-@timeout_operation(300)  # 5 minutes timeout for content extraction
+@timeout_operation(OPERATION_TIMEOUTS["content_extraction"])
 async def orchestrate_quiz_content_extraction(
     quiz_id: UUID,
     course_id: int,
@@ -251,7 +252,7 @@ async def orchestrate_quiz_content_extraction(
         )
 
 
-@timeout_operation(600)  # 10 minutes timeout for question generation
+@timeout_operation(OPERATION_TIMEOUTS["question_generation"])
 async def orchestrate_quiz_question_generation(
     quiz_id: UUID,
     target_question_count: int,
@@ -460,7 +461,7 @@ async def _rollback_auto_trigger_failure(quiz_id: UUID, error: Exception) -> Non
         # Log this as a critical error for manual intervention
 
 
-@timeout_operation(180)  # 3 minutes timeout for Canvas export
+@timeout_operation(OPERATION_TIMEOUTS["canvas_export"])
 async def orchestrate_quiz_export_to_canvas(
     quiz_id: UUID,
     canvas_token: str,
