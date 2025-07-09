@@ -50,8 +50,7 @@ interface ButtonProps extends ChakraButtonProps {
 ```tsx
 // Status Light - Visual status indicator
 <StatusLight
-  extractionStatus="completed"
-  generationStatus="processing"
+  status="generating_questions"
 />
 
 // Status Badge - Text-based status
@@ -952,9 +951,9 @@ function QuizProcessingMonitor({ quizId }: { quizId: string }) {
     staleTime: 0, // Always refetch when polling
   })
 
-  const isProcessing = quiz?.status === 'processing' ||
-                     quiz?.extraction_status === 'processing' ||
-                     quiz?.generation_status === 'processing'
+  const isProcessing = quiz?.status === 'extracting_content' ||
+                     quiz?.status === 'generating_questions' ||
+                     quiz?.status === 'exporting_to_canvas'
 
   return (
     <Card.Root>
@@ -966,17 +965,12 @@ function QuizProcessingMonitor({ quizId }: { quizId: string }) {
       </Card.Header>
       <Card.Body>
         <VStack gap={3} align="start">
-          <StatusItem
-            label="Content Extraction"
-            status={quiz?.extraction_status}
-          />
-          <StatusItem
-            label="Question Generation"
-            status={quiz?.generation_status}
-          />
-          <StatusItem
-            label="Export to Canvas"
-            status={quiz?.export_status}
+          <QuizPhaseProgress
+            status={quiz?.status}
+            failureReason={quiz?.failure_reason}
+            contentExtractedAt={quiz?.content_extracted_at}
+            exportedAt={quiz?.exported_at}
+            lastStatusUpdate={quiz?.last_status_update}
           />
         </VStack>
       </Card.Body>

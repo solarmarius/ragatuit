@@ -23,6 +23,21 @@ This document provides comprehensive documentation for all custom React hooks in
 
 ---
 
+## Status System Notes
+
+The application uses a **consolidated status system** with a single `status` field instead of separate status fields. Quiz status values are:
+- `created` - Quiz created, ready to start
+- `extracting_content` - Extracting content from Canvas
+- `generating_questions` - AI generating questions
+- `ready_for_review` - Ready for user review
+- `exporting_to_canvas` - Exporting to Canvas
+- `published` - Successfully published
+- `failed` - Process failed (see `failure_reason` for details)
+
+When using polling hooks, check `quiz.status` instead of separate extraction/generation/export status fields.
+
+---
+
 ## API & Data Management
 
 ### useApiMutation
@@ -381,9 +396,9 @@ const { data: quiz } = useQuery({
 // Usage with multiple conditions
 const pollWhileAnyProcessing = useConditionalPolling(
   (data: QuizData) => {
-    return data?.extraction_status === 'processing' ||
-           data?.generation_status === 'processing' ||
-           data?.export_status === 'processing'
+    return data?.status === 'extracting_content' ||
+           data?.status === 'generating_questions' ||
+           data?.status === 'exporting_to_canvas'
   },
   2000
 )
