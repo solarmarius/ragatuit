@@ -250,6 +250,10 @@ async def orchestrate_quiz_question_generation(
         return
 
     # === Question Generation (outside transaction) ===
+    final_status = "failed"
+    error_message = None
+    failure_exception = None
+
     try:
         # Use injected generation service or create default
         if generation_service is None:
@@ -272,7 +276,6 @@ async def orchestrate_quiz_question_generation(
 
         if result.success:
             final_status = "completed"
-            error_message = None
             logger.info(
                 "generation_orchestration_completed",
                 quiz_id=str(quiz_id),
@@ -301,6 +304,7 @@ async def orchestrate_quiz_question_generation(
         )
         final_status = "failed"
         error_message = str(e)
+        failure_exception = e
 
     # === Transaction 2: Save the Result ===
     async def _save_generation_result(
@@ -308,6 +312,7 @@ async def orchestrate_quiz_question_generation(
         quiz_id: UUID,
         status: str,
         error_message: str | None = None,
+        exception: Exception | None = None,
     ) -> None:
         """Save the generation result to the quiz."""
         from .service import update_quiz_status
@@ -315,11 +320,10 @@ async def orchestrate_quiz_question_generation(
         if status == "completed":
             await update_quiz_status(session, quiz_id, QuizStatus.READY_FOR_REVIEW)
         elif status == "failed":
-            # Determine appropriate failure reason based on error message
-            if (
-                error_message
-                and "No valid content chunks found for generation" in error_message
-            ):
+            # Determine appropriate failure reason based on exception type
+            from .exceptions import ContentInsufficientError
+
+            if isinstance(exception, ContentInsufficientError):
                 # This indicates no meaningful content was available for generation
                 failure_reason = FailureReason.NO_CONTENT_FOUND
             elif error_message and "No questions generated" in error_message:
@@ -338,6 +342,7 @@ async def orchestrate_quiz_question_generation(
         quiz_id,
         final_status,
         error_message,
+        failure_exception,
         isolation_level="REPEATABLE READ",
         retries=3,
     )

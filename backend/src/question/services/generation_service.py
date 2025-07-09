@@ -83,15 +83,15 @@ class GenerationOrchestrationService:
             )
 
             if not content_chunks:
-                return GenerationResult(
-                    success=False,
-                    questions_generated=0,
-                    target_questions=generation_parameters.target_count,
-                    error_message="No valid content chunks found for generation",
-                    metadata={
-                        "quiz_id": str(quiz_id),
-                        "question_type": question_type,
+                from src.quiz.exceptions import ContentInsufficientError
+
+                raise ContentInsufficientError(
+                    "No valid content chunks found for generation",
+                    quiz_id=str(quiz_id),
+                    details={
+                        "question_type": question_type.value,
                         "content_chunks": 0,
+                        "target_questions": generation_parameters.target_count,
                     },
                 )
 
@@ -168,7 +168,7 @@ class GenerationOrchestrationService:
             logger.error(
                 "question_generation_failed",
                 quiz_id=str(quiz_id),
-                question_type=question_type.value,
+                question_type=question_type,
                 error=str(e),
                 error_type=type(e).__name__,
                 exc_info=True,
@@ -181,7 +181,7 @@ class GenerationOrchestrationService:
                 error_message=f"Generation failed: {str(e)}",
                 metadata={
                     "quiz_id": str(quiz_id),
-                    "question_type": question_type.value,
+                    "question_type": question_type,
                     "error_type": type(e).__name__,
                     "provider_name": provider_name,
                     "workflow_name": workflow_name,
