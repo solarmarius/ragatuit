@@ -155,37 +155,37 @@ export const UI_TEXT = {
     FAILED: "Failed",
   },
   FAILURE_MESSAGES: {
-    CANVAS_EXPORT_ERROR: {
+    [FAILURE_REASON.CANVAS_EXPORT_ERROR]: {
       TITLE: "Export to Canvas Failed",
       MESSAGE:
         "There was an error exporting your quiz to Canvas. Your questions are shown below and you can try exporting again.",
     },
-    CONTENT_EXTRACTION_ERROR: {
+    [FAILURE_REASON.CONTENT_EXTRACTION_ERROR]: {
       TITLE: "Content Extraction Failed",
       MESSAGE:
         "Unable to extract content from the selected Canvas modules. Please check your module selection and try again.",
     },
-    NO_CONTENT_FOUND: {
+    [FAILURE_REASON.NO_CONTENT_FOUND]: {
       TITLE: "No Content Found",
       MESSAGE:
         "No content was found in the selected Canvas modules. Please select different modules or check if the modules contain content.",
     },
-    LLM_GENERATION_ERROR: {
+    [FAILURE_REASON.LLM_GENERATION_ERROR]: {
       TITLE: "Question Generation Failed",
       MESSAGE:
         "Unable to generate questions from the extracted content. Please try again or adjust your quiz settings.",
     },
-    NO_QUESTIONS_GENERATED: {
+    [FAILURE_REASON.NO_QUESTIONS_GENERATED]: {
       TITLE: "No Questions Generated",
       MESSAGE:
         "No questions could be generated from the available content. Please try with different content or adjust your quiz settings.",
     },
-    NETWORK_ERROR: {
+    [FAILURE_REASON.NETWORK_ERROR]: {
       TITLE: "Network Error",
       MESSAGE:
         "A network error occurred while processing your quiz. Please check your connection and try again.",
     },
-    VALIDATION_ERROR: {
+    [FAILURE_REASON.VALIDATION_ERROR]: {
       TITLE: "Validation Error",
       MESSAGE:
         "There was a validation error while processing your quiz. Please check your quiz settings and try again.",

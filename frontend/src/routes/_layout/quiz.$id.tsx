@@ -36,6 +36,30 @@ function DateDisplay({ date }: { date: string | null | undefined }) {
   return <Text color="gray.600">{formattedDate}</Text>
 }
 
+function renderErrorForFailureReason(failureReason: string | null | undefined) {
+  if (!failureReason) {
+    return null
+  }
+
+  // Get the error message from constants or use generic fallback
+  const errorMessage =
+    UI_TEXT.FAILURE_MESSAGES[
+      failureReason as keyof typeof UI_TEXT.FAILURE_MESSAGES
+    ] || UI_TEXT.FAILURE_MESSAGES.GENERIC
+
+  return (
+    <Card.Root>
+      <Card.Body>
+        <ErrorState
+          title={errorMessage.TITLE}
+          message={errorMessage.MESSAGE}
+          showRetry={false}
+        />
+      </Card.Body>
+    </Card.Root>
+  )
+}
+
 function QuizDetail() {
   const { id } = Route.useParams()
   const [currentTab, setCurrentTab] = useState("info")
@@ -309,21 +333,8 @@ function QuizDetail() {
 
               {/* Canvas Export Error Banner */}
               {quiz.status === QUIZ_STATUS.FAILED &&
-                quiz.failure_reason === FAILURE_REASON.CANVAS_EXPORT_ERROR && (
-                  <Card.Root>
-                    <Card.Body>
-                      <ErrorState
-                        title={
-                          UI_TEXT.FAILURE_MESSAGES.CANVAS_EXPORT_ERROR.TITLE
-                        }
-                        message={
-                          UI_TEXT.FAILURE_MESSAGES.CANVAS_EXPORT_ERROR.MESSAGE
-                        }
-                        showRetry={false}
-                      />
-                    </Card.Body>
-                  </Card.Root>
-                )}
+                quiz.failure_reason === FAILURE_REASON.CANVAS_EXPORT_ERROR &&
+                renderErrorForFailureReason(quiz.failure_reason)}
 
               {/* Question Review */}
               {(quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
@@ -335,131 +346,10 @@ function QuizDetail() {
                 <QuestionReview quizId={id} />
               )}
 
-              {/* Content Extraction Error */}
-              {quiz.status === QUIZ_STATUS.FAILED &&
-                quiz.failure_reason ===
-                  FAILURE_REASON.CONTENT_EXTRACTION_ERROR && (
-                  <Card.Root>
-                    <Card.Body>
-                      <ErrorState
-                        title={
-                          UI_TEXT.FAILURE_MESSAGES.CONTENT_EXTRACTION_ERROR
-                            .TITLE
-                        }
-                        message={
-                          UI_TEXT.FAILURE_MESSAGES.CONTENT_EXTRACTION_ERROR
-                            .MESSAGE
-                        }
-                        showRetry={false}
-                      />
-                    </Card.Body>
-                  </Card.Root>
-                )}
-
-              {/* No Content Found Error */}
-              {quiz.status === QUIZ_STATUS.FAILED &&
-                quiz.failure_reason === FAILURE_REASON.NO_CONTENT_FOUND && (
-                  <Card.Root>
-                    <Card.Body>
-                      <ErrorState
-                        title={UI_TEXT.FAILURE_MESSAGES.NO_CONTENT_FOUND.TITLE}
-                        message={
-                          UI_TEXT.FAILURE_MESSAGES.NO_CONTENT_FOUND.MESSAGE
-                        }
-                        showRetry={false}
-                      />
-                    </Card.Body>
-                  </Card.Root>
-                )}
-
-              {/* LLM Generation Error */}
-              {quiz.status === QUIZ_STATUS.FAILED &&
-                quiz.failure_reason === FAILURE_REASON.LLM_GENERATION_ERROR && (
-                  <Card.Root>
-                    <Card.Body>
-                      <ErrorState
-                        title={
-                          UI_TEXT.FAILURE_MESSAGES.LLM_GENERATION_ERROR.TITLE
-                        }
-                        message={
-                          UI_TEXT.FAILURE_MESSAGES.LLM_GENERATION_ERROR.MESSAGE
-                        }
-                        showRetry={false}
-                      />
-                    </Card.Body>
-                  </Card.Root>
-                )}
-
-              {/* No Questions Generated Error */}
-              {quiz.status === QUIZ_STATUS.FAILED &&
-                quiz.failure_reason ===
-                  FAILURE_REASON.NO_QUESTIONS_GENERATED && (
-                  <Card.Root>
-                    <Card.Body>
-                      <ErrorState
-                        title={
-                          UI_TEXT.FAILURE_MESSAGES.NO_QUESTIONS_GENERATED.TITLE
-                        }
-                        message={
-                          UI_TEXT.FAILURE_MESSAGES.NO_QUESTIONS_GENERATED
-                            .MESSAGE
-                        }
-                        showRetry={false}
-                      />
-                    </Card.Body>
-                  </Card.Root>
-                )}
-
-              {/* Network Error */}
-              {quiz.status === QUIZ_STATUS.FAILED &&
-                quiz.failure_reason === FAILURE_REASON.NETWORK_ERROR && (
-                  <Card.Root>
-                    <Card.Body>
-                      <ErrorState
-                        title={UI_TEXT.FAILURE_MESSAGES.NETWORK_ERROR.TITLE}
-                        message={UI_TEXT.FAILURE_MESSAGES.NETWORK_ERROR.MESSAGE}
-                        showRetry={false}
-                      />
-                    </Card.Body>
-                  </Card.Root>
-                )}
-
-              {/* Validation Error */}
-              {quiz.status === QUIZ_STATUS.FAILED &&
-                quiz.failure_reason === FAILURE_REASON.VALIDATION_ERROR && (
-                  <Card.Root>
-                    <Card.Body>
-                      <ErrorState
-                        title={UI_TEXT.FAILURE_MESSAGES.VALIDATION_ERROR.TITLE}
-                        message={
-                          UI_TEXT.FAILURE_MESSAGES.VALIDATION_ERROR.MESSAGE
-                        }
-                        showRetry={false}
-                      />
-                    </Card.Body>
-                  </Card.Root>
-                )}
-
-              {/* Generic Error (for unknown failure reasons) */}
+              {/* Error Display for Failed Status (except Canvas Export Error which is handled above) */}
               {quiz.status === QUIZ_STATUS.FAILED &&
                 quiz.failure_reason !== FAILURE_REASON.CANVAS_EXPORT_ERROR &&
-                quiz.failure_reason !==
-                  FAILURE_REASON.CONTENT_EXTRACTION_ERROR &&
-                quiz.failure_reason !== FAILURE_REASON.NO_CONTENT_FOUND &&
-                quiz.failure_reason !== FAILURE_REASON.LLM_GENERATION_ERROR &&
-                quiz.failure_reason !== FAILURE_REASON.NO_QUESTIONS_GENERATED &&
-                quiz.failure_reason !== FAILURE_REASON.NETWORK_ERROR &&
-                quiz.failure_reason !== FAILURE_REASON.VALIDATION_ERROR && (
-                  <Card.Root>
-                    <Card.Body>
-                      <ErrorState
-                        title={UI_TEXT.FAILURE_MESSAGES.GENERIC.TITLE}
-                        message={UI_TEXT.FAILURE_MESSAGES.GENERIC.MESSAGE}
-                        showRetry={false}
-                      />
-                    </Card.Body>
-                  </Card.Root>
-                )}
+                renderErrorForFailureReason(quiz.failure_reason)}
 
               {/* Message when questions aren't ready */}
               {quiz.status !== QUIZ_STATUS.READY_FOR_REVIEW &&
