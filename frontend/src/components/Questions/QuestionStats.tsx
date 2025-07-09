@@ -15,7 +15,7 @@ import { SiCanvas } from "react-icons/si"
 import { type Quiz, QuizService } from "@/client"
 import { ErrorState, LoadingSkeleton } from "@/components/Common"
 import { useCustomToast, useErrorHandler } from "@/hooks/common"
-import { UI_SIZES } from "@/lib/constants"
+import { QUIZ_STATUS, UI_SIZES } from "@/lib/constants"
 import {
   type QuestionStats as TypedQuestionStats,
   mergeLegacyStats,
@@ -172,16 +172,16 @@ export const QuestionStats = memo(function QuestionStats({
                   fontWeight="medium"
                   color="green.700"
                   textAlign="center"
-                  mb={quiz.export_status !== "completed" ? 3 : 2}
+                  mb={quiz.status !== QUIZ_STATUS.PUBLISHED ? 3 : 2}
                 >
                   All questions have been reviewed and approved!
                 </Text>
 
                 {(() => {
-                  const isExported = quiz.export_status === "completed"
+                  const isExported = quiz.status === QUIZ_STATUS.PUBLISHED
                   const isExporting =
                     exportMutation.isPending ||
-                    quiz.export_status === "processing"
+                    quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS
                   const canExport = !isExported
 
                   if (canExport) {

@@ -218,7 +218,7 @@ function useQuizProcessing(quiz) {
   // Memoized calculations
   const processingStatus = useMemo(() => {
     return calculateProcessingStatus(quiz)
-  }, [quiz.extractionStatus, quiz.generationStatus])
+  }, [quiz.status])
 
   // Memoized callbacks
   const handleStatusUpdate = useCallback((newStatus) => {

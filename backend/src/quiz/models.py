@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from src.auth.models import User
     from src.question.models import Question
 
+from .schemas import FailureReason, QuizStatus
+
 
 class Quiz(SQLModel, table=True):
     """Quiz model representing a quiz with questions generated from Canvas content."""
@@ -31,15 +33,23 @@ class Quiz(SQLModel, table=True):
     question_count: int = Field(default=100, ge=1, le=200)
     llm_model: str = Field(default="o3")
     llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
-    content_extraction_status: str = Field(
-        default="pending",
-        description="Status of content extraction: pending, processing, completed, failed",
+    status: QuizStatus = Field(
+        default=QuizStatus.CREATED,
+        description="Consolidated quiz status",
         index=True,
     )
-    llm_generation_status: str = Field(
-        default="pending",
-        description="Status of LLM generation: pending, processing, completed, failed",
+    failure_reason: FailureReason | None = Field(
+        default=None,
+        description="Specific failure reason when status is failed",
         index=True,
+    )
+    last_status_update: datetime = Field(
+        default=None,
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now(),
+            nullable=False,
+        ),
     )
     extracted_content: dict[str, Any] | None = Field(
         default=None, sa_column=Column(JSONB, nullable=True)
@@ -65,11 +75,6 @@ class Quiz(SQLModel, table=True):
     )
     canvas_quiz_id: str | None = Field(
         default=None, description="Canvas quiz assignment ID after export"
-    )
-    export_status: str = Field(
-        default="pending",
-        description="Status of Canvas export: pending, processing, completed, failed",
-        index=True,
     )
     exported_at: datetime | None = Field(
         sa_column=Column(DateTime(timezone=True), nullable=True),

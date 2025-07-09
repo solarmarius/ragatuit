@@ -24,12 +24,11 @@
  *   refetchInterval: pollWhileProcessing,
  * })
  *
- * // Usage with multiple conditions
- * const pollWhileAnyProcessing = useConditionalPolling(
+ * // Usage with consolidated status system
+ * const pollWhileProcessing = useConditionalPolling(
  *   (data: QuizData) => {
- *     return data?.extraction_status === 'processing' ||
- *            data?.generation_status === 'processing' ||
- *            data?.export_status === 'processing'
+ *     const activeStatuses = ['extracting_content', 'generating_questions', 'exporting_to_canvas']
+ *     return activeStatuses.includes(data?.status)
  *   },
  *   2000
  * )
@@ -46,46 +45,53 @@ export function useConditionalPolling<T>(
 }
 
 /**
- * Predefined polling condition for quiz processing status.
- * Polls while any status is pending or processing. Checks content extraction,
- * LLM generation, and export status for active processing states.
+ * Smart polling for quiz status based on consolidated status system.
+ * Uses different polling intervals based on current status:
+ * - Active processing: 2000ms (extracting, generating, exporting)
+ * - Ready for review: 10000ms (slower polling)
+ * - Terminal states: no polling (published, failed)
+ * - Default: 5000ms
  *
- * @param interval - Polling interval in milliseconds (default: 5000)
- *
- * @returns Function that can be used with TanStack Query's refetchInterval
+ * @returns Function that dynamically determines polling interval based on quiz status
  *
  * @example
  * ```tsx
- * // Use with quiz queries to poll while processing
- * const { data: quiz, isLoading } = useQuery({
+ * // Use with quiz queries for intelligent polling
+ * const { data: quiz } = useQuery({
  *   queryKey: ['quiz', quizId],
- *   queryFn: () => QuizzesService.getQuiz(quizId),
- *   refetchInterval: useQuizStatusPolling(3000), // Poll every 3 seconds
- * })
- *
- * // Custom interval for different polling needs
- * const { data: quizProgress } = useQuery({
- *   queryKey: ['quiz', 'progress', quizId],
- *   queryFn: () => QuizzesService.getQuizProgress(quizId),
- *   refetchInterval: useQuizStatusPolling(10000), // Poll every 10 seconds
+ *   queryFn: () => QuizService.getQuiz(quizId),
+ *   refetchInterval: useQuizStatusPolling(),
  * })
  * ```
  */
-export function useQuizStatusPolling(interval = 5000) {
-  return useConditionalPolling((data: any) => {
-    if (!data) return false
+export function useQuizStatusPolling() {
+  return (query: { state: { data?: any } }) => {
+    const data = query?.state?.data
+    if (!data) return 2000 // Poll every 2 seconds when no data
 
-    const extractionStatus = data.content_extraction_status || "pending"
-    const generationStatus = data.llm_generation_status || "pending"
-    const exportStatus = data.export_status || "pending"
+    const status = data.status
+    if (!status) return 5000 // Default polling if no status
 
-    return (
-      extractionStatus === "pending" ||
-      extractionStatus === "processing" ||
-      generationStatus === "pending" ||
-      generationStatus === "processing" ||
-      exportStatus === "pending" ||
-      exportStatus === "processing"
-    )
-  }, interval)
+    // Different polling intervals based on status
+    const activeStatuses = [
+      "extracting_content",
+      "generating_questions",
+      "exporting_to_canvas"
+    ]
+
+    if (activeStatuses.includes(status)) {
+      return 2000 // Poll every 2 seconds for active processes
+    }
+
+    if (status === "ready_for_review") {
+      return 10000 // Poll every 10 seconds for review state
+    }
+
+    // No polling for terminal states
+    if (status === "published" || status === "failed") {
+      return false
+    }
+
+    return 5000 // Default polling interval for other states
+  }
 }

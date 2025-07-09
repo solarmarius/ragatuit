@@ -35,11 +35,24 @@ export const QUESTION_TYPES = {
   FILL_IN_BLANK: "fill_in_blank",
 } as const
 
-export const PROCESSING_STATUSES = {
-  PENDING: "pending",
-  PROCESSING: "processing",
-  COMPLETED: "completed",
+export const QUIZ_STATUS = {
+  CREATED: "created",
+  EXTRACTING_CONTENT: "extracting_content",
+  GENERATING_QUESTIONS: "generating_questions",
+  READY_FOR_REVIEW: "ready_for_review",
+  EXPORTING_TO_CANVAS: "exporting_to_canvas",
+  PUBLISHED: "published",
   FAILED: "failed",
+} as const
+
+export const FAILURE_REASON = {
+  CONTENT_EXTRACTION_ERROR: "content_extraction_error",
+  NO_CONTENT_FOUND: "no_content_found",
+  LLM_GENERATION_ERROR: "llm_generation_error",
+  NO_QUESTIONS_GENERATED: "no_questions_generated",
+  CANVAS_EXPORT_ERROR: "canvas_export_error",
+  NETWORK_ERROR: "network_error",
+  VALIDATION_ERROR: "validation_error",
 } as const
 
 // =============================================================================
@@ -96,20 +109,27 @@ export const UI_SIZES = {
 
 export const UI_COLORS = {
   STATUS: {
-    PENDING: "orange",
-    PROCESSING: "orange",
-    COMPLETED: "green",
+    CREATED: "orange",
+    EXTRACTING_CONTENT: "orange",
+    GENERATING_QUESTIONS: "orange",
+    READY_FOR_REVIEW: "purple",
+    EXPORTING_TO_CANVAS: "yellow",
+    PUBLISHED: "green",
     FAILED: "red",
   },
   BORDER: {
-    PROCESSING: "orange.200",
-    SUCCESS: "green.200",
-    ERROR: "red.200",
+    ORANGE: "orange.200",
+    PURPLE: "purple.200",
+    YELLOW: "yellow.200",
+    GREEN: "green.200",
+    RED: "red.200",
   },
   BACKGROUND: {
-    PROCESSING: "orange.50",
-    SUCCESS: "green.50",
-    ERROR: "red.50",
+    ORANGE: "orange.50",
+    PURPLE: "purple.50",
+    YELLOW: "yellow.50",
+    GREEN: "green.50",
+    RED: "red.50",
   },
 } as const
 
@@ -126,11 +146,13 @@ export const UI_TEXT = {
     VIEW_ALL: "View All Quizzes",
   },
   STATUS: {
+    CREATED: "Ready to Start",
+    EXTRACTING_CONTENT: "Extracting Content",
+    GENERATING_QUESTIONS: "Generating Questions",
     READY_FOR_REVIEW: "Ready for Review",
-    PROCESSING: "Processing",
-    PENDING: "Pending",
+    EXPORTING_TO_CANVAS: "Exporting to Canvas",
+    PUBLISHED: "Published to Canvas",
     FAILED: "Failed",
-    COMPLETE: "Complete",
   },
 } as const
 

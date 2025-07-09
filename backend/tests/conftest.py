@@ -331,9 +331,8 @@ async def create_quiz_in_async_session(session, owner: User = None, **kwargs):
         "question_count": kwargs.get("question_count", 10),
         "llm_model": kwargs.get("llm_model", "o3"),
         "llm_temperature": kwargs.get("llm_temperature", 1.0),
-        "content_extraction_status": kwargs.get("content_extraction_status", "pending"),
-        "llm_generation_status": kwargs.get("llm_generation_status", "pending"),
-        "export_status": kwargs.get("export_status", "pending"),
+        "status": kwargs.get("status", "created"),
+        "failure_reason": kwargs.get("failure_reason", None),
         **kwargs,
     }
 

@@ -173,12 +173,12 @@ test.describe("Dashboard Layout", () => {
       .locator('[data-testid="badge"]')
     await expect(reviewBadge).toContainText("6")
 
-    // Check generation panel badge (should show 6 quizzes being generated - includes failed ones with pending status)
+    // Check generation panel badge (should show 5 quizzes being generated from quizzesBeingGenerated)
     const generationBadge = page
       .locator('text="Quizzes Being Generated"')
       .locator("..")
       .locator('[data-testid="badge"]')
-    await expect(generationBadge).toContainText("3")
+    await expect(generationBadge).toContainText("5")
   })
 
   test("should handle mixed quiz states correctly", async ({ page }) => {
@@ -205,7 +205,7 @@ test.describe("Dashboard Layout", () => {
       .locator('text="Quizzes Being Generated"')
       .locator("..")
       .getByTestId("badge")
-    await expect(generationPanelBadge).toContainText("2")
+    await expect(generationPanelBadge).toContainText("3")
 
     // Both panels should have content
     await expect(page.getByText("Machine Learning Fundamentals")).toBeVisible()

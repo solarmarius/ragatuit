@@ -8,43 +8,38 @@ import {
   Tabs,
   Text,
   VStack,
-} from "@chakra-ui/react"
-import { useQuery } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
-import { useState } from "react"
+} from "@chakra-ui/react";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 
-import { QuizService } from "@/client"
-import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenerationTrigger"
-import { QuestionReview } from "@/components/Questions/QuestionReview"
-import { QuestionStats } from "@/components/Questions/QuestionStats"
-import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirmation"
-import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common"
-import { StatusBadge } from "@/components/ui/status-badge"
-import { StatusDescription } from "@/components/ui/status-description"
-import { StatusLight } from "@/components/ui/status-light"
-import {
-  useApiMutation,
-  useFormattedDate,
-  useQuizStatusPolling,
-} from "@/hooks/common"
-import { UI_SIZES } from "@/lib/constants"
+import { QuizService } from "@/client";
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common";
+import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenerationTrigger";
+import { QuestionReview } from "@/components/Questions/QuestionReview";
+import { QuestionStats } from "@/components/Questions/QuestionStats";
+import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirmation";
+import { QuizPhaseProgress } from "@/components/ui/quiz-phase-progress";
+import { StatusLight } from "@/components/ui/status-light";
+import { useFormattedDate, useQuizStatusPolling } from "@/hooks/common";
+import { QUIZ_STATUS, UI_SIZES } from "@/lib/constants";
 
 export const Route = createFileRoute("/_layout/quiz/$id")({
   component: QuizDetail,
-})
+});
 
 function DateDisplay({ date }: { date: string | null | undefined }) {
-  const formattedDate = useFormattedDate(date, "default")
+  const formattedDate = useFormattedDate(date, "default");
 
-  if (!formattedDate) return <Text color="gray.500">Not available</Text>
+  if (!formattedDate) return <Text color="gray.500">Not available</Text>;
 
-  return <Text color="gray.600">{formattedDate}</Text>
+  return <Text color="gray.600">{formattedDate}</Text>;
 }
 
 function QuizDetail() {
-  const { id } = Route.useParams()
-  const [currentTab, setCurrentTab] = useState("info")
-  const pollingInterval = useQuizStatusPolling()
+  const { id } = Route.useParams();
+  const [currentTab, setCurrentTab] = useState("info");
+  const pollingInterval = useQuizStatusPolling();
 
   const {
     data: quiz,
@@ -53,26 +48,15 @@ function QuizDetail() {
   } = useQuery({
     queryKey: ["quiz", id],
     queryFn: async () => {
-      const response = await QuizService.getQuiz({ quizId: id })
-      return response
+      const response = await QuizService.getQuiz({ quizId: id });
+      return response;
     },
     refetchInterval: pollingInterval,
     refetchIntervalInBackground: false, // Only poll when tab is active
-  })
-
-  // Retry content extraction mutation
-  const retryExtractionMutation = useApiMutation(
-    async () => {
-      return await QuizService.triggerContentExtraction({ quizId: id })
-    },
-    {
-      successMessage: "Content extraction restarted",
-      invalidateQueries: [["quiz", id]],
-    },
-  )
+  });
 
   if (isLoading) {
-    return <QuizDetailSkeleton />
+    return <QuizDetailSkeleton />;
   }
 
   if (error || !quiz) {
@@ -88,42 +72,40 @@ function QuizDetail() {
           </Card.Body>
         </Card.Root>
       </Container>
-    )
+    );
   }
 
   // Get selected modules - parse JSON string if needed
   const selectedModules = (() => {
-    if (!quiz.selected_modules) return {}
+    if (!quiz.selected_modules) return {};
 
     // If it's already an object, use it directly
     if (typeof quiz.selected_modules === "object") {
-      return quiz.selected_modules
+      return quiz.selected_modules;
     }
 
     // If it's a string, parse it as JSON
     if (typeof quiz.selected_modules === "string") {
       try {
-        return JSON.parse(quiz.selected_modules)
+        return JSON.parse(quiz.selected_modules);
       } catch {
-        return {}
+        return {};
       }
     }
 
-    return {}
-  })()
+    return {};
+  })();
 
   const moduleNames = Object.values(selectedModules).filter(
-    (value): value is string => typeof value === "string",
-  )
+    (value): value is string => typeof value === "string"
+  );
 
   // Check if quiz is ready for approval
-  const isQuizReadyForApproval =
-    quiz.content_extraction_status === "completed" &&
-    quiz.llm_generation_status === "completed"
+  const isQuizReadyForApproval = quiz.status === QUIZ_STATUS.READY_FOR_REVIEW;
 
   const handleApproveQuiz = () => {
-    setCurrentTab("questions")
-  }
+    setCurrentTab("questions");
+  };
 
   return (
     <Container maxW="6xl" py={8}>
@@ -135,10 +117,7 @@ function QuizDetail() {
               <Text fontSize="3xl" fontWeight="bold">
                 {quiz.title}
               </Text>
-              <StatusLight
-                extractionStatus={quiz.content_extraction_status || "pending"}
-                generationStatus={quiz.llm_generation_status || "pending"}
-              />
+              <StatusLight status={quiz.status || "created"} />
             </HStack>
             <HStack gap={3}>
               {isQuizReadyForApproval && (
@@ -292,79 +271,22 @@ function QuizDetail() {
                 </Card.Body>
               </Card.Root>
 
-              {/* Quiz Generation Status */}
+              {/* Quiz Generation Progress */}
               <Card.Root>
                 <Card.Header>
                   <Text fontSize="xl" fontWeight="semibold">
-                    Quiz Generation Status
+                    Quiz Generation Progress
                   </Text>
                 </Card.Header>
                 <Card.Body>
-                  <VStack gap={4} align="stretch">
-                    {/* Content Extraction Status */}
-                    <Box>
-                      <HStack justify="space-between" mb={2}>
-                        <Text fontWeight="medium" color="gray.700">
-                          Content Extraction
-                        </Text>
-                        <StatusBadge
-                          status={quiz.content_extraction_status || "pending"}
-                        />
-                      </HStack>
-                      <StatusDescription
-                        status={quiz.content_extraction_status || "pending"}
-                        type="extraction"
-                        timestamp={quiz.content_extracted_at || null}
-                      />
-
-                      {/* Retry button for failed content extraction */}
-                      {quiz.content_extraction_status === "failed" && (
-                        <Button
-                          size="sm"
-                          colorScheme="blue"
-                          variant="outline"
-                          loading={retryExtractionMutation.isPending}
-                          onClick={() =>
-                            retryExtractionMutation.mutate(undefined)
-                          }
-                          mt={2}
-                        >
-                          Retry Content Extraction
-                        </Button>
-                      )}
-                    </Box>
-
-                    {/* LLM Generation Status */}
-                    <Box>
-                      <HStack justify="space-between" mb={2}>
-                        <Text fontWeight="medium" color="gray.700">
-                          Question Generation
-                        </Text>
-                        <StatusBadge
-                          status={quiz.llm_generation_status || "pending"}
-                        />
-                      </HStack>
-                      <StatusDescription
-                        status={quiz.llm_generation_status || "pending"}
-                        type="generation"
-                      />
-                    </Box>
-
-                    {/* Canvas Export Status */}
-                    <Box>
-                      <HStack justify="space-between" mb={2}>
-                        <Text fontWeight="medium" color="gray.700">
-                          Canvas Export
-                        </Text>
-                        <StatusBadge status={quiz.export_status || "pending"} />
-                      </HStack>
-                      <StatusDescription
-                        status={quiz.export_status || "pending"}
-                        type="export"
-                        timestamp={quiz.exported_at || null}
-                      />
-                    </Box>
-                  </VStack>
+                  <QuizPhaseProgress
+                    status={quiz.status || "created"}
+                    failureReason={quiz.failure_reason}
+                    contentExtractedAt={quiz.content_extracted_at}
+                    exportedAt={quiz.exported_at}
+                    lastStatusUpdate={quiz.last_status_update}
+                    showTimestamps={true}
+                  />
                 </Card.Body>
               </Card.Root>
 
@@ -376,32 +298,38 @@ function QuizDetail() {
           <Tabs.Content value="questions">
             <VStack gap={6} align="stretch" mt={6}>
               {/* Question Statistics */}
-              {quiz.llm_generation_status === "completed" && (
+              {(quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
+                quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS ||
+                quiz.status === QUIZ_STATUS.PUBLISHED) && (
                 <QuestionStats quiz={quiz} />
               )}
 
               {/* Question Review */}
-              {quiz.llm_generation_status === "completed" && (
+              {(quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
+                quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS ||
+                quiz.status === QUIZ_STATUS.PUBLISHED) && (
                 <QuestionReview quizId={id} />
               )}
 
               {/* Message when questions aren't ready */}
-              {quiz.llm_generation_status !== "completed" && (
-                <Card.Root>
-                  <Card.Body>
-                    <EmptyState
-                      title="Questions Not Available Yet"
-                      description="Questions will appear here once the generation process is complete."
-                    />
-                  </Card.Body>
-                </Card.Root>
-              )}
+              {quiz.status !== QUIZ_STATUS.READY_FOR_REVIEW &&
+                quiz.status !== QUIZ_STATUS.EXPORTING_TO_CANVAS &&
+                quiz.status !== QUIZ_STATUS.PUBLISHED && (
+                  <Card.Root>
+                    <Card.Body>
+                      <EmptyState
+                        title="Questions Not Available Yet"
+                        description="Questions will appear here once the generation process is complete."
+                      />
+                    </Card.Body>
+                  </Card.Root>
+                )}
             </VStack>
           </Tabs.Content>
         </Tabs.Root>
       </VStack>
     </Container>
-  )
+  );
 }
 
 function QuizDetailSkeleton() {
@@ -444,5 +372,5 @@ function QuizDetailSkeleton() {
         ))}
       </VStack>
     </Container>
-  )
+  );
 }

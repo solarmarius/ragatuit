@@ -128,7 +128,9 @@ test.describe("Quiz Workflow End-to-End", () => {
     await expect(page.getByText("Quiz Settings")).toBeVisible()
 
     // Adjust question count - use placeholder text to find the input
-    const questionCountInput = page.getByPlaceholder("Enter number of questions")
+    const questionCountInput = page.getByPlaceholder(
+      "Enter number of questions",
+    )
     await questionCountInput.fill("50")
 
     // Click on "Advanced settings" tab to access LLM model and temperature

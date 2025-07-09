@@ -407,7 +407,7 @@ async def test_reserve_quiz_job_extraction_success(async_session):
         question_count=50,
         llm_model="gpt-4",
         llm_temperature=0.7,
-        content_extraction_status="pending",
+        status="created",
     )
     async_session.add(quiz)
     await async_session.commit()
@@ -426,6 +426,7 @@ async def test_reserve_quiz_job_extraction_success(async_session):
 async def test_reserve_quiz_job_already_processing(async_session):
     """Test job reservation when already processing."""
     from src.quiz.models import Quiz
+    from src.quiz.schemas import QuizStatus
     from src.quiz.service import reserve_quiz_job
 
     quiz = Quiz(
@@ -434,7 +435,7 @@ async def test_reserve_quiz_job_already_processing(async_session):
         canvas_course_name="Test Course",
         selected_modules={"1": "Module 1"},
         title="Test Quiz",
-        content_extraction_status="processing",
+        status=QuizStatus.EXTRACTING_CONTENT,
     )
 
     with patch("src.quiz.service.get_quiz_for_update", return_value=quiz):
@@ -448,6 +449,7 @@ async def test_update_quiz_status_content_extraction(async_session):
     """Test updating content extraction status to completed."""
     from src.auth.models import User
     from src.quiz.models import Quiz
+    from src.quiz.schemas import QuizStatus
     from src.quiz.service import update_quiz_status
 
     # Create a user first
@@ -467,7 +469,7 @@ async def test_update_quiz_status_content_extraction(async_session):
         canvas_course_name="Test Course",
         selected_modules={"1": "Module 1"},
         title="Test Quiz",
-        content_extraction_status="processing",
+        status=QuizStatus.EXTRACTING_CONTENT,
     )
     async_session.add(quiz)
     await async_session.commit()
@@ -479,8 +481,7 @@ async def test_update_quiz_status_content_extraction(async_session):
         await update_quiz_status(
             async_session,
             quiz.id,
-            "content_extraction",
-            "completed",
+            QuizStatus.READY_FOR_REVIEW,
             extracted_content=extracted_content,
         )
 
@@ -492,14 +493,13 @@ async def test_update_quiz_status_content_extraction(async_session):
 @pytest.mark.asyncio
 async def test_update_quiz_status_quiz_not_found(async_session):
     """Test status update when quiz not found."""
+    from src.quiz.schemas import QuizStatus
     from src.quiz.service import update_quiz_status
 
     random_id = uuid.uuid4()
 
     with patch("src.quiz.service.get_quiz_for_update", return_value=None):
-        await update_quiz_status(
-            async_session, random_id, "content_extraction", "completed"
-        )
+        await update_quiz_status(async_session, random_id, QuizStatus.READY_FOR_REVIEW)
 
     # Should handle gracefully without error
     assert True

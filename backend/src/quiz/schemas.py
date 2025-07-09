@@ -8,8 +8,33 @@ from uuid import UUID
 from sqlmodel import Field, SQLModel
 
 
+class QuizStatus(str, Enum):
+    """Consolidated status values for quiz workflow."""
+
+    CREATED = "created"
+    EXTRACTING_CONTENT = "extracting_content"
+    GENERATING_QUESTIONS = "generating_questions"
+    READY_FOR_REVIEW = "ready_for_review"
+    EXPORTING_TO_CANVAS = "exporting_to_canvas"
+    PUBLISHED = "published"
+    FAILED = "failed"
+
+
+class FailureReason(str, Enum):
+    """Specific failure reasons for detailed error tracking."""
+
+    CONTENT_EXTRACTION_ERROR = "content_extraction_error"
+    NO_CONTENT_FOUND = "no_content_found"
+    LLM_GENERATION_ERROR = "llm_generation_error"
+    NO_QUESTIONS_GENERATED = "no_questions_generated"
+    CANVAS_EXPORT_ERROR = "canvas_export_error"
+    NETWORK_ERROR = "network_error"
+    VALIDATION_ERROR = "validation_error"
+
+
+# Legacy enum for backwards compatibility during migration
 class Status(str, Enum):
-    """Status values for quiz operations."""
+    """Legacy status values - will be removed after migration."""
 
     PENDING = "pending"
     PROCESSING = "processing"
@@ -50,37 +75,35 @@ class QuizPublic(SQLModel):
     question_count: int
     llm_model: str
     llm_temperature: float
-    content_extraction_status: str
-    llm_generation_status: str
+    status: QuizStatus
+    failure_reason: FailureReason | None = None
+    last_status_update: datetime
     extracted_content: dict[str, Any] | None
     content_extracted_at: datetime | None
     created_at: datetime | None
     updated_at: datetime | None
     canvas_quiz_id: str | None
-    export_status: str
     exported_at: datetime | None
 
 
-class QuizContentUpdate(SQLModel):
-    """Schema for updating quiz content extraction results."""
+class QuizStatusUpdate(SQLModel):
+    """Schema for updating quiz status."""
 
-    content_extraction_status: str
-    extracted_content: dict[str, Any] | None = None
-    content_extracted_at: datetime | None = None
-
-
-class QuizGenerationUpdate(SQLModel):
-    """Schema for updating quiz generation status."""
-
-    llm_generation_status: str
+    status: QuizStatus
+    failure_reason: FailureReason | None = None
 
 
-class QuizExportUpdate(SQLModel):
-    """Schema for updating quiz export results."""
+class QuizRetryRequest(SQLModel):
+    """Request to retry a failed quiz."""
 
-    export_status: str
-    canvas_quiz_id: str | None = None
-    exported_at: datetime | None = None
+    pass  # Empty body for now, could add options later
+
+
+class QuizStatusFilter(SQLModel):
+    """Filter quizzes by status."""
+
+    status: QuizStatus | None = None
+    failure_reason: FailureReason | None = None
 
 
 # Flow operation schemas
@@ -124,7 +147,6 @@ class QuizOperationStatus(SQLModel):
     """Status information for ongoing quiz operations."""
 
     quiz_id: UUID
-    content_extraction_status: Status
-    llm_generation_status: Status
-    export_status: Status
+    status: QuizStatus
+    failure_reason: FailureReason | None = None
     last_updated: datetime | None = None

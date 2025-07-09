@@ -74,13 +74,12 @@ class QuizFactory(BaseFactory):
     question_count = 100
     llm_model = "o3"
     llm_temperature = 1.0
-    content_extraction_status = "pending"
-    llm_generation_status = "pending"
-    export_status = "pending"
+    status = "created"
+    failure_reason = None
 
     class Params:
         with_extracted_content = factory.Trait(
-            content_extraction_status="completed",
+            status="extracting_content",
             extracted_content=factory.LazyFunction(
                 lambda: {
                     "modules": [
@@ -95,13 +94,17 @@ class QuizFactory(BaseFactory):
             ),
             content_extracted_at=LazyAttribute(lambda obj: datetime.now(timezone.utc)),
         )
-        with_generated_questions = factory.Trait(
-            llm_generation_status="completed", content_extraction_status="completed"
-        )
+        with_generated_questions = factory.Trait(status="ready_for_review")
         exported_to_canvas = factory.Trait(
-            export_status="completed",
+            status="published",
             canvas_quiz_id=Faker("uuid4"),
             exported_at=LazyAttribute(lambda obj: datetime.now(timezone.utc)),
+        )
+        failed_extraction = factory.Trait(
+            status="failed", failure_reason="content_extraction_error"
+        )
+        failed_generation = factory.Trait(
+            status="failed", failure_reason="llm_generation_error"
         )
 
 

@@ -124,6 +124,9 @@ Comprehensive documentation for the refactored frontend architecture:
 ### Key Models
 
 - **User**: Canvas user with OAuth tokens and metadata
+- **Quiz**: Quiz with consolidated status system (7 states: created, extracting_content, generating_questions, ready_for_review, exporting_to_canvas, published, failed)
+- **QuizStatus**: Enum representing the current state of quiz processing
+- **FailureReason**: Enum for detailed error tracking when quiz status is failed
 - **Canvas Integration**: OAuth flow for accessing Canvas courses and content
 - **Authentication**: JWT-based session management with Canvas token storage
 
@@ -131,10 +134,43 @@ Comprehensive documentation for the refactored frontend architecture:
 
 1. **Canvas OAuth Setup**: Users authenticate via Canvas to access course content
 2. **Course Selection**: Users select which Canvas course to generate questions from
-3. **Content Processing**: Course modules are parsed and prepared for LLM input
-4. **Question Generation**: Language model generates multiple-choice questions
-5. **Review Process**: Users approve/reject generated questions
-6. **Exam Creation**: Approved questions are exported to Canvas
+3. **Quiz Creation**: Quiz created with status `created`
+4. **Content Processing**: Course modules are parsed and prepared for LLM input (status: `extracting_content`)
+5. **Question Generation**: Language model generates multiple-choice questions (status: `generating_questions`)
+6. **Review Process**: Users approve/reject generated questions (status: `ready_for_review`)
+7. **Canvas Export**: Approved questions are exported to Canvas (status: `exporting_to_canvas`)
+8. **Quiz Published**: Quiz is successfully published to Canvas (status: `published`)
+
+**Error Handling**: Any step can fail (status: `failed`) with specific failure reasons for debugging.
+
+## Status System Architecture
+
+The application uses a **consolidated status system** with a single `status` field and detailed failure tracking:
+
+### QuizStatus Enum
+- `created` - Quiz created, ready to start
+- `extracting_content` - Extracting content from Canvas modules
+- `generating_questions` - AI generating questions from extracted content
+- `ready_for_review` - Questions ready for user review and approval
+- `exporting_to_canvas` - Exporting approved questions to Canvas
+- `published` - Quiz successfully published to Canvas
+- `failed` - Process failed (see failure_reason for details)
+
+### FailureReason Enum
+- `content_extraction_error` - Failed to extract content from Canvas
+- `no_content_found` - No content found in selected modules
+- `llm_generation_error` - AI question generation failed
+- `no_questions_generated` - No questions could be generated
+- `canvas_export_error` - Failed to export to Canvas
+- `network_error` - Network connectivity issues
+- `validation_error` - Data validation failed
+
+### Status Light Color System
+- 🔴 **Red**: `failed` - Any process failed
+- 🟠 **Orange**: `created`, `extracting_content`, `generating_questions` - Processing
+- 🟡 **Yellow**: `exporting_to_canvas` - Exporting to Canvas
+- 🟣 **Purple**: `ready_for_review` - Ready for user review
+- 🟢 **Green**: `published` - Successfully completed
 
 ## Important Conventions
 
@@ -145,6 +181,7 @@ Comprehensive documentation for the refactored frontend architecture:
 - Canvas tokens are securely stored and refreshed automatically
 - Database migrations managed with Alembic
 - Comprehensive test coverage required
+- Use consolidated status system for all quiz state management
 
 ### Frontend
 
@@ -156,6 +193,9 @@ Comprehensive documentation for the refactored frontend architecture:
 - Custom hooks system for reusable logic and API operations
 - Component patterns documented in `/docs/frontend/` for consistency
 - JSDoc comments on all component props and custom hooks
+- StatusLight component with 4-color system based on consolidated status
+- Smart polling system with dynamic intervals based on quiz status
+- QuizPhaseProgress component for detailed three-phase status display
 
 ### Testing
 

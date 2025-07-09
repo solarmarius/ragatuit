@@ -1,5 +1,6 @@
 import { QuizService } from "@/client"
 import { queryKeys } from "@/lib/api"
+import { useQuizStatusPolling } from "@/hooks/common"
 import { useQuery } from "@tanstack/react-query"
 
 export function useUserQuizzes() {
@@ -14,5 +15,7 @@ export function useQuizDetail(quizId: string) {
     queryKey: queryKeys.quizzes.detail(quizId),
     queryFn: () => QuizService.getQuiz({ quizId }),
     enabled: !!quizId,
+    refetchInterval: useQuizStatusPolling(),
+    refetchIntervalInBackground: false, // Only poll when tab is active
   })
 }

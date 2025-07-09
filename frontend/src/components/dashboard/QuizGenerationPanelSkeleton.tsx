@@ -30,9 +30,9 @@ export function QuizGenerationPanelSkeleton() {
               key={i}
               p={4}
               border="1px solid"
-              borderColor={UI_COLORS.BORDER.PROCESSING}
+              borderColor={UI_COLORS.BORDER.ORANGE}
               borderRadius="md"
-              bg={UI_COLORS.BACKGROUND.PROCESSING}
+              bg={UI_COLORS.BACKGROUND.ORANGE}
             >
               <VStack align="stretch" gap={3}>
                 <HStack justify="space-between" align="start">

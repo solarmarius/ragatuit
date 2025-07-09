@@ -32,8 +32,8 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      content_extraction_status: "pending",
-      llm_generation_status: "pending",
+      status: "created",
+      last_status_update: "2024-01-16T14:20:00Z",
       extracted_content: null,
       content_extracted_at: null,
       created_at: "2024-01-15T10:30:00Z",
@@ -52,7 +52,7 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     await page.reload()
 
     // Check that status light is visible with correct title
-    const statusLight = page.locator('[title="Waiting to generate questions"]')
+    const statusLight = page.locator('[title="Ready to Start"]')
     await expect(statusLight).toBeVisible()
 
     // Check that quiz title and status light are in the same row
@@ -72,8 +72,8 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      content_extraction_status: "processing",
-      llm_generation_status: "pending",
+      status: "extracting_content",
+      last_status_update: "2024-01-16T14:20:00Z",
       extracted_content: null,
       content_extracted_at: null,
       created_at: "2024-01-15T10:30:00Z",
@@ -92,7 +92,7 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     await page.reload()
 
     // Check that status light shows processing state
-    const statusLight = page.locator('[title="Generating questions..."]')
+    const statusLight = page.locator('[title="Extracting Content"]')
     await expect(statusLight).toBeVisible()
     await expect(statusLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
   })
@@ -109,11 +109,11 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      content_extraction_status: "completed",
-      llm_generation_status: "completed",
+      status: "ready_for_review",
       extracted_content:
         '{"module_173467": [{"title": "Test Page", "content": "Test content"}]}',
       content_extracted_at: "2024-01-16T15:30:00Z",
+      last_status_update: "2024-01-16T16:00:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -129,12 +129,12 @@ test.describe("Quiz Detail Content Extraction Features", () => {
 
     await page.reload()
 
-    // Check that status light shows completed state
+    // Check that status light shows ready for review state
     const statusLight = page.locator(
-      '[title="Questions generated successfully"]',
+      '[title="Ready for Review"]',
     )
     await expect(statusLight).toBeVisible()
-    await expect(statusLight).toHaveCSS("background-color", "rgb(34, 197, 94)") // green.500
+    await expect(statusLight).toHaveCSS("background-color", "rgb(168, 85, 247)") // purple.500
   })
 
   test("should display content extraction status with failed extraction", async ({
@@ -149,10 +149,11 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      content_extraction_status: "failed",
-      llm_generation_status: "pending",
+      status: "failed",
+      failure_reason: "content_extraction_error",
       extracted_content: null,
       content_extracted_at: null,
+      last_status_update: "2024-01-16T14:20:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -169,7 +170,7 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     await page.reload()
 
     // Check that status light shows failed state
-    const statusLight = page.locator('[title="Generation failed"]')
+    const statusLight = page.locator('[title="Failed"]')
     await expect(statusLight).toBeVisible()
     await expect(statusLight).toHaveCSS("background-color", "rgb(239, 68, 68)") // red.500
   })
@@ -187,10 +188,10 @@ test.describe("Quiz Detail Content Extraction Features", () => {
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
-        content_extraction_status: "processing",
-        llm_generation_status: "pending",
+        status: "extracting_content",
         extracted_content: null,
         content_extracted_at: null,
+        last_status_update: "2024-01-16T14:20:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
@@ -205,11 +206,11 @@ test.describe("Quiz Detail Content Extraction Features", () => {
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
-        content_extraction_status: "completed",
-        llm_generation_status: "completed",
+        status: "ready_for_review",
         extracted_content:
           '{"module_173467": [{"title": "Test Page", "content": "Test content"}]}',
         content_extracted_at: "2024-01-16T15:30:00Z",
+        last_status_update: "2024-01-16T16:00:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
@@ -233,13 +234,13 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     await page.reload()
 
     const completedLight = page.locator(
-      '[title="Questions generated successfully"]',
+      '[title="Ready for Review"]',
     )
     await expect(completedLight).toBeVisible()
     await expect(completedLight).toHaveCSS(
       "background-color",
-      "rgb(34, 197, 94)",
-    ) // green.500
+      "rgb(168, 85, 247)",
+    ) // purple.500
 
     // Verify that multiple API calls were made
     expect(callCount).toBeGreaterThan(1)
@@ -256,11 +257,11 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      content_extraction_status: "completed",
-      llm_generation_status: "completed",
+      status: "ready_for_review",
       extracted_content:
         '{"module_173467": [{"title": "Test Page", "content": "Test content"}]}',
       content_extracted_at: "2024-01-16T15:30:00Z",
+      last_status_update: "2024-01-16T16:00:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -277,9 +278,9 @@ test.describe("Quiz Detail Content Extraction Features", () => {
 
     await page.reload()
 
-    // Check that status light shows completed state
+    // Check that status light shows ready for review state
     const statusLight = page.locator(
-      '[title="Questions generated successfully"]',
+      '[title="Ready for Review"]',
     )
     await expect(statusLight).toBeVisible()
 
@@ -301,10 +302,11 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      content_extraction_status: "failed",
-      llm_generation_status: "pending",
+      status: "failed",
+      failure_reason: "content_extraction_error",
       extracted_content: null,
       content_extracted_at: null,
+      last_status_update: "2024-01-16T14:20:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -322,7 +324,7 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     await page.reload()
 
     // Check that status light shows failed state
-    const statusLight = page.locator('[title="Generation failed"]')
+    const statusLight = page.locator('[title="Failed"]')
     await expect(statusLight).toBeVisible()
 
     // Wait to ensure no additional polling occurs
@@ -345,7 +347,7 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      // Missing content_extraction_status, llm_generation_status, extracted_content, content_extracted_at
+      // Missing status field - should default to created
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -361,8 +363,8 @@ test.describe("Quiz Detail Content Extraction Features", () => {
 
     await page.reload()
 
-    // Should default to pending status (orange light)
-    const statusLight = page.locator('[title="Waiting to generate questions"]')
+    // Should default to created status (orange light)
+    const statusLight = page.locator('[title="Ready to Start"]')
     await expect(statusLight).toBeVisible()
     await expect(statusLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
 
@@ -386,8 +388,8 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
-      content_extraction_status: "pending",
-      llm_generation_status: "pending",
+      status: "created",
+      last_status_update: "2024-01-16T14:20:00Z",
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
@@ -407,7 +409,7 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     const titleContainer = page
       .locator('text="Status Light Position Test"')
       .locator("..")
-    const statusLight = page.locator('[title="Waiting to generate questions"]')
+    const statusLight = page.locator('[title="Ready to Start"]')
 
     await expect(titleContainer).toContainText("Status Light Position Test")
     await expect(statusLight).toBeVisible()
@@ -431,45 +433,45 @@ test.describe("Quiz Detail Content Extraction Features", () => {
   }) => {
     const testCases = [
       {
-        extraction: "pending",
-        generation: "pending",
-        expectedTitle: "Waiting to generate questions",
+        status: "created",
+        expectedTitle: "Ready to Start",
         expectedColor: "rgb(249, 115, 22)", // orange.500
       },
       {
-        extraction: "processing",
-        generation: "pending",
-        expectedTitle: "Generating questions...",
+        status: "extracting_content",
+        expectedTitle: "Extracting Content",
         expectedColor: "rgb(249, 115, 22)", // orange.500
       },
       {
-        extraction: "completed",
-        generation: "pending",
-        expectedTitle: "Waiting to generate questions",
+        status: "generating_questions",
+        expectedTitle: "Generating Questions",
         expectedColor: "rgb(249, 115, 22)", // orange.500
       },
       {
-        extraction: "completed",
-        generation: "processing",
-        expectedTitle: "Generating questions...",
-        expectedColor: "rgb(249, 115, 22)", // orange.500
+        status: "ready_for_review",
+        expectedTitle: "Ready for Review",
+        expectedColor: "rgb(168, 85, 247)", // purple.500
       },
       {
-        extraction: "completed",
-        generation: "completed",
-        expectedTitle: "Questions generated successfully",
+        status: "exporting_to_canvas",
+        expectedTitle: "Exporting to Canvas",
+        expectedColor: "rgb(234, 179, 8)", // yellow.500
+      },
+      {
+        status: "published",
+        expectedTitle: "Published to Canvas",
         expectedColor: "rgb(34, 197, 94)", // green.500
       },
       {
-        extraction: "failed",
-        generation: "pending",
-        expectedTitle: "Generation failed",
+        status: "failed",
+        failure_reason: "content_extraction_error",
+        expectedTitle: "Failed",
         expectedColor: "rgb(239, 68, 68)", // red.500
       },
       {
-        extraction: "completed",
-        generation: "failed",
-        expectedTitle: "Generation failed",
+        status: "failed",
+        failure_reason: "llm_generation_error",
+        expectedTitle: "Failed",
         expectedColor: "rgb(239, 68, 68)", // red.500
       },
     ]
@@ -477,15 +479,16 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     for (const testCase of testCases) {
       const mockQuiz = {
         id: mockQuizId,
-        title: `Status Test ${testCase.extraction}-${testCase.generation}`,
+        title: `Status Test ${testCase.status}`,
         canvas_course_id: 12345,
         canvas_course_name: "Test Course",
         selected_modules: '{"173467": "Module 1"}',
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
-        content_extraction_status: testCase.extraction,
-        llm_generation_status: testCase.generation,
+        status: testCase.status,
+        ...(testCase.failure_reason && { failure_reason: testCase.failure_reason }),
+        last_status_update: "2024-01-16T14:20:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",

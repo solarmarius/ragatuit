@@ -35,6 +35,11 @@ export type CanvasModule = {
 };
 
 /**
+ * Specific failure reasons for detailed error tracking.
+ */
+export type FailureReason = 'content_extraction_error' | 'no_content_found' | 'llm_generation_error' | 'no_questions_generated' | 'canvas_export_error' | 'network_error' | 'validation_error';
+
+/**
  * Schema for question generation requests.
  */
 export type GenerationRequest = {
@@ -145,13 +150,14 @@ export type Quiz = {
     llm_model?: string;
     llm_temperature?: number;
     /**
-     * Status of content extraction: pending, processing, completed, failed
+     * Consolidated quiz status
      */
-    content_extraction_status?: string;
+    status?: QuizStatus;
     /**
-     * Status of LLM generation: pending, processing, completed, failed
+     * Specific failure reason when status is failed
      */
-    llm_generation_status?: string;
+    failure_reason?: (FailureReason | null);
+    last_status_update?: string;
     extracted_content?: ({
     [key: string]: unknown;
 } | null);
@@ -165,10 +171,6 @@ export type Quiz = {
      * Canvas quiz assignment ID after export
      */
     canvas_quiz_id?: (string | null);
-    /**
-     * Status of Canvas export: pending, processing, completed, failed
-     */
-    export_status?: string;
     /**
      * Timestamp when quiz was exported to Canvas
      */
@@ -189,6 +191,11 @@ export type QuizCreate = {
     llm_model?: string;
     llm_temperature?: number;
 };
+
+/**
+ * Consolidated status values for quiz workflow.
+ */
+export type QuizStatus = 'created' | 'extracting_content' | 'generating_questions' | 'ready_for_review' | 'exporting_to_canvas' | 'published' | 'failed';
 
 /**
  * Public user information schema.

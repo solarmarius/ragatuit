@@ -1,8 +1,8 @@
-"""initial migration
+"""Initial migration
 
-Revision ID: 0e5d8cc7d759
+Revision ID: e96cd2e69244
 Revises:
-Create Date: 2025-07-01 16:40:09.584690
+Create Date: 2025-07-08 16:03:14.154488
 
 """
 from alembic import op
@@ -11,7 +11,7 @@ import sqlmodel.sql.sqltypes
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '0e5d8cc7d759'
+revision = 'e96cd2e69244'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -43,27 +43,26 @@ def upgrade():
     sa.Column('question_count', sa.Integer(), nullable=False),
     sa.Column('llm_model', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('llm_temperature', sa.Float(), nullable=False),
-    sa.Column('content_extraction_status', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('llm_generation_status', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('status', sa.Enum('CREATED', 'EXTRACTING_CONTENT', 'GENERATING_QUESTIONS', 'READY_FOR_REVIEW', 'EXPORTING_TO_CANVAS', 'PUBLISHED', 'FAILED', name='quizstatus'), nullable=False),
+    sa.Column('failure_reason', sa.Enum('CONTENT_EXTRACTION_ERROR', 'NO_CONTENT_FOUND', 'LLM_GENERATION_ERROR', 'NO_QUESTIONS_GENERATED', 'CANVAS_EXPORT_ERROR', 'NETWORK_ERROR', 'VALIDATION_ERROR', name='failurereason'), nullable=True),
+    sa.Column('last_status_update', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('extracted_content', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
     sa.Column('content_extracted_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('canvas_quiz_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.Column('export_status', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('exported_at', sa.DateTime(timezone=True), nullable=True),
     sa.ForeignKeyConstraint(['owner_id'], ['user.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_quiz_canvas_course_id'), 'quiz', ['canvas_course_id'], unique=False)
-    op.create_index(op.f('ix_quiz_content_extraction_status'), 'quiz', ['content_extraction_status'], unique=False)
-    op.create_index(op.f('ix_quiz_export_status'), 'quiz', ['export_status'], unique=False)
-    op.create_index(op.f('ix_quiz_llm_generation_status'), 'quiz', ['llm_generation_status'], unique=False)
+    op.create_index(op.f('ix_quiz_failure_reason'), 'quiz', ['failure_reason'], unique=False)
     op.create_index(op.f('ix_quiz_owner_id'), 'quiz', ['owner_id'], unique=False)
+    op.create_index(op.f('ix_quiz_status'), 'quiz', ['status'], unique=False)
     op.create_table('question',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('quiz_id', sa.Uuid(), nullable=False),
-    sa.Column('question_type', sa.Enum('MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER', 'ESSAY', 'FILL_IN_BLANK', name='questiontype'), nullable=False),
+    sa.Column('question_type', sa.Enum('MULTIPLE_CHOICE', 'SHORT_ANSWER', 'FILL_IN_BLANK', name='questiontype'), nullable=False),
     sa.Column('question_data', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('difficulty', sa.Enum('EASY', 'MEDIUM', 'HARD', name='questiondifficulty'), nullable=True),
     sa.Column('tags', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
@@ -89,10 +88,9 @@ def downgrade():
     op.drop_index(op.f('ix_question_is_approved'), table_name='question')
     op.drop_index(op.f('ix_question_difficulty'), table_name='question')
     op.drop_table('question')
+    op.drop_index(op.f('ix_quiz_status'), table_name='quiz')
     op.drop_index(op.f('ix_quiz_owner_id'), table_name='quiz')
-    op.drop_index(op.f('ix_quiz_llm_generation_status'), table_name='quiz')
-    op.drop_index(op.f('ix_quiz_export_status'), table_name='quiz')
-    op.drop_index(op.f('ix_quiz_content_extraction_status'), table_name='quiz')
+    op.drop_index(op.f('ix_quiz_failure_reason'), table_name='quiz')
     op.drop_index(op.f('ix_quiz_canvas_course_id'), table_name='quiz')
     op.drop_table('quiz')
     op.drop_index(op.f('ix_user_canvas_id'), table_name='user')
