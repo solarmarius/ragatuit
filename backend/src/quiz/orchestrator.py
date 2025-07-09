@@ -15,7 +15,7 @@ from src.config import get_logger
 from src.database import execute_in_transaction
 
 # Removed DI container import - GenerationOrchestrationService imported locally
-from src.question.types import GenerationParameters, QuestionType
+from src.question.types import QuestionType
 
 from .constants import OPERATION_TIMEOUTS
 from .exceptions import OrchestrationTimeoutError
@@ -79,6 +79,168 @@ QuizCreatorFunc = Callable[[str, int, str, int], Any]
 QuestionExporterFunc = Callable[[str, int, str, list[dict[str, Any]]], Any]
 
 
+async def _execute_content_extraction_workflow(
+    quiz_id: UUID,
+    course_id: int,
+    module_ids: list[int],
+    canvas_token: str,
+    content_extractor: ContentExtractorFunc,
+    content_summarizer: ContentSummaryFunc,
+) -> tuple[dict[str, Any] | None, str]:
+    """
+    Execute the content extraction workflow.
+
+    Returns:
+        Tuple of (extracted_content, final_status)
+    """
+    try:
+        # Use injected content extractor function
+        extracted_content = await content_extractor(canvas_token, course_id, module_ids)
+        content_summary = content_summarizer(extracted_content)
+
+        logger.info(
+            "extraction_orchestration_completed",
+            quiz_id=str(quiz_id),
+            course_id=course_id,
+            modules_processed=content_summary["modules_processed"],
+            total_pages=content_summary["total_pages"],
+            total_word_count=content_summary["total_word_count"],
+        )
+
+        # Check if meaningful content was extracted
+        total_word_count = content_summary.get("total_word_count", 0)
+        total_pages = content_summary.get("total_pages", 0)
+
+        if total_word_count == 0 or total_pages == 0:
+            logger.warning(
+                "extraction_completed_but_no_content_found",
+                quiz_id=str(quiz_id),
+                course_id=course_id,
+                total_word_count=total_word_count,
+                total_pages=total_pages,
+            )
+            return None, "no_content"
+        else:
+            return extracted_content, "completed"
+
+    except Exception as e:
+        logger.error(
+            "extraction_orchestration_failed",
+            quiz_id=str(quiz_id),
+            course_id=course_id,
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        return None, "failed"
+
+
+async def _execute_generation_workflow(
+    quiz_id: UUID,
+    target_question_count: int,
+    _llm_model: str,
+    _llm_temperature: float,
+    question_type: Any,
+    generation_service: Any = None,
+) -> tuple[str, str | None, Exception | None]:
+    """
+    Execute the question generation workflow.
+
+    Returns:
+        Tuple of (final_status, error_message, failure_exception)
+    """
+    try:
+        # Use injected generation service or create default
+        if generation_service is None:
+            from src.question.services import GenerationOrchestrationService
+
+            generation_service = GenerationOrchestrationService()
+
+        # Create generation parameters
+        from src.question.types import GenerationParameters
+
+        generation_parameters = GenerationParameters(target_count=target_question_count)
+
+        # Generate questions using modular system
+        result = await generation_service.generate_questions(
+            quiz_id=quiz_id,
+            question_type=question_type,
+            generation_parameters=generation_parameters,
+            provider_name=None,  # Use default provider
+            workflow_name=None,  # Use default workflow
+            template_name=None,  # Use default template
+        )
+
+        if result.success:
+            logger.info(
+                "generation_orchestration_completed",
+                quiz_id=str(quiz_id),
+                questions_generated=result.questions_generated,
+                target_questions=target_question_count,
+                question_type=question_type.value,
+            )
+            return "completed", None, None
+        else:
+            error_message = result.error_message
+            logger.error(
+                "generation_orchestration_failed_during_llm",
+                quiz_id=str(quiz_id),
+                error_message=error_message,
+                question_type=question_type.value,
+            )
+            return "failed", error_message, None
+
+    except Exception as e:
+        logger.error(
+            "generation_orchestration_failed",
+            quiz_id=str(quiz_id),
+            error=str(e),
+            error_type=type(e).__name__,
+            question_type=question_type.value,
+            exc_info=True,
+        )
+        return "failed", str(e), e
+
+
+async def _execute_export_workflow(
+    _quiz_id: UUID,
+    canvas_token: str,
+    quiz_creator: QuizCreatorFunc,
+    question_exporter: QuestionExporterFunc,
+    export_data: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Execute the Canvas export workflow.
+
+    Returns:
+        Export result dictionary
+    """
+    # Create Canvas quiz using injected function
+    canvas_quiz = await quiz_creator(
+        canvas_token,
+        export_data["course_id"],
+        export_data["title"],
+        len(export_data["questions"]),
+    )
+
+    # Export questions using injected function
+    exported_items = await question_exporter(
+        canvas_token,
+        export_data["course_id"],
+        canvas_quiz["id"],
+        export_data["questions"],
+    )
+
+    successful_exports = len([r for r in exported_items if r.get("success")])
+    return {
+        "success": True,
+        "canvas_quiz_id": canvas_quiz["id"],
+        "exported_questions": successful_exports,
+        "message": "Quiz successfully exported to Canvas",
+        "exported_items": exported_items,
+    }
+
+
 @timeout_operation(OPERATION_TIMEOUTS["content_extraction"])
 async def orchestrate_quiz_content_extraction(
     quiz_id: UUID,
@@ -131,47 +293,14 @@ async def orchestrate_quiz_content_extraction(
         return
 
     # === Content Extraction (outside transaction) ===
-    try:
-        # Use injected content extractor function
-        extracted_content = await content_extractor(canvas_token, course_id, module_ids)
-        content_summary = content_summarizer(extracted_content)
-
-        logger.info(
-            "extraction_orchestration_completed",
-            quiz_id=str(quiz_id),
-            course_id=course_id,
-            modules_processed=content_summary["modules_processed"],
-            total_pages=content_summary["total_pages"],
-            total_word_count=content_summary["total_word_count"],
-        )
-
-        # Check if meaningful content was extracted
-        total_word_count = content_summary.get("total_word_count", 0)
-        total_pages = content_summary.get("total_pages", 0)
-
-        if total_word_count == 0 or total_pages == 0:
-            logger.warning(
-                "extraction_completed_but_no_content_found",
-                quiz_id=str(quiz_id),
-                course_id=course_id,
-                total_word_count=total_word_count,
-                total_pages=total_pages,
-            )
-            final_status = "no_content"
-        else:
-            final_status = "completed"
-
-    except Exception as e:
-        logger.error(
-            "extraction_orchestration_failed",
-            quiz_id=str(quiz_id),
-            course_id=course_id,
-            error=str(e),
-            error_type=type(e).__name__,
-            exc_info=True,
-        )
-        extracted_content = None
-        final_status = "failed"
+    extracted_content, final_status = await _execute_content_extraction_workflow(
+        quiz_id,
+        course_id,
+        module_ids,
+        canvas_token,
+        content_extractor,
+        content_summarizer,
+    )
 
     # === Transaction 2: Save the Result ===
     async def _save_extraction_result(
@@ -305,61 +434,14 @@ async def orchestrate_quiz_question_generation(
         return
 
     # === Question Generation (outside transaction) ===
-    final_status = "failed"
-    error_message = None
-    failure_exception = None
-
-    try:
-        # Use injected generation service or create default
-        if generation_service is None:
-            from src.question.services import GenerationOrchestrationService
-
-            generation_service = GenerationOrchestrationService()
-
-        # Create generation parameters
-        generation_parameters = GenerationParameters(target_count=target_question_count)
-
-        # Generate questions using modular system
-        result = await generation_service.generate_questions(
-            quiz_id=quiz_id,
-            question_type=question_type,
-            generation_parameters=generation_parameters,
-            provider_name=None,  # Use default provider
-            workflow_name=None,  # Use default workflow
-            template_name=None,  # Use default template
-        )
-
-        if result.success:
-            final_status = "completed"
-            logger.info(
-                "generation_orchestration_completed",
-                quiz_id=str(quiz_id),
-                questions_generated=result.questions_generated,
-                target_questions=target_question_count,
-                question_type=question_type.value,
-            )
-        else:
-            final_status = "failed"
-            error_message = result.error_message
-            logger.error(
-                "generation_orchestration_failed_during_llm",
-                quiz_id=str(quiz_id),
-                error_message=error_message,
-                question_type=question_type.value,
-            )
-
-    except Exception as e:
-        logger.error(
-            "generation_orchestration_failed",
-            quiz_id=str(quiz_id),
-            error=str(e),
-            error_type=type(e).__name__,
-            question_type=question_type.value,
-            exc_info=True,
-        )
-        final_status = "failed"
-        error_message = str(e)
-        failure_exception = e
+    final_status, error_message, failure_exception = await _execute_generation_workflow(
+        quiz_id,
+        target_question_count,
+        llm_model,
+        llm_temperature,
+        question_type,
+        generation_service,
+    )
 
     # === Transaction 2: Save the Result ===
     async def _save_generation_result(
@@ -519,21 +601,11 @@ async def orchestrate_quiz_export_to_canvas(
 
     # === Canvas Operations (outside transaction) ===
     try:
-        # Create Canvas quiz using injected function
-        canvas_quiz = await quiz_creator(
-            canvas_token,
-            export_data["course_id"],
-            export_data["title"],
-            len(export_data["questions"]),
+        workflow_result = await _execute_export_workflow(
+            quiz_id, canvas_token, quiz_creator, question_exporter, export_data
         )
-
-        # Export questions using injected function
-        exported_items = await question_exporter(
-            canvas_token,
-            export_data["course_id"],
-            canvas_quiz["id"],
-            export_data["questions"],
-        )
+        canvas_quiz = {"id": workflow_result["canvas_quiz_id"]}
+        exported_items = workflow_result["exported_items"]
 
         # === Transaction 2: Save Results ===
         async def _save_export_results(session: Any, quiz_id: UUID) -> dict[str, Any]:
