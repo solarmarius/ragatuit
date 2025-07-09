@@ -376,21 +376,9 @@ async def orchestrate_quiz_question_generation(
             await update_quiz_status(session, quiz_id, QuizStatus.READY_FOR_REVIEW)
         elif status == "failed":
             # Determine appropriate failure reason based on exception type
-            from .exceptions import ContentInsufficientError, OrchestrationTimeoutError
+            from .exceptions import categorize_generation_error
 
-            if isinstance(exception, ContentInsufficientError):
-                # This indicates no meaningful content was available for generation
-                failure_reason = FailureReason.NO_CONTENT_FOUND
-            elif isinstance(exception, OrchestrationTimeoutError):
-                # Operation timed out
-                failure_reason = FailureReason.LLM_GENERATION_ERROR
-            elif error_message and "No questions generated" in error_message:
-                # This indicates the LLM failed to generate any questions
-                failure_reason = FailureReason.NO_QUESTIONS_GENERATED
-            else:
-                # Default to LLM generation error for other failures
-                failure_reason = FailureReason.LLM_GENERATION_ERROR
-
+            failure_reason = categorize_generation_error(exception, error_message)
             await update_quiz_status(
                 session, quiz_id, QuizStatus.FAILED, failure_reason
             )

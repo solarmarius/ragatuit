@@ -4,6 +4,8 @@ from typing import Any
 
 from src.exceptions import ServiceError
 
+from .schemas import FailureReason
+
 
 class OrchestrationError(ServiceError):
     """Base exception for orchestration errors."""
@@ -64,3 +66,30 @@ class StatusTransitionError(OrchestrationError):
         )
         self.current_status = current_status
         self.target_status = target_status
+
+
+def categorize_generation_error(
+    exception: Exception | None, error_message: str | None = None
+) -> FailureReason:
+    """
+    Categorize generation errors into appropriate failure reasons.
+
+    Args:
+        exception: The exception that occurred during generation
+        error_message: Optional error message from the generation process
+
+    Returns:
+        Appropriate FailureReason for the error type
+    """
+    if isinstance(exception, ContentInsufficientError):
+        # This indicates no meaningful content was available for generation
+        return FailureReason.NO_CONTENT_FOUND
+    elif isinstance(exception, OrchestrationTimeoutError):
+        # Operation timed out
+        return FailureReason.LLM_GENERATION_ERROR
+    elif error_message and "No questions generated" in error_message:
+        # This indicates the LLM failed to generate any questions
+        return FailureReason.NO_QUESTIONS_GENERATED
+    else:
+        # Default to LLM generation error for other failures
+        return FailureReason.LLM_GENERATION_ERROR
