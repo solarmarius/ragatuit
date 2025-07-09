@@ -120,8 +120,14 @@ async def orchestrate_quiz_content_extraction(
             additional_fields["extracted_content"] = content
 
         if status == "completed":
+            # Keep status as EXTRACTING_CONTENT to allow question generation to proceed
+            # The extracted_content will be saved via additional_fields
             await update_quiz_status(
-                session, quiz_id, QuizStatus.READY_FOR_REVIEW, None, **additional_fields
+                session,
+                quiz_id,
+                QuizStatus.EXTRACTING_CONTENT,
+                None,
+                **additional_fields,
             )
         elif status == "failed":
             # Determine appropriate failure reason

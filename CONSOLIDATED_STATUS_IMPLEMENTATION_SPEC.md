@@ -7,6 +7,7 @@ This document provides a detailed specification for transforming the current 3-f
 ## Current State Analysis
 
 ### Backend Current Implementation
+
 - **3 Status Fields**: `content_extraction_status`, `llm_generation_status`, `export_status`
 - **Status Values**: `pending`, `processing`, `completed`, `failed`
 - **Status Enum**: Defined in `backend/src/quiz/schemas.py`
@@ -15,6 +16,7 @@ This document provides a detailed specification for transforming the current 3-f
 - **Validation**: Strong state transition validation
 
 ### Frontend Current Implementation
+
 - **StatusLight Component**: 3-color system (red/orange/green)
 - **Status Constants**: `PROCESSING_STATUSES` in `frontend/src/lib/constants/index.ts`
 - **Utility Functions**: Comprehensive status checking and filtering
@@ -23,6 +25,7 @@ This document provides a detailed specification for transforming the current 3-f
 ## Target State Design
 
 ### New Status Enum
+
 ```python
 class QuizStatus(str, Enum):
     CREATED = "created"                    # Initial state when quiz is created
@@ -35,6 +38,7 @@ class QuizStatus(str, Enum):
 ```
 
 ### New Failure Reason Enum
+
 ```python
 class FailureReason(str, Enum):
     CONTENT_EXTRACTION_ERROR = "content_extraction_error"
@@ -47,6 +51,7 @@ class FailureReason(str, Enum):
 ```
 
 ### Status Light Color Mapping
+
 - 🔴 **Red**: `failed` - Any process failed
 - 🟠 **Orange**: `created`, `extracting_content`, `generating_questions` - Pending/In progress
 - 🟡 **Yellow**: `exporting_to_canvas` - Exporting to Canvas
@@ -56,18 +61,22 @@ class FailureReason(str, Enum):
 ## State Transition Flow
 
 ### Automatic Transitions
+
 1. `created` → `extracting_content` (when content extraction starts)
 2. `extracting_content` → `generating_questions` (when extraction completes successfully)
 3. `generating_questions` → `ready_for_review` (when generation completes successfully)
 4. `exporting_to_canvas` → `published` (when export completes successfully)
 
 ### Manual Transitions
+
 - `ready_for_review` → `exporting_to_canvas` (user action after approving questions)
 
 ### Error Transitions
+
 - Any state → `failed` (when errors occur with appropriate failure_reason)
 
 ### Retry Transitions
+
 - `failed` → appropriate previous state (when retry is triggered)
 
 ## Detailed Implementation Phases
@@ -79,6 +88,7 @@ class FailureReason(str, Enum):
 #### File: `backend/src/quiz/models.py`
 
 **Current Implementation:**
+
 ```python
 class Quiz(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -90,6 +100,7 @@ class Quiz(SQLModel, table=True):
 ```
 
 **New Implementation:**
+
 ```python
 from .schemas import QuizStatus, FailureReason
 
@@ -105,6 +116,7 @@ class Quiz(SQLModel, table=True):
 #### File: `backend/src/quiz/schemas.py`
 
 **Current Implementation:**
+
 ```python
 class Status(str, Enum):
     PENDING = "pending"
@@ -114,6 +126,7 @@ class Status(str, Enum):
 ```
 
 **New Implementation:**
+
 ```python
 class QuizStatus(str, Enum):
     CREATED = "created"
@@ -139,6 +152,7 @@ class FailureReason(str, Enum):
 ### Phase 1.2: Database Migration
 
 **Commands to Run:**
+
 ```bash
 cd backend
 source .venv/bin/activate
@@ -147,6 +161,7 @@ alembic upgrade head
 ```
 
 **Expected Migration File Content:**
+
 ```python
 def upgrade():
     # Add new columns
@@ -175,6 +190,7 @@ def upgrade():
 #### File: `backend/src/quiz/service.py`
 
 **Current Implementation:**
+
 ```python
 def update_quiz_status(
     quiz_id: int,
@@ -187,6 +203,7 @@ def update_quiz_status(
 ```
 
 **New Implementation:**
+
 ```python
 def update_quiz_status(
     quiz_id: int,
@@ -301,6 +318,7 @@ def _is_valid_transition(current: QuizStatus, target: QuizStatus) -> bool:
 #### File: `backend/src/quiz/orchestrator.py`
 
 **Current Implementation:**
+
 ```python
 async def extract_content_from_modules(quiz_id: int, db: Session):
     # Update content_extraction_status to "processing"
@@ -310,6 +328,7 @@ async def extract_content_from_modules(quiz_id: int, db: Session):
 ```
 
 **New Implementation:**
+
 ```python
 async def extract_content_from_modules(quiz_id: int, db: Session):
     """Extract content with consolidated status tracking"""
@@ -420,6 +439,7 @@ async def export_quiz_to_canvas(quiz_id: int, db: Session):
 #### File: `backend/src/quiz/validators.py`
 
 **Current Implementation:**
+
 ```python
 def is_quiz_ready_for_extraction(quiz: Quiz) -> bool:
     return quiz.content_extraction_status != "processing"
@@ -430,6 +450,7 @@ def is_quiz_ready_for_generation(quiz: Quiz) -> bool:
 ```
 
 **New Implementation:**
+
 ```python
 def is_quiz_ready_for_extraction(quiz: Quiz) -> bool:
     """Check if quiz is ready for content extraction"""
@@ -472,6 +493,7 @@ def get_quiz_processing_phase(quiz: Quiz) -> str:
 #### File: `backend/src/quiz/schemas.py`
 
 **Current Implementation:**
+
 ```python
 class QuizPublic(BaseModel):
     id: int
@@ -483,6 +505,7 @@ class QuizPublic(BaseModel):
 ```
 
 **New Implementation:**
+
 ```python
 class QuizPublic(BaseModel):
     id: int
@@ -511,6 +534,7 @@ class QuizStatusFilter(BaseModel):
 #### File: `backend/src/quiz/router.py`
 
 **Current Implementation:**
+
 ```python
 @router.post("/{quiz_id}/extract-content")
 async def extract_content(quiz_id: int, db: Session = Depends(get_db)):
@@ -518,6 +542,7 @@ async def extract_content(quiz_id: int, db: Session = Depends(get_db)):
 ```
 
 **New Implementation:**
+
 ```python
 @router.post("/{quiz_id}/extract-content")
 async def extract_content(
@@ -631,6 +656,7 @@ async def get_quizzes_by_status(
 #### File: `backend/src/quiz/dependencies.py`
 
 **Current Implementation:**
+
 ```python
 def validate_content_extraction_ready(quiz: Quiz = Depends(get_quiz)):
     if quiz.content_extraction_status == "processing":
@@ -639,6 +665,7 @@ def validate_content_extraction_ready(quiz: Quiz = Depends(get_quiz)):
 ```
 
 **New Implementation:**
+
 ```python
 def validate_content_extraction_ready(quiz: Quiz = Depends(get_quiz)):
     """Validate quiz is ready for content extraction"""
@@ -682,12 +709,14 @@ def validate_retry_ready(quiz: Quiz = Depends(get_quiz)):
 ### Phase 4.1: Regenerate API Client
 
 **Command:**
+
 ```bash
 cd frontend
 npm run generate-client
 ```
 
 **Expected Changes in `frontend/src/client/types.gen.ts`:**
+
 ```typescript
 export interface Quiz {
   id: number;
@@ -705,7 +734,7 @@ export enum QuizStatus {
   READY_FOR_REVIEW = "ready_for_review",
   EXPORTING_TO_CANVAS = "exporting_to_canvas",
   PUBLISHED = "published",
-  FAILED = "failed"
+  FAILED = "failed",
 }
 
 export enum FailureReason {
@@ -715,7 +744,7 @@ export enum FailureReason {
   NO_QUESTIONS_GENERATED = "no_questions_generated",
   CANVAS_EXPORT_ERROR = "canvas_export_error",
   NETWORK_ERROR = "network_error",
-  VALIDATION_ERROR = "validation_error"
+  VALIDATION_ERROR = "validation_error",
 }
 ```
 
@@ -724,18 +753,20 @@ export enum FailureReason {
 #### File: `frontend/src/lib/constants/index.ts`
 
 **Current Implementation:**
+
 ```typescript
 export const PROCESSING_STATUSES = {
   PENDING: "pending",
   PROCESSING: "processing",
   COMPLETED: "completed",
   FAILED: "failed",
-} as const
+} as const;
 ```
 
 **New Implementation:**
+
 ```typescript
-import { QuizStatus, FailureReason } from "@/client/types.gen"
+import { QuizStatus, FailureReason } from "@/client/types.gen";
 
 export const QUIZ_STATUS = {
   CREATED: QuizStatus.CREATED,
@@ -745,7 +776,7 @@ export const QUIZ_STATUS = {
   EXPORTING_TO_CANVAS: QuizStatus.EXPORTING_TO_CANVAS,
   PUBLISHED: QuizStatus.PUBLISHED,
   FAILED: QuizStatus.FAILED,
-} as const
+} as const;
 
 export const FAILURE_REASON = {
   CONTENT_EXTRACTION_ERROR: FailureReason.CONTENT_EXTRACTION_ERROR,
@@ -755,7 +786,7 @@ export const FAILURE_REASON = {
   CANVAS_EXPORT_ERROR: FailureReason.CANVAS_EXPORT_ERROR,
   NETWORK_ERROR: FailureReason.NETWORK_ERROR,
   VALIDATION_ERROR: FailureReason.VALIDATION_ERROR,
-} as const
+} as const;
 
 export const STATUS_COLORS = {
   [QUIZ_STATUS.CREATED]: "orange.500",
@@ -765,7 +796,7 @@ export const STATUS_COLORS = {
   [QUIZ_STATUS.EXPORTING_TO_CANVAS]: "yellow.500",
   [QUIZ_STATUS.PUBLISHED]: "green.500",
   [QUIZ_STATUS.FAILED]: "red.500",
-} as const
+} as const;
 
 export const STATUS_LABELS = {
   [QUIZ_STATUS.CREATED]: "Ready to start",
@@ -775,17 +806,18 @@ export const STATUS_LABELS = {
   [QUIZ_STATUS.EXPORTING_TO_CANVAS]: "Exporting to Canvas",
   [QUIZ_STATUS.PUBLISHED]: "Published",
   [QUIZ_STATUS.FAILED]: "Failed",
-} as const
+} as const;
 
 export const FAILURE_REASON_MESSAGES = {
-  [FAILURE_REASON.CONTENT_EXTRACTION_ERROR]: "Failed to extract content from modules",
+  [FAILURE_REASON.CONTENT_EXTRACTION_ERROR]:
+    "Failed to extract content from modules",
   [FAILURE_REASON.NO_CONTENT_FOUND]: "No content found in selected modules",
   [FAILURE_REASON.LLM_GENERATION_ERROR]: "AI question generation failed",
   [FAILURE_REASON.NO_QUESTIONS_GENERATED]: "No questions could be generated",
   [FAILURE_REASON.CANVAS_EXPORT_ERROR]: "Failed to export to Canvas",
   [FAILURE_REASON.NETWORK_ERROR]: "Network error occurred",
   [FAILURE_REASON.VALIDATION_ERROR]: "Validation error occurred",
-} as const
+} as const;
 
 // Remove old PROCESSING_STATUSES
 ```
@@ -797,31 +829,36 @@ export const FAILURE_REASON_MESSAGES = {
 #### File: `frontend/src/components/ui/status-light.tsx`
 
 **Current Implementation:**
+
 ```typescript
 interface StatusLightProps {
-  extractionStatus: string
-  generationStatus: string
+  extractionStatus: string;
+  generationStatus: string;
 }
 
-export function StatusLight({ extractionStatus, generationStatus }: StatusLightProps) {
+export function StatusLight({
+  extractionStatus,
+  generationStatus,
+}: StatusLightProps) {
   const getStatusColor = () => {
     if (extractionStatus === "failed" || generationStatus === "failed") {
-      return "red.500"
+      return "red.500";
     }
     if (extractionStatus === "completed" && generationStatus === "completed") {
-      return "green.500"
+      return "green.500";
     }
-    return "orange.500"
-  }
+    return "orange.500";
+  };
   // ... rest of component
 }
 ```
 
 **New Implementation:**
+
 ```typescript
-import { QuizStatus } from "@/client/types.gen"
-import { QUIZ_STATUS, STATUS_COLORS, STATUS_LABELS } from "@/lib/constants"
-import { Box } from "@chakra-ui/react"
+import { QuizStatus } from "@/client/types.gen";
+import { QUIZ_STATUS, STATUS_COLORS, STATUS_LABELS } from "@/lib/constants";
+import { Box } from "@chakra-ui/react";
 
 /**
  * Props for the StatusLight component.
@@ -836,27 +873,31 @@ import { Box } from "@chakra-ui/react"
  */
 interface StatusLightProps {
   /** Current quiz status */
-  status: QuizStatus
+  status: QuizStatus;
   /** Whether the status light should be clickable */
-  onClick?: () => void
+  onClick?: () => void;
   /** Size of the status light */
-  size?: "sm" | "md" | "lg"
+  size?: "sm" | "md" | "lg";
 }
 
-export function StatusLight({ status, onClick, size = "md" }: StatusLightProps) {
+export function StatusLight({
+  status,
+  onClick,
+  size = "md",
+}: StatusLightProps) {
   const getStatusColor = () => {
-    return STATUS_COLORS[status] || "gray.500"
-  }
+    return STATUS_COLORS[status] || "gray.500";
+  };
 
   const getStatusTitle = () => {
-    return STATUS_LABELS[status] || "Unknown status"
-  }
+    return STATUS_LABELS[status] || "Unknown status";
+  };
 
   const sizeMap = {
     sm: "12px",
     md: "16px",
-    lg: "24px"
-  }
+    lg: "24px",
+  };
 
   return (
     <Box
@@ -870,15 +911,23 @@ export function StatusLight({ status, onClick, size = "md" }: StatusLightProps) 
       boxShadow={`0 0 8px ${getStatusColor()}`}
       onClick={onClick}
       transition="all 0.2s"
-      _hover={onClick ? {
-        transform: "scale(1.1)",
-        boxShadow: `0 0 12px ${getStatusColor()}`
-      } : undefined}
-      _active={onClick ? {
-        transform: "scale(0.95)"
-      } : undefined}
+      _hover={
+        onClick
+          ? {
+              transform: "scale(1.1)",
+              boxShadow: `0 0 12px ${getStatusColor()}`,
+            }
+          : undefined
+      }
+      _active={
+        onClick
+          ? {
+              transform: "scale(0.95)",
+            }
+          : undefined
+      }
     />
-  )
+  );
 }
 ```
 
@@ -887,10 +936,11 @@ export function StatusLight({ status, onClick, size = "md" }: StatusLightProps) 
 #### File: `frontend/src/components/ui/status-description.tsx`
 
 **Current Implementation:**
+
 ```typescript
 interface StatusDescriptionProps {
-  status: string
-  type: "extraction" | "generation" | "export"
+  status: string;
+  type: "extraction" | "generation" | "export";
 }
 
 export function StatusDescription({ status, type }: StatusDescriptionProps) {
@@ -899,50 +949,56 @@ export function StatusDescription({ status, type }: StatusDescriptionProps) {
 ```
 
 **New Implementation:**
+
 ```typescript
-import { QuizStatus, FailureReason } from "@/client/types.gen"
-import { STATUS_LABELS, FAILURE_REASON_MESSAGES } from "@/lib/constants"
-import { Box, Text, Badge } from "@chakra-ui/react"
+import { QuizStatus, FailureReason } from "@/client/types.gen";
+import { STATUS_LABELS, FAILURE_REASON_MESSAGES } from "@/lib/constants";
+import { Box, Text, Badge } from "@chakra-ui/react";
 
 interface StatusDescriptionProps {
   /** Current quiz status */
-  status: QuizStatus
+  status: QuizStatus;
   /** Failure reason if status is failed */
-  failureReason?: FailureReason | null
+  failureReason?: FailureReason | null;
   /** Last status update timestamp */
-  lastUpdated?: string
+  lastUpdated?: string;
   /** Whether to show detailed description */
-  detailed?: boolean
+  detailed?: boolean;
 }
 
 export function StatusDescription({
   status,
   failureReason,
   lastUpdated,
-  detailed = false
+  detailed = false,
 }: StatusDescriptionProps) {
   const getStatusDescription = () => {
-    const baseDescription = STATUS_LABELS[status]
+    const baseDescription = STATUS_LABELS[status];
 
     if (status === QuizStatus.FAILED && failureReason) {
-      return FAILURE_REASON_MESSAGES[failureReason]
+      return FAILURE_REASON_MESSAGES[failureReason];
     }
 
     if (detailed) {
       const detailedDescriptions = {
-        [QuizStatus.CREATED]: "Quiz created and ready to start content extraction",
-        [QuizStatus.EXTRACTING_CONTENT]: "Extracting content from selected Canvas modules",
-        [QuizStatus.GENERATING_QUESTIONS]: "AI is generating multiple-choice questions",
-        [QuizStatus.READY_FOR_REVIEW]: "Questions generated successfully, ready for review",
-        [QuizStatus.EXPORTING_TO_CANVAS]: "Exporting approved questions to Canvas",
+        [QuizStatus.CREATED]:
+          "Quiz created and ready to start content extraction",
+        [QuizStatus.EXTRACTING_CONTENT]:
+          "Extracting content from selected Canvas modules",
+        [QuizStatus.GENERATING_QUESTIONS]:
+          "AI is generating multiple-choice questions",
+        [QuizStatus.READY_FOR_REVIEW]:
+          "Questions generated successfully, ready for review",
+        [QuizStatus.EXPORTING_TO_CANVAS]:
+          "Exporting approved questions to Canvas",
         [QuizStatus.PUBLISHED]: "Quiz successfully published to Canvas",
         [QuizStatus.FAILED]: "Process failed - check error details",
-      }
-      return detailedDescriptions[status] || baseDescription
+      };
+      return detailedDescriptions[status] || baseDescription;
     }
 
-    return baseDescription
-  }
+    return baseDescription;
+  };
 
   const getStatusColor = () => {
     const colorMap = {
@@ -953,13 +1009,13 @@ export function StatusDescription({
       [QuizStatus.EXPORTING_TO_CANVAS]: "yellow",
       [QuizStatus.PUBLISHED]: "green",
       [QuizStatus.FAILED]: "red",
-    }
-    return colorMap[status] || "gray"
-  }
+    };
+    return colorMap[status] || "gray";
+  };
 
   const formatTimestamp = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString()
-  }
+    return new Date(timestamp).toLocaleString();
+  };
 
   return (
     <Box>
@@ -984,7 +1040,7 @@ export function StatusDescription({
         </Text>
       )}
     </Box>
-  )
+  );
 }
 ```
 
@@ -993,55 +1049,65 @@ export function StatusDescription({
 #### File: `frontend/src/lib/utils/quiz.ts`
 
 **Current Implementation:**
+
 ```typescript
-import { PROCESSING_STATUSES } from "@/lib/constants"
+import { PROCESSING_STATUSES } from "@/lib/constants";
 
 export function hasQuizFailed(quiz: Quiz): boolean {
-  return quiz.content_extraction_status === PROCESSING_STATUSES.FAILED ||
-         quiz.llm_generation_status === PROCESSING_STATUSES.FAILED
+  return (
+    quiz.content_extraction_status === PROCESSING_STATUSES.FAILED ||
+    quiz.llm_generation_status === PROCESSING_STATUSES.FAILED
+  );
 }
 
 export function isQuizComplete(quiz: Quiz): boolean {
-  return quiz.content_extraction_status === PROCESSING_STATUSES.COMPLETED &&
-         quiz.llm_generation_status === PROCESSING_STATUSES.COMPLETED
+  return (
+    quiz.content_extraction_status === PROCESSING_STATUSES.COMPLETED &&
+    quiz.llm_generation_status === PROCESSING_STATUSES.COMPLETED
+  );
 }
 ```
 
 **New Implementation:**
+
 ```typescript
-import { Quiz, QuizStatus, FailureReason } from "@/client/types.gen"
-import { QUIZ_STATUS } from "@/lib/constants"
+import { Quiz, QuizStatus, FailureReason } from "@/client/types.gen";
+import { QUIZ_STATUS } from "@/lib/constants";
 
 export function hasQuizFailed(quiz: Quiz): boolean {
-  return quiz.status === QUIZ_STATUS.FAILED
+  return quiz.status === QUIZ_STATUS.FAILED;
 }
 
 export function isQuizComplete(quiz: Quiz): boolean {
-  return quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
-         quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS ||
-         quiz.status === QUIZ_STATUS.PUBLISHED
+  return (
+    quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
+    quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS ||
+    quiz.status === QUIZ_STATUS.PUBLISHED
+  );
 }
 
 export function isQuizProcessing(quiz: Quiz): boolean {
-  return quiz.status === QUIZ_STATUS.EXTRACTING_CONTENT ||
-         quiz.status === QUIZ_STATUS.GENERATING_QUESTIONS ||
-         quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS
+  return (
+    quiz.status === QUIZ_STATUS.EXTRACTING_CONTENT ||
+    quiz.status === QUIZ_STATUS.GENERATING_QUESTIONS ||
+    quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS
+  );
 }
 
 export function isQuizPublished(quiz: Quiz): boolean {
-  return quiz.status === QUIZ_STATUS.PUBLISHED
+  return quiz.status === QUIZ_STATUS.PUBLISHED;
 }
 
 export function isQuizReadyForReview(quiz: Quiz): boolean {
-  return quiz.status === QUIZ_STATUS.READY_FOR_REVIEW
+  return quiz.status === QUIZ_STATUS.READY_FOR_REVIEW;
 }
 
 export function isQuizReadyForExport(quiz: Quiz): boolean {
-  return quiz.status === QUIZ_STATUS.READY_FOR_REVIEW
+  return quiz.status === QUIZ_STATUS.READY_FOR_REVIEW;
 }
 
 export function canQuizBeRetried(quiz: Quiz): boolean {
-  return quiz.status === QUIZ_STATUS.FAILED
+  return quiz.status === QUIZ_STATUS.FAILED;
 }
 
 export function getQuizProgressPercentage(quiz: Quiz): number {
@@ -1053,44 +1119,44 @@ export function getQuizProgressPercentage(quiz: Quiz): number {
     [QUIZ_STATUS.EXPORTING_TO_CANVAS]: 90,
     [QUIZ_STATUS.PUBLISHED]: 100,
     [QUIZ_STATUS.FAILED]: 0,
-  }
-  return progressMap[quiz.status] || 0
+  };
+  return progressMap[quiz.status] || 0;
 }
 
 export function getQuizStatusColor(quiz: Quiz): string {
-  return STATUS_COLORS[quiz.status] || "gray.500"
+  return STATUS_COLORS[quiz.status] || "gray.500";
 }
 
 export function getQuizStatusText(quiz: Quiz): string {
-  return STATUS_LABELS[quiz.status] || "Unknown"
+  return STATUS_LABELS[quiz.status] || "Unknown";
 }
 
 export function getQuizFailureMessage(quiz: Quiz): string | null {
   if (quiz.status !== QUIZ_STATUS.FAILED || !quiz.failure_reason) {
-    return null
+    return null;
   }
-  return FAILURE_REASON_MESSAGES[quiz.failure_reason] || "Unknown error"
+  return FAILURE_REASON_MESSAGES[quiz.failure_reason] || "Unknown error";
 }
 
 // Filtering functions for different quiz lists
 export function getQuizzesBeingGenerated(quizzes: Quiz[]): Quiz[] {
-  return quizzes.filter(quiz => isQuizProcessing(quiz))
+  return quizzes.filter((quiz) => isQuizProcessing(quiz));
 }
 
 export function getQuizzesNeedingReview(quizzes: Quiz[]): Quiz[] {
-  return quizzes.filter(quiz => isQuizReadyForReview(quiz))
+  return quizzes.filter((quiz) => isQuizReadyForReview(quiz));
 }
 
 export function getFailedQuizzes(quizzes: Quiz[]): Quiz[] {
-  return quizzes.filter(quiz => hasQuizFailed(quiz))
+  return quizzes.filter((quiz) => hasQuizFailed(quiz));
 }
 
 export function getPublishedQuizzes(quizzes: Quiz[]): Quiz[] {
-  return quizzes.filter(quiz => isQuizPublished(quiz))
+  return quizzes.filter((quiz) => isQuizPublished(quiz));
 }
 
 export function getPendingQuizzes(quizzes: Quiz[]): Quiz[] {
-  return quizzes.filter(quiz => quiz.status === QUIZ_STATUS.CREATED)
+  return quizzes.filter((quiz) => quiz.status === QUIZ_STATUS.CREATED);
 }
 
 export function sortQuizzesByStatus(quizzes: Quiz[]): Quiz[] {
@@ -1102,19 +1168,22 @@ export function sortQuizzesByStatus(quizzes: Quiz[]): Quiz[] {
     [QUIZ_STATUS.EXPORTING_TO_CANVAS]: 4,
     [QUIZ_STATUS.CREATED]: 5,
     [QUIZ_STATUS.PUBLISHED]: 6,
-  }
+  };
 
   return [...quizzes].sort((a, b) => {
-    const orderA = statusOrder[a.status] ?? 999
-    const orderB = statusOrder[b.status] ?? 999
+    const orderA = statusOrder[a.status] ?? 999;
+    const orderB = statusOrder[b.status] ?? 999;
 
     if (orderA !== orderB) {
-      return orderA - orderB
+      return orderA - orderB;
     }
 
     // Sort by last updated within same status
-    return new Date(b.last_status_update).getTime() - new Date(a.last_status_update).getTime()
-  })
+    return (
+      new Date(b.last_status_update).getTime() -
+      new Date(a.last_status_update).getTime()
+    );
+  });
 }
 ```
 
@@ -1125,56 +1194,66 @@ export function sortQuizzesByStatus(quizzes: Quiz[]): Quiz[] {
 #### File: `frontend/src/components/Common/QuizTableRow.tsx`
 
 **Current Implementation:**
+
 ```typescript
 <StatusLight
-  extractionStatus={quiz.content_extraction_status || PROCESSING_STATUSES.PENDING}
+  extractionStatus={
+    quiz.content_extraction_status || PROCESSING_STATUSES.PENDING
+  }
   generationStatus={quiz.llm_generation_status || PROCESSING_STATUSES.PENDING}
 />
 ```
 
 **New Implementation:**
+
 ```typescript
-import { StatusLight } from "@/components/ui/status-light"
-import { StatusDescription } from "@/components/ui/status-description"
-import { canQuizBeRetried, getQuizFailureMessage } from "@/lib/utils/quiz"
-import { Button } from "@/components/ui/button"
+import { StatusLight } from "@/components/ui/status-light";
+import { StatusDescription } from "@/components/ui/status-description";
+import { canQuizBeRetried, getQuizFailureMessage } from "@/lib/utils/quiz";
+import { Button } from "@/components/ui/button";
 
 // In the component render:
 <StatusLight
   status={quiz.status}
   onClick={() => setShowStatusDetails(!showStatusDetails)}
-/>
+/>;
 
-{showStatusDetails && (
-  <StatusDescription
-    status={quiz.status}
-    failureReason={quiz.failure_reason}
-    lastUpdated={quiz.last_status_update}
-    detailed={true}
-  />
-)}
+{
+  showStatusDetails && (
+    <StatusDescription
+      status={quiz.status}
+      failureReason={quiz.failure_reason}
+      lastUpdated={quiz.last_status_update}
+      detailed={true}
+    />
+  );
+}
 
-{canQuizBeRetried(quiz) && (
-  <Button
-    size="sm"
-    colorScheme="orange"
-    onClick={() => handleRetryQuiz(quiz.id)}
-    isLoading={isRetrying}
-  >
-    Retry
-  </Button>
-)}
+{
+  canQuizBeRetried(quiz) && (
+    <Button
+      size="sm"
+      colorScheme="orange"
+      onClick={() => handleRetryQuiz(quiz.id)}
+      isLoading={isRetrying}
+    >
+      Retry
+    </Button>
+  );
+}
 ```
 
 #### File: `frontend/src/components/dashboard/QuizGenerationCard.tsx`
 
 **Current Implementation:**
+
 ```typescript
-const processingPhase = getQuizProcessingPhase(quiz)
-const progressPercentage = getQuizProgressPercentage(quiz)
+const processingPhase = getQuizProcessingPhase(quiz);
+const progressPercentage = getQuizProgressPercentage(quiz);
 ```
 
 **New Implementation:**
+
 ```typescript
 import { getQuizProgressPercentage, getQuizStatusText, canQuizBeRetried } from "@/lib/utils/quiz"
 import { useRetryQuiz } from "@/hooks/api/useQuizzes"
@@ -1210,70 +1289,78 @@ const { mutate: retryQuiz, isLoading: isRetrying } = useRetryQuiz()
 #### File: `frontend/src/hooks/api/useQuizzes.ts`
 
 **Current Implementation:**
+
 ```typescript
 export function useQuizStatusPolling(quizId: number) {
   return useQuery({
     queryKey: ["quiz", quizId],
     queryFn: () => QuizService.getQuiz(quizId),
     refetchInterval: 2000,
-  })
+  });
 }
 ```
 
 **New Implementation:**
+
 ```typescript
-import { QUIZ_STATUS } from "@/lib/constants"
+import { QUIZ_STATUS } from "@/lib/constants";
 
 export function useQuizStatusPolling(quizId: number) {
   return useQuery({
     queryKey: ["quiz", quizId],
     queryFn: () => QuizService.getQuiz(quizId),
     refetchInterval: (data) => {
-      if (!data) return 2000
+      if (!data) return 2000;
 
       // Different polling intervals based on status
       const activeStatuses = [
         QUIZ_STATUS.EXTRACTING_CONTENT,
         QUIZ_STATUS.GENERATING_QUESTIONS,
-        QUIZ_STATUS.EXPORTING_TO_CANVAS
-      ]
+        QUIZ_STATUS.EXPORTING_TO_CANVAS,
+      ];
 
       if (activeStatuses.includes(data.status)) {
-        return 2000 // Poll every 2 seconds for active processes
+        return 2000; // Poll every 2 seconds for active processes
       }
 
       if (data.status === QUIZ_STATUS.READY_FOR_REVIEW) {
-        return 10000 // Poll every 10 seconds for review state
+        return 10000; // Poll every 10 seconds for review state
       }
 
       // No polling for terminal states
-      if (data.status === QUIZ_STATUS.PUBLISHED || data.status === QUIZ_STATUS.FAILED) {
-        return false
+      if (
+        data.status === QUIZ_STATUS.PUBLISHED ||
+        data.status === QUIZ_STATUS.FAILED
+      ) {
+        return false;
       }
 
-      return 5000 // Default polling interval
+      return 5000; // Default polling interval
     },
-  })
+  });
 }
 
 export function useRetryQuiz() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (quizId: number) => QuizService.retryQuiz(quizId),
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["quiz", data.id] })
-      queryClient.invalidateQueries({ queryKey: ["quizzes"] })
+      queryClient.invalidateQueries({ queryKey: ["quiz", data.id] });
+      queryClient.invalidateQueries({ queryKey: ["quizzes"] });
     },
-  })
+  });
 }
 
 export function useQuizzesByStatus(status?: QuizStatus) {
   return useQuery({
     queryKey: ["quizzes", "by-status", status],
-    queryFn: () => status ? QuizService.getQuizzesByStatus(status) : QuizService.getQuizzes(),
+    queryFn: () =>
+      status
+        ? QuizService.getQuizzesByStatus(status)
+        : QuizService.getQuizzes(),
     enabled: !!status,
-  })
+  });
 }
 ```
 
@@ -1437,102 +1524,126 @@ class TestQuizStatusTransitions:
 #### File: `frontend/tests/components/status-light.spec.ts`
 
 ```typescript
-import { test, expect } from '@playwright/test'
-import { QUIZ_STATUS } from '@/lib/constants'
+import { test, expect } from "@playwright/test";
+import { QUIZ_STATUS } from "@/lib/constants";
 
-test.describe('StatusLight Component', () => {
-  test('displays correct colors for different statuses', async ({ page }) => {
+test.describe("StatusLight Component", () => {
+  test("displays correct colors for different statuses", async ({ page }) => {
     // Test red color for failed status
-    await page.goto('/quiz/failed-quiz')
-    const failedLight = page.locator('[data-testid="status-light"]')
-    await expect(failedLight).toHaveCSS('background-color', 'rgb(245, 101, 101)') // red.500
+    await page.goto("/quiz/failed-quiz");
+    const failedLight = page.locator('[data-testid="status-light"]');
+    await expect(failedLight).toHaveCSS(
+      "background-color",
+      "rgb(245, 101, 101)"
+    ); // red.500
 
     // Test orange color for processing statuses
-    await page.goto('/quiz/processing-quiz')
-    const processingLight = page.locator('[data-testid="status-light"]')
-    await expect(processingLight).toHaveCSS('background-color', 'rgb(251, 146, 60)') // orange.500
+    await page.goto("/quiz/processing-quiz");
+    const processingLight = page.locator('[data-testid="status-light"]');
+    await expect(processingLight).toHaveCSS(
+      "background-color",
+      "rgb(251, 146, 60)"
+    ); // orange.500
 
     // Test purple color for ready for review
-    await page.goto('/quiz/ready-quiz')
-    const readyLight = page.locator('[data-testid="status-light"]')
-    await expect(readyLight).toHaveCSS('background-color', 'rgb(139, 92, 246)') // purple.500
+    await page.goto("/quiz/ready-quiz");
+    const readyLight = page.locator('[data-testid="status-light"]');
+    await expect(readyLight).toHaveCSS("background-color", "rgb(139, 92, 246)"); // purple.500
 
     // Test yellow color for exporting
-    await page.goto('/quiz/exporting-quiz')
-    const exportingLight = page.locator('[data-testid="status-light"]')
-    await expect(exportingLight).toHaveCSS('background-color', 'rgb(250, 204, 21)') // yellow.500
+    await page.goto("/quiz/exporting-quiz");
+    const exportingLight = page.locator('[data-testid="status-light"]');
+    await expect(exportingLight).toHaveCSS(
+      "background-color",
+      "rgb(250, 204, 21)"
+    ); // yellow.500
 
     // Test green color for published
-    await page.goto('/quiz/published-quiz')
-    const publishedLight = page.locator('[data-testid="status-light"]')
-    await expect(publishedLight).toHaveCSS('background-color', 'rgb(34, 197, 94)') // green.500
-  })
+    await page.goto("/quiz/published-quiz");
+    const publishedLight = page.locator('[data-testid="status-light"]');
+    await expect(publishedLight).toHaveCSS(
+      "background-color",
+      "rgb(34, 197, 94)"
+    ); // green.500
+  });
 
-  test('shows correct tooltip text', async ({ page }) => {
-    await page.goto('/quiz/1')
-    const statusLight = page.locator('[data-testid="status-light"]')
+  test("shows correct tooltip text", async ({ page }) => {
+    await page.goto("/quiz/1");
+    const statusLight = page.locator('[data-testid="status-light"]');
 
-    await statusLight.hover()
-    await expect(page.locator('[role="tooltip"]')).toContainText('Extracting content')
-  })
+    await statusLight.hover();
+    await expect(page.locator('[role="tooltip"]')).toContainText(
+      "Extracting content"
+    );
+  });
 
-  test('is clickable when onClick handler provided', async ({ page }) => {
-    await page.goto('/quiz/1')
-    const statusLight = page.locator('[data-testid="status-light"]')
+  test("is clickable when onClick handler provided", async ({ page }) => {
+    await page.goto("/quiz/1");
+    const statusLight = page.locator('[data-testid="status-light"]');
 
-    await expect(statusLight).toHaveCSS('cursor', 'pointer')
+    await expect(statusLight).toHaveCSS("cursor", "pointer");
 
-    await statusLight.click()
-    await expect(page.locator('[data-testid="status-details"]')).toBeVisible()
-  })
+    await statusLight.click();
+    await expect(page.locator('[data-testid="status-details"]')).toBeVisible();
+  });
 
-  test('shows correct size variations', async ({ page }) => {
-    await page.goto('/quiz/1')
+  test("shows correct size variations", async ({ page }) => {
+    await page.goto("/quiz/1");
 
-    const smallLight = page.locator('[data-testid="status-light-sm"]')
-    await expect(smallLight).toHaveCSS('width', '12px')
-    await expect(smallLight).toHaveCSS('height', '12px')
+    const smallLight = page.locator('[data-testid="status-light-sm"]');
+    await expect(smallLight).toHaveCSS("width", "12px");
+    await expect(smallLight).toHaveCSS("height", "12px");
 
-    const mediumLight = page.locator('[data-testid="status-light-md"]')
-    await expect(mediumLight).toHaveCSS('width', '16px')
-    await expect(mediumLight).toHaveCSS('height', '16px')
+    const mediumLight = page.locator('[data-testid="status-light-md"]');
+    await expect(mediumLight).toHaveCSS("width", "16px");
+    await expect(mediumLight).toHaveCSS("height", "16px");
 
-    const largeLight = page.locator('[data-testid="status-light-lg"]')
-    await expect(largeLight).toHaveCSS('width', '24px')
-    await expect(largeLight).toHaveCSS('height', '24px')
-  })
-})
+    const largeLight = page.locator('[data-testid="status-light-lg"]');
+    await expect(largeLight).toHaveCSS("width", "24px");
+    await expect(largeLight).toHaveCSS("height", "24px");
+  });
+});
 
-test.describe('StatusDescription Component', () => {
-  test('displays correct status descriptions', async ({ page }) => {
-    await page.goto('/quiz/1')
-    const statusDescription = page.locator('[data-testid="status-description"]')
+test.describe("StatusDescription Component", () => {
+  test("displays correct status descriptions", async ({ page }) => {
+    await page.goto("/quiz/1");
+    const statusDescription = page.locator(
+      '[data-testid="status-description"]'
+    );
 
-    await expect(statusDescription).toContainText('Extracting content')
-  })
+    await expect(statusDescription).toContainText("Extracting content");
+  });
 
-  test('shows failure reason when quiz failed', async ({ page }) => {
-    await page.goto('/quiz/failed-quiz')
-    const statusDescription = page.locator('[data-testid="status-description"]')
+  test("shows failure reason when quiz failed", async ({ page }) => {
+    await page.goto("/quiz/failed-quiz");
+    const statusDescription = page.locator(
+      '[data-testid="status-description"]'
+    );
 
-    await expect(statusDescription).toContainText('Failed to extract content from modules')
-  })
+    await expect(statusDescription).toContainText(
+      "Failed to extract content from modules"
+    );
+  });
 
-  test('displays last updated timestamp', async ({ page }) => {
-    await page.goto('/quiz/1')
-    const timestamp = page.locator('[data-testid="last-updated"]')
+  test("displays last updated timestamp", async ({ page }) => {
+    await page.goto("/quiz/1");
+    const timestamp = page.locator('[data-testid="last-updated"]');
 
-    await expect(timestamp).toBeVisible()
-    await expect(timestamp).toContainText(/\d{1,2}\/\d{1,2}\/\d{4}/)
-  })
+    await expect(timestamp).toBeVisible();
+    await expect(timestamp).toContainText(/\d{1,2}\/\d{1,2}\/\d{4}/);
+  });
 
-  test('shows detailed description when requested', async ({ page }) => {
-    await page.goto('/quiz/1?detailed=true')
-    const detailedDescription = page.locator('[data-testid="detailed-description"]')
+  test("shows detailed description when requested", async ({ page }) => {
+    await page.goto("/quiz/1?detailed=true");
+    const detailedDescription = page.locator(
+      '[data-testid="detailed-description"]'
+    );
 
-    await expect(detailedDescription).toContainText('Extracting content from selected Canvas modules')
-  })
-})
+    await expect(detailedDescription).toContainText(
+      "Extracting content from selected Canvas modules"
+    );
+  });
+});
 ```
 
 ### Phase 7.3: End-to-End Tests
@@ -1540,123 +1651,155 @@ test.describe('StatusDescription Component', () => {
 #### File: `frontend/tests/e2e/quiz-workflow.spec.ts`
 
 ```typescript
-import { test, expect } from '@playwright/test'
+import { test, expect } from "@playwright/test";
 
-test.describe('Quiz Workflow with Consolidated Status', () => {
-  test('complete quiz workflow from creation to publication', async ({ page }) => {
+test.describe("Quiz Workflow with Consolidated Status", () => {
+  test("complete quiz workflow from creation to publication", async ({
+    page,
+  }) => {
     // Login and navigate to quiz creation
-    await page.goto('/login')
-    await page.fill('[data-testid="email"]', 'test@example.com')
-    await page.fill('[data-testid="password"]', 'password')
-    await page.click('[data-testid="login-button"]')
+    await page.goto("/login");
+    await page.fill('[data-testid="email"]', "test@example.com");
+    await page.fill('[data-testid="password"]', "password");
+    await page.click('[data-testid="login-button"]');
 
     // Create new quiz
-    await page.goto('/create-quiz')
-    await page.fill('[data-testid="quiz-title"]', 'Test Quiz')
-    await page.click('[data-testid="create-quiz-button"]')
+    await page.goto("/create-quiz");
+    await page.fill('[data-testid="quiz-title"]', "Test Quiz");
+    await page.click('[data-testid="create-quiz-button"]');
 
     // Verify initial status
-    const statusLight = page.locator('[data-testid="status-light"]')
-    await expect(statusLight).toHaveCSS('background-color', 'rgb(251, 146, 60)') // orange for created
+    const statusLight = page.locator('[data-testid="status-light"]');
+    await expect(statusLight).toHaveCSS(
+      "background-color",
+      "rgb(251, 146, 60)"
+    ); // orange for created
 
     // Start content extraction
-    await page.click('[data-testid="start-extraction-button"]')
+    await page.click('[data-testid="start-extraction-button"]');
 
     // Wait for extraction to complete
     await page.waitForFunction(() => {
-      const light = document.querySelector('[data-testid="status-light"]')
-      return light && getComputedStyle(light).backgroundColor === 'rgb(251, 146, 60)' // Still orange but different stage
-    })
+      const light = document.querySelector('[data-testid="status-light"]');
+      return (
+        light && getComputedStyle(light).backgroundColor === "rgb(251, 146, 60)"
+      ); // Still orange but different stage
+    });
 
     // Wait for question generation to complete
     await page.waitForFunction(() => {
-      const light = document.querySelector('[data-testid="status-light"]')
-      return light && getComputedStyle(light).backgroundColor === 'rgb(139, 92, 246)' // purple for ready for review
-    })
+      const light = document.querySelector('[data-testid="status-light"]');
+      return (
+        light && getComputedStyle(light).backgroundColor === "rgb(139, 92, 246)"
+      ); // purple for ready for review
+    });
 
     // Verify quiz is ready for review
-    await expect(page.locator('[data-testid="review-questions-button"]')).toBeVisible()
+    await expect(
+      page.locator('[data-testid="review-questions-button"]')
+    ).toBeVisible();
 
     // Review and approve questions
-    await page.click('[data-testid="review-questions-button"]')
-    await page.click('[data-testid="approve-all-button"]')
+    await page.click('[data-testid="review-questions-button"]');
+    await page.click('[data-testid="approve-all-button"]');
 
     // Export to Canvas
-    await page.click('[data-testid="export-to-canvas-button"]')
+    await page.click('[data-testid="export-to-canvas-button"]');
 
     // Verify exporting status (yellow)
-    await expect(statusLight).toHaveCSS('background-color', 'rgb(250, 204, 21)')
+    await expect(statusLight).toHaveCSS(
+      "background-color",
+      "rgb(250, 204, 21)"
+    );
 
     // Wait for export to complete
     await page.waitForFunction(() => {
-      const light = document.querySelector('[data-testid="status-light"]')
-      return light && getComputedStyle(light).backgroundColor === 'rgb(34, 197, 94)' // green for published
-    })
+      const light = document.querySelector('[data-testid="status-light"]');
+      return (
+        light && getComputedStyle(light).backgroundColor === "rgb(34, 197, 94)"
+      ); // green for published
+    });
 
     // Verify final published status
-    await expect(page.locator('[data-testid="quiz-published-message"]')).toBeVisible()
-  })
+    await expect(
+      page.locator('[data-testid="quiz-published-message"]')
+    ).toBeVisible();
+  });
 
-  test('retry failed quiz workflow', async ({ page }) => {
+  test("retry failed quiz workflow", async ({ page }) => {
     // Navigate to failed quiz
-    await page.goto('/quiz/failed-quiz')
+    await page.goto("/quiz/failed-quiz");
 
     // Verify failed status (red)
-    const statusLight = page.locator('[data-testid="status-light"]')
-    await expect(statusLight).toHaveCSS('background-color', 'rgb(245, 101, 101)')
+    const statusLight = page.locator('[data-testid="status-light"]');
+    await expect(statusLight).toHaveCSS(
+      "background-color",
+      "rgb(245, 101, 101)"
+    );
 
     // Verify failure reason is displayed
-    await expect(page.locator('[data-testid="failure-reason"]')).toContainText('Failed to extract content from modules')
+    await expect(page.locator('[data-testid="failure-reason"]')).toContainText(
+      "Failed to extract content from modules"
+    );
 
     // Click retry button
-    await page.click('[data-testid="retry-button"]')
+    await page.click('[data-testid="retry-button"]');
 
     // Verify status changes back to processing
-    await expect(statusLight).toHaveCSS('background-color', 'rgb(251, 146, 60)')
+    await expect(statusLight).toHaveCSS(
+      "background-color",
+      "rgb(251, 146, 60)"
+    );
 
     // Wait for retry process to complete or fail again
     await page.waitForFunction(() => {
-      const light = document.querySelector('[data-testid="status-light"]')
-      const bgColor = getComputedStyle(light).backgroundColor
-      return bgColor === 'rgb(139, 92, 246)' || bgColor === 'rgb(245, 101, 101)' // purple or red
-    })
-  })
+      const light = document.querySelector('[data-testid="status-light"]');
+      const bgColor = getComputedStyle(light).backgroundColor;
+      return (
+        bgColor === "rgb(139, 92, 246)" || bgColor === "rgb(245, 101, 101)"
+      ); // purple or red
+    });
+  });
 
-  test('status polling stops for terminal states', async ({ page }) => {
+  test("status polling stops for terminal states", async ({ page }) => {
     // Navigate to published quiz
-    await page.goto('/quiz/published-quiz')
+    await page.goto("/quiz/published-quiz");
 
     // Verify published status
-    const statusLight = page.locator('[data-testid="status-light"]')
-    await expect(statusLight).toHaveCSS('background-color', 'rgb(34, 197, 94)')
+    const statusLight = page.locator('[data-testid="status-light"]');
+    await expect(statusLight).toHaveCSS("background-color", "rgb(34, 197, 94)");
 
     // Wait and verify no network requests for polling
-    await page.waitForTimeout(5000)
+    await page.waitForTimeout(5000);
 
     // Check that no polling requests are made
-    const requests = []
-    page.on('request', (request) => {
-      if (request.url().includes('/api/quiz/')) {
-        requests.push(request)
+    const requests = [];
+    page.on("request", (request) => {
+      if (request.url().includes("/api/quiz/")) {
+        requests.push(request);
       }
-    })
+    });
 
-    await page.waitForTimeout(3000)
-    expect(requests.length).toBe(0)
-  })
+    await page.waitForTimeout(3000);
+    expect(requests.length).toBe(0);
+  });
 
-  test('clickable status light shows detailed information', async ({ page }) => {
-    await page.goto('/quiz/1')
+  test("clickable status light shows detailed information", async ({
+    page,
+  }) => {
+    await page.goto("/quiz/1");
 
-    const statusLight = page.locator('[data-testid="status-light"]')
-    await statusLight.click()
+    const statusLight = page.locator('[data-testid="status-light"]');
+    await statusLight.click();
 
     // Verify detailed status information appears
-    await expect(page.locator('[data-testid="status-details"]')).toBeVisible()
-    await expect(page.locator('[data-testid="detailed-description"]')).toContainText('Extracting content from selected Canvas modules')
-    await expect(page.locator('[data-testid="last-updated"]')).toBeVisible()
-  })
-})
+    await expect(page.locator('[data-testid="status-details"]')).toBeVisible();
+    await expect(
+      page.locator('[data-testid="detailed-description"]')
+    ).toContainText("Extracting content from selected Canvas modules");
+    await expect(page.locator('[data-testid="last-updated"]')).toBeVisible();
+  });
+});
 ```
 
 ## Phase 8: Cleanup
@@ -1664,12 +1807,14 @@ test.describe('Quiz Workflow with Consolidated Status', () => {
 ### Phase 8.1: Remove Old Implementation
 
 **Files to Update:**
+
 - Remove all references to `content_extraction_status`, `llm_generation_status`, `export_status`
 - Remove old `PROCESSING_STATUSES` constant
 - Remove old status-related utility functions
 - Clean up imports and unused code
 
 **Example changes:**
+
 ```typescript
 // Remove from backend/src/quiz/models.py
 // content_extraction_status: str = Field(default="pending", index=True)
@@ -1686,13 +1831,15 @@ test.describe('Quiz Workflow with Consolidated Status', () => {
 ### Phase 8.2: Documentation Updates
 
 **Files to Update:**
+
 - Update API documentation in backend OpenAPI spec
 - Update component documentation with new props
 - Update development guides with new status system
 - Create status flow diagrams
 
 **Example documentation updates:**
-```markdown
+
+````markdown
 # Status System Documentation
 
 ## Quiz Status Flow
@@ -1715,13 +1862,16 @@ graph TD
     G --> B
     G --> D
 ```
+````
 
 ## API Endpoints
 
 ### GET /quiz/{id}
+
 Returns quiz with consolidated status field.
 
 **Response:**
+
 ```json
 {
   "id": 1,
@@ -1732,11 +1882,6 @@ Returns quiz with consolidated status field.
 }
 ```
 
-### POST /quiz/{id}/retry
-Retries a failed quiz.
-
-**Request:** Empty body
-**Response:** Updated quiz object
 ```
 
 ## Success Metrics
@@ -1767,3 +1912,4 @@ Retries a failed quiz.
 **Last Updated**: 2025-01-08
 **Author**: Claude Code Implementation
 **Status**: Approved for Implementation
+```

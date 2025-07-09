@@ -462,14 +462,11 @@ async def update_quiz_status(
         quiz.failure_reason = None
 
     # Handle specific status transitions and additional fields
-    if (
-        new_status == QuizStatus.READY_FOR_REVIEW
-        and "extracted_content" in additional_fields
-    ):
+    if "extracted_content" in additional_fields:
         quiz.extracted_content = additional_fields["extracted_content"]
         quiz.content_extracted_at = datetime.now(timezone.utc)
 
-    elif new_status == QuizStatus.PUBLISHED:
+    if new_status == QuizStatus.PUBLISHED:
         if "canvas_quiz_id" in additional_fields:
             quiz.canvas_quiz_id = additional_fields["canvas_quiz_id"]
         quiz.exported_at = datetime.now(timezone.utc)

@@ -267,6 +267,7 @@ def validate_status_transition(current: QuizStatus, target: QuizStatus) -> bool:
     valid_transitions = {
         QuizStatus.CREATED: [QuizStatus.EXTRACTING_CONTENT, QuizStatus.FAILED],
         QuizStatus.EXTRACTING_CONTENT: [
+            QuizStatus.EXTRACTING_CONTENT,  # Allow self-transition to save extracted content
             QuizStatus.READY_FOR_REVIEW,
             QuizStatus.GENERATING_QUESTIONS,
             QuizStatus.FAILED,
