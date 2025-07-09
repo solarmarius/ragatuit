@@ -106,29 +106,6 @@ class QuizStatusFilter(SQLModel):
     failure_reason: FailureReason | None = None
 
 
-# Legacy schemas for backwards compatibility during migration
-class QuizContentUpdate(SQLModel):
-    """Legacy schema for updating quiz content extraction results."""
-
-    content_extraction_status: str
-    extracted_content: dict[str, Any] | None = None
-    content_extracted_at: datetime | None = None
-
-
-class QuizGenerationUpdate(SQLModel):
-    """Legacy schema for updating quiz generation status."""
-
-    llm_generation_status: str
-
-
-class QuizExportUpdate(SQLModel):
-    """Legacy schema for updating quiz export results."""
-
-    export_status: str
-    canvas_quiz_id: str | None = None
-    exported_at: datetime | None = None
-
-
 # Flow operation schemas
 class QuizContentExtractionData(SQLModel):
     """Typed data for content extraction flow operations."""

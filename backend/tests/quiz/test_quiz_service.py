@@ -407,7 +407,7 @@ async def test_reserve_quiz_job_extraction_success(async_session):
         question_count=50,
         llm_model="gpt-4",
         llm_temperature=0.7,
-        content_extraction_status="pending",
+        status="created",
     )
     async_session.add(quiz)
     await async_session.commit()
@@ -499,9 +499,7 @@ async def test_update_quiz_status_quiz_not_found(async_session):
     random_id = uuid.uuid4()
 
     with patch("src.quiz.service.get_quiz_for_update", return_value=None):
-        await update_quiz_status(
-            async_session, random_id, QuizStatus.READY_FOR_REVIEW
-        )
+        await update_quiz_status(async_session, random_id, QuizStatus.READY_FOR_REVIEW)
 
     # Should handle gracefully without error
     assert True
