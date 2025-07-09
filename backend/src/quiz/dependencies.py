@@ -224,6 +224,9 @@ def validate_export_ready(quiz: Quiz) -> None:
                 "quiz_export_not_ready",
                 quiz_id=str(quiz.id),
                 current_status=quiz.status,
+                failure_reason=quiz.failure_reason
+                if quiz.status == QuizStatus.FAILED
+                else None,
             )
             raise HTTPException(status_code=409, detail="Quiz is not ready for export")
 

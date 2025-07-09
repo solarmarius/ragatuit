@@ -62,7 +62,18 @@ def is_quiz_ready_for_export(quiz: Quiz) -> bool:
     Returns:
         True if quiz can be exported to Canvas
     """
-    return quiz.status == QuizStatus.READY_FOR_REVIEW
+    # Allow export from READY_FOR_REVIEW status
+    if quiz.status == QuizStatus.READY_FOR_REVIEW:
+        return True
+
+    # Allow retry of Canvas export if it previously failed
+    if (
+        quiz.status == QuizStatus.FAILED
+        and quiz.failure_reason == "canvas_export_error"
+    ):
+        return True
+
+    return False
 
 
 def verify_quiz_ownership(session: Session, quiz_id: UUID, user_id: UUID) -> Quiz:
@@ -288,6 +299,7 @@ def validate_status_transition(current: QuizStatus, target: QuizStatus) -> bool:
             QuizStatus.EXTRACTING_CONTENT,
             QuizStatus.GENERATING_QUESTIONS,
             QuizStatus.READY_FOR_REVIEW,
+            QuizStatus.EXPORTING_TO_CANVAS,  # Allow direct retry of Canvas export
         ],  # Can retry from various states
     }
 

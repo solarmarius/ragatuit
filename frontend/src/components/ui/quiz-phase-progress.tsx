@@ -1,7 +1,12 @@
 import { Box, HStack, Text, VStack } from "@chakra-ui/react"
-import { MdCheckCircle, MdSchedule, MdError, MdRadioButtonUnchecked } from "react-icons/md"
+import {
+  MdCheckCircle,
+  MdError,
+  MdRadioButtonUnchecked,
+  MdSchedule,
+} from "react-icons/md"
 
-import type { QuizStatus, FailureReason } from "@/client/types.gen"
+import type { FailureReason, QuizStatus } from "@/client/types.gen"
 import { QUIZ_STATUS } from "@/lib/constants"
 import { formatTimeAgo } from "@/lib/utils"
 
@@ -46,18 +51,32 @@ interface Phase {
  */
 function getPhaseStatuses(
   quizStatus: QuizStatus,
-  failureReason?: FailureReason | null
+  failureReason?: FailureReason | null,
 ): { extraction: PhaseStatus; generation: PhaseStatus; export: PhaseStatus } {
   // Handle failed status - determine which phase failed based on failure reason
   if (quizStatus === QUIZ_STATUS.FAILED) {
-    if (failureReason === "content_extraction_error" || failureReason === "no_content_found") {
+    if (
+      failureReason === "content_extraction_error" ||
+      failureReason === "no_content_found"
+    ) {
       return { extraction: "failed", generation: "pending", export: "pending" }
     }
-    if (failureReason === "llm_generation_error" || failureReason === "no_questions_generated") {
-      return { extraction: "completed", generation: "failed", export: "pending" }
+    if (
+      failureReason === "llm_generation_error" ||
+      failureReason === "no_questions_generated"
+    ) {
+      return {
+        extraction: "completed",
+        generation: "failed",
+        export: "pending",
+      }
     }
     if (failureReason === "canvas_export_error") {
-      return { extraction: "completed", generation: "completed", export: "failed" }
+      return {
+        extraction: "completed",
+        generation: "completed",
+        export: "failed",
+      }
     }
     // Default: assume extraction failed
     return { extraction: "failed", generation: "pending", export: "pending" }
@@ -69,19 +88,39 @@ function getPhaseStatuses(
       return { extraction: "pending", generation: "pending", export: "pending" }
 
     case QUIZ_STATUS.EXTRACTING_CONTENT:
-      return { extraction: "processing", generation: "pending", export: "pending" }
+      return {
+        extraction: "processing",
+        generation: "pending",
+        export: "pending",
+      }
 
     case QUIZ_STATUS.GENERATING_QUESTIONS:
-      return { extraction: "completed", generation: "processing", export: "pending" }
+      return {
+        extraction: "completed",
+        generation: "processing",
+        export: "pending",
+      }
 
     case QUIZ_STATUS.READY_FOR_REVIEW:
-      return { extraction: "completed", generation: "completed", export: "pending" }
+      return {
+        extraction: "completed",
+        generation: "completed",
+        export: "pending",
+      }
 
     case QUIZ_STATUS.EXPORTING_TO_CANVAS:
-      return { extraction: "completed", generation: "completed", export: "processing" }
+      return {
+        extraction: "completed",
+        generation: "completed",
+        export: "processing",
+      }
 
     case QUIZ_STATUS.PUBLISHED:
-      return { extraction: "completed", generation: "completed", export: "completed" }
+      return {
+        extraction: "completed",
+        generation: "completed",
+        export: "completed",
+      }
 
     default:
       return { extraction: "pending", generation: "pending", export: "pending" }
@@ -99,7 +138,6 @@ function getPhaseIcon(status: PhaseStatus) {
       return <MdSchedule size={20} />
     case "failed":
       return <MdError size={20} />
-    case "pending":
     default:
       return <MdRadioButtonUnchecked size={20} />
   }
@@ -116,7 +154,6 @@ function getPhaseColor(status: PhaseStatus) {
       return "blue"
     case "failed":
       return "red"
-    case "pending":
     default:
       return "gray"
   }
@@ -184,7 +221,10 @@ function getPhaseDescription(phase: string, status: PhaseStatus): string {
 /**
  * Individual phase component
  */
-function PhaseItem({ phase, isLast = false }: { phase: Phase; isLast?: boolean }) {
+function PhaseItem({
+  phase,
+  isLast = false,
+}: { phase: Phase; isLast?: boolean }) {
   const color = getPhaseColor(phase.status)
   const icon = getPhaseIcon(phase.status)
 
@@ -192,11 +232,7 @@ function PhaseItem({ phase, isLast = false }: { phase: Phase; isLast?: boolean }
     <Box position="relative">
       <HStack gap={3} align="start">
         {/* Icon */}
-        <Box
-          color={`${color}.500`}
-          flexShrink={0}
-          mt={1}
-        >
+        <Box color={`${color}.500`} flexShrink={0} mt={1}>
           {icon}
         </Box>
 
@@ -262,7 +298,10 @@ export function QuizPhaseProgress({
       title: "Question Generation",
       status: phaseStatuses.generation,
       description: getPhaseDescription("generation", phaseStatuses.generation),
-      timestamp: showTimestamps && phaseStatuses.generation === "completed" ? lastStatusUpdate : null,
+      timestamp:
+        showTimestamps && phaseStatuses.generation === "completed"
+          ? lastStatusUpdate
+          : null,
     },
     {
       id: "export",

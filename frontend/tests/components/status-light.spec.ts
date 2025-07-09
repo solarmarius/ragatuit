@@ -122,9 +122,7 @@ test.describe("StatusLight Component", () => {
     await page.goto(`/quiz/${mockQuizId}`)
 
     // Check that the status light is present and has purple color
-    const statusLight = page.locator(
-      '[title="Ready for Review"]',
-    )
+    const statusLight = page.locator('[title="Ready for Review"]')
     await expect(statusLight).toBeVisible()
     await expect(statusLight).toHaveCSS("background-color", "rgb(168, 85, 247)") // purple.500
   })
@@ -202,9 +200,7 @@ test.describe("StatusLight Component", () => {
     await expect(statusLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
   })
 
-  test("should display orange light when quiz is created", async ({
-    page,
-  }) => {
+  test("should display orange light when quiz is created", async ({ page }) => {
     const mockQuizId = "123e4567-e89b-12d3-a456-426614174000"
     const mockQuiz = {
       id: mockQuizId,

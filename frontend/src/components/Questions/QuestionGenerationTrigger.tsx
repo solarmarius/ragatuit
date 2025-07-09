@@ -1,26 +1,26 @@
-import { Box, Button, Card, HStack, Text, VStack } from "@chakra-ui/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MdAutoAwesome } from "react-icons/md";
+import { Box, Button, Card, HStack, Text, VStack } from "@chakra-ui/react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { MdAutoAwesome } from "react-icons/md"
 
-import { type GenerationRequest, QuestionsService, type Quiz } from "@/client";
-import { useCustomToast, useErrorHandler } from "@/hooks/common";
-import { QUIZ_STATUS } from "@/lib/constants";
+import { type GenerationRequest, QuestionsService, type Quiz } from "@/client"
+import { useCustomToast, useErrorHandler } from "@/hooks/common"
+import { QUIZ_STATUS } from "@/lib/constants"
 
 interface QuestionGenerationTriggerProps {
-  quiz: Quiz;
+  quiz: Quiz
 }
 
 export function QuestionGenerationTrigger({
   quiz,
 }: QuestionGenerationTriggerProps) {
-  const { showSuccessToast } = useCustomToast();
-  const { handleError } = useErrorHandler();
-  const queryClient = useQueryClient();
+  const { showSuccessToast } = useCustomToast()
+  const { handleError } = useErrorHandler()
+  const queryClient = useQueryClient()
 
   const triggerGenerationMutation = useMutation({
     mutationFn: async () => {
       if (!quiz.id) {
-        throw new Error("Quiz ID is required");
+        throw new Error("Quiz ID is required")
       }
 
       const generationRequest: GenerationRequest = {
@@ -33,29 +33,32 @@ export function QuestionGenerationTrigger({
         provider_name: null,
         workflow_name: null,
         template_name: null,
-      };
+      }
 
       return await QuestionsService.generateQuestions({
         quizId: quiz.id,
         requestBody: generationRequest,
-      });
+      })
     },
     onSuccess: () => {
-      showSuccessToast("Question generation started");
-      queryClient.invalidateQueries({ queryKey: ["quiz", quiz.id] });
+      showSuccessToast("Question generation started")
+      queryClient.invalidateQueries({ queryKey: ["quiz", quiz.id] })
     },
     onError: handleError,
-  });
+  })
 
   // Don't show if quiz ID is missing
   if (!quiz.id) {
-    return null;
+    return null
   }
 
   // Only show if LLM generation has failed and user can retry
-  if (quiz.status !== QUIZ_STATUS.FAILED ||
-      (quiz.failure_reason !== "llm_generation_error" && quiz.failure_reason !== "no_questions_generated")) {
-    return null;
+  if (
+    quiz.status !== QUIZ_STATUS.FAILED ||
+    (quiz.failure_reason !== "llm_generation_error" &&
+      quiz.failure_reason !== "no_questions_generated")
+  ) {
+    return null
   }
 
   return (
@@ -67,8 +70,8 @@ export function QuestionGenerationTrigger({
               Question Generation Failed
             </Text>
             <Text color="gray.600" mb={4}>
-              The previous question generation attempt failed. Click below to retry generating{" "}
-              {quiz.question_count} multiple-choice questions.
+              The previous question generation attempt failed. Click below to
+              retry generating {quiz.question_count} multiple-choice questions.
             </Text>
           </Box>
 
@@ -104,5 +107,5 @@ export function QuestionGenerationTrigger({
         </VStack>
       </Card.Body>
     </Card.Root>
-  );
+  )
 }

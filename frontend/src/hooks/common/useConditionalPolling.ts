@@ -76,7 +76,7 @@ export function useQuizStatusPolling() {
     const activeStatuses = [
       "extracting_content",
       "generating_questions",
-      "exporting_to_canvas"
+      "exporting_to_canvas",
     ]
 
     if (activeStatuses.includes(status)) {

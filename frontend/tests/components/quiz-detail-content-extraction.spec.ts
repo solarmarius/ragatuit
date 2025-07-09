@@ -130,9 +130,7 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     await page.reload()
 
     // Check that status light shows ready for review state
-    const statusLight = page.locator(
-      '[title="Ready for Review"]',
-    )
+    const statusLight = page.locator('[title="Ready for Review"]')
     await expect(statusLight).toBeVisible()
     await expect(statusLight).toHaveCSS("background-color", "rgb(168, 85, 247)") // purple.500
   })
@@ -233,9 +231,7 @@ test.describe("Quiz Detail Content Extraction Features", () => {
 
     await page.reload()
 
-    const completedLight = page.locator(
-      '[title="Ready for Review"]',
-    )
+    const completedLight = page.locator('[title="Ready for Review"]')
     await expect(completedLight).toBeVisible()
     await expect(completedLight).toHaveCSS(
       "background-color",
@@ -279,9 +275,7 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     await page.reload()
 
     // Check that status light shows ready for review state
-    const statusLight = page.locator(
-      '[title="Ready for Review"]',
-    )
+    const statusLight = page.locator('[title="Ready for Review"]')
     await expect(statusLight).toBeVisible()
 
     // Wait to ensure no additional polling occurs
@@ -487,7 +481,9 @@ test.describe("Quiz Detail Content Extraction Features", () => {
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
         status: testCase.status,
-        ...(testCase.failure_reason && { failure_reason: testCase.failure_reason }),
+        ...(testCase.failure_reason && {
+          failure_reason: testCase.failure_reason,
+        }),
         last_status_update: "2024-01-16T14:20:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
