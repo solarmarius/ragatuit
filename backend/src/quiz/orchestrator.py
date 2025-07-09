@@ -5,8 +5,10 @@ This module owns the complete quiz lifecycle orchestration using functional
 composition and dependency injection to maintain clean domain boundaries.
 """
 
+import asyncio
 from collections.abc import Callable
-from typing import Any
+from functools import wraps
+from typing import Any, TypeVar
 from uuid import UUID
 
 from src.config import get_logger
@@ -15,9 +17,59 @@ from src.database import execute_in_transaction
 # Removed DI container import - GenerationOrchestrationService imported locally
 from src.question.types import GenerationParameters, QuestionType
 
+from .exceptions import OrchestrationTimeoutError
 from .schemas import FailureReason, QuizStatus
 
+T = TypeVar("T")
+
 logger = get_logger("quiz_orchestrator")
+
+
+def timeout_operation(
+    timeout_seconds: int,
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """
+    Decorator to add timeout to orchestration operations.
+
+    Args:
+        timeout_seconds: Maximum time to wait before timing out
+
+    Raises:
+        OrchestrationTimeoutError: If operation times out
+    """
+
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(func)
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            try:
+                return await asyncio.wait_for(
+                    func(*args, **kwargs), timeout=timeout_seconds
+                )
+            except asyncio.TimeoutError:
+                # Extract quiz_id from args if available for better logging
+                quiz_id = None
+                if args and hasattr(args[0], "hex"):  # UUID has hex attribute
+                    quiz_id = str(args[0])
+                elif len(args) > 0:
+                    quiz_id = str(args[0])
+
+                logger.error(
+                    "orchestration_operation_timeout",
+                    operation=func.__name__,
+                    timeout_seconds=timeout_seconds,
+                    quiz_id=quiz_id,
+                )
+
+                raise OrchestrationTimeoutError(
+                    operation=func.__name__,
+                    timeout_seconds=timeout_seconds,
+                    quiz_id=quiz_id,
+                )
+
+        return wrapper
+
+    return decorator
+
 
 # Type aliases for dependency injection
 ContentExtractorFunc = Callable[[str, int, list[int]], Any]
@@ -26,6 +78,7 @@ QuizCreatorFunc = Callable[[str, int, str, int], Any]
 QuestionExporterFunc = Callable[[str, int, str, list[dict[str, Any]]], Any]
 
 
+@timeout_operation(300)  # 5 minutes timeout for content extraction
 async def orchestrate_quiz_content_extraction(
     quiz_id: UUID,
     course_id: int,
@@ -198,6 +251,7 @@ async def orchestrate_quiz_content_extraction(
         )
 
 
+@timeout_operation(600)  # 10 minutes timeout for question generation
 async def orchestrate_quiz_question_generation(
     quiz_id: UUID,
     target_question_count: int,
@@ -321,11 +375,14 @@ async def orchestrate_quiz_question_generation(
             await update_quiz_status(session, quiz_id, QuizStatus.READY_FOR_REVIEW)
         elif status == "failed":
             # Determine appropriate failure reason based on exception type
-            from .exceptions import ContentInsufficientError
+            from .exceptions import ContentInsufficientError, OrchestrationTimeoutError
 
             if isinstance(exception, ContentInsufficientError):
                 # This indicates no meaningful content was available for generation
                 failure_reason = FailureReason.NO_CONTENT_FOUND
+            elif isinstance(exception, OrchestrationTimeoutError):
+                # Operation timed out
+                failure_reason = FailureReason.LLM_GENERATION_ERROR
             elif error_message and "No questions generated" in error_message:
                 # This indicates the LLM failed to generate any questions
                 failure_reason = FailureReason.NO_QUESTIONS_GENERATED
@@ -403,6 +460,7 @@ async def _rollback_auto_trigger_failure(quiz_id: UUID, error: Exception) -> Non
         # Log this as a critical error for manual intervention
 
 
+@timeout_operation(180)  # 3 minutes timeout for Canvas export
 async def orchestrate_quiz_export_to_canvas(
     quiz_id: UUID,
     canvas_token: str,
