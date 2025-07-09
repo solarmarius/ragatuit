@@ -8,38 +8,62 @@ import {
   Tabs,
   Text,
   VStack,
-} from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+} from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
+import { createFileRoute } from "@tanstack/react-router"
+import { useState } from "react"
 
-import { QuizService } from "@/client";
-import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common";
-import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenerationTrigger";
-import { QuestionReview } from "@/components/Questions/QuestionReview";
-import { QuestionStats } from "@/components/Questions/QuestionStats";
-import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirmation";
-import { QuizPhaseProgress } from "@/components/ui/quiz-phase-progress";
-import { StatusLight } from "@/components/ui/status-light";
-import { useFormattedDate, useQuizStatusPolling } from "@/hooks/common";
-import { QUIZ_STATUS, UI_SIZES } from "@/lib/constants";
+import { QuizService } from "@/client"
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common"
+import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenerationTrigger"
+import { QuestionReview } from "@/components/Questions/QuestionReview"
+import { QuestionStats } from "@/components/Questions/QuestionStats"
+import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirmation"
+import { QuizPhaseProgress } from "@/components/ui/quiz-phase-progress"
+import { StatusLight } from "@/components/ui/status-light"
+import { useFormattedDate, useQuizStatusPolling } from "@/hooks/common"
+import { FAILURE_REASON, QUIZ_STATUS, UI_SIZES, UI_TEXT } from "@/lib/constants"
 
 export const Route = createFileRoute("/_layout/quiz/$id")({
   component: QuizDetail,
-});
+})
 
 function DateDisplay({ date }: { date: string | null | undefined }) {
-  const formattedDate = useFormattedDate(date, "default");
+  const formattedDate = useFormattedDate(date, "default")
 
-  if (!formattedDate) return <Text color="gray.500">Not available</Text>;
+  if (!formattedDate) return <Text color="gray.500">Not available</Text>
 
-  return <Text color="gray.600">{formattedDate}</Text>;
+  return <Text color="gray.600">{formattedDate}</Text>
+}
+
+function renderErrorForFailureReason(failureReason: string | null | undefined) {
+  if (!failureReason) {
+    return null
+  }
+
+  // Get the error message from constants or use generic fallback
+  const errorMessage =
+    UI_TEXT.FAILURE_MESSAGES[
+      failureReason as keyof typeof UI_TEXT.FAILURE_MESSAGES
+    ] || UI_TEXT.FAILURE_MESSAGES.GENERIC
+
+  return (
+    <Card.Root>
+      <Card.Body>
+        <ErrorState
+          title={errorMessage.TITLE}
+          message={errorMessage.MESSAGE}
+          showRetry={false}
+        />
+      </Card.Body>
+    </Card.Root>
+  )
 }
 
 function QuizDetail() {
-  const { id } = Route.useParams();
-  const [currentTab, setCurrentTab] = useState("info");
-  const pollingInterval = useQuizStatusPolling();
+  const { id } = Route.useParams()
+  const [currentTab, setCurrentTab] = useState("info")
+  const pollingInterval = useQuizStatusPolling()
 
   const {
     data: quiz,
@@ -48,15 +72,15 @@ function QuizDetail() {
   } = useQuery({
     queryKey: ["quiz", id],
     queryFn: async () => {
-      const response = await QuizService.getQuiz({ quizId: id });
-      return response;
+      const response = await QuizService.getQuiz({ quizId: id })
+      return response
     },
     refetchInterval: pollingInterval,
     refetchIntervalInBackground: false, // Only poll when tab is active
-  });
+  })
 
   if (isLoading) {
-    return <QuizDetailSkeleton />;
+    return <QuizDetailSkeleton />
   }
 
   if (error || !quiz) {
@@ -72,40 +96,40 @@ function QuizDetail() {
           </Card.Body>
         </Card.Root>
       </Container>
-    );
+    )
   }
 
   // Get selected modules - parse JSON string if needed
   const selectedModules = (() => {
-    if (!quiz.selected_modules) return {};
+    if (!quiz.selected_modules) return {}
 
     // If it's already an object, use it directly
     if (typeof quiz.selected_modules === "object") {
-      return quiz.selected_modules;
+      return quiz.selected_modules
     }
 
     // If it's a string, parse it as JSON
     if (typeof quiz.selected_modules === "string") {
       try {
-        return JSON.parse(quiz.selected_modules);
+        return JSON.parse(quiz.selected_modules)
       } catch {
-        return {};
+        return {}
       }
     }
 
-    return {};
-  })();
+    return {}
+  })()
 
   const moduleNames = Object.values(selectedModules).filter(
-    (value): value is string => typeof value === "string"
-  );
+    (value): value is string => typeof value === "string",
+  )
 
   // Check if quiz is ready for approval
-  const isQuizReadyForApproval = quiz.status === QUIZ_STATUS.READY_FOR_REVIEW;
+  const isQuizReadyForApproval = quiz.status === QUIZ_STATUS.READY_FOR_REVIEW
 
   const handleApproveQuiz = () => {
-    setCurrentTab("questions");
-  };
+    setCurrentTab("questions")
+  }
 
   return (
     <Container maxW="6xl" py={8}>
@@ -300,21 +324,38 @@ function QuizDetail() {
               {/* Question Statistics */}
               {(quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
                 quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS ||
-                quiz.status === QUIZ_STATUS.PUBLISHED) && (
+                quiz.status === QUIZ_STATUS.PUBLISHED ||
+                (quiz.status === QUIZ_STATUS.FAILED &&
+                  quiz.failure_reason ===
+                    FAILURE_REASON.CANVAS_EXPORT_ERROR)) && (
                 <QuestionStats quiz={quiz} />
               )}
+
+              {/* Canvas Export Error Banner */}
+              {quiz.status === QUIZ_STATUS.FAILED &&
+                quiz.failure_reason === FAILURE_REASON.CANVAS_EXPORT_ERROR &&
+                renderErrorForFailureReason(quiz.failure_reason)}
 
               {/* Question Review */}
               {(quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
                 quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS ||
-                quiz.status === QUIZ_STATUS.PUBLISHED) && (
+                quiz.status === QUIZ_STATUS.PUBLISHED ||
+                (quiz.status === QUIZ_STATUS.FAILED &&
+                  quiz.failure_reason ===
+                    FAILURE_REASON.CANVAS_EXPORT_ERROR)) && (
                 <QuestionReview quizId={id} />
               )}
+
+              {/* Error Display for Failed Status (except Canvas Export Error which is handled above) */}
+              {quiz.status === QUIZ_STATUS.FAILED &&
+                quiz.failure_reason !== FAILURE_REASON.CANVAS_EXPORT_ERROR &&
+                renderErrorForFailureReason(quiz.failure_reason)}
 
               {/* Message when questions aren't ready */}
               {quiz.status !== QUIZ_STATUS.READY_FOR_REVIEW &&
                 quiz.status !== QUIZ_STATUS.EXPORTING_TO_CANVAS &&
-                quiz.status !== QUIZ_STATUS.PUBLISHED && (
+                quiz.status !== QUIZ_STATUS.PUBLISHED &&
+                quiz.status !== QUIZ_STATUS.FAILED && (
                   <Card.Root>
                     <Card.Body>
                       <EmptyState
@@ -329,7 +370,7 @@ function QuizDetail() {
         </Tabs.Root>
       </VStack>
     </Container>
-  );
+  )
 }
 
 function QuizDetailSkeleton() {
@@ -372,5 +413,5 @@ function QuizDetailSkeleton() {
         ))}
       </VStack>
     </Container>
-  );
+  )
 }

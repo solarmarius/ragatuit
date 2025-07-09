@@ -108,9 +108,7 @@ test.describe("Quiz List Content Extraction Status", () => {
     const createdRow = page.locator("tr", {
       has: page.getByText("Created Quiz"),
     })
-    await expect(
-      createdRow.locator('[title="Ready to Start"]'),
-    ).toBeVisible()
+    await expect(createdRow.locator('[title="Ready to Start"]')).toBeVisible()
     await expect(
       createdRow
         .locator("td")
@@ -138,9 +136,7 @@ test.describe("Quiz List Content Extraction Status", () => {
     const readyRow = page.locator("tr", {
       has: page.getByText("Ready for Review Quiz"),
     })
-    await expect(
-      readyRow.locator('[title="Ready for Review"]'),
-    ).toBeVisible()
+    await expect(readyRow.locator('[title="Ready for Review"]')).toBeVisible()
     await expect(
       readyRow
         .locator("td")
@@ -225,9 +221,7 @@ test.describe("Quiz List Content Extraction Status", () => {
     await page.reload()
 
     // Purple status (ready for review)
-    const purpleLight = page.locator(
-      '[title="Ready for Review"]',
-    )
+    const purpleLight = page.locator('[title="Ready for Review"]')
     await expect(purpleLight).toBeVisible()
     await expect(purpleLight).toHaveCSS("background-color", "rgb(168, 85, 247)") // purple.500
 
@@ -290,7 +284,9 @@ test.describe("Quiz List Content Extraction Status", () => {
 
     // Check status text specifically in the Status column (5th column, index 4)
     const statusCells = page.locator("tbody tr td:nth-child(5)")
-    await expect(statusCells.filter({ hasText: "Ready to Start" })).toHaveCount(2)
+    await expect(statusCells.filter({ hasText: "Ready to Start" })).toHaveCount(
+      2,
+    )
   })
 
   test("should display correct status text for different combinations", async ({
@@ -345,7 +341,9 @@ test.describe("Quiz List Content Extraction Status", () => {
         llm_model: "gpt-4o",
         llm_temperature: 0.3,
         status: testCase.status,
-        ...(testCase.failure_reason && { failure_reason: testCase.failure_reason }),
+        ...(testCase.failure_reason && {
+          failure_reason: testCase.failure_reason,
+        }),
         last_status_update: "2024-01-16T14:20:00Z",
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
@@ -414,9 +412,7 @@ test.describe("Quiz List Content Extraction Status", () => {
     await expect(statusCell).toBeVisible()
 
     // Verify both status light and text are in the same cell
-    await expect(
-      statusCell.locator('[title="Ready for Review"]'),
-    ).toBeVisible()
+    await expect(statusCell.locator('[title="Ready for Review"]')).toBeVisible()
     await expect(statusCell.getByText("Ready for Review")).toBeVisible()
 
     // Check horizontal alignment - status light and text should be in a horizontal container
@@ -506,8 +502,6 @@ test.describe("Quiz List Content Extraction Status", () => {
 
     // Should now show ready for review status
     await expect(page.getByText("Ready for Review")).toBeVisible()
-    await expect(
-      page.locator('[title="Ready for Review"]'),
-    ).toBeVisible()
+    await expect(page.locator('[title="Ready for Review"]')).toBeVisible()
   })
 })

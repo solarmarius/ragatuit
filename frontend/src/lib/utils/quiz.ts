@@ -77,7 +77,10 @@ export function getQuizStatusText(quiz: Quiz): string {
     [QUIZ_STATUS.FAILED]: UI_TEXT.STATUS.FAILED,
   }
 
-  return statusMapping[quiz.status as keyof typeof statusMapping] || UI_TEXT.STATUS.CREATED
+  return (
+    statusMapping[quiz.status as keyof typeof statusMapping] ||
+    UI_TEXT.STATUS.CREATED
+  )
 }
 
 /**
