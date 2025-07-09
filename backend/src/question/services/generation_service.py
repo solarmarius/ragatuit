@@ -56,7 +56,7 @@ class GenerationOrchestrationService:
         logger.info(
             "question_generation_started",
             quiz_id=str(quiz_id),
-            question_type=question_type.value,
+            question_type=question_type,
             target_count=generation_parameters.target_count,
             provider_name=provider_name,
             workflow_name=workflow_name,
@@ -90,7 +90,7 @@ class GenerationOrchestrationService:
                     error_message="No valid content chunks found for generation",
                     metadata={
                         "quiz_id": str(quiz_id),
-                        "question_type": question_type.value,
+                        "question_type": question_type,
                         "content_chunks": 0,
                     },
                 )

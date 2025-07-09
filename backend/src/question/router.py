@@ -483,7 +483,7 @@ async def generate_questions(
         "question_generation_initiated",
         user_id=str(current_user.id),
         quiz_id=str(quiz_id),
-        question_type=generation_request.question_type.value,
+        question_type=generation_request.question_type,
         target_count=generation_request.target_count,
     )
 
@@ -518,13 +518,21 @@ async def generate_questions(
             template_name=generation_request.template_name,
         )
 
-        logger.info(
-            "question_generation_completed",
-            user_id=str(current_user.id),
-            quiz_id=str(quiz_id),
-            success=result.success,
-            questions_generated=result.questions_generated,
-        )
+        if result.success:
+            logger.info(
+                "question_generation_completed",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+                questions_generated=result.questions_generated,
+            )
+        else:
+            logger.error(
+                "question_generation_failed",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz_id),
+                error_message=result.error_message,
+                questions_generated=result.questions_generated,
+            )
 
         return GenerationResponse(
             success=result.success,

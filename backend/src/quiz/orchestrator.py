@@ -91,7 +91,21 @@ async def orchestrate_quiz_content_extraction(
             total_word_count=content_summary["total_word_count"],
         )
 
-        final_status = "completed"
+        # Check if meaningful content was extracted
+        total_word_count = content_summary.get("total_word_count", 0)
+        total_pages = content_summary.get("total_pages", 0)
+
+        if total_word_count == 0 or total_pages == 0:
+            logger.warning(
+                "extraction_completed_but_no_content_found",
+                quiz_id=str(quiz_id),
+                course_id=course_id,
+                total_word_count=total_word_count,
+                total_pages=total_pages,
+            )
+            final_status = "no_content"
+        else:
+            final_status = "completed"
 
     except Exception as e:
         logger.error(
@@ -129,8 +143,14 @@ async def orchestrate_quiz_content_extraction(
                 None,
                 **additional_fields,
             )
+        elif status == "no_content":
+            # No meaningful content was extracted from the selected modules
+            failure_reason = FailureReason.NO_CONTENT_FOUND
+            await update_quiz_status(
+                session, quiz_id, QuizStatus.FAILED, failure_reason, **additional_fields
+            )
         elif status == "failed":
-            # Determine appropriate failure reason
+            # Technical failure during content extraction
             failure_reason = FailureReason.CONTENT_EXTRACTION_ERROR
             await update_quiz_status(
                 session, quiz_id, QuizStatus.FAILED, failure_reason, **additional_fields
@@ -158,6 +178,12 @@ async def orchestrate_quiz_content_extraction(
             target_question_count=quiz_settings["target_questions"],
             llm_model=quiz_settings["llm_model"],
             llm_temperature=quiz_settings["llm_temperature"],
+        )
+    elif final_status == "no_content":
+        logger.info(
+            "skipping_question_generation_no_content",
+            quiz_id=str(quiz_id),
+            reason="no_meaningful_content_extracted",
         )
 
 
@@ -235,6 +261,7 @@ async def orchestrate_quiz_question_generation(
 
         if result.success:
             final_status = "completed"
+            error_message = None
             logger.info(
                 "generation_orchestration_completed",
                 quiz_id=str(quiz_id),
@@ -244,10 +271,11 @@ async def orchestrate_quiz_question_generation(
             )
         else:
             final_status = "failed"
+            error_message = result.error_message
             logger.error(
                 "generation_orchestration_failed_during_llm",
                 quiz_id=str(quiz_id),
-                error_message=result.error_message,
+                error_message=error_message,
                 question_type=question_type.value,
             )
 
@@ -261,12 +289,14 @@ async def orchestrate_quiz_question_generation(
             exc_info=True,
         )
         final_status = "failed"
+        error_message = str(e)
 
     # === Transaction 2: Save the Result ===
     async def _save_generation_result(
         session: Any,
         quiz_id: UUID,
         status: str,
+        error_message: str | None = None,
     ) -> None:
         """Save the generation result to the quiz."""
         from .service import update_quiz_status
@@ -274,7 +304,20 @@ async def orchestrate_quiz_question_generation(
         if status == "completed":
             await update_quiz_status(session, quiz_id, QuizStatus.READY_FOR_REVIEW)
         elif status == "failed":
-            failure_reason = FailureReason.LLM_GENERATION_ERROR
+            # Determine appropriate failure reason based on error message
+            if (
+                error_message
+                and "No valid content chunks found for generation" in error_message
+            ):
+                # This indicates no meaningful content was available for generation
+                failure_reason = FailureReason.NO_CONTENT_FOUND
+            elif error_message and "No questions generated" in error_message:
+                # This indicates the LLM failed to generate any questions
+                failure_reason = FailureReason.NO_QUESTIONS_GENERATED
+            else:
+                # Default to LLM generation error for other failures
+                failure_reason = FailureReason.LLM_GENERATION_ERROR
+
             await update_quiz_status(
                 session, quiz_id, QuizStatus.FAILED, failure_reason
             )
@@ -283,6 +326,7 @@ async def orchestrate_quiz_question_generation(
         _save_generation_result,
         quiz_id,
         final_status,
+        error_message,
         isolation_level="REPEATABLE READ",
         retries=3,
     )
