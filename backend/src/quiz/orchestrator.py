@@ -15,7 +15,7 @@ from src.config import get_logger
 from src.database import execute_in_transaction
 
 # Removed DI container import - GenerationOrchestrationService imported locally
-from src.question.types import QuestionType
+from src.question.types import QuestionType, QuizLanguage
 
 from .constants import OPERATION_TIMEOUTS
 from .exceptions import OrchestrationTimeoutError
@@ -140,6 +140,7 @@ async def _execute_generation_workflow(
     target_question_count: int,
     _llm_model: str,
     _llm_temperature: float,
+    language: QuizLanguage,
     question_type: Any,
     generation_service: Any = None,
 ) -> tuple[str, str | None, Exception | None]:
@@ -159,7 +160,9 @@ async def _execute_generation_workflow(
         # Create generation parameters
         from src.question.types import GenerationParameters
 
-        generation_parameters = GenerationParameters(target_count=target_question_count)
+        generation_parameters = GenerationParameters(
+            target_count=target_question_count, language=language
+        )
 
         # Generate questions using modular system
         result = await generation_service.generate_questions(
@@ -362,6 +365,7 @@ async def orchestrate_quiz_content_extraction(
                 target_question_count=quiz_settings["target_questions"],
                 llm_model=quiz_settings["llm_model"],
                 llm_temperature=quiz_settings["llm_temperature"],
+                language=quiz_settings["language"],
             )
         except Exception as auto_trigger_error:
             logger.error(
@@ -387,6 +391,7 @@ async def orchestrate_quiz_question_generation(
     target_question_count: int,
     llm_model: str,
     llm_temperature: float,
+    language: QuizLanguage,
     question_type: QuestionType = QuestionType.MULTIPLE_CHOICE,
     generation_service: Any = None,
 ) -> None:
@@ -401,6 +406,7 @@ async def orchestrate_quiz_question_generation(
         target_question_count: Number of questions to generate
         llm_model: LLM model to use for generation
         llm_temperature: Temperature setting for LLM
+        language: Language for question generation
         question_type: Type of questions to generate
         generation_service: Optional injected generation service (creates default if None)
     """
@@ -439,6 +445,7 @@ async def orchestrate_quiz_question_generation(
         target_question_count,
         llm_model,
         llm_temperature,
+        language,
         question_type,
         generation_service,
     )

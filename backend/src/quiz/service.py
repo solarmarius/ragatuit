@@ -54,6 +54,7 @@ def create_quiz(session: Session, quiz_create: QuizCreate, owner_id: UUID) -> Qu
         question_count=quiz_create.question_count,
         llm_model=quiz_create.llm_model,
         llm_temperature=quiz_create.llm_temperature,
+        language=quiz_create.language,
         updated_at=datetime.now(timezone.utc),
     )
 
@@ -267,6 +268,7 @@ def prepare_question_generation(
         "question_count": quiz.question_count,
         "llm_model": quiz.llm_model,
         "llm_temperature": quiz.llm_temperature,
+        "language": quiz.language,
     }
 
 
@@ -328,6 +330,7 @@ async def reserve_quiz_job(
             "target_questions": quiz.question_count,
             "llm_model": quiz.llm_model,
             "llm_temperature": quiz.llm_temperature,
+            "language": quiz.language,
         }
 
     elif job_type == "generation":
