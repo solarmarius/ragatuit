@@ -101,7 +101,7 @@ test.describe("Quiz List Component", () => {
     await expect(page.getByText("Quiz Title")).toBeVisible()
     await expect(page.getByText("Course")).toBeVisible()
     await expect(page.getByText("Questions")).toBeVisible()
-    await expect(page.getByText("LLM Model")).toBeVisible()
+    await expect(page.locator("th").getByText("Status")).toBeVisible()
     await expect(page.locator("th").getByText("Created")).toBeVisible()
     await expect(page.getByText("Actions")).toBeVisible()
 

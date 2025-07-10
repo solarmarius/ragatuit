@@ -456,13 +456,12 @@ test.describe("Quiz List Content Extraction Status", () => {
     await expect(headers.nth(0)).toContainText("Quiz Title")
     await expect(headers.nth(1)).toContainText("Course")
     await expect(headers.nth(2)).toContainText("Questions")
-    await expect(headers.nth(3)).toContainText("LLM Model")
-    await expect(headers.nth(4)).toContainText("Status")
-    await expect(headers.nth(5)).toContainText("Created")
-    await expect(headers.nth(6)).toContainText("Actions")
+    await expect(headers.nth(3)).toContainText("Status")
+    await expect(headers.nth(4)).toContainText("Created")
+    await expect(headers.nth(5)).toContainText("Actions")
 
-    // Check that Status column is the 5th column (index 4)
-    const statusHeader = headers.nth(4)
+    // Check that Status column is the 4th column (index 3)
+    const statusHeader = headers.nth(3)
     await expect(statusHeader).toContainText("Status")
   })
 
