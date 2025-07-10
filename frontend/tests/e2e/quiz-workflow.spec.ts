@@ -123,31 +123,15 @@ test.describe("Quiz Workflow End-to-End", () => {
     // next to next step (quiz settings)
     await page.getByRole("button", { name: "next" }).click()
 
-    // Step 3: Quiz settings - wait for page to load
+    // Step 3: Quiz configuration - wait for page to load
     await page.waitForLoadState("networkidle")
-    await expect(page.getByText("Quiz Settings")).toBeVisible()
+    await expect(page.getByText("Quiz Configuration")).toBeVisible()
 
     // Adjust question count - use placeholder text to find the input
     const questionCountInput = page.getByPlaceholder(
       "Enter number of questions",
     )
     await questionCountInput.fill("50")
-
-    // Click on "Advanced settings" tab to access LLM model and temperature
-    await page.getByText("Advanced Settings").click()
-
-    // Select different model - use exact display text from dropdown
-    await page.getByRole("combobox").click()
-    await page.getByRole("option", { name: "GPT-4o" }).click()
-
-    // Adjust temperature
-    const slider = page.locator('[data-part="thumb"]').first() // or be more specific if multiple sliders
-    await slider.focus()
-    await page.keyboard.press("Home") // Go to minimum (0)
-    // Calculate how many steps to reach 0.7 (step=0.1, so 7 steps from 0)
-    for (let i = 0; i < 7; i++) {
-      await page.keyboard.press("ArrowRight")
-    }
 
     // Mock quiz creation API
     const newQuizId = "123e4567-e89b-12d3-a456-426614174000"
@@ -166,8 +150,8 @@ test.describe("Quiz Workflow End-to-End", () => {
               "173468": "Deep Learning Concepts",
             },
             question_count: 50,
-            llm_model: "gpt-4o",
-            llm_temperature: 0.7,
+            llm_model: "o3",
+            llm_temperature: 1.0,
             created_at: "2024-01-15T10:30:00Z",
             updated_at: "2024-01-15T10:30:00Z",
             owner_id: "user123",
@@ -197,8 +181,8 @@ test.describe("Quiz Workflow End-to-End", () => {
             "173468": "Deep Learning Concepts",
           },
           question_count: 50,
-          llm_model: "gpt-4o",
-          llm_temperature: 0.7,
+          llm_model: "o3",
+          llm_temperature: 1.0,
           created_at: "2024-01-15T10:30:00Z",
           updated_at: "2024-01-15T10:30:00Z",
           owner_id: "user123",
@@ -214,8 +198,6 @@ test.describe("Quiz Workflow End-to-End", () => {
     ).toBeVisible()
     await expect(page.getByText("Deep Learning Concepts")).toBeVisible()
     await expect(page.locator("span").getByText("50").first()).toBeVisible()
-    await expect(page.getByText("gpt-4o")).toBeVisible()
-    await expect(page.getByText("0.7")).toBeVisible()
   })
 
   test("navigate from quiz list to quiz detail", async ({ page }) => {

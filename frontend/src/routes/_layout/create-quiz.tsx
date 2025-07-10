@@ -29,8 +29,6 @@ interface QuizFormData {
   selectedModules?: { [id: number]: string }
   title?: string
   questionCount?: number
-  llmModel?: string
-  llmTemperature?: number
 }
 
 const TOTAL_STEPS = 3 // Course selection, Module selection, Quiz settings
@@ -82,8 +80,6 @@ function CreateQuiz() {
         selected_modules: formData.selectedModules,
         title: formData.title,
         question_count: formData.questionCount || 100,
-        llm_model: formData.llmModel || "o3",
-        llm_temperature: formData.llmTemperature || 1,
       }
 
       const response = await QuizService.createNewQuiz({
@@ -110,7 +106,7 @@ function CreateQuiz() {
       case 2:
         return "Select Modules"
       case 3:
-        return "Quiz Settings"
+        return "Quiz Configuration"
       default:
         return "Create Quiz"
     }
@@ -147,14 +143,10 @@ function CreateQuiz() {
           <QuizSettingsStep
             settings={{
               questionCount: formData.questionCount || 100,
-              llmModel: formData.llmModel || "o3",
-              llmTemperature: formData.llmTemperature || 1,
             }}
             onSettingsChange={(settings) =>
               updateFormData({
                 questionCount: settings.questionCount,
-                llmModel: settings.llmModel,
-                llmTemperature: settings.llmTemperature,
               })
             }
           />
@@ -180,16 +172,7 @@ function CreateQuiz() {
       case 3: {
         // Step 3 is always valid since we have default values
         const questionCount = formData.questionCount || 100
-        const llmModel = formData.llmModel || "o3"
-        const llmTemperature = formData.llmTemperature || 1
-        return (
-          questionCount >= 1 &&
-          questionCount <= 200 &&
-          llmModel != null &&
-          llmTemperature != null &&
-          llmTemperature >= 0 &&
-          llmTemperature <= 2
-        )
+        return questionCount >= 1 && questionCount <= 200
       }
       default:
         return false
