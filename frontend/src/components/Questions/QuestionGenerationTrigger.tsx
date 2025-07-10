@@ -88,8 +88,6 @@ export function QuestionGenerationTrigger({
               </Text>
               <HStack gap={4} fontSize="sm" color="blue.600">
                 <Text>Questions: {quiz.question_count}</Text>
-                <Text>Model: {quiz.llm_model}</Text>
-                <Text>Temperature: {quiz.llm_temperature}</Text>
               </HStack>
             </VStack>
           </Box>

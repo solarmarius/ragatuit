@@ -20,7 +20,6 @@ export const QuizTableSkeleton = memo(function QuizTableSkeleton({
               <Table.ColumnHeader>Quiz Title</Table.ColumnHeader>
               <Table.ColumnHeader>Course</Table.ColumnHeader>
               <Table.ColumnHeader>Questions</Table.ColumnHeader>
-              <Table.ColumnHeader>LLM Model</Table.ColumnHeader>
               <Table.ColumnHeader>Status</Table.ColumnHeader>
               <Table.ColumnHeader>Created</Table.ColumnHeader>
               <Table.ColumnHeader>Actions</Table.ColumnHeader>
@@ -57,12 +56,6 @@ export const QuizTableSkeleton = memo(function QuizTableSkeleton({
                   <LoadingSkeleton
                     height={UI_SIZES.SKELETON.HEIGHT.LG}
                     width={UI_SIZES.SKELETON.WIDTH.MD}
-                  />
-                </Table.Cell>
-                <Table.Cell>
-                  <LoadingSkeleton
-                    height={UI_SIZES.SKELETON.HEIGHT.LG}
-                    width={UI_SIZES.SKELETON.WIDTH.LG}
                   />
                 </Table.Cell>
                 <Table.Cell>

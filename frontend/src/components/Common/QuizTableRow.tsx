@@ -44,11 +44,6 @@ export const QuizTableRow = memo(function QuizTableRow({
         </Badge>
       </Table.Cell>
       <Table.Cell>
-        <Badge variant="outline" colorScheme="purple">
-          {quiz.llm_model}
-        </Badge>
-      </Table.Cell>
-      <Table.Cell>
         <HStack gap={2} align="center">
           <StatusLight status={quiz.status || "created"} />
           <Text fontSize="sm" color="gray.600">

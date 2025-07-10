@@ -93,7 +93,6 @@ test.describe("QuizGenerationPanel Component", () => {
     await expect(page.getByText("Web Development Concepts")).toBeVisible()
     await expect(page.getByText("Web Dev 101")).toBeVisible()
     await expect(page.getByText("40 questions")).toBeVisible()
-    await expect(page.getByText("gpt-4o").first()).toBeVisible()
     await expect(
       page.getByRole("link", { name: "View Details" }).first(),
     ).toBeVisible()
@@ -324,7 +323,7 @@ test.describe("QuizGenerationPanel Component", () => {
     await expect(quizCard).toBeVisible()
   })
 
-  test("should show correct badge styling for questions and models", async ({
+  test("should show correct badge styling for questions", async ({
     page,
   }) => {
     await page.route("**/api/v1/quiz/", async (route) => {
@@ -335,7 +334,6 @@ test.describe("QuizGenerationPanel Component", () => {
 
     // Check badges are visible somewhere on the page
     await expect(page.getByText("40 questions")).toBeVisible()
-    await expect(page.getByText("gpt-4o").first()).toBeVisible()
   })
 
   test("should display progress bars with orange color scheme", async ({

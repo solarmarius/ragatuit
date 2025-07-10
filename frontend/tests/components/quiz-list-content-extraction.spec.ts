@@ -282,8 +282,8 @@ test.describe("Quiz List Content Extraction Status", () => {
     const orangeLights = page.locator('[title="Ready to Start"]')
     await expect(orangeLights).toHaveCount(2)
 
-    // Check status text specifically in the Status column (5th column, index 4)
-    const statusCells = page.locator("tbody tr td:nth-child(5)")
+    // Check status text specifically in the Status column (4th column, index 3)
+    const statusCells = page.locator("tbody tr td:nth-child(4)")
     await expect(statusCells.filter({ hasText: "Ready to Start" })).toHaveCount(
       2,
     )
@@ -362,9 +362,9 @@ test.describe("Quiz List Content Extraction Status", () => {
 
       // Check the status text in the status column
       const row = page.locator("tr", { has: page.getByText(mockQuiz.title) })
-      // Look specifically in the Status column (5th column, index 4)
+      // Look specifically in the Status column (4th column, index 3)
       await expect(
-        row.locator("td").nth(4).getByText(testCase.expectedText),
+        row.locator("td").nth(3).getByText(testCase.expectedText),
       ).toBeVisible()
     }
   })
@@ -456,13 +456,12 @@ test.describe("Quiz List Content Extraction Status", () => {
     await expect(headers.nth(0)).toContainText("Quiz Title")
     await expect(headers.nth(1)).toContainText("Course")
     await expect(headers.nth(2)).toContainText("Questions")
-    await expect(headers.nth(3)).toContainText("LLM Model")
-    await expect(headers.nth(4)).toContainText("Status")
-    await expect(headers.nth(5)).toContainText("Created")
-    await expect(headers.nth(6)).toContainText("Actions")
+    await expect(headers.nth(3)).toContainText("Status")
+    await expect(headers.nth(4)).toContainText("Created")
+    await expect(headers.nth(5)).toContainText("Actions")
 
-    // Check that Status column is the 5th column (index 4)
-    const statusHeader = headers.nth(4)
+    // Check that Status column is the 4th column (index 3)
+    const statusHeader = headers.nth(3)
     await expect(statusHeader).toContainText("Status")
   })
 

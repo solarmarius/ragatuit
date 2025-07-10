@@ -18,7 +18,6 @@ export const QuizTable = memo(function QuizTable({ quizzes }: QuizTableProps) {
               <Table.ColumnHeader>Quiz Title</Table.ColumnHeader>
               <Table.ColumnHeader>Course</Table.ColumnHeader>
               <Table.ColumnHeader>Questions</Table.ColumnHeader>
-              <Table.ColumnHeader>LLM Model</Table.ColumnHeader>
               <Table.ColumnHeader>Status</Table.ColumnHeader>
               <Table.ColumnHeader>Created</Table.ColumnHeader>
               <Table.ColumnHeader>Actions</Table.ColumnHeader>

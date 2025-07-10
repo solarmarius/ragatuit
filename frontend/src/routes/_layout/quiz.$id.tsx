@@ -234,24 +234,6 @@ function QuizDetail() {
                         {quiz.question_count}
                       </Badge>
                     </HStack>
-
-                    <HStack justify="space-between">
-                      <Text fontWeight="medium" color="gray.700">
-                        LLM Model
-                      </Text>
-                      <Badge variant="outline" colorScheme="purple">
-                        {quiz.llm_model}
-                      </Badge>
-                    </HStack>
-
-                    <HStack justify="space-between">
-                      <Text fontWeight="medium" color="gray.700">
-                        Temperature
-                      </Text>
-                      <Badge variant="outline" colorScheme="orange">
-                        {quiz.llm_temperature}
-                      </Badge>
-                    </HStack>
                   </VStack>
                 </Card.Body>
               </Card.Root>
