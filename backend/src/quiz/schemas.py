@@ -32,6 +32,13 @@ class FailureReason(str, Enum):
     VALIDATION_ERROR = "validation_error"
 
 
+class QuizLanguage(str, Enum):
+    """Supported languages for quiz question generation."""
+
+    ENGLISH = "en"
+    NORWEGIAN = "no"
+
+
 # Legacy enum for backwards compatibility during migration
 class Status(str, Enum):
     """Legacy status values - will be removed after migration."""
@@ -52,6 +59,7 @@ class QuizCreate(SQLModel):
     question_count: int = Field(default=100, ge=1, le=200)
     llm_model: str = Field(default="o3")
     llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
+    language: QuizLanguage = Field(default=QuizLanguage.ENGLISH)
 
 
 class QuizUpdate(SQLModel):
@@ -61,6 +69,7 @@ class QuizUpdate(SQLModel):
     question_count: int | None = Field(default=None, ge=1, le=200)
     llm_model: str | None = None
     llm_temperature: float | None = Field(default=None, ge=0.0, le=2.0)
+    language: QuizLanguage | None = None
 
 
 class QuizPublic(SQLModel):
@@ -75,6 +84,7 @@ class QuizPublic(SQLModel):
     question_count: int
     llm_model: str
     llm_temperature: float
+    language: QuizLanguage
     status: QuizStatus
     failure_reason: FailureReason | None = None
     last_status_update: datetime
@@ -123,6 +133,7 @@ class QuizQuestionGenerationData(SQLModel):
     target_question_count: int
     llm_model: str
     llm_temperature: float
+    language: QuizLanguage
 
 
 class QuizExportData(SQLModel):
