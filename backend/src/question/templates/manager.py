@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from src.config import get_logger
 
 from ..providers import LLMMessage
-from ..types import GenerationParameters, QuestionType
+from ..types import GenerationParameters, QuestionType, QuizLanguage
 
 logger = get_logger("template_manager")
 
@@ -22,6 +22,9 @@ class PromptTemplate(BaseModel):
     version: str = Field(default="1.0", description="Template version")
     question_type: QuestionType = Field(
         description="Question type this template supports"
+    )
+    language: QuizLanguage | None = Field(
+        default=None, description="Language for this template (None = default/English)"
     )
     description: str | None = Field(default=None, description="Template description")
 
@@ -117,7 +120,10 @@ class TemplateManager:
         self._initialized = True
 
     def get_template(
-        self, question_type: QuestionType, template_name: str | None = None
+        self,
+        question_type: QuestionType,
+        template_name: str | None = None,
+        language: QuizLanguage | str | None = None,
     ) -> PromptTemplate:
         """
         Get a prompt template for a question type.
@@ -125,6 +131,7 @@ class TemplateManager:
         Args:
             question_type: The question type
             template_name: Specific template name, uses default if None
+            language: Language for template, uses English if None
 
         Returns:
             Prompt template
@@ -135,25 +142,58 @@ class TemplateManager:
         if not self._initialized:
             self.initialize()
 
+        # Normalize language (None means English/default)
+        if language is None:
+            language = QuizLanguage.ENGLISH
+        elif isinstance(language, str):
+            # Handle string values
+            language = QuizLanguage(language)
+
         # If no specific template name, use default for question type
         if template_name is None:
-            template_name = f"default_{question_type.value}"
+            # Try language-specific template first
+            if language == QuizLanguage.NORWEGIAN:
+                template_name = f"default_{question_type.value}_no"
+            else:
+                template_name = f"default_{question_type.value}"
 
-        # Try exact match first
+        # Try exact match first with language consideration
         if template_name in self._template_cache:
             template = self._template_cache[template_name]
             if template.question_type == question_type:
-                return template
+                # Check if template language matches requested language
+                template_lang = template.language or QuizLanguage.ENGLISH
+                if template_lang == language:
+                    return template
 
-        # Try finding by question type
+        # Try language-specific template by appending language suffix
+        if language == QuizLanguage.NORWEGIAN and not template_name.endswith("_no"):
+            language_specific_name = f"{template_name}_no"
+            if language_specific_name in self._template_cache:
+                template = self._template_cache[language_specific_name]
+                if template.question_type == question_type:
+                    return template
+
+        # Try finding by question type and language
         for template in self._template_cache.values():
-            if template.question_type == question_type and (
-                template_name is None or template.name == template_name
-            ):
-                return template
+            if template.question_type == question_type:
+                template_lang = template.language or QuizLanguage.ENGLISH
+                if template_lang == language and (
+                    template_name is None or template.name == template_name
+                ):
+                    return template
+
+        # Fallback: try English template if Norwegian was requested but not found
+        if language == QuizLanguage.NORWEGIAN:
+            logger.warning(
+                "norwegian_template_not_found_fallback_to_english",
+                question_type=question_type.value,
+                template_name=template_name,
+            )
+            return self.get_template(question_type, template_name, QuizLanguage.ENGLISH)
 
         raise ValueError(
-            f"No template found for question type {question_type} with name {template_name}"
+            f"No template found for question type {question_type} with name {template_name} and language {language}"
         )
 
     def list_templates(
@@ -184,6 +224,7 @@ class TemplateManager:
         content: str,
         generation_parameters: GenerationParameters,
         template_name: str | None = None,
+        language: QuizLanguage | str | None = None,
         extra_variables: dict[str, Any] | None = None,
     ) -> list[LLMMessage]:
         """
@@ -194,12 +235,17 @@ class TemplateManager:
             content: Content to generate questions from
             generation_parameters: Generation parameters
             template_name: Specific template to use
+            language: Language for template selection
             extra_variables: Additional template variables
 
         Returns:
             List of LLM messages
         """
-        template = self.get_template(question_type, template_name)
+        # Normalize language if it's a string
+        if isinstance(language, str):
+            language = QuizLanguage(language)
+
+        template = self.get_template(question_type, template_name, language)
 
         # Prepare template variables
         variables = {

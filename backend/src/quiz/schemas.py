@@ -7,6 +7,9 @@ from uuid import UUID
 
 from sqlmodel import Field, SQLModel
 
+# Import QuizLanguage from question types to avoid circular dependency
+from src.question.types import QuizLanguage
+
 
 class QuizStatus(str, Enum):
     """Consolidated status values for quiz workflow."""
@@ -30,13 +33,6 @@ class FailureReason(str, Enum):
     CANVAS_EXPORT_ERROR = "canvas_export_error"
     NETWORK_ERROR = "network_error"
     VALIDATION_ERROR = "validation_error"
-
-
-class QuizLanguage(str, Enum):
-    """Supported languages for quiz question generation."""
-
-    ENGLISH = "en"
-    NORWEGIAN = "no"
 
 
 # Legacy enum for backwards compatibility during migration

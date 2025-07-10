@@ -401,7 +401,10 @@ class BaseQuestionWorkflow(ABC):
         if self.template_manager:
             # Use template manager if available
             messages = await self.template_manager.create_messages(
-                self.question_type, content_chunk, generation_parameters
+                self.question_type,
+                content_chunk,
+                generation_parameters,
+                language=generation_parameters.language,
             )
         else:
             # Fallback to default implementation

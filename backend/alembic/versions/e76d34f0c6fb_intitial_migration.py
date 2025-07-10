@@ -1,8 +1,8 @@
-"""Initial migration
+"""Intitial migration
 
-Revision ID: e96cd2e69244
+Revision ID: e76d34f0c6fb
 Revises:
-Create Date: 2025-07-08 16:03:14.154488
+Create Date: 2025-07-10 12:27:34.744553
 
 """
 from alembic import op
@@ -11,7 +11,7 @@ import sqlmodel.sql.sqltypes
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'e96cd2e69244'
+revision = 'e76d34f0c6fb'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -43,6 +43,7 @@ def upgrade():
     sa.Column('question_count', sa.Integer(), nullable=False),
     sa.Column('llm_model', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('llm_temperature', sa.Float(), nullable=False),
+    sa.Column('language', sa.Enum('ENGLISH', 'NORWEGIAN', name='quizlanguage'), nullable=False),
     sa.Column('status', sa.Enum('CREATED', 'EXTRACTING_CONTENT', 'GENERATING_QUESTIONS', 'READY_FOR_REVIEW', 'EXPORTING_TO_CANVAS', 'PUBLISHED', 'FAILED', name='quizstatus'), nullable=False),
     sa.Column('failure_reason', sa.Enum('CONTENT_EXTRACTION_ERROR', 'NO_CONTENT_FOUND', 'LLM_GENERATION_ERROR', 'NO_QUESTIONS_GENERATED', 'CANVAS_EXPORT_ERROR', 'NETWORK_ERROR', 'VALIDATION_ERROR', name='failurereason'), nullable=True),
     sa.Column('last_status_update', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),

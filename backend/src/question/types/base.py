@@ -36,6 +36,13 @@ class QuestionDifficulty(str, Enum):
     HARD = "hard"
 
 
+class QuizLanguage(str, Enum):
+    """Supported languages for quiz question generation."""
+
+    ENGLISH = "en"
+    NORWEGIAN = "no"
+
+
 class BaseQuestionData(BaseModel):
     """Base class for question type-specific data."""
 
@@ -155,6 +162,9 @@ class GenerationParameters(BaseModel):
     difficulty: QuestionDifficulty | None = Field(default=None)
     tags: list[str] | None = Field(default=None)
     custom_instructions: str | None = Field(default=None, max_length=500)
+    language: QuizLanguage = Field(
+        default=QuizLanguage.ENGLISH, description="Language for question generation"
+    )
 
     class Config:
         """Pydantic configuration."""

@@ -13,7 +13,9 @@ if TYPE_CHECKING:
     from src.auth.models import User
     from src.question.models import Question
 
-from .schemas import FailureReason, QuizLanguage, QuizStatus
+from src.question.types import QuizLanguage
+
+from .schemas import FailureReason, QuizStatus
 
 
 class Quiz(SQLModel, table=True):
