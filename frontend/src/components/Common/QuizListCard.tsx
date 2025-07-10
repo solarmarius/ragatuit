@@ -54,16 +54,6 @@ export const QuizListCard = memo(function QuizListCard({
             <Badge variant="solid" colorScheme="blue" size="sm" flexShrink={0}>
               {quiz.question_count} questions
             </Badge>
-            {quiz.llm_model && (
-              <Badge
-                variant="outline"
-                colorScheme="purple"
-                size="sm"
-                flexShrink={0}
-              >
-                {quiz.llm_model}
-              </Badge>
-            )}
           </HStack>
 
           <Button size="sm" variant="outline" asChild flexShrink={0}>

@@ -282,8 +282,8 @@ test.describe("Quiz List Content Extraction Status", () => {
     const orangeLights = page.locator('[title="Ready to Start"]')
     await expect(orangeLights).toHaveCount(2)
 
-    // Check status text specifically in the Status column (5th column, index 4)
-    const statusCells = page.locator("tbody tr td:nth-child(5)")
+    // Check status text specifically in the Status column (4th column, index 3)
+    const statusCells = page.locator("tbody tr td:nth-child(4)")
     await expect(statusCells.filter({ hasText: "Ready to Start" })).toHaveCount(
       2,
     )
@@ -362,9 +362,9 @@ test.describe("Quiz List Content Extraction Status", () => {
 
       // Check the status text in the status column
       const row = page.locator("tr", { has: page.getByText(mockQuiz.title) })
-      // Look specifically in the Status column (5th column, index 4)
+      // Look specifically in the Status column (4th column, index 3)
       await expect(
-        row.locator("td").nth(4).getByText(testCase.expectedText),
+        row.locator("td").nth(3).getByText(testCase.expectedText),
       ).toBeVisible()
     }
   })

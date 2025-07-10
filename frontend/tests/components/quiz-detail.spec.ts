@@ -70,10 +70,6 @@ test.describe("Quiz Detail Component", () => {
     await expect(page.getByText("Quiz Settings")).toBeVisible()
     await expect(page.getByText("Question Count")).toBeVisible()
     await expect(page.locator('text="75"').first()).toBeVisible()
-    await expect(page.getByText("LLM Model")).toBeVisible()
-    await expect(page.getByText("gpt-4o")).toBeVisible()
-    await expect(page.getByText("Temperature")).toBeVisible()
-    await expect(page.getByText("0.7")).toBeVisible()
 
     // Check metadata section
     await expect(page.getByText("Quiz Metadata")).toBeVisible()
@@ -272,14 +268,6 @@ test.describe("Quiz Detail Component", () => {
     // Check question count badge
     const questionBadge = page.locator('text="100"').first()
     await expect(questionBadge).toBeVisible()
-
-    // Check model badge
-    const modelBadge = page.locator("text=gpt-4.1-mini").first()
-    await expect(modelBadge).toBeVisible()
-
-    // Check temperature badge
-    const tempBadge = page.locator("text=1.5").first()
-    await expect(tempBadge).toBeVisible()
   })
 
   test("should handle malformed JSON in selected_modules", async ({ page }) => {
@@ -350,8 +338,6 @@ test.describe("Quiz Detail Component", () => {
 
     // Check extreme values are displayed correctly
     await expect(page.locator('text="200"').first()).toBeVisible()
-    await expect(page.getByText("model-with-very-long-name")).toBeVisible()
-    await expect(page.locator("span").getByText("2").first()).toBeVisible()
     await expect(page.getByText("Course with Long Name")).toBeVisible()
 
     // Check all modules are displayed

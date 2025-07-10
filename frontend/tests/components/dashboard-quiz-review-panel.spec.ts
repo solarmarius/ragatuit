@@ -96,7 +96,6 @@ test.describe("QuizReviewPanel Component", () => {
     await expect(page.getByText("Machine Learning Fundamentals")).toBeVisible()
     await expect(page.getByText("Test Course")).toBeVisible()
     await expect(page.getByText("50 questions").first()).toBeVisible()
-    await expect(page.getByText("gpt-4o").first()).toBeVisible()
     await expect(page.getByText("Review").first()).toBeVisible()
 
     // Check second quiz card
@@ -209,7 +208,7 @@ test.describe("QuizReviewPanel Component", () => {
     await expect(firstQuiz).toBeVisible()
   })
 
-  test("should show correct badge styling for questions and models", async ({
+  test("should show correct badge styling for questions", async ({
     page,
   }) => {
     await page.route("**/api/v1/quiz/", async (route) => {
@@ -221,9 +220,5 @@ test.describe("QuizReviewPanel Component", () => {
     // Check question count badge
     const questionBadge = page.getByText("50 questions").first()
     await expect(questionBadge).toBeVisible()
-
-    // Check LLM model badge
-    const modelBadge = page.getByText("gpt-4o").first()
-    await expect(modelBadge).toBeVisible()
   })
 })

@@ -111,7 +111,6 @@ test.describe("Quiz List Component", () => {
     await expect(page.getByText("Intro to AI")).toBeVisible()
     await expect(page.getByText("ID: 12345")).toBeVisible()
     await expect(page.locator("tbody").getByText("50")).toBeVisible()
-    await expect(page.getByText("gpt-4o")).toBeVisible()
     await expect(page.getByText("15 Jan 2024")).toBeVisible()
 
     // Check second quiz row
@@ -120,7 +119,6 @@ test.describe("Quiz List Component", () => {
     await expect(page.getByText("CS101")).toBeVisible()
     await expect(page.getByText("ID: 67890")).toBeVisible()
     await expect(page.getByText("25")).toBeVisible()
-    await expect(page.getByText("o3")).toBeVisible()
     await expect(page.getByText("10 Jan 2024")).toBeVisible()
 
     // Check action buttons
@@ -350,9 +348,5 @@ test.describe("Quiz List Component", () => {
     // Check badge styling - question count should be blue solid
     const questionBadge = page.locator("text=75").first()
     await expect(questionBadge).toBeVisible()
-
-    // Check model badge styling - should be purple outline
-    const modelBadge = page.locator("text=gpt-4.1-mini").first()
-    await expect(modelBadge).toBeVisible()
   })
 })

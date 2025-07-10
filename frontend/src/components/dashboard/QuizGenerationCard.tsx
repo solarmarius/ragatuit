@@ -54,10 +54,7 @@ export const QuizGenerationCard = memo(function QuizGenerationCard({
 
         {/* Footer with badges and action */}
         <HStack justify="space-between" align="center">
-          <QuizBadges
-            questionCount={quiz.question_count || 0}
-            llmModel={quiz.llm_model}
-          />
+          <QuizBadges questionCount={quiz.question_count || 0} />
 
           <Button size="sm" variant="outline" asChild>
             <RouterLink to="/quiz/$id" params={{ id: quiz.id || "" }}>
