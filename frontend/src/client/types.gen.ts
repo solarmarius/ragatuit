@@ -83,6 +83,17 @@ export type HTTPValidationError = {
 }
 
 /**
+ * Schema for module selection with question count.
+ */
+export type ModuleSelection = {
+  name: string
+  /**
+   * Questions per module (1-20)
+   */
+  question_count: number
+}
+
+/**
  * Schema for creating a new question.
  */
 export type QuestionCreateRequest = {
@@ -150,7 +161,9 @@ export type Quiz = {
   canvas_course_id: number
   canvas_course_name: string
   selected_modules?: {
-    [key: string]: string
+    [key: string]: {
+      [key: string]: unknown
+    }
   }
   title: string
   question_count?: number
@@ -186,19 +199,24 @@ export type Quiz = {
    * Timestamp when quiz was exported to Canvas
    */
   exported_at?: string | null
+  /**
+   * Additional metadata for tracking generation details
+   */
+  generation_metadata?: {
+    [key: string]: unknown
+  }
 }
 
 /**
- * Schema for creating a new quiz.
+ * Schema for creating a new quiz with module-based questions.
  */
 export type QuizCreate = {
   canvas_course_id: number
   canvas_course_name: string
   selected_modules: {
-    [key: string]: string
+    [key: string]: ModuleSelection
   }
   title: string
-  question_count?: number
   llm_model?: string
   llm_temperature?: number
   language?: QuizLanguage
