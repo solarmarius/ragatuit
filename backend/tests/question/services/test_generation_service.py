@@ -656,6 +656,103 @@ def test_validate_generation_request_system_limits(generation_service):
     assert "exceeds system limits" in str(exc_info.value)
 
 
+# Norwegian Language Feature Tests for Generation Service
+
+
+def test_generation_parameters_with_norwegian_language():
+    """Test creating generation parameters with Norwegian language."""
+    from src.question.types import (
+        GenerationParameters,
+        QuestionDifficulty,
+        QuizLanguage,
+    )
+
+    params = GenerationParameters(
+        target_count=10,
+        difficulty=QuestionDifficulty.HARD,
+        language=QuizLanguage.NORWEGIAN,
+        tags=["matematikk", "norsk"],
+        custom_instructions="Fokuser på grunnleggende konsepter",
+    )
+
+    assert params.language == QuizLanguage.NORWEGIAN
+    assert params.target_count == 10
+    assert params.difficulty == QuestionDifficulty.HARD
+    assert "matematikk" in params.tags
+    assert "grunnleggende konsepter" in params.custom_instructions
+
+
+def test_generation_parameters_default_language():
+    """Test generation parameters default to English language."""
+    from src.question.types import (
+        GenerationParameters,
+        QuestionDifficulty,
+        QuizLanguage,
+    )
+
+    params = GenerationParameters(
+        target_count=5,
+        difficulty=QuestionDifficulty.MEDIUM,
+        # language not specified - should default to English
+    )
+
+    assert params.language == QuizLanguage.ENGLISH
+    assert params.target_count == 5
+    assert params.difficulty == QuestionDifficulty.MEDIUM
+
+
+@pytest.mark.asyncio
+async def test_batch_generate_questions_with_mixed_languages(generation_service):
+    """Test batch generation with both English and Norwegian requests."""
+    from src.question.types import GenerationResult
+
+    requests = [
+        {
+            "quiz_id": str(uuid.uuid4()),
+            "question_type": "multiple_choice",
+            "generation_parameters": {
+                "target_count": 3,
+                "difficulty": "medium",
+                "language": "en",
+            },
+        },
+        {
+            "quiz_id": str(uuid.uuid4()),
+            "question_type": "multiple_choice",
+            "generation_parameters": {
+                "target_count": 2,
+                "difficulty": "easy",
+                "language": "no",
+            },
+        },
+    ]
+
+    mock_result_en = GenerationResult(
+        success=True,
+        questions_generated=3,
+        target_questions=3,
+        metadata={"language": "en"},
+    )
+    mock_result_no = GenerationResult(
+        success=True,
+        questions_generated=2,
+        target_questions=2,
+        metadata={"language": "no"},
+    )
+
+    with patch.object(generation_service, "generate_questions") as mock_generate:
+        mock_generate.side_effect = [mock_result_en, mock_result_no]
+
+        results = await generation_service.batch_generate_questions(requests)
+
+    assert len(results) == 2
+    assert all(result.success for result in results)
+    assert results[0].questions_generated == 3
+    assert results[1].questions_generated == 2
+    # Verify both language requests were processed
+    assert mock_generate.call_count == 2
+
+
 @pytest.mark.parametrize(
     "provider_name,workflow_name,template_name",
     [
