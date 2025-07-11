@@ -40,10 +40,15 @@ def create_quiz(session: Session, quiz_create: QuizCreate, owner_id: UUID) -> Qu
         title=quiz_create.title,
     )
 
-    # Convert dict[int, str] to dict[str, str] for storage
-    selected_modules = {
-        str(module_id): name for module_id, name in quiz_create.selected_modules.items()
-    }
+    # Convert ModuleSelection objects to dict for storage
+    selected_modules: dict[str, dict[str, Any]] = {}
+    for module_id, module_data in quiz_create.selected_modules.items():
+        if hasattr(module_data, "model_dump"):
+            # ModuleSelection object
+            selected_modules[str(module_id)] = module_data.model_dump()
+        else:
+            # Already a dict
+            selected_modules[str(module_id)] = dict(module_data)
 
     quiz = Quiz(
         owner_id=owner_id,
@@ -51,7 +56,7 @@ def create_quiz(session: Session, quiz_create: QuizCreate, owner_id: UUID) -> Qu
         canvas_course_name=quiz_create.canvas_course_name,
         selected_modules=selected_modules,
         title=quiz_create.title,
-        question_count=quiz_create.question_count,
+        question_count=quiz_create.total_question_count,
         llm_model=quiz_create.llm_model,
         llm_temperature=quiz_create.llm_temperature,
         language=quiz_create.language,

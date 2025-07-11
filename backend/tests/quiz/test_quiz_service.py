@@ -12,7 +12,7 @@ from tests.factories import QuizFactory, UserFactory
 
 def test_create_quiz_success(session: Session):
     """Test successful quiz creation."""
-    from src.quiz.schemas import QuizCreate
+    from src.quiz.schemas import ModuleSelection, QuizCreate
     from src.quiz.service import create_quiz
 
     # Create user using helper function
@@ -23,9 +23,11 @@ def test_create_quiz_success(session: Session):
     quiz_data = QuizCreate(
         canvas_course_id=123,
         canvas_course_name="Test Course",
-        selected_modules={456: "Module 1", 789: "Module 2"},
+        selected_modules={
+            "456": ModuleSelection(name="Module 1", question_count=10),
+            "789": ModuleSelection(name="Module 2", question_count=15),
+        },
         title="Test Quiz",
-        question_count=50,
         llm_model="gpt-4",
         llm_temperature=0.7,
     )
@@ -36,9 +38,12 @@ def test_create_quiz_success(session: Session):
     assert quiz.owner_id == user.id
     assert quiz.canvas_course_id == 123
     assert quiz.canvas_course_name == "Test Course"
-    assert quiz.selected_modules == {"456": "Module 1", "789": "Module 2"}
+    assert quiz.selected_modules == {
+        "456": {"name": "Module 1", "question_count": 10},
+        "789": {"name": "Module 2", "question_count": 15},
+    }
     assert quiz.title == "Test Quiz"
-    assert quiz.question_count == 50
+    assert quiz.question_count == 25  # 10 + 15 from modules
     assert quiz.llm_model == "gpt-4"
     assert quiz.llm_temperature == 0.7
     assert quiz.updated_at is not None
