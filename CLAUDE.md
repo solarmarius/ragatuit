@@ -127,6 +127,7 @@ Comprehensive documentation for the refactored frontend architecture:
 - **Quiz**: Quiz with consolidated status system (7 states: created, extracting_content, generating_questions, ready_for_review, exporting_to_canvas, published, failed)
 - **QuizStatus**: Enum representing the current state of quiz processing
 - **FailureReason**: Enum for detailed error tracking when quiz status is failed
+- **QuizLanguage**: Enum for supported languages (English: "en", Norwegian: "no")
 - **Canvas Integration**: OAuth flow for accessing Canvas courses and content
 - **Authentication**: JWT-based session management with Canvas token storage
 
@@ -134,7 +135,7 @@ Comprehensive documentation for the refactored frontend architecture:
 
 1. **Canvas OAuth Setup**: Users authenticate via Canvas to access course content
 2. **Course Selection**: Users select which Canvas course to generate questions from
-3. **Quiz Creation**: Quiz created with status `created`
+3. **Quiz Creation**: Quiz created with status `created` and language selection (English/Norwegian)
 4. **Content Processing**: Course modules are parsed and prepared for LLM input (status: `extracting_content`)
 5. **Question Generation**: Language model generates multiple-choice questions (status: `generating_questions`)
 6. **Review Process**: Users approve/reject generated questions (status: `ready_for_review`)

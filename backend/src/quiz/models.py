@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from src.auth.models import User
     from src.question.models import Question
 
+from src.question.types import QuizLanguage
+
 from .schemas import FailureReason, QuizStatus
 
 
@@ -33,6 +35,10 @@ class Quiz(SQLModel, table=True):
     question_count: int = Field(default=100, ge=1, le=200)
     llm_model: str = Field(default="o3")
     llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
+    language: QuizLanguage = Field(
+        default=QuizLanguage.ENGLISH,
+        description="Language for question generation",
+    )
     status: QuizStatus = Field(
         default=QuizStatus.CREATED,
         description="Consolidated quiz status",

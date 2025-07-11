@@ -35,6 +35,11 @@ export const QUESTION_TYPES = {
   FILL_IN_BLANK: "fill_in_blank",
 } as const
 
+export const QUIZ_LANGUAGES = {
+  ENGLISH: "en",
+  NORWEGIAN: "no",
+} as const
+
 export const QUIZ_STATUS = {
   CREATED: "created",
   EXTRACTING_CONTENT: "extracting_content",

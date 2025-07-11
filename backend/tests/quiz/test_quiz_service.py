@@ -621,3 +621,151 @@ def test_create_quiz_with_various_parameters(
     assert quiz.question_count == question_count
     assert quiz.llm_model == llm_model
     assert quiz.llm_temperature == temperature
+
+
+# Norwegian Language Feature Tests
+
+
+def test_create_quiz_with_norwegian_language(session: Session):
+    """Test quiz creation with Norwegian language selection."""
+    from src.question.types import QuizLanguage
+    from src.quiz.schemas import QuizCreate
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Norwegian Course",
+        selected_modules={456: "Modul 1"},
+        title="Norsk Quiz",
+        language=QuizLanguage.NORWEGIAN,
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify Norwegian language is set
+    assert quiz.language == QuizLanguage.NORWEGIAN
+    assert quiz.canvas_course_name == "Norwegian Course"
+    assert quiz.title == "Norsk Quiz"
+
+
+def test_create_quiz_language_defaults_to_english(session: Session):
+    """Test quiz creation defaults to English when language not specified."""
+    from src.question.types import QuizLanguage
+    from src.quiz.schemas import QuizCreate
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Default Language Course",
+        selected_modules={456: "Module 1"},
+        title="Default Quiz",
+        # language not specified - should default to English
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify default language is English
+    assert quiz.language == QuizLanguage.ENGLISH
+
+
+def test_create_quiz_with_english_language_explicit(session: Session):
+    """Test quiz creation with explicit English language selection."""
+    from src.question.types import QuizLanguage
+    from src.quiz.schemas import QuizCreate
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="English Course",
+        selected_modules={456: "Module 1"},
+        title="English Quiz",
+        language=QuizLanguage.ENGLISH,
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify English language is set explicitly
+    assert quiz.language == QuizLanguage.ENGLISH
+
+
+def test_prepare_question_generation_includes_language(session: Session):
+    """Test that prepare_question_generation includes language in results."""
+    from src.question.types import QuizLanguage
+    from src.quiz.service import prepare_question_generation
+    from tests.conftest import create_quiz_in_session
+
+    # Create quiz with Norwegian language
+    quiz = create_quiz_in_session(
+        session,
+        question_count=75,
+        llm_model="gpt-4",
+        llm_temperature=0.8,
+        language=QuizLanguage.NORWEGIAN,
+    )
+
+    with patch(
+        "src.quiz.service.validate_quiz_for_question_generation"
+    ) as mock_validate:
+        mock_validate.return_value = quiz
+
+        result = prepare_question_generation(session, quiz.id, quiz.owner_id)
+
+    # Verify language is included in generation parameters
+    assert result["language"] == QuizLanguage.NORWEGIAN
+    assert result["question_count"] == 75
+    assert result["llm_model"] == "gpt-4"
+    assert result["llm_temperature"] == 0.8
+
+
+@pytest.mark.asyncio
+async def test_reserve_quiz_job_includes_language_setting(async_session):
+    """Test that quiz job reservation includes language in settings."""
+    from src.auth.models import User
+    from src.question.types import QuizLanguage
+    from src.quiz.models import Quiz
+    from src.quiz.service import reserve_quiz_job
+
+    # Create a user first
+    user = User(
+        canvas_id=128,
+        name="Language Test User",
+        access_token="test_access_token",
+        refresh_token="test_refresh_token",
+    )
+    async_session.add(user)
+    await async_session.commit()
+    await async_session.refresh(user)
+
+    quiz = Quiz(
+        owner_id=user.id,
+        canvas_course_id=123,
+        canvas_course_name="Norwegian Test Course",
+        selected_modules={"1": "Modul 1"},
+        title="Norsk Test Quiz",
+        question_count=50,
+        llm_model="gpt-4",
+        llm_temperature=0.7,
+        language=QuizLanguage.NORWEGIAN,
+        status="created",
+    )
+    async_session.add(quiz)
+    await async_session.commit()
+    await async_session.refresh(quiz)
+
+    with patch("src.quiz.service.get_quiz_for_update", return_value=quiz):
+        result = await reserve_quiz_job(async_session, quiz.id, "extraction")
+
+    assert result is not None
+    assert result["language"] == QuizLanguage.NORWEGIAN
+    assert result["target_questions"] == 50
+    assert result["llm_model"] == "gpt-4"
+    assert result["llm_temperature"] == 0.7

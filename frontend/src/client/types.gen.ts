@@ -157,6 +157,10 @@ export type Quiz = {
   llm_model?: string
   llm_temperature?: number
   /**
+   * Language for question generation
+   */
+  language?: QuizLanguage
+  /**
    * Consolidated quiz status
    */
   status?: QuizStatus
@@ -197,7 +201,13 @@ export type QuizCreate = {
   question_count?: number
   llm_model?: string
   llm_temperature?: number
+  language?: QuizLanguage
 }
+
+/**
+ * Supported languages for quiz question generation.
+ */
+export type QuizLanguage = "en" | "no"
 
 /**
  * Consolidated status values for quiz workflow.

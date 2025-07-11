@@ -208,9 +208,7 @@ test.describe("QuizReviewPanel Component", () => {
     await expect(firstQuiz).toBeVisible()
   })
 
-  test("should show correct badge styling for questions", async ({
-    page,
-  }) => {
+  test("should show correct badge styling for questions", async ({ page }) => {
     await page.route("**/api/v1/quiz/", async (route) => {
       await route.fulfill(createQuizListResponse(quizzesNeedingReview))
     })

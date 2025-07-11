@@ -870,3 +870,132 @@ async def test_get_questions_with_various_filters(
 
     assert len(result) == 1
     assert expected_filter in result[0].question_data["question_text"]
+
+
+# Norwegian Language Feature Tests for Question Service
+
+
+@pytest.mark.asyncio
+async def test_save_questions_with_norwegian_validation(async_session):
+    """Test question saving with Norwegian language-specific validation."""
+    from src.question.models import QuestionType
+    from src.question.service import save_questions
+    from tests.conftest import create_quiz_in_async_session
+
+    # Create a quiz in the session to avoid foreign key constraint violation
+    quiz = await create_quiz_in_async_session(async_session)
+    quiz_id = quiz.id
+    question_type = QuestionType.MULTIPLE_CHOICE
+
+    # Norwegian questions data
+    questions_data = [
+        {
+            "question_text": "Hva er 2+2?",
+            "option_a": "3",
+            "option_b": "4",
+            "option_c": "5",
+            "option_d": "6",
+            "correct_answer": "B",
+            "explanation": "Grunnleggende aritmetikk",
+        },
+        {
+            "question_text": "Hva er hovedstaden i Norge?",
+            "option_a": "Bergen",
+            "option_b": "Trondheim",
+            "option_c": "Oslo",
+            "option_d": "Stavanger",
+            "correct_answer": "C",
+            "explanation": "Oslo er hovedstaden i Norge",
+        },
+    ]
+
+    # Mock question registry and validation
+    mock_question_data = MagicMock()
+    mock_question_data.dict.return_value = {"validated": "norwegian_data"}
+
+    mock_question_impl = MagicMock()
+    mock_question_impl.validate_data.return_value = mock_question_data
+
+    mock_registry = MagicMock()
+    mock_registry.get_question_type.return_value = mock_question_impl
+
+    with patch(
+        "src.question.service.get_question_type_registry", return_value=mock_registry
+    ):
+        result = await save_questions(
+            async_session, quiz_id, question_type, questions_data
+        )
+
+    assert result["success"] is True
+    assert result["saved_count"] == 2
+    assert result["total_count"] == 2
+    assert len(result["question_ids"]) == 2
+    assert result["errors"] == []
+
+    # Verify Norwegian questions were validated
+    assert mock_question_impl.validate_data.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_prepare_questions_for_export_norwegian_content():
+    """Test question export preparation with Norwegian content."""
+    from src.question.models import Question, QuestionType
+    from src.question.service import prepare_questions_for_export
+
+    quiz_id = uuid.uuid4()
+
+    # Norwegian questions
+    questions = [
+        Question(
+            id=uuid.uuid4(),
+            quiz_id=quiz_id,
+            question_type=QuestionType.MULTIPLE_CHOICE,
+            question_data={
+                "question_text": "Hva er hovedstaden i Norge?",
+                "option_a": "Bergen",
+                "option_b": "Trondheim",
+                "option_c": "Oslo",
+                "option_d": "Stavanger",
+                "correct_answer": "C",
+                "explanation": "Oslo er hovedstaden i Norge",
+            },
+            is_approved=True,
+        )
+    ]
+
+    # Create proper MultipleChoiceData instance with Norwegian content
+    from src.question.types.mcq import MultipleChoiceData
+
+    mock_norwegian_mcq_data = MultipleChoiceData(
+        question_text="Hva er hovedstaden i Norge?",
+        option_a="Bergen",
+        option_b="Trondheim",
+        option_c="Oslo",
+        option_d="Stavanger",
+        correct_answer="C",
+        explanation="Oslo er hovedstaden i Norge",
+    )
+
+    # Mock question.get_typed_data to return the Norwegian mock data
+    for question in questions:
+        object.__setattr__(
+            question, "get_typed_data", MagicMock(return_value=mock_norwegian_mcq_data)
+        )
+
+    with (
+        patch("src.database.get_async_session") as mock_get_session,
+        patch("src.question.service.get_questions_by_quiz", return_value=questions),
+        patch("src.question.service.get_question_type_registry"),
+    ):
+        # Mock the async context manager
+        mock_session = AsyncMock()
+        mock_get_session.return_value.__aenter__.return_value = mock_session
+
+        result = await prepare_questions_for_export(quiz_id)
+
+    assert len(result) == 1
+    # Verify Norwegian content is preserved in export
+    assert result[0]["question_text"] == "Hva er hovedstaden i Norge?"
+    assert result[0]["option_a"] == "Bergen"
+    assert result[0]["option_c"] == "Oslo"
+    assert result[0]["correct_answer"] == "C"

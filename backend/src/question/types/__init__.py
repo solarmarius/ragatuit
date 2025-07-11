@@ -8,6 +8,7 @@ from .base import (
     Question,
     QuestionDifficulty,
     QuestionType,
+    QuizLanguage,
 )
 from .mcq import MultipleChoiceData, MultipleChoiceQuestionType
 from .registry import QuestionTypeRegistry, get_question_type_registry
@@ -19,6 +20,7 @@ __all__ = [
     "Question",
     "QuestionType",
     "QuestionDifficulty",
+    "QuizLanguage",
     "GenerationParameters",
     "GenerationResult",
     # MCQ implementation

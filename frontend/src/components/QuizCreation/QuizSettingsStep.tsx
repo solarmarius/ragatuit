@@ -1,8 +1,19 @@
+import type { QuizLanguage } from "@/client"
 import { FormField, FormGroup } from "@/components/forms"
-import { Box, Input, Text } from "@chakra-ui/react"
+import { QUIZ_LANGUAGES } from "@/lib/constants"
+import {
+  Box,
+  Card,
+  HStack,
+  Input,
+  RadioGroup,
+  Text,
+  VStack,
+} from "@chakra-ui/react"
 
 interface QuizSettings {
   questionCount: number
+  language: QuizLanguage
 }
 
 interface QuizSettingsStepProps {
@@ -12,6 +23,7 @@ interface QuizSettingsStepProps {
 
 const DEFAULT_SETTINGS: QuizSettings = {
   questionCount: 100,
+  language: QUIZ_LANGUAGES.ENGLISH,
 }
 
 export function QuizSettingsStep({
@@ -22,6 +34,19 @@ export function QuizSettingsStep({
     const newSettings = { ...settings, ...updates }
     onSettingsChange(newSettings)
   }
+
+  const languageOptions = [
+    {
+      value: QUIZ_LANGUAGES.ENGLISH,
+      label: "English",
+      description: "Generate questions in English",
+    },
+    {
+      value: QUIZ_LANGUAGES.NORWEGIAN,
+      label: "Norwegian",
+      description: "Generate questions in Norwegian (Norsk)",
+    },
+  ]
 
   return (
     <FormGroup gap={6}>
@@ -42,6 +67,49 @@ export function QuizSettingsStep({
           <Text fontSize="sm" color="gray.600" mt={2}>
             Number of questions to generate (1-200)
           </Text>
+        </Box>
+      </FormField>
+
+      <FormField label="Quiz Language" isRequired>
+        <Box>
+          <Text fontSize="sm" color="gray.600" mb={3}>
+            Select the language for question generation
+          </Text>
+          <RadioGroup.Root
+            value={settings.language}
+            onValueChange={(details) =>
+              updateSettings({ language: details.value as QuizLanguage })
+            }
+          >
+            <VStack gap={3} align="stretch" maxW="500px">
+              {languageOptions.map((option) => (
+                <Card.Root
+                  key={option.value}
+                  variant="outline"
+                  cursor="pointer"
+                  _hover={{ borderColor: "blue.300" }}
+                  borderColor={
+                    settings.language === option.value ? "blue.500" : "gray.200"
+                  }
+                  bg={settings.language === option.value ? "blue.50" : "white"}
+                  onClick={() => updateSettings({ language: option.value })}
+                  data-testid={`language-card-${option.value}`}
+                >
+                  <Card.Body>
+                    <HStack>
+                      <RadioGroup.Item value={option.value} />
+                      <Box flex={1}>
+                        <Text fontWeight="semibold">{option.label}</Text>
+                        <Text fontSize="sm" color="gray.600">
+                          {option.description}
+                        </Text>
+                      </Box>
+                    </HStack>
+                  </Card.Body>
+                </Card.Root>
+              ))}
+            </VStack>
+          </RadioGroup.Root>
         </Box>
       </FormField>
     </FormGroup>

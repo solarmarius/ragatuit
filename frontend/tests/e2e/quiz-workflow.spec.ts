@@ -383,4 +383,322 @@ test.describe("Quiz Workflow End-to-End", () => {
     // Should navigate to create quiz page
     await expect(page).toHaveURL("/create-quiz")
   })
+
+  // Norwegian Language Feature Tests for Quiz Workflow
+
+  test("complete quiz creation with Norwegian language selection", async ({
+    page,
+  }) => {
+    // Mock empty quiz list initially
+    await page.route("**/api/v1/quiz/", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([]),
+      })
+    })
+
+    // Start at quiz list page
+    await page.goto("/quizzes")
+
+    // Click create quiz button
+    await page.getByRole("link", { name: "Create Your First Quiz" }).click()
+
+    // Verify we're on create quiz page
+    await expect(page).toHaveURL("/create-quiz")
+
+    // Step 1: Select course
+    await page.getByText("Machine Learning Fundamentals").click()
+    await page.getByLabel("Quiz Title").fill("Norsk ML Quiz")
+
+    // Go to step 2 (modules)
+    await page.getByRole("button", { name: "next" }).click()
+
+    // Step 2: Select modules
+    await page.waitForLoadState("networkidle")
+    await page.getByText("Introduction to Neural Networks").click()
+    await page.getByText("Deep Learning Concepts").click()
+
+    // Go to step 3 (quiz settings)
+    await page.getByRole("button", { name: "next" }).click()
+
+    // Step 3: Quiz Configuration with Norwegian language
+    await page.waitForLoadState("networkidle")
+    await expect(page.getByText("Quiz Configuration")).toBeVisible()
+
+    // Set question count
+    const questionCountInput = page.getByPlaceholder(
+      "Enter number of questions",
+    )
+    await questionCountInput.fill("30")
+
+    // Select Norwegian language
+    await expect(page.getByText("Quiz Language")).toBeVisible()
+    await page.locator('[data-testid="language-card-no"]').click()
+
+    // Verify Norwegian is selected
+    const norwegianCard = page.locator('[data-testid="language-card-no"]')
+    await expect(norwegianCard).toHaveCSS(
+      "background-color",
+      "rgb(239, 246, 255)",
+    ) // blue.50 selected state
+
+    // Mock quiz creation API with Norwegian language
+    const newQuizId = "123e4567-e89b-12d3-a456-426614174000"
+    await page.route("**/api/v1/quiz/", async (route) => {
+      if (route.request().method() === "POST") {
+        const requestBody = await route.request().postDataJSON()
+
+        // Verify Norwegian language is included in request
+        expect(requestBody.language).toBe("no")
+
+        await route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify({
+            id: newQuizId,
+            title: "Norsk ML Quiz",
+            canvas_course_id: 12345,
+            canvas_course_name: "Machine Learning Fundamentals",
+            selected_modules: {
+              "173467": "Introduction to Neural Networks",
+              "173468": "Deep Learning Concepts",
+            },
+            question_count: 30,
+            language: "no",
+            llm_model: "o3",
+            llm_temperature: 1.0,
+            created_at: "2024-01-15T10:30:00Z",
+            updated_at: "2024-01-15T10:30:00Z",
+            owner_id: "user123",
+          }),
+        })
+      }
+    })
+
+    // Create quiz
+    await page.getByRole("button", { name: "Create Quiz" }).click()
+
+    // Should redirect to quiz detail page
+    await expect(page).toHaveURL(`/quiz/${newQuizId}`)
+  })
+
+  test("quiz configuration shows default English selection", async ({
+    page,
+  }) => {
+    // Mock the necessary APIs
+    await page.route("**/api/v1/quiz/", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([]),
+      })
+    })
+
+    await page.goto("/create-quiz")
+
+    // Step 1: Select course
+    await page.getByText("Machine Learning Fundamentals").click()
+    await page.getByLabel("Quiz Title").fill("English Quiz")
+    await page.getByRole("button", { name: "next" }).click()
+
+    // Step 2: Select modules
+    await page.waitForLoadState("networkidle")
+    await page.getByText("Introduction to Neural Networks").click()
+    await page.getByRole("button", { name: "next" }).click()
+
+    // Step 3: Quiz Configuration - verify English is selected by default
+    await page.waitForLoadState("networkidle")
+    await expect(page.getByText("Quiz Configuration")).toBeVisible()
+    await expect(page.getByText("Quiz Language")).toBeVisible()
+
+    // English should be selected by default (blue background)
+    const englishCard = page.locator('[data-testid="language-card-en"]')
+    await expect(englishCard).toHaveCSS(
+      "background-color",
+      "rgb(239, 246, 255)",
+    ) // blue.50
+
+    // Norwegian should not be selected (white background)
+    const norwegianCard = page.locator('[data-testid="language-card-no"]')
+    await expect(norwegianCard).toHaveCSS(
+      "background-color",
+      "rgb(255, 255, 255)",
+    ) // white
+  })
+
+  test("language selection switching between English and Norwegian", async ({
+    page,
+  }) => {
+    // Mock APIs
+    await page.route("**/api/v1/quiz/", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([]),
+      })
+    })
+
+    await page.goto("/create-quiz")
+
+    // Navigate to quiz configuration step
+    await page.getByText("Machine Learning Fundamentals").click()
+    await page.getByLabel("Quiz Title").fill("Language Test Quiz")
+    await page.getByRole("button", { name: "next" }).click()
+    await page.waitForLoadState("networkidle")
+    await page.getByText("Introduction to Neural Networks").click()
+    await page.getByRole("button", { name: "next" }).click()
+
+    // Step 3: Quiz Configuration
+    await page.waitForLoadState("networkidle")
+
+    const englishCard = page.locator('[data-testid="language-card-en"]')
+    const norwegianCard = page.locator('[data-testid="language-card-no"]')
+
+    // Initially English should be selected
+    await expect(englishCard).toHaveCSS(
+      "background-color",
+      "rgb(239, 246, 255)",
+    ) // blue.50
+    await expect(norwegianCard).toHaveCSS(
+      "background-color",
+      "rgb(255, 255, 255)",
+    ) // white
+
+    // Click Norwegian
+    await page.locator('[data-testid="language-card-no"]').click()
+
+    // Norwegian should now be selected, English deselected
+    await expect(norwegianCard).toHaveCSS(
+      "background-color",
+      "rgb(239, 246, 255)",
+    ) // blue.50
+    await expect(englishCard).toHaveCSS(
+      "background-color",
+      "rgb(255, 255, 255)",
+    ) // white
+
+    // Switch back to English
+    await page.locator('[data-testid="language-card-en"]').click()
+
+    // English should be selected again
+    await expect(englishCard).toHaveCSS(
+      "background-color",
+      "rgb(239, 246, 255)",
+    ) // blue.50
+    await expect(norwegianCard).toHaveCSS(
+      "background-color",
+      "rgb(255, 255, 255)",
+    ) // white
+  })
+
+  test("language selection is preserved when navigating between steps", async ({
+    page,
+  }) => {
+    // Mock APIs
+    await page.route("**/api/v1/quiz/", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([]),
+      })
+    })
+
+    await page.goto("/create-quiz")
+
+    // Navigate to quiz configuration and select Norwegian
+    await page.getByText("Machine Learning Fundamentals").click()
+    await page.getByLabel("Quiz Title").fill("Navigation Test Quiz")
+    await page.getByRole("button", { name: "next" }).click()
+    await page.waitForLoadState("networkidle")
+    await page.getByText("Introduction to Neural Networks").click()
+    await page.getByRole("button", { name: "next" }).click()
+    await page.waitForLoadState("networkidle")
+
+    // Select Norwegian language
+    await page.locator('[data-testid="language-card-no"]').click()
+    const norwegianCard = page.locator('[data-testid="language-card-no"]')
+    await expect(norwegianCard).toHaveCSS(
+      "background-color",
+      "rgb(239, 246, 255)",
+    ) // blue.50
+
+    // Go back to step 2
+    await page.getByRole("button", { name: "Previous" }).click()
+    await expect(page.getByText("Step 2 of 3: Select Modules")).toBeVisible()
+
+    // Go back to step 3
+    await page.getByRole("button", { name: "Next" }).click()
+    await page.waitForLoadState("networkidle")
+
+    // Norwegian should still be selected
+    await expect(norwegianCard).toHaveCSS(
+      "background-color",
+      "rgb(239, 246, 255)",
+    ) // blue.50
+  })
+
+  test("create quiz with Norwegian language and verify API payload", async ({
+    page,
+  }) => {
+    // Mock quiz creation to verify Norwegian language in payload
+    let capturedRequestBody: any
+
+    await page.route("**/api/v1/quiz/", async (route) => {
+      if (route.request().method() === "POST") {
+        capturedRequestBody = await route.request().postDataJSON()
+
+        await route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify({
+            id: "test-quiz-id",
+            title: "Norsk Test Quiz",
+            canvas_course_id: 12345,
+            canvas_course_name: "Machine Learning Fundamentals",
+            selected_modules: { "173467": "Introduction to Neural Networks" },
+            question_count: 25,
+            language: "no",
+            llm_model: "o3",
+            llm_temperature: 1.0,
+            created_at: "2024-01-15T10:30:00Z",
+            updated_at: "2024-01-15T10:30:00Z",
+            owner_id: "user123",
+          }),
+        })
+      } else {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([]),
+        })
+      }
+    })
+
+    await page.goto("/create-quiz")
+
+    // Complete quiz creation with Norwegian
+    await page.getByText("Machine Learning Fundamentals").click()
+    await page.getByLabel("Quiz Title").fill("Norsk Test Quiz")
+    await page.getByRole("button", { name: "next" }).click()
+    await page.waitForLoadState("networkidle")
+    await page.getByText("Introduction to Neural Networks").click()
+    await page.getByRole("button", { name: "next" }).click()
+    await page.waitForLoadState("networkidle")
+
+    // Select Norwegian and set question count
+    await page.locator('[data-testid="language-card-no"]').click()
+    await page.getByPlaceholder("Enter number of questions").fill("25")
+
+    // Create quiz
+    await page.getByRole("button", { name: "Create Quiz" }).click()
+
+    // Wait for API call and verify payload
+    await page.waitForTimeout(500)
+
+    expect(capturedRequestBody).toBeDefined()
+    expect(capturedRequestBody.language).toBe("no")
+    expect(capturedRequestBody.title).toBe("Norsk Test Quiz")
+    expect(capturedRequestBody.question_count).toBe(25)
+  })
 })

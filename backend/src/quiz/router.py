@@ -471,6 +471,7 @@ async def trigger_question_generation(
             generation_params["question_count"],
             generation_params["llm_model"],
             generation_params["llm_temperature"],
+            generation_params["language"],
         )
 
         logger.info(
