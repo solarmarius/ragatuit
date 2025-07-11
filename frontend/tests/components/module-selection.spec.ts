@@ -214,16 +214,16 @@ test.describe("ModuleSelectionStep Component", () => {
 
   test("should display correct step title and progress", async ({ page }) => {
     // Check step title in header
-    await expect(page.locator("text=Step 2 of 3: Select Modules")).toBeVisible()
+    await expect(page.locator("text=Step 2 of 4: Select Modules")).toBeVisible()
 
     // Check step counter
-    await expect(page.locator("text=Step 2 of 3")).toBeVisible()
+    await expect(page.locator("text=Step 2 of 4")).toBeVisible()
 
-    // Check progress bar (should be at 66.67% for step 2 of 3)
+    // Check progress bar (should be at 50% for step 2 of 4)
     const progressBar = page.locator('[role="progressbar"]')
     await expect(progressBar).toHaveAttribute(
       "aria-valuenow",
-      "66.66666666666666",
+      "50",
     )
   })
 

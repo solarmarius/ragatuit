@@ -120,18 +120,26 @@ test.describe("Quiz Workflow End-to-End", () => {
     // Wait for module selection to be processed and next button to be enabled
     await page.waitForTimeout(500)
 
+    // next to next step (Questions per Module)
+    await page.getByRole("button", { name: "next" }).click()
+
+    // Step 3: Questions per Module - wait for page to load
+    await page.waitForLoadState("networkidle")
+    await expect(page.getByRole("heading", { name: "Set Questions per Module" })).toBeVisible()
+
+    // Verify module question inputs are visible (default 10 per module)
+    const moduleInputs = page.getByRole("spinbutton")
+    await expect(moduleInputs.first()).toHaveValue("10")
+
+    // Adjust question count for first module
+    await moduleInputs.first().fill("25")
+
     // next to next step (quiz settings)
     await page.getByRole("button", { name: "next" }).click()
 
-    // Step 3: Quiz configuration - wait for page to load
+    // Step 4: Quiz configuration - wait for page to load
     await page.waitForLoadState("networkidle")
     await expect(page.getByText("Quiz Configuration")).toBeVisible()
-
-    // Adjust question count - use placeholder text to find the input
-    const questionCountInput = page.getByPlaceholder(
-      "Enter number of questions",
-    )
-    await questionCountInput.fill("50")
 
     // Mock quiz creation API
     const newQuizId = "123e4567-e89b-12d3-a456-426614174000"
@@ -146,10 +154,10 @@ test.describe("Quiz Workflow End-to-End", () => {
             canvas_course_id: 12345,
             canvas_course_name: "Machine Learning Fundamentals",
             selected_modules: {
-              "173467": "Introduction to Neural Networks",
-              "173468": "Deep Learning Concepts",
+              "173467": { name: "Introduction to Neural Networks", question_count: 25 },
+              "173468": { name: "Deep Learning Concepts", question_count: 10 },
             },
-            question_count: 50,
+            question_count: 35,
             llm_model: "o3",
             llm_temperature: 1.0,
             created_at: "2024-01-15T10:30:00Z",
@@ -419,18 +427,24 @@ test.describe("Quiz Workflow End-to-End", () => {
     await page.getByText("Introduction to Neural Networks").click()
     await page.getByText("Deep Learning Concepts").click()
 
-    // Go to step 3 (quiz settings)
+    // Go to step 3 (questions per module)
     await page.getByRole("button", { name: "next" }).click()
 
-    // Step 3: Quiz Configuration with Norwegian language
+    // Step 3: Questions per Module
+    await page.waitForLoadState("networkidle")
+    await expect(page.getByRole("heading", { name: "Set Questions per Module" })).toBeVisible()
+
+    // Set question counts for modules
+    const moduleInputs = page.getByRole("spinbutton")
+    await moduleInputs.first().fill("15")
+    await moduleInputs.last().fill("15")
+
+    // Go to step 4 (quiz settings)
+    await page.getByRole("button", { name: "next" }).click()
+
+    // Step 4: Quiz Configuration with Norwegian language
     await page.waitForLoadState("networkidle")
     await expect(page.getByText("Quiz Configuration")).toBeVisible()
-
-    // Set question count
-    const questionCountInput = page.getByPlaceholder(
-      "Enter number of questions",
-    )
-    await questionCountInput.fill("30")
 
     // Select Norwegian language
     await expect(page.getByText("Quiz Language")).toBeVisible()
@@ -461,8 +475,8 @@ test.describe("Quiz Workflow End-to-End", () => {
             canvas_course_id: 12345,
             canvas_course_name: "Machine Learning Fundamentals",
             selected_modules: {
-              "173467": "Introduction to Neural Networks",
-              "173468": "Deep Learning Concepts",
+              "173467": { name: "Introduction to Neural Networks", question_count: 15 },
+              "173468": { name: "Deep Learning Concepts", question_count: 15 },
             },
             question_count: 30,
             language: "no",
@@ -507,7 +521,12 @@ test.describe("Quiz Workflow End-to-End", () => {
     await page.getByText("Introduction to Neural Networks").click()
     await page.getByRole("button", { name: "next" }).click()
 
-    // Step 3: Quiz Configuration - verify English is selected by default
+    // Step 3: Questions per Module
+    await page.waitForLoadState("networkidle")
+    await expect(page.getByRole("heading", { name: "Set Questions per Module" })).toBeVisible()
+    await page.getByRole("button", { name: "next" }).click()
+
+    // Step 4: Quiz Configuration - verify English is selected by default
     await page.waitForLoadState("networkidle")
     await expect(page.getByText("Quiz Configuration")).toBeVisible()
     await expect(page.getByText("Quiz Language")).toBeVisible()
@@ -549,7 +568,12 @@ test.describe("Quiz Workflow End-to-End", () => {
     await page.getByText("Introduction to Neural Networks").click()
     await page.getByRole("button", { name: "next" }).click()
 
-    // Step 3: Quiz Configuration
+    // Step 3: Questions per Module
+    await page.waitForLoadState("networkidle")
+    await expect(page.getByRole("heading", { name: "Set Questions per Module" })).toBeVisible()
+    await page.getByRole("button", { name: "next" }).click()
+
+    // Step 4: Quiz Configuration
     await page.waitForLoadState("networkidle")
 
     const englishCard = page.locator('[data-testid="language-card-en"]')
@@ -613,6 +637,13 @@ test.describe("Quiz Workflow End-to-End", () => {
     await page.waitForLoadState("networkidle")
     await page.getByText("Introduction to Neural Networks").click()
     await page.getByRole("button", { name: "next" }).click()
+
+    // Step 3: Questions per Module
+    await page.waitForLoadState("networkidle")
+    await expect(page.getByRole("heading", { name: "Set Questions per Module" })).toBeVisible()
+    await page.getByRole("button", { name: "next" }).click()
+
+    // Step 4: Quiz Configuration
     await page.waitForLoadState("networkidle")
 
     // Select Norwegian language
@@ -623,11 +654,11 @@ test.describe("Quiz Workflow End-to-End", () => {
       "rgb(239, 246, 255)",
     ) // blue.50
 
-    // Go back to step 2
-    await page.getByRole("button", { name: "Previous" }).click()
-    await expect(page.getByText("Step 2 of 3: Select Modules")).toBeVisible()
-
     // Go back to step 3
+    await page.getByRole("button", { name: "Previous" }).click()
+    await expect(page.getByText("Step 3 of 4: Questions per Module")).toBeVisible()
+
+    // Go back to step 4
     await page.getByRole("button", { name: "Next" }).click()
     await page.waitForLoadState("networkidle")
 
@@ -656,8 +687,8 @@ test.describe("Quiz Workflow End-to-End", () => {
             title: "Norsk Test Quiz",
             canvas_course_id: 12345,
             canvas_course_name: "Machine Learning Fundamentals",
-            selected_modules: { "173467": "Introduction to Neural Networks" },
-            question_count: 25,
+            selected_modules: { "173467": { name: "Introduction to Neural Networks", question_count: 10 } },
+            question_count: 10,
             language: "no",
             llm_model: "o3",
             llm_temperature: 1.0,
@@ -684,11 +715,24 @@ test.describe("Quiz Workflow End-to-End", () => {
     await page.waitForLoadState("networkidle")
     await page.getByText("Introduction to Neural Networks").click()
     await page.getByRole("button", { name: "next" }).click()
-    await page.waitForLoadState("networkidle")
 
-    // Select Norwegian and set question count
+    // Step 3: Questions per Module - set question count
+    await page.waitForLoadState("networkidle")
+    await expect(page.getByRole("heading", { name: "Set Questions per Module" })).toBeVisible()
+    const moduleInputs = page.getByRole("spinbutton")
+
+    // Try to change the input value
+    await moduleInputs.first().clear()
+    await moduleInputs.first().type("25")
+
+    // Wait for the form to update
+    await page.waitForTimeout(200)
+
+    await page.getByRole("button", { name: "next" }).click()
+
+    // Step 4: Quiz Configuration - select Norwegian
+    await page.waitForLoadState("networkidle")
     await page.locator('[data-testid="language-card-no"]').click()
-    await page.getByPlaceholder("Enter number of questions").fill("25")
 
     // Create quiz
     await page.getByRole("button", { name: "Create Quiz" }).click()
@@ -699,6 +743,8 @@ test.describe("Quiz Workflow End-to-End", () => {
     expect(capturedRequestBody).toBeDefined()
     expect(capturedRequestBody.language).toBe("no")
     expect(capturedRequestBody.title).toBe("Norsk Test Quiz")
-    expect(capturedRequestBody.question_count).toBe(25)
+    expect(capturedRequestBody.selected_modules).toEqual({
+      "173467": { name: "Introduction to Neural Networks", question_count: 10 }
+    })
   })
 })

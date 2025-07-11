@@ -321,11 +321,11 @@ test.describe("Course Selection Feature", () => {
 
     // Go to step 2
     await page.locator('button:has-text("Next")').click()
-    await expect(page.locator("text=Step 2 of 3: Select Modules")).toBeVisible()
+    await expect(page.locator("text=Step 2 of 4: Select Modules")).toBeVisible()
 
     // Go back to step 1
     await page.locator('button:has-text("Previous")').click()
-    await expect(page.locator("text=Step 1 of 3: Select Course")).toBeVisible()
+    await expect(page.locator("text=Step 1 of 4: Select Course")).toBeVisible()
 
     // Title should be preserved
     await expect(titleInput).toHaveValue("My Custom Quiz Title")
