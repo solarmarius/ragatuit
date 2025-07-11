@@ -11,11 +11,12 @@ import {
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useCallback, useState } from "react"
 
-import { QuizService } from "@/client"
+import { type QuizLanguage, QuizService } from "@/client"
 import { CourseSelectionStep } from "@/components/QuizCreation/CourseSelectionStep"
 import { ModuleSelectionStep } from "@/components/QuizCreation/ModuleSelectionStep"
 import { QuizSettingsStep } from "@/components/QuizCreation/QuizSettingsStep"
 import { useCustomToast, useErrorHandler } from "@/hooks/common"
+import { QUIZ_LANGUAGES } from "@/lib/constants"
 
 export const Route = createFileRoute("/_layout/create-quiz")({
   component: CreateQuiz,
@@ -29,6 +30,7 @@ interface QuizFormData {
   selectedModules?: { [id: number]: string }
   title?: string
   questionCount?: number
+  language?: QuizLanguage
 }
 
 const TOTAL_STEPS = 3 // Course selection, Module selection, Quiz settings
@@ -80,6 +82,7 @@ function CreateQuiz() {
         selected_modules: formData.selectedModules,
         title: formData.title,
         question_count: formData.questionCount || 100,
+        language: formData.language || QUIZ_LANGUAGES.ENGLISH,
       }
 
       const response = await QuizService.createNewQuiz({
@@ -143,10 +146,12 @@ function CreateQuiz() {
           <QuizSettingsStep
             settings={{
               questionCount: formData.questionCount || 100,
+              language: formData.language || QUIZ_LANGUAGES.ENGLISH,
             }}
             onSettingsChange={(settings) =>
               updateFormData({
                 questionCount: settings.questionCount,
+                language: settings.language,
               })
             }
           />

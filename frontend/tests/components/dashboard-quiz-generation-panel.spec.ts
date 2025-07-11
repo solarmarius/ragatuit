@@ -323,9 +323,7 @@ test.describe("QuizGenerationPanel Component", () => {
     await expect(quizCard).toBeVisible()
   })
 
-  test("should show correct badge styling for questions", async ({
-    page,
-  }) => {
+  test("should show correct badge styling for questions", async ({ page }) => {
     await page.route("**/api/v1/quiz/", async (route) => {
       await route.fulfill(createQuizListResponse(quizzesBeingGenerated))
     })
