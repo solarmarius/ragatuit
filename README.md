@@ -10,6 +10,7 @@ Rag@UiT is an application that helps instructors and course coordinators generat
 - **AI-Powered Question Generation:**
   - Utilizes a Language Model (LLM) to analyze course materials (text, PDFs).
   - Generates relevant multiple-choice questions based on the selected content.
+  - **Multi-language support:** Generate questions in English or Norwegian.
 - **Question Review & Management:**
   - Review generated MCQs, including questions and answer choices.
   - Approve, skip, or edit questions to ensure quality and accuracy.
