@@ -51,7 +51,7 @@ def test_create_quiz_success(session: Session):
 
 def test_create_quiz_with_defaults(session: Session):
     """Test quiz creation with default values."""
-    from src.quiz.schemas import QuizCreate
+    from src.quiz.schemas import ModuleSelection, QuizCreate
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
 
@@ -60,21 +60,21 @@ def test_create_quiz_with_defaults(session: Session):
     quiz_data = QuizCreate(
         canvas_course_id=123,
         canvas_course_name="Test Course",
-        selected_modules={456: "Module 1"},
+        selected_modules={"456": ModuleSelection(name="Module 1", question_count=10)},
         title="Default Quiz",
     )
 
     quiz = create_quiz(session, quiz_data, user.id)
 
     # Verify defaults
-    assert quiz.question_count == 100  # Default
+    assert quiz.question_count == 10  # Sum of module question counts
     assert quiz.llm_model == "o3"  # Default
     assert quiz.llm_temperature == 1.0  # Default
 
 
 def test_create_quiz_module_id_conversion(session: Session):
-    """Test that module IDs are converted from int to string."""
-    from src.quiz.schemas import QuizCreate
+    """Test that module IDs are handled correctly as strings."""
+    from src.quiz.schemas import ModuleSelection, QuizCreate
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
 
@@ -83,14 +83,22 @@ def test_create_quiz_module_id_conversion(session: Session):
     quiz_data = QuizCreate(
         canvas_course_id=123,
         canvas_course_name="Test Course",
-        selected_modules={111: "Module A", 222: "Module B", 333: "Module C"},
+        selected_modules={
+            "111": ModuleSelection(name="Module A", question_count=10),
+            "222": ModuleSelection(name="Module B", question_count=15),
+            "333": ModuleSelection(name="Module C", question_count=5),
+        },
         title="Module Test Quiz",
     )
 
     quiz = create_quiz(session, quiz_data, user.id)
 
     # Verify module ID conversion
-    expected_modules = {"111": "Module A", "222": "Module B", "333": "Module C"}
+    expected_modules = {
+        "111": {"name": "Module A", "question_count": 10},
+        "222": {"name": "Module B", "question_count": 15},
+        "333": {"name": "Module C", "question_count": 5},
+    }
     assert quiz.selected_modules == expected_modules
 
 
@@ -280,7 +288,7 @@ async def test_get_content_from_quiz(async_session):
         owner_id=user.id,
         canvas_course_id=123,
         canvas_course_name="Test Course",
-        selected_modules={"1": "Module 1"},
+        selected_modules={"1": {"name": "Module 1", "question_count": 10}},
         title="Test Quiz",
         extracted_content=content_data,
     )
@@ -316,7 +324,7 @@ async def test_get_question_counts(async_session):
         owner_id=user.id,
         canvas_course_id=123,
         canvas_course_name="Test Course",
-        selected_modules={"1": "Module 1"},
+        selected_modules={"1": {"name": "Module 1", "question_count": 10}},
         title="Test Quiz",
     )
     async_session.add(quiz)
@@ -345,7 +353,10 @@ def test_prepare_content_extraction_success(session: Session):
 
     quiz = create_quiz_in_session(
         session,
-        selected_modules={"123": "Module A", "456": "Module B"},
+        selected_modules={
+            "123": {"name": "Module A", "question_count": 10},
+            "456": {"name": "Module B", "question_count": 15},
+        },
     )
 
     with patch(
@@ -407,7 +418,7 @@ async def test_reserve_quiz_job_extraction_success(async_session):
         owner_id=user.id,
         canvas_course_id=123,
         canvas_course_name="Test Course",
-        selected_modules={"1": "Module 1"},
+        selected_modules={"1": {"name": "Module 1", "question_count": 10}},
         title="Test Quiz",
         question_count=50,
         llm_model="gpt-4",
@@ -438,7 +449,7 @@ async def test_reserve_quiz_job_already_processing(async_session):
         owner_id=uuid.uuid4(),
         canvas_course_id=123,
         canvas_course_name="Test Course",
-        selected_modules={"1": "Module 1"},
+        selected_modules={"1": {"name": "Module 1", "question_count": 10}},
         title="Test Quiz",
         status=QuizStatus.EXTRACTING_CONTENT,
     )
@@ -472,7 +483,7 @@ async def test_update_quiz_status_content_extraction(async_session):
         owner_id=user.id,
         canvas_course_id=123,
         canvas_course_name="Test Course",
-        selected_modules={"1": "Module 1"},
+        selected_modules={"1": {"name": "Module 1", "question_count": 10}},
         title="Test Quiz",
         status=QuizStatus.EXTRACTING_CONTENT,
     )
@@ -512,7 +523,7 @@ async def test_update_quiz_status_quiz_not_found(async_session):
 
 def test_quiz_lifecycle_creation_to_deletion(session: Session):
     """Test complete quiz lifecycle from creation to deletion."""
-    from src.quiz.schemas import QuizCreate
+    from src.quiz.schemas import ModuleSelection, QuizCreate
     from src.quiz.service import (
         create_quiz,
         delete_quiz,
@@ -527,9 +538,11 @@ def test_quiz_lifecycle_creation_to_deletion(session: Session):
     quiz_data = QuizCreate(
         canvas_course_id=999,
         canvas_course_name="Lifecycle Course",
-        selected_modules={111: "Module Alpha", 222: "Module Beta"},
+        selected_modules={
+            "111": ModuleSelection(name="Module Alpha", question_count=15),
+            "222": ModuleSelection(name="Module Beta", question_count=10),
+        },
         title="Lifecycle Quiz",
-        question_count=25,
     )
 
     quiz = create_quiz(session, quiz_data, user.id)
@@ -605,7 +618,7 @@ def test_create_quiz_with_various_parameters(
     session: Session, question_count: int, llm_model: str, temperature: float
 ):
     """Test quiz creation with various parameter combinations."""
-    from src.quiz.schemas import QuizCreate
+    from src.quiz.schemas import ModuleSelection, QuizCreate
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
 
@@ -614,16 +627,19 @@ def test_create_quiz_with_various_parameters(
     quiz_data = QuizCreate(
         canvas_course_id=123,
         canvas_course_name="Param Test Course",
-        selected_modules={1: "Module 1"},
+        selected_modules={
+            "1": ModuleSelection(
+                name="Module 1", question_count=min(question_count, 20)
+            )
+        },
         title=f"Quiz {question_count}q",
-        question_count=question_count,
         llm_model=llm_model,
         llm_temperature=temperature,
     )
 
     quiz = create_quiz(session, quiz_data, user.id)
 
-    assert quiz.question_count == question_count
+    assert quiz.question_count == min(question_count, 20)
     assert quiz.llm_model == llm_model
     assert quiz.llm_temperature == temperature
 
@@ -634,7 +650,7 @@ def test_create_quiz_with_various_parameters(
 def test_create_quiz_with_norwegian_language(session: Session):
     """Test quiz creation with Norwegian language selection."""
     from src.question.types import QuizLanguage
-    from src.quiz.schemas import QuizCreate
+    from src.quiz.schemas import ModuleSelection, QuizCreate
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
 
@@ -643,7 +659,7 @@ def test_create_quiz_with_norwegian_language(session: Session):
     quiz_data = QuizCreate(
         canvas_course_id=123,
         canvas_course_name="Norwegian Course",
-        selected_modules={456: "Modul 1"},
+        selected_modules={"456": ModuleSelection(name="Modul 1", question_count=10)},
         title="Norsk Quiz",
         language=QuizLanguage.NORWEGIAN,
     )
@@ -659,7 +675,7 @@ def test_create_quiz_with_norwegian_language(session: Session):
 def test_create_quiz_language_defaults_to_english(session: Session):
     """Test quiz creation defaults to English when language not specified."""
     from src.question.types import QuizLanguage
-    from src.quiz.schemas import QuizCreate
+    from src.quiz.schemas import ModuleSelection, QuizCreate
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
 
@@ -668,7 +684,7 @@ def test_create_quiz_language_defaults_to_english(session: Session):
     quiz_data = QuizCreate(
         canvas_course_id=123,
         canvas_course_name="Default Language Course",
-        selected_modules={456: "Module 1"},
+        selected_modules={"456": ModuleSelection(name="Module 1", question_count=10)},
         title="Default Quiz",
         # language not specified - should default to English
     )
@@ -691,7 +707,7 @@ def test_create_quiz_with_english_language_explicit(session: Session):
     quiz_data = QuizCreate(
         canvas_course_id=123,
         canvas_course_name="English Course",
-        selected_modules={456: "Module 1"},
+        selected_modules={"456": {"name": "Module 1", "question_count": 10}},
         title="English Quiz",
         language=QuizLanguage.ENGLISH,
     )
@@ -754,7 +770,7 @@ async def test_reserve_quiz_job_includes_language_setting(async_session):
         owner_id=user.id,
         canvas_course_id=123,
         canvas_course_name="Norwegian Test Course",
-        selected_modules={"1": "Modul 1"},
+        selected_modules={"1": {"name": "Modul 1", "question_count": 10}},
         title="Norsk Test Quiz",
         question_count=50,
         llm_model="gpt-4",
