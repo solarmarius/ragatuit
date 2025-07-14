@@ -185,8 +185,8 @@ test.describe("Quiz Workflow End-to-End", () => {
           canvas_course_id: 12345,
           canvas_course_name: "Machine Learning Fundamentals",
           selected_modules: {
-            "173467": "Introduction to Neural Networks",
-            "173468": "Deep Learning Concepts",
+            "173467": { name: "Introduction to Neural Networks", question_count: 25 },
+            "173468": { name: "Deep Learning Concepts", question_count: 25 },
           },
           question_count: 50,
           llm_model: "o3",
@@ -222,7 +222,7 @@ test.describe("Quiz Workflow End-to-End", () => {
             title: "Existing Quiz",
             canvas_course_id: 12345,
             canvas_course_name: "Test Course",
-            selected_modules: { "173467": "Module 1", "173468": "Module 2" },
+            selected_modules: { "173467": { name: "Module 1", question_count: 25 }, "173468": { name: "Module 2", question_count: 25 } },
             question_count: 75,
             llm_model: "o3",
             llm_temperature: 0.3,
@@ -245,8 +245,8 @@ test.describe("Quiz Workflow End-to-End", () => {
           canvas_course_id: 12345,
           canvas_course_name: "Test Course",
           selected_modules: {
-            "173467": "Module 1",
-            "173468": "Module 2",
+            "173467": { name: "Module 1", question_count: 25 },
+            "173468": { name: "Module 2", question_count: 25 },
           },
           question_count: 75,
           llm_model: "o3",
@@ -285,7 +285,7 @@ test.describe("Quiz Workflow End-to-End", () => {
       title: `Quiz ${i + 1}`,
       canvas_course_id: 12345 + i,
       canvas_course_name: `Course ${i + 1}`,
-      selected_modules: `{"${173467 + i}": "Module ${i + 1}"}`,
+      selected_modules: `{"${173467 + i}": {"name": "Module ${i + 1}", "question_count": 25}}`,
       question_count: 50 + i,
       llm_model: i % 2 === 0 ? "gpt-4o" : "o3",
       llm_temperature: 0.3 + i * 0.1,
@@ -306,7 +306,7 @@ test.describe("Quiz Workflow End-to-End", () => {
 
     // Verify multiple quizzes are displayed
     await expect(page.getByText("Quiz 1", { exact: true })).toBeVisible()
-    await expect(page.getByText("Quiz 25")).toBeVisible()
+    await expect(page.getByText("Quiz 25", { exact: true })).toBeVisible()
   })
 
   test("responsive behavior on mobile viewport", async ({ page }) => {
@@ -326,7 +326,7 @@ test.describe("Quiz Workflow End-to-End", () => {
             title: "Mobile Test Quiz",
             canvas_course_id: 12345,
             canvas_course_name: "Mobile Test Course",
-            selected_modules: { "173467": "Mobile Module" },
+            selected_modules: { "173467": { name: "Mobile Module", question_count: 25 } },
             question_count: 50,
             llm_model: "gpt-4o",
             llm_temperature: 0.5,
@@ -365,7 +365,7 @@ test.describe("Quiz Workflow End-to-End", () => {
             title: "Keyboard Test Quiz",
             canvas_course_id: 12345,
             canvas_course_name: "Test Course",
-            selected_modules: { "173467": "Module 1" },
+            selected_modules: { "173467": { name: "Module 1", question_count: 25 } },
             question_count: 50,
             llm_model: "gpt-4o",
             llm_temperature: 0.5,
