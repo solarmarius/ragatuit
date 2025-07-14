@@ -24,7 +24,6 @@ class QuestionType(str, Enum):
     """Enumeration of supported question types."""
 
     MULTIPLE_CHOICE = "multiple_choice"
-    SHORT_ANSWER = "short_answer"
     FILL_IN_BLANK = "fill_in_blank"
 
 

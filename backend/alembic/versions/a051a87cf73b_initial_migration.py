@@ -1,8 +1,8 @@
-"""initial migration
+"""Initial migration
 
-Revision ID: c0552f9d7394
+Revision ID: a051a87cf73b
 Revises:
-Create Date: 2025-07-11 22:01:07.904452
+Create Date: 2025-07-14 15:23:45.569310
 
 """
 from alembic import op
@@ -11,7 +11,7 @@ import sqlmodel.sql.sqltypes
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'c0552f9d7394'
+revision = 'a051a87cf73b'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -44,6 +44,7 @@ def upgrade():
     sa.Column('llm_model', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('llm_temperature', sa.Float(), nullable=False),
     sa.Column('language', sa.Enum('ENGLISH', 'NORWEGIAN', name='quizlanguage'), nullable=False),
+    sa.Column('question_type', sa.Enum('MULTIPLE_CHOICE', 'FILL_IN_BLANK', name='questiontype'), nullable=False),
     sa.Column('status', sa.Enum('CREATED', 'EXTRACTING_CONTENT', 'GENERATING_QUESTIONS', 'READY_FOR_REVIEW', 'EXPORTING_TO_CANVAS', 'PUBLISHED', 'FAILED', name='quizstatus'), nullable=False),
     sa.Column('failure_reason', sa.Enum('CONTENT_EXTRACTION_ERROR', 'NO_CONTENT_FOUND', 'LLM_GENERATION_ERROR', 'NO_QUESTIONS_GENERATED', 'CANVAS_EXPORT_ERROR', 'NETWORK_ERROR', 'VALIDATION_ERROR', name='failurereason'), nullable=True),
     sa.Column('last_status_update', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -64,7 +65,7 @@ def upgrade():
     op.create_table('question',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('quiz_id', sa.Uuid(), nullable=False),
-    sa.Column('question_type', sa.Enum('MULTIPLE_CHOICE', 'SHORT_ANSWER', 'FILL_IN_BLANK', name='questiontype'), nullable=False),
+    sa.Column('question_type', sa.Enum('MULTIPLE_CHOICE', 'FILL_IN_BLANK', name='questiontype'), nullable=False),
     sa.Column('question_data', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('difficulty', sa.Enum('EASY', 'MEDIUM', 'HARD', name='questiondifficulty'), nullable=True),
     sa.Column('tags', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
