@@ -28,11 +28,11 @@ class Quiz(SQLModel, table=True):
     owner: Optional["User"] = Relationship(back_populates="quizzes")
     canvas_course_id: int = Field(index=True)
     canvas_course_name: str
-    selected_modules: dict[str, str] = Field(
+    selected_modules: dict[str, dict[str, Any]] = Field(
         default_factory=dict, sa_column=Column(JSONB, nullable=False, default={})
     )
     title: str = Field(min_length=1)
-    question_count: int = Field(default=100, ge=1, le=200)
+    question_count: int = Field(default=100, ge=1)
     llm_model: str = Field(default="o3")
     llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
     language: QuizLanguage = Field(
@@ -87,20 +87,65 @@ class Quiz(SQLModel, table=True):
         default=None,
         description="Timestamp when quiz was exported to Canvas",
     )
+    generation_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB, nullable=False, default={}),
+        description="Additional metadata for tracking generation details",
+    )
     questions: list["Question"] = Relationship(
         back_populates="quiz", cascade_delete=True
     )
 
+    @property
+    def module_question_distribution(self) -> dict[str, int]:
+        """Get question count per module."""
+        return {
+            module_id: module_data.get("question_count", 0)
+            for module_id, module_data in self.selected_modules.items()
+        }
+
+    @property
+    def total_questions_from_modules(self) -> int:
+        """Calculate total questions from module distribution."""
+        return sum(
+            module_data.get("question_count", 0)
+            for module_data in self.selected_modules.values()
+        )
+
     # Pydantic validators for structure
     @field_validator("selected_modules")
-    def validate_selected_modules(cls, v: Any) -> dict[str, str]:
+    def validate_selected_modules(cls, v: Any) -> dict[str, dict[str, Any]]:
         """Ensure selected_modules has correct structure."""
         if not isinstance(v, dict):
             raise ValueError("selected_modules must be a dictionary")
-        # Validate all keys are strings (module IDs)
-        for _key, value in v.items():
-            if not isinstance(value, str):
-                raise ValueError(f"Module name must be string, got {type(value)}")
+
+        # Validate structure for each module
+        for module_id, module_data in v.items():
+            if not isinstance(module_data, dict):
+                raise ValueError(f"Module {module_id} data must be a dictionary")
+
+            # Check required fields
+            if "name" not in module_data:
+                raise ValueError(f"Module {module_id} missing required 'name' field")
+
+            if "question_count" not in module_data:
+                raise ValueError(
+                    f"Module {module_id} missing required 'question_count' field"
+                )
+
+            # Validate types
+            if not isinstance(module_data["name"], str):
+                raise ValueError(f"Module {module_id} name must be string")
+
+            if not isinstance(module_data["question_count"], int):
+                raise ValueError(f"Module {module_id} question_count must be integer")
+
+            # Validate question count range
+            if not (1 <= module_data["question_count"] <= 20):
+                raise ValueError(
+                    f"Module {module_id} question_count must be between 1 and 20"
+                )
+
         return v
 
     @field_validator("extracted_content")

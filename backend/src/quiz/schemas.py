@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID
 
+from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
 # Import QuizLanguage from question types to avoid circular dependency
@@ -45,24 +46,67 @@ class Status(str, Enum):
     FAILED = "failed"
 
 
+class ModuleSelection(SQLModel):
+    """Schema for module selection with question count."""
+
+    name: str
+    question_count: int = Field(ge=1, le=20, description="Questions per module (1-20)")
+
+
 class QuizCreate(SQLModel):
-    """Schema for creating a new quiz."""
+    """Schema for creating a new quiz with module-based questions."""
 
     canvas_course_id: int
     canvas_course_name: str
-    selected_modules: dict[int, str]
+    selected_modules: dict[str, ModuleSelection]
     title: str = Field(min_length=1, max_length=255)
-    question_count: int = Field(default=100, ge=1, le=200)
     llm_model: str = Field(default="o3")
     llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
     language: QuizLanguage = Field(default=QuizLanguage.ENGLISH)
+
+    @field_validator("selected_modules")
+    def validate_modules(cls, v: dict[str, Any]) -> dict[str, Any]:
+        """Validate selected modules structure."""
+        if not v:
+            raise ValueError("At least one module must be selected")
+
+        # Validate each module has required fields
+        for module_id, module_data in v.items():
+            if not isinstance(module_data, dict) and not isinstance(
+                module_data, ModuleSelection
+            ):
+                raise ValueError(f"Module {module_id} must be a valid module selection")
+
+            # Convert to dict if ModuleSelection object
+            if isinstance(module_data, ModuleSelection):
+                module_dict = module_data.model_dump()
+            else:
+                module_dict = module_data
+
+            if "name" not in module_dict or "question_count" not in module_dict:
+                raise ValueError(f"Module {module_id} missing required fields")
+
+            if not 1 <= module_dict["question_count"] <= 20:
+                raise ValueError(f"Module {module_id} question count must be 1-20")
+
+        return v
+
+    @property
+    def total_question_count(self) -> int:
+        """Calculate total questions across all modules."""
+        total = 0
+        for module in self.selected_modules.values():
+            if isinstance(module, ModuleSelection):
+                total += module.question_count
+            elif isinstance(module, dict) and "question_count" in module:
+                total += module["question_count"]
+        return total
 
 
 class QuizUpdate(SQLModel):
     """Schema for updating quiz settings."""
 
     title: str | None = Field(default=None, min_length=1, max_length=255)
-    question_count: int | None = Field(default=None, ge=1, le=200)
     llm_model: str | None = None
     llm_temperature: float | None = Field(default=None, ge=0.0, le=2.0)
     language: QuizLanguage | None = None
@@ -75,7 +119,7 @@ class QuizPublic(SQLModel):
     owner_id: UUID
     canvas_course_id: int
     canvas_course_name: str
-    selected_modules: dict[str, str]
+    selected_modules: dict[str, dict[str, Any]]
     title: str
     question_count: int
     llm_model: str
@@ -90,6 +134,8 @@ class QuizPublic(SQLModel):
     updated_at: datetime | None
     canvas_quiz_id: str | None
     exported_at: datetime | None
+    generation_metadata: dict[str, Any] = Field(default_factory=dict)
+    module_question_distribution: dict[str, int] = Field(default_factory=dict)
 
 
 class QuizStatusUpdate(SQLModel):

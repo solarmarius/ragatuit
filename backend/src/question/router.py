@@ -9,6 +9,8 @@ from fastapi import APIRouter, HTTPException, Query
 from src.auth.dependencies import CurrentUser
 from src.config import get_logger
 from src.database import get_async_session
+from src.question.types import QuizLanguage
+from src.quiz.orchestrator import orchestrate_quiz_question_generation
 
 from . import service
 from .formatters import format_question_for_display
@@ -21,7 +23,6 @@ from .schemas import (
     QuestionResponse,
     QuestionUpdateRequest,
 )
-from .services import GenerationOrchestrationService
 from .types import QuestionType
 
 router = APIRouter(prefix="/questions", tags=["questions"])
@@ -470,7 +471,7 @@ async def generate_questions(
     current_user: CurrentUser,
 ) -> GenerationResponse:
     """
-    Generate questions for a quiz using AI.
+    Generate questions for a quiz using module-based AI generation.
 
     **Parameters:**
         quiz_id: Quiz identifier
@@ -483,7 +484,7 @@ async def generate_questions(
         "question_generation_initiated",
         user_id=str(current_user.id),
         quiz_id=str(quiz_id),
-        question_type=generation_request.question_type,
+        question_type=generation_request.question_type.value,
         target_count=generation_request.target_count,
     )
 
@@ -495,52 +496,67 @@ async def generate_questions(
         if generation_request.quiz_id != quiz_id:
             raise HTTPException(status_code=400, detail="Quiz ID mismatch")
 
-        # Get generation service
-        generation_service = GenerationOrchestrationService()
+        # Get quiz to access language and other settings
+        async with get_async_session() as session:
+            from src.quiz.models import Quiz
 
-        # Create generation parameters
-        from .types import GenerationParameters
+            quiz = await session.get(Quiz, quiz_id)
+            if not quiz:
+                raise HTTPException(status_code=404, detail="Quiz not found")
 
-        generation_parameters = GenerationParameters(
-            target_count=generation_request.target_count,
-            difficulty=generation_request.difficulty,
-            tags=generation_request.tags,
-            custom_instructions=generation_request.custom_instructions,
+        # Extract language from quiz or use default
+        language = (
+            quiz.language
+            if hasattr(quiz, "language") and quiz.language
+            else QuizLanguage.ENGLISH
         )
 
-        # Generate questions
-        result = await generation_service.generate_questions(
+        # Get the current question count before generation
+        async with get_async_session() as session:
+            questions_before = await service.get_questions_by_quiz(session, quiz_id)
+            initial_count = len(questions_before)
+
+        # Trigger orchestrated generation
+        await orchestrate_quiz_question_generation(
             quiz_id=quiz_id,
+            target_question_count=generation_request.target_count,
+            llm_model=generation_request.provider_name or "gpt-4",
+            llm_temperature=0.7,  # Default temperature
+            language=language,
             question_type=generation_request.question_type,
-            generation_parameters=generation_parameters,
-            provider_name=generation_request.provider_name,
-            workflow_name=generation_request.workflow_name,
-            template_name=generation_request.template_name,
         )
 
-        if result.success:
-            logger.info(
-                "question_generation_completed",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-                questions_generated=result.questions_generated,
-            )
-        else:
-            logger.error(
-                "question_generation_failed",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-                error_message=result.error_message,
-                questions_generated=result.questions_generated,
-            )
+        # Check the results after generation
+        async with get_async_session() as session:
+            questions_after = await service.get_questions_by_quiz(session, quiz_id)
+            final_count = len(questions_after)
+            questions_generated = final_count - initial_count
+
+        logger.info(
+            "question_generation_completed",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz_id),
+            questions_generated=questions_generated,
+            target_count=generation_request.target_count,
+        )
+
+        from datetime import datetime
 
         return GenerationResponse(
-            success=result.success,
-            questions_generated=result.questions_generated,
-            target_questions=result.target_questions,
-            error_message=result.error_message,
-            metadata=result.metadata,
-            generated_at=result.generated_at,
+            success=questions_generated > 0,
+            questions_generated=questions_generated,
+            target_questions=generation_request.target_count,
+            error_message=None
+            if questions_generated > 0
+            else "No questions were generated",
+            metadata={
+                "provider_name": generation_request.provider_name or "openai",
+                "question_type": generation_request.question_type.value,
+                "language": language.value,
+                "initial_count": initial_count,
+                "final_count": final_count,
+            },
+            generated_at=datetime.utcnow(),
         )
 
     except HTTPException:
@@ -564,7 +580,7 @@ async def batch_generate_questions(
     current_user: CurrentUser,
 ) -> BatchGenerationResponse:
     """
-    Generate questions for multiple quizzes in batch.
+    Generate questions for multiple quizzes in batch using module-based generation.
 
     **Parameters:**
         batch_request: Batch generation requests
@@ -583,47 +599,101 @@ async def batch_generate_questions(
         for request in batch_request.requests:
             await _verify_quiz_ownership(request.quiz_id, current_user.id)
 
-        # Get generation service
-        generation_service = GenerationOrchestrationService()
+        # Use orchestrator for each quiz in batch
+        from datetime import datetime
 
-        # Convert requests to the format expected by the service
-        service_requests = []
-        for request in batch_request.requests:
-            service_requests.append(
-                {
-                    "quiz_id": str(request.quiz_id),
-                    "question_type": request.question_type.value,
-                    "generation_parameters": {
-                        "target_count": request.target_count,
-                        "difficulty": request.difficulty.value
-                        if request.difficulty
-                        else None,
-                        "tags": request.tags,
-                        "custom_instructions": request.custom_instructions,
-                    },
-                    "provider_name": request.provider_name,
-                    "workflow_name": request.workflow_name,
-                    "template_name": request.template_name,
-                }
-            )
+        from src.question.types import QuizLanguage
+        from src.quiz.orchestrator import orchestrate_quiz_question_generation
 
-        # Execute batch generation
-        results = await generation_service.batch_generate_questions(service_requests)
-
-        # Convert results to response format
         response_results = []
-        for result in results:
-            response_results.append(
-                GenerationResponse(
-                    success=result.success,
-                    questions_generated=result.questions_generated,
-                    target_questions=result.target_questions,
-                    error_message=result.error_message,
-                    metadata=result.metadata,
-                    generated_at=result.generated_at,
-                )
-            )
 
+        for request in batch_request.requests:
+            try:
+                # Get quiz to access language and other settings
+                async with get_async_session() as session:
+                    from src.quiz.models import Quiz
+
+                    quiz = await session.get(Quiz, request.quiz_id)
+                    if not quiz:
+                        raise ValueError(f"Quiz {request.quiz_id} not found")
+
+                # Extract language from quiz or use default
+                language = (
+                    quiz.language
+                    if hasattr(quiz, "language") and quiz.language
+                    else QuizLanguage.ENGLISH
+                )
+
+                # Get the current question count before generation
+                async with get_async_session() as session:
+                    questions_before = await service.get_questions_by_quiz(
+                        session, request.quiz_id
+                    )
+                    initial_count = len(questions_before)
+
+                # Trigger orchestrated generation
+                await orchestrate_quiz_question_generation(
+                    quiz_id=request.quiz_id,
+                    target_question_count=request.target_count,
+                    llm_model=request.provider_name or "gpt-4",
+                    llm_temperature=0.7,
+                    language=language,
+                    question_type=request.question_type,
+                )
+
+                # Check the results after generation
+                async with get_async_session() as session:
+                    questions_after = await service.get_questions_by_quiz(
+                        session, request.quiz_id
+                    )
+                    final_count = len(questions_after)
+                    questions_generated = final_count - initial_count
+
+                # Add successful result
+                response_results.append(
+                    GenerationResponse(
+                        success=questions_generated > 0,
+                        questions_generated=questions_generated,
+                        target_questions=request.target_count,
+                        error_message=None
+                        if questions_generated > 0
+                        else "No questions were generated",
+                        metadata={
+                            "provider_name": request.provider_name or "openai",
+                            "question_type": request.question_type.value,
+                            "language": language.value,
+                            "quiz_id": str(request.quiz_id),
+                        },
+                        generated_at=datetime.utcnow(),
+                    )
+                )
+
+            except Exception as quiz_error:
+                # Add failed result for this quiz
+                logger.error(
+                    "batch_quiz_generation_failed",
+                    quiz_id=str(request.quiz_id),
+                    error=str(quiz_error),
+                    exc_info=True,
+                )
+
+                response_results.append(
+                    GenerationResponse(
+                        success=False,
+                        questions_generated=0,
+                        target_questions=request.target_count,
+                        error_message=f"Generation failed: {str(quiz_error)}",
+                        metadata={
+                            "provider_name": request.provider_name or "openai",
+                            "question_type": request.question_type.value,
+                            "quiz_id": str(request.quiz_id),
+                            "error_type": type(quiz_error).__name__,
+                        },
+                        generated_at=datetime.utcnow(),
+                    )
+                )
+
+        # Calculate batch statistics
         successful_requests = sum(1 for r in response_results if r.success)
         total_questions = sum(r.questions_generated for r in response_results)
 

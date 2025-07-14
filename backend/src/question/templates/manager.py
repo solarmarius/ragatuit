@@ -100,7 +100,6 @@ class TemplateManager:
 
         try:
             self._load_templates()
-            self._create_default_templates()
 
             logger.info(
                 "template_manager_initialized",
@@ -249,7 +248,7 @@ class TemplateManager:
 
         # Prepare template variables
         variables = {
-            "content": content,
+            "module_content": content,
             "target_count": generation_parameters.target_count,
             "difficulty": generation_parameters.difficulty.value
             if generation_parameters.difficulty
@@ -412,68 +411,6 @@ class TemplateManager:
                     error=str(e),
                     exc_info=True,
                 )
-
-    def _create_default_templates(self) -> None:
-        """Create default templates if they don't exist."""
-        # MCQ default template
-        mcq_template_name = "default_multiple_choice"
-        if mcq_template_name not in self._template_cache:
-            mcq_template = PromptTemplate(
-                name=mcq_template_name,
-                version="1.0",
-                question_type=QuestionType.MULTIPLE_CHOICE,
-                description="Default template for multiple choice question generation",
-                system_prompt="""You are an expert educator creating multiple-choice questions for a quiz.
-
-Based on the provided course content, generate ONE high-quality multiple-choice question with exactly 4 options (A, B, C, D) and one correct answer.
-
-Requirements:
-- The question should test understanding, not just memorization
-- All 4 options should be plausible but only one correct
-- Options should be similar in length and style
-- Avoid "all of the above" or "none of the above" options
-- Use clear, concise language
-- Focus on key concepts from the content
-{% if difficulty %}
-- Question difficulty level: {{ difficulty }}
-{% endif %}
-{% if tags %}
-- Focus on these topics: {{ tags|join(', ') }}
-{% endif %}
-
-Return your response as valid JSON with this exact structure:
-{
-    "question_text": "Your question here",
-    "option_a": "First option",
-    "option_b": "Second option",
-    "option_c": "Third option",
-    "option_d": "Fourth option",
-    "correct_answer": "[LETTER]"
-}
-
-The correct_answer must be exactly one of: A, B, C, or D. Try to vary the correct answer letter, do not always make it "A".
-
-Generate exactly ONE question based on this content.""",
-                user_prompt="""Course Content:
-{{ content }}
-{% if custom_instructions %}
-
-Additional Instructions:
-{{ custom_instructions }}
-{% endif %}""",
-                variables={
-                    "content": "The course content to generate questions from",
-                    "difficulty": "Question difficulty level (optional)",
-                    "tags": "List of topic tags to focus on (optional)",
-                    "custom_instructions": "Additional custom instructions (optional)",
-                },
-                author="System",
-                tags=["default", "mcq"],
-                min_content_length=100,
-                max_content_length=5000,
-            )
-
-            self.save_template(mcq_template)
 
     def _render_template(self, template_string: str, variables: dict[str, Any]) -> str:
         """

@@ -91,6 +91,19 @@ class Settings(BaseSettings):
     OPENAI_SECRET_KEY: str | None = None
     LLM_API_TIMEOUT: float = 120.0  # LLM request timeout in seconds (2 minutes)
 
+    # Module-based question generation settings
+    MAX_CONCURRENT_MODULES: int = 5  # Maximum concurrent module processing tasks
+    MAX_GENERATION_RETRIES: int = (
+        3  # Maximum retries for question generation per module
+    )
+    MAX_JSON_CORRECTIONS: int = 2  # Maximum JSON correction attempts per module
+    MODULE_GENERATION_TIMEOUT: int = (
+        300  # Timeout per module generation in seconds (5 minutes)
+    )
+    CONTENT_LENGTH_THRESHOLD: int = (
+        100  # Minimum content length for question generation
+    )
+
     @computed_field  # type: ignore[prop-decorator]
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:

@@ -13,6 +13,7 @@ import { useCallback, useState } from "react"
 
 import { type QuizLanguage, QuizService } from "@/client"
 import { CourseSelectionStep } from "@/components/QuizCreation/CourseSelectionStep"
+import { ModuleQuestionSelectionStep } from "@/components/QuizCreation/ModuleQuestionSelectionStep"
 import { ModuleSelectionStep } from "@/components/QuizCreation/ModuleSelectionStep"
 import { QuizSettingsStep } from "@/components/QuizCreation/QuizSettingsStep"
 import { useCustomToast, useErrorHandler } from "@/hooks/common"
@@ -28,12 +29,12 @@ interface QuizFormData {
     name: string
   }
   selectedModules?: { [id: number]: string }
+  moduleQuestions?: { [id: string]: number }
   title?: string
-  questionCount?: number
   language?: QuizLanguage
 }
 
-const TOTAL_STEPS = 3 // Course selection, Module selection, Quiz settings
+const TOTAL_STEPS = 4 // Course selection, Module selection, Questions per module, Quiz settings
 
 function CreateQuiz() {
   const navigate = useNavigate()
@@ -63,10 +64,49 @@ function CreateQuiz() {
     setFormData((prev) => ({ ...prev, ...data }))
   }, [])
 
+  const handleModuleSelection = useCallback(
+    (modules: { [id: number]: string }) => {
+      const moduleQuestions = { ...formData.moduleQuestions }
+
+      // Add default 10 questions for newly selected modules
+      Object.keys(modules).forEach((moduleId) => {
+        if (!moduleQuestions[moduleId]) {
+          moduleQuestions[moduleId] = 10
+        }
+      })
+
+      // Remove deselected modules
+      Object.keys(moduleQuestions).forEach((moduleId) => {
+        if (!modules[Number(moduleId)]) {
+          delete moduleQuestions[moduleId]
+        }
+      })
+
+      updateFormData({
+        selectedModules: modules,
+        moduleQuestions,
+      })
+    },
+    [formData.moduleQuestions, updateFormData],
+  )
+
+  const handleModuleQuestionChange = useCallback(
+    (moduleId: string, count: number) => {
+      updateFormData({
+        moduleQuestions: {
+          ...formData.moduleQuestions,
+          [moduleId]: count,
+        },
+      })
+    },
+    [formData.moduleQuestions, updateFormData],
+  )
+
   const handleCreateQuiz = async () => {
     if (
       !formData.selectedCourse ||
       !formData.selectedModules ||
+      !formData.moduleQuestions ||
       !formData.title
     ) {
       showErrorToast("Missing required quiz data")
@@ -76,12 +116,25 @@ function CreateQuiz() {
     setIsCreating(true)
 
     try {
+      // Transform data to match backend expectations
+      const selectedModulesWithCounts = Object.entries(
+        formData.selectedModules,
+      ).reduce(
+        (acc, [moduleId, moduleName]) => ({
+          ...acc,
+          [moduleId]: {
+            name: moduleName,
+            question_count: formData.moduleQuestions?.[moduleId] || 10,
+          },
+        }),
+        {},
+      )
+
       const quizData = {
         canvas_course_id: formData.selectedCourse.id,
         canvas_course_name: formData.selectedCourse.name,
-        selected_modules: formData.selectedModules,
+        selected_modules: selectedModulesWithCounts,
         title: formData.title,
-        question_count: formData.questionCount || 100,
         language: formData.language || QUIZ_LANGUAGES.ENGLISH,
       }
 
@@ -109,6 +162,8 @@ function CreateQuiz() {
       case 2:
         return "Select Modules"
       case 3:
+        return "Questions per Module"
+      case 4:
         return "Quiz Configuration"
       default:
         return "Create Quiz"
@@ -136,21 +191,29 @@ function CreateQuiz() {
           <ModuleSelectionStep
             courseId={formData.selectedCourse?.id || 0}
             selectedModules={formData.selectedModules || {}}
-            onModulesSelect={(modules) =>
-              updateFormData({ selectedModules: modules })
-            }
+            onModulesSelect={handleModuleSelection}
           />
         )
       case 3:
         return (
+          <ModuleQuestionSelectionStep
+            selectedModules={Object.fromEntries(
+              Object.entries(formData.selectedModules || {}).map(
+                ([id, name]) => [id, name],
+              ),
+            )}
+            moduleQuestions={formData.moduleQuestions || {}}
+            onModuleQuestionChange={handleModuleQuestionChange}
+          />
+        )
+      case 4:
+        return (
           <QuizSettingsStep
             settings={{
-              questionCount: formData.questionCount || 100,
               language: formData.language || QUIZ_LANGUAGES.ENGLISH,
             }}
             onSettingsChange={(settings) =>
               updateFormData({
-                questionCount: settings.questionCount,
                 language: settings.language,
               })
             }
@@ -174,11 +237,17 @@ function CreateQuiz() {
           formData.selectedModules != null &&
           Object.keys(formData.selectedModules).length > 0
         )
-      case 3: {
-        // Step 3 is always valid since we have default values
-        const questionCount = formData.questionCount || 100
-        return questionCount >= 1 && questionCount <= 200
-      }
+      case 3:
+        return (
+          formData.moduleQuestions != null &&
+          Object.keys(formData.moduleQuestions).length > 0 &&
+          Object.values(formData.moduleQuestions).every(
+            (count) => count >= 1 && count <= 20,
+          )
+        )
+      case 4:
+        // Step 4 is always valid since we have default values
+        return true
       default:
         return false
     }

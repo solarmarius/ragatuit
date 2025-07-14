@@ -1,8 +1,8 @@
-"""Intitial migration
+"""initial migration
 
-Revision ID: e76d34f0c6fb
+Revision ID: c0552f9d7394
 Revises:
-Create Date: 2025-07-10 12:27:34.744553
+Create Date: 2025-07-11 22:01:07.904452
 
 """
 from alembic import op
@@ -11,7 +11,7 @@ import sqlmodel.sql.sqltypes
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'e76d34f0c6fb'
+revision = 'c0552f9d7394'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -53,6 +53,7 @@ def upgrade():
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('canvas_quiz_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('exported_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('generation_metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.ForeignKeyConstraint(['owner_id'], ['user.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )

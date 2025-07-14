@@ -1,18 +1,9 @@
 import type { QuizLanguage } from "@/client"
 import { FormField, FormGroup } from "@/components/forms"
 import { QUIZ_LANGUAGES } from "@/lib/constants"
-import {
-  Box,
-  Card,
-  HStack,
-  Input,
-  RadioGroup,
-  Text,
-  VStack,
-} from "@chakra-ui/react"
+import { Box, Card, HStack, RadioGroup, Text, VStack } from "@chakra-ui/react"
 
 interface QuizSettings {
-  questionCount: number
   language: QuizLanguage
 }
 
@@ -22,7 +13,6 @@ interface QuizSettingsStepProps {
 }
 
 const DEFAULT_SETTINGS: QuizSettings = {
-  questionCount: 100,
   language: QUIZ_LANGUAGES.ENGLISH,
 }
 
@@ -50,26 +40,6 @@ export function QuizSettingsStep({
 
   return (
     <FormGroup gap={6}>
-      <FormField label="Question Count" isRequired>
-        <Box maxW="300px">
-          <Input
-            type="number"
-            value={settings.questionCount}
-            onChange={(e) =>
-              updateSettings({
-                questionCount: Number.parseInt(e.target.value) || 100,
-              })
-            }
-            min={1}
-            max={200}
-            placeholder="Enter number of questions"
-          />
-          <Text fontSize="sm" color="gray.600" mt={2}>
-            Number of questions to generate (1-200)
-          </Text>
-        </Box>
-      </FormField>
-
       <FormField label="Quiz Language" isRequired>
         <Box>
           <Text fontSize="sm" color="gray.600" mb={3}>

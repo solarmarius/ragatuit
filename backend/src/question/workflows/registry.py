@@ -163,8 +163,7 @@ class WorkflowRegistry:
         logger.info(
             "default_workflow_configuration_updated",
             question_type=question_type.value,
-            max_chunk_size=configuration.max_chunk_size,
-            max_questions_per_chunk=configuration.max_questions_per_chunk,
+            max_questions_per_module=configuration.max_questions_per_module,
         )
 
     def get_workflow_info(self, question_type: QuestionType) -> dict[str, Any]:
@@ -239,35 +238,17 @@ class WorkflowRegistry:
             return
 
         try:
-            # Import and register default workflows
-            from .mcq_workflow import MCQWorkflow
-
-            # Register MCQ workflow with default configuration
-            mcq_config = WorkflowConfiguration(
-                max_chunk_size=3000,
-                min_chunk_size=100,
-                max_questions_per_chunk=1,  # MCQ generates one question per chunk
-                allow_duplicate_detection=True,
-                quality_threshold=0.8,
-                max_generation_retries=3,
-                type_specific_settings={
-                    "enforce_unique_correct_answers": True,
-                    "require_plausible_distractors": True,
-                    "min_option_length": 10,
-                    "max_option_length": 200,
-                },
-            )
-
-            self.register_workflow(
-                QuestionType.MULTIPLE_CHOICE, MCQWorkflow, mcq_config
-            )
+            # Note: Module-based question generation now uses QuestionGenerationService
+            # and ModuleBatchWorkflow directly, without the workflow registry.
+            # This registry is kept for potential future workflow extensions.
 
             logger.info(
                 "workflow_registry_initialized",
                 registered_workflows=len(self._workflows),
+                note="Module-based generation uses QuestionGenerationService directly",
             )
 
-        except ImportError as e:
+        except Exception as e:
             logger.error(
                 "failed_to_initialize_default_workflows", error=str(e), exc_info=True
             )

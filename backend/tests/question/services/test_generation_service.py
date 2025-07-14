@@ -1,830 +1,414 @@
-"""Tests for generation orchestration service."""
+"""Tests for module-based question generation service."""
 
-import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import UUID
 
 import pytest
 
 
 @pytest.fixture
 def generation_service():
-    """Create generation orchestration service instance."""
-    from unittest.mock import MagicMock, patch
+    """Create question generation service instance."""
+    from unittest.mock import patch
 
-    from src.question.services.generation_service import GenerationOrchestrationService
+    from src.question.services.generation_service import QuestionGenerationService
 
     with (
-        patch(
-            "src.question.services.generation_service.get_configuration_service"
-        ) as mock_config_service,
         patch(
             "src.question.services.generation_service.get_llm_provider_registry"
         ) as mock_provider_registry,
         patch(
-            "src.question.services.generation_service.get_workflow_registry"
-        ) as mock_workflow_registry,
-        patch(
             "src.question.services.generation_service.get_template_manager"
         ) as mock_template_manager,
     ):
-        service = GenerationOrchestrationService()
-
-        # Replace the actual instances with mocks
-        service.config_service = mock_config_service.return_value
+        service = QuestionGenerationService()
         service.provider_registry = mock_provider_registry.return_value
-        service.workflow_registry = mock_workflow_registry.return_value
         service.template_manager = mock_template_manager.return_value
-
         yield service
 
 
 @pytest.fixture
-def generation_parameters():
-    """Create test generation parameters."""
-    from src.question.types import GenerationParameters, QuestionDifficulty
+def mock_quiz():
+    """Create mock quiz with module structure."""
+    from src.quiz.models import Quiz
+    from src.quiz.schemas import QuizStatus
 
-    return GenerationParameters(
-        target_count=5,
-        difficulty=QuestionDifficulty.MEDIUM,
-        tags=["python", "programming"],
-        custom_instructions="Focus on basic concepts",
-    )
-
-
-@pytest.fixture
-def mock_generation_result():
-    """Create mock generation result."""
-    from src.question.types import GenerationResult
-
-    return GenerationResult(
-        success=True,
-        questions_generated=5,
-        target_questions=5,
-        error_message=None,
-        metadata={
-            "quiz_id": str(uuid.uuid4()),
-            "question_type": "multiple_choice",
-            "provider": "openai",
-            "workflow": "mcq_workflow",
-        },
-    )
+    quiz = MagicMock(spec=Quiz)
+    quiz.id = UUID("12345678-1234-5678-1234-567812345678")
+    quiz.status = QuizStatus.GENERATING_QUESTIONS
+    quiz.language = "en"
+    quiz.selected_modules = {
+        "module_1": {"name": "Introduction", "question_count": 5},
+        "module_2": {"name": "Advanced Topics", "question_count": 10},
+    }
+    quiz.question_count = 0
+    return quiz
 
 
 @pytest.fixture
-def mock_content_chunks():
-    """Create mock content chunks."""
-    from src.question.workflows import ContentChunk
+def extracted_content():
+    """Create mock extracted content."""
+    return {
+        "module_1": "This is content from module 1 about introduction topics.",
+        "module_2": "This is content from module 2 about advanced topics.",
+    }
+
+
+@pytest.fixture
+def mock_questions():
+    """Create mock generated questions."""
+    from src.question.types import Question, QuestionType
 
     return [
-        ContentChunk(
-            content="Python is a programming language.",
-            source="module_1/page_1",
-            metadata={"module_id": "module_1", "page_id": "page_1"},
+        Question(
+            quiz_id=UUID("12345678-1234-5678-1234-567812345678"),
+            question_type=QuestionType.MULTIPLE_CHOICE,
+            question_data={
+                "question_text": "What is the main topic?",
+                "option_a": "Option A",
+                "option_b": "Option B",
+                "option_c": "Option C",
+                "option_d": "Option D",
+                "correct_answer": "A",
+            },
+            is_approved=False,
         ),
-        ContentChunk(
-            content="Variables store data values.",
-            source="module_1/page_2",
-            metadata={"module_id": "module_1", "page_id": "page_2"},
+        Question(
+            quiz_id=UUID("12345678-1234-5678-1234-567812345678"),
+            question_type=QuestionType.MULTIPLE_CHOICE,
+            question_data={
+                "question_text": "What is advanced concept?",
+                "option_a": "Advanced A",
+                "option_b": "Advanced B",
+                "option_c": "Advanced C",
+                "option_d": "Advanced D",
+                "correct_answer": "B",
+            },
+            is_approved=False,
         ),
     ]
 
 
-def test_generation_service_initialization(generation_service):
-    """Test generation service initialization."""
-    assert generation_service.config_service is not None
-    assert generation_service.provider_registry is not None
-    assert generation_service.workflow_registry is not None
-    assert generation_service.template_manager is not None
-
-
 @pytest.mark.asyncio
-async def test_generate_questions_success(
-    generation_service,
-    generation_parameters,
-    mock_generation_result,
-    mock_content_chunks,
+async def test_generate_questions_for_quiz_success(
+    generation_service, mock_quiz, extracted_content, mock_questions
 ):
-    """Test successful question generation."""
-    from src.question.types import QuestionType
-
-    quiz_id = uuid.uuid4()
-    question_type = QuestionType.MULTIPLE_CHOICE
+    """Test successful module-based question generation."""
+    quiz_id = mock_quiz.id
 
     with (
-        patch.object(
-            generation_service, "_validate_generation_request"
-        ) as mock_validate,
-        patch.object(
-            generation_service.config_service, "get_config"
-        ) as mock_get_config,
-        patch.object(
-            generation_service.config_service, "get_provider_config"
-        ) as mock_get_provider_config,
-        patch.object(
-            generation_service.config_service, "get_workflow_config"
-        ) as mock_get_workflow_config,
         patch(
-            "src.question.services.generation_service.ContentProcessingService"
-        ) as mock_content_service_class,
+            "src.question.services.generation_service.get_async_session"
+        ) as mock_session_ctx,
+        patch(
+            "src.question.services.generation_service.ParallelModuleProcessor"
+        ) as mock_processor_class,
     ):
-        # Mock configuration
-        mock_config = MagicMock()
-        mock_config.enable_duplicate_detection = False
-        mock_get_config.return_value = mock_config
-
-        mock_provider_config = MagicMock()
-        mock_provider_config.provider = MagicMock()
-        mock_provider_config.model = "gpt-4"
-        mock_provider_config.temperature = 0.7
-        mock_provider_config.max_retries = 3
-        mock_get_provider_config.return_value = mock_provider_config
-
-        mock_workflow_config = MagicMock()
-        mock_workflow_config.max_chunk_size = 1000
-        mock_workflow_config.quality_threshold = 0.5
-        mock_get_workflow_config.return_value = mock_workflow_config
-
-        # Mock content service
-        mock_content_service = MagicMock()
-        mock_content_service.prepare_content_for_generation = AsyncMock(
-            return_value=mock_content_chunks
-        )
-        mock_content_service.get_content_statistics.return_value = {
-            "total_characters": 500,
-            "avg_chunk_size": 250,
-        }
-        mock_content_service_class.return_value = mock_content_service
+        # Mock session and quiz retrieval
+        mock_session = AsyncMock()
+        mock_session.get.return_value = mock_quiz
+        mock_session_ctx.return_value.__aenter__.return_value = mock_session
 
         # Mock provider registry
         mock_provider = MagicMock()
         generation_service.provider_registry.get_provider.return_value = mock_provider
-        generation_service.provider_registry.get_available_providers.return_value = [
-            MagicMock()
-        ]
 
-        # Mock workflow registry
-        mock_workflow = MagicMock()
-        mock_workflow.workflow_name = "mcq_workflow"
-        mock_workflow.execute = AsyncMock(return_value=mock_generation_result)
-        generation_service.workflow_registry.get_workflow.return_value = mock_workflow
+        # Mock parallel processor
+        mock_processor = MagicMock()
+        mock_processor.process_all_modules = AsyncMock(
+            return_value={
+                "module_1": [mock_questions[0]],
+                "module_2": [mock_questions[1]],
+            }
+        )
+        mock_processor_class.return_value = mock_processor
 
-        result = await generation_service.generate_questions(
-            quiz_id=quiz_id,
-            question_type=question_type,
-            generation_parameters=generation_parameters,
+        result = await generation_service.generate_questions_for_quiz(
+            quiz_id, extracted_content
         )
 
-    assert result.success is True
-    assert result.questions_generated == 5
-    assert result.target_questions == 5
-    mock_validate.assert_called_once_with(question_type, generation_parameters)
-    mock_workflow.execute.assert_called_once()
+    assert len(result) == 2
+    assert "module_1" in result
+    assert "module_2" in result
+    assert len(result["module_1"]) == 1
+    assert len(result["module_2"]) == 1
 
-
-@pytest.mark.asyncio
-async def test_generate_questions_no_content_chunks(
-    generation_service, generation_parameters
-):
-    """Test question generation when no content chunks are found."""
-    from src.question.types import QuestionType
-
-    quiz_id = uuid.uuid4()
-    question_type = QuestionType.MULTIPLE_CHOICE
-
-    with (
-        patch.object(generation_service, "_validate_generation_request"),
-        patch.object(
-            generation_service.config_service, "get_config"
-        ) as mock_get_config,
-        patch.object(generation_service.config_service, "get_provider_config"),
-        patch.object(generation_service.config_service, "get_workflow_config"),
-        patch(
-            "src.question.services.generation_service.ContentProcessingService"
-        ) as mock_content_service_class,
-    ):
-        mock_config = MagicMock()
-        mock_get_config.return_value = mock_config
-
-        # Mock content service returns empty chunks
-        mock_content_service = MagicMock()
-        mock_content_service.prepare_content_for_generation = AsyncMock(return_value=[])
-        mock_content_service_class.return_value = mock_content_service
-
-        generation_service.provider_registry.get_available_providers.return_value = [
-            MagicMock()
-        ]
-
-        result = await generation_service.generate_questions(
-            quiz_id=quiz_id,
-            question_type=question_type,
-            generation_parameters=generation_parameters,
-        )
-
-    assert result.success is False
-    assert result.questions_generated == 0
-    assert "No valid content chunks found" in result.error_message
-
-
-@pytest.mark.asyncio
-async def test_generate_questions_with_quality_filtering(
-    generation_service, generation_parameters, mock_content_chunks
-):
-    """Test question generation with quality filtering enabled."""
-    from src.question.types import QuestionType
-
-    quiz_id = uuid.uuid4()
-    question_type = QuestionType.MULTIPLE_CHOICE
-
-    with (
-        patch.object(generation_service, "_validate_generation_request"),
-        patch.object(
-            generation_service.config_service, "get_config"
-        ) as mock_get_config,
-        patch.object(generation_service.config_service, "get_provider_config"),
-        patch.object(generation_service.config_service, "get_workflow_config"),
-        patch(
-            "src.question.services.generation_service.ContentProcessingService"
-        ) as mock_content_service_class,
-    ):
-        # Enable quality filtering
-        mock_config = MagicMock()
-        mock_config.enable_duplicate_detection = True
-        mock_get_config.return_value = mock_config
-
-        # Mock content service
-        mock_content_service = MagicMock()
-        mock_content_service.prepare_content_for_generation = AsyncMock(
-            return_value=mock_content_chunks
-        )
-        mock_content_service.validate_content_quality.return_value = mock_content_chunks
-        mock_content_service.get_content_statistics.return_value = {
-            "total_characters": 500
-        }
-        mock_content_service_class.return_value = mock_content_service
-
-        # Mock other dependencies
-        generation_service.provider_registry.get_available_providers.return_value = [
-            MagicMock()
-        ]
-        generation_service.provider_registry.get_provider.return_value = MagicMock()
-
-        mock_workflow = MagicMock()
-        mock_workflow.workflow_name = "test_workflow"
-        mock_workflow.execute = AsyncMock(
-            return_value=MagicMock(success=True, metadata={})
-        )
-        generation_service.workflow_registry.get_workflow.return_value = mock_workflow
-
-        await generation_service.generate_questions(
-            quiz_id=quiz_id,
-            question_type=question_type,
-            generation_parameters=generation_parameters,
-        )
-
-    # Verify quality filtering was called
-    mock_content_service.validate_content_quality.assert_called_once_with(
-        mock_content_chunks
-    )
-
-
-@pytest.mark.asyncio
-async def test_generate_questions_exception_handling(
-    generation_service, generation_parameters
-):
-    """Test exception handling in question generation."""
-    from src.question.types import QuestionType
-
-    quiz_id = uuid.uuid4()
-    question_type = QuestionType.MULTIPLE_CHOICE
-
-    with patch.object(
-        generation_service, "_validate_generation_request"
-    ) as mock_validate:
-        mock_validate.side_effect = Exception("Validation error")
-
-        result = await generation_service.generate_questions(
-            quiz_id=quiz_id,
-            question_type=question_type,
-            generation_parameters=generation_parameters,
-        )
-
-    assert result.success is False
-    assert result.questions_generated == 0
-    assert "Generation failed: Validation error" in result.error_message
-    assert result.metadata["error_type"] == "Exception"
-
-
-@pytest.mark.asyncio
-async def test_batch_generate_questions_success(generation_service):
-    """Test successful batch question generation."""
-    from src.question.types import GenerationResult
-
-    requests = [
-        {
-            "quiz_id": str(uuid.uuid4()),
-            "question_type": "multiple_choice",
-            "generation_parameters": {"target_count": 3, "difficulty": "medium"},
-        },
-        {
-            "quiz_id": str(uuid.uuid4()),
-            "question_type": "short_answer",
-            "generation_parameters": {"target_count": 2, "difficulty": "easy"},
-        },
-    ]
-
-    mock_result_1 = GenerationResult(
-        success=True, questions_generated=3, target_questions=3
-    )
-    mock_result_2 = GenerationResult(
-        success=True, questions_generated=2, target_questions=2
-    )
-
-    with patch.object(generation_service, "generate_questions") as mock_generate:
-        mock_generate.side_effect = [mock_result_1, mock_result_2]
-
-        results = await generation_service.batch_generate_questions(requests)
-
-    assert len(results) == 2
-    assert all(result.success for result in results)
-    assert results[0].questions_generated == 3
-    assert results[1].questions_generated == 2
-
-
-@pytest.mark.asyncio
-async def test_batch_generate_questions_with_failures(generation_service):
-    """Test batch generation with some failures."""
-    from src.question.types import GenerationResult
-
-    requests = [
-        {
-            "quiz_id": str(uuid.uuid4()),
-            "question_type": "multiple_choice",
-            "generation_parameters": {"target_count": 3, "difficulty": "medium"},
-        },
-        {
-            "quiz_id": "invalid_uuid",  # Invalid UUID
-            "question_type": "short_answer",
-            "generation_parameters": {"target_count": 2, "difficulty": "easy"},
-        },
-    ]
-
-    mock_success_result = GenerationResult(
-        success=True, questions_generated=3, target_questions=3
-    )
-
-    with patch.object(generation_service, "generate_questions") as mock_generate:
-        mock_generate.return_value = mock_success_result
-
-        results = await generation_service.batch_generate_questions(requests)
-
-    assert len(results) == 2
-    assert results[0].success is True  # First request succeeds
-    assert results[1].success is False  # Second request fails due to invalid UUID
-    assert "Batch request failed" in results[1].error_message
-
-
-@pytest.mark.asyncio
-async def test_batch_generate_questions_empty_list(generation_service):
-    """Test batch generation with empty request list."""
-    results = await generation_service.batch_generate_questions([])
-
-    assert results == []
-
-
-def test_get_generation_capabilities(generation_service):
-    """Test getting generation capabilities."""
+    # Verify provider was called correctly
     from src.question.providers import LLMProvider
-    from src.question.types import QuestionType
 
-    # Mock registries
-    mock_providers = [LLMProvider.OPENAI]
-    generation_service.provider_registry.get_available_providers.return_value = (
-        mock_providers
+    generation_service.provider_registry.get_provider.assert_called_once_with(
+        LLMProvider.OPENAI
     )
-    generation_service.provider_registry.is_registered.return_value = True
 
-    mock_question_types = [QuestionType.MULTIPLE_CHOICE, QuestionType.SHORT_ANSWER]
-    generation_service.workflow_registry.get_available_question_types.return_value = (
-        mock_question_types
-    )
-    generation_service.workflow_registry.is_supported.return_value = True
-
-    mock_templates = [
-        MagicMock(
-            name="mcq_template",
-            question_type=QuestionType.MULTIPLE_CHOICE,
-            version="1.0",
-            description="MCQ template",
-        )
-    ]
-    generation_service.template_manager.list_templates.return_value = mock_templates
-
-    generation_service.config_service.get_configuration_summary.return_value = {
-        "version": "1.0"
-    }
-
-    capabilities = generation_service.get_generation_capabilities()
-
-    assert "providers" in capabilities
-    assert "question_types" in capabilities
-    assert "templates" in capabilities
-    assert "configuration" in capabilities
-
-    assert len(capabilities["providers"]) == 1
-    assert capabilities["providers"][0]["name"] == "openai"
-    assert capabilities["providers"][0]["available"] is True
+    # Verify processor was called correctly
+    mock_processor.process_all_modules.assert_called_once()
+    call_args = mock_processor.process_all_modules.call_args
+    assert call_args[0][0] == quiz_id  # quiz_id
+    assert "module_1" in call_args[0][1]  # modules_data
+    assert "module_2" in call_args[0][1]
 
 
 @pytest.mark.asyncio
-async def test_validate_generation_setup_all_valid(generation_service):
-    """Test generation setup validation when everything is valid."""
-    from src.question.types import QuestionType
+async def test_generate_questions_for_quiz_quiz_not_found(generation_service):
+    """Test generation when quiz is not found."""
+    quiz_id = UUID("00000000-0000-0000-0000-000000000000")
+    extracted_content = {"module_1": "content"}
 
-    question_type = QuestionType.MULTIPLE_CHOICE
+    with patch(
+        "src.question.services.generation_service.get_async_session"
+    ) as mock_session_ctx:
+        mock_session = AsyncMock()
+        mock_session.get.return_value = None  # Quiz not found
+        mock_session_ctx.return_value.__aenter__.return_value = mock_session
 
-    # Mock all validation checks to pass
-    generation_service.workflow_registry.is_supported.return_value = True
-    generation_service.config_service.get_config.return_value = MagicMock()
-    generation_service.config_service.get_provider_config.return_value = MagicMock()
-    generation_service.provider_registry.is_registered.return_value = True
-    generation_service.provider_registry.health_check = AsyncMock(return_value=True)
-    generation_service.template_manager.get_template.return_value = MagicMock()
-
-    result = await generation_service.validate_generation_setup(question_type)
-
-    assert result["overall_status"] == "ready"
-    assert result["question_type_supported"] is True
-    assert result["provider_available"] is True
-    assert result["workflow_available"] is True
-    assert result["template_available"] is True
-    assert result["provider_health"] is True
-    assert len(result["errors"]) == 0
+        with pytest.raises(ValueError, match="Quiz .* not found"):
+            await generation_service.generate_questions_for_quiz(
+                quiz_id, extracted_content
+            )
 
 
 @pytest.mark.asyncio
-async def test_validate_generation_setup_question_type_not_supported(
-    generation_service,
+async def test_generate_questions_for_quiz_no_content(generation_service, mock_quiz):
+    """Test generation when no module content is available."""
+    quiz_id = mock_quiz.id
+    extracted_content = {}  # No content
+
+    with patch(
+        "src.question.services.generation_service.get_async_session"
+    ) as mock_session_ctx:
+        mock_session = AsyncMock()
+        mock_session.get.return_value = mock_quiz
+        mock_session_ctx.return_value.__aenter__.return_value = mock_session
+
+        with pytest.raises(ValueError, match="No module content available"):
+            await generation_service.generate_questions_for_quiz(
+                quiz_id, extracted_content
+            )
+
+
+@pytest.mark.asyncio
+async def test_generate_questions_for_quiz_missing_module_content(
+    generation_service, mock_quiz, extracted_content
 ):
-    """Test validation when question type is not supported."""
-    from src.question.types import QuestionType
-
-    question_type = QuestionType.MULTIPLE_CHOICE
-
-    # Question type not supported
-    generation_service.workflow_registry.is_supported.return_value = False
-
-    result = await generation_service.validate_generation_setup(question_type)
-
-    assert result["overall_status"] == "error"
-    assert result["question_type_supported"] is False
-    assert any("not supported" in error for error in result["errors"])
-
-
-@pytest.mark.asyncio
-async def test_validate_generation_setup_provider_health_failed(generation_service):
-    """Test validation when provider health check fails."""
-    from src.question.types import QuestionType
-
-    question_type = QuestionType.MULTIPLE_CHOICE
-
-    # Mock setup where provider is available but health check fails
-    generation_service.workflow_registry.is_supported.return_value = True
-    generation_service.config_service.get_config.return_value = MagicMock()
-    generation_service.config_service.get_provider_config.return_value = MagicMock()
-    generation_service.provider_registry.is_registered.return_value = True
-    generation_service.provider_registry.health_check = AsyncMock(return_value=False)
-    generation_service.template_manager.get_template.return_value = MagicMock()
-
-    result = await generation_service.validate_generation_setup(question_type)
-
-    assert result["overall_status"] == "error"
-    assert result["provider_available"] is True
-    assert result["provider_health"] is False
-    assert any("health check failed" in error for error in result["errors"])
-
-
-@pytest.mark.asyncio
-async def test_validate_generation_setup_template_not_available(generation_service):
-    """Test validation when template is not available."""
-    from src.question.types import QuestionType
-
-    question_type = QuestionType.MULTIPLE_CHOICE
-
-    # Mock setup where template is not available
-    generation_service.workflow_registry.is_supported.return_value = True
-    generation_service.config_service.get_config.return_value = MagicMock()
-    generation_service.config_service.get_provider_config.return_value = MagicMock()
-    generation_service.provider_registry.is_registered.return_value = True
-    generation_service.provider_registry.health_check = AsyncMock(return_value=True)
-    generation_service.template_manager.get_template.side_effect = ValueError(
-        "Template not found"
-    )
-
-    result = await generation_service.validate_generation_setup(question_type)
-
-    assert result["overall_status"] == "error"
-    assert result["template_available"] is False
-    assert any("No template available" in error for error in result["errors"])
-
-
-@pytest.mark.asyncio
-async def test_validate_generation_setup_exception_handling(generation_service):
-    """Test validation exception handling."""
-    from src.question.types import QuestionType
-
-    question_type = QuestionType.MULTIPLE_CHOICE
-
-    # Mock an exception during validation
-    generation_service.workflow_registry.is_supported.side_effect = Exception(
-        "Registry error"
-    )
-
-    result = await generation_service.validate_generation_setup(question_type)
-
-    assert result["overall_status"] == "error"
-    assert any(
-        "Validation failed: Registry error" in error for error in result["errors"]
-    )
-
-
-def test_validate_generation_request_valid(generation_service, generation_parameters):
-    """Test validation of valid generation request."""
-    from src.question.types import QuestionType
-
-    question_type = QuestionType.MULTIPLE_CHOICE
-
-    # Mock workflow registry to support the question type
-    generation_service.workflow_registry.is_supported.return_value = True
-
-    # Mock config service
-    mock_config = MagicMock()
-    mock_config.max_concurrent_generations = 10
-    generation_service.config_service.get_config.return_value = mock_config
-
-    # Should not raise any exception
-    generation_service._validate_generation_request(
-        question_type, generation_parameters
-    )
-
-
-def test_validate_generation_request_unsupported_question_type(
-    generation_service, generation_parameters
-):
-    """Test validation with unsupported question type."""
-    from src.question.types import QuestionType
-
-    question_type = QuestionType.MULTIPLE_CHOICE
-
-    # Mock workflow registry to not support the question type
-    generation_service.workflow_registry.is_supported.return_value = False
-
-    with pytest.raises(ValueError) as exc_info:
-        generation_service._validate_generation_request(
-            question_type, generation_parameters
-        )
-
-    assert "not supported" in str(exc_info.value)
-
-
-def test_validate_generation_request_invalid_target_count(generation_service):
-    """Test validation with invalid target count."""
-    from pydantic import ValidationError
-
-    from src.question.types import (
-        GenerationParameters,
-        QuestionDifficulty,
-        QuestionType,
-    )
-
-    question_type = QuestionType.MULTIPLE_CHOICE
-    generation_service.workflow_registry.is_supported.return_value = True
-
-    # Test zero target count - should fail at Pydantic level
-    with pytest.raises(ValidationError) as exc_info:
-        GenerationParameters(target_count=0, difficulty=QuestionDifficulty.MEDIUM)
-
-    assert "greater_than_equal" in str(exc_info.value)
-
-
-def test_validate_generation_request_excessive_target_count(generation_service):
-    """Test validation with excessive target count."""
-    from pydantic import ValidationError
-
-    from src.question.types import (
-        GenerationParameters,
-        QuestionDifficulty,
-        QuestionType,
-    )
-
-    question_type = QuestionType.MULTIPLE_CHOICE
-    generation_service.workflow_registry.is_supported.return_value = True
-
-    # Test excessive target count - should fail at Pydantic level
-    with pytest.raises(ValidationError) as exc_info:
-        GenerationParameters(
-            target_count=150,  # > 100
-            difficulty=QuestionDifficulty.MEDIUM,
-        )
-
-    assert "less_than_equal" in str(exc_info.value)
-
-
-def test_validate_generation_request_system_limits(generation_service):
-    """Test validation against system limits."""
-    from src.question.types import (
-        GenerationParameters,
-        QuestionDifficulty,
-        QuestionType,
-    )
-
-    question_type = QuestionType.MULTIPLE_CHOICE
-    generation_service.workflow_registry.is_supported.return_value = True
-
-    # Mock config with low limits
-    mock_config = MagicMock()
-    mock_config.max_concurrent_generations = 1  # Very low limit
-    generation_service.config_service.get_config.return_value = mock_config
-
-    excessive_params = GenerationParameters(
-        target_count=50,  # > 1 * 10
-        difficulty=QuestionDifficulty.MEDIUM,
-    )
-
-    with pytest.raises(ValueError) as exc_info:
-        generation_service._validate_generation_request(question_type, excessive_params)
-
-    assert "exceeds system limits" in str(exc_info.value)
-
-
-# Norwegian Language Feature Tests for Generation Service
-
-
-def test_generation_parameters_with_norwegian_language():
-    """Test creating generation parameters with Norwegian language."""
-    from src.question.types import (
-        GenerationParameters,
-        QuestionDifficulty,
-        QuizLanguage,
-    )
-
-    params = GenerationParameters(
-        target_count=10,
-        difficulty=QuestionDifficulty.HARD,
-        language=QuizLanguage.NORWEGIAN,
-        tags=["matematikk", "norsk"],
-        custom_instructions="Fokuser på grunnleggende konsepter",
-    )
-
-    assert params.language == QuizLanguage.NORWEGIAN
-    assert params.target_count == 10
-    assert params.difficulty == QuestionDifficulty.HARD
-    assert "matematikk" in params.tags
-    assert "grunnleggende konsepter" in params.custom_instructions
-
-
-def test_generation_parameters_default_language():
-    """Test generation parameters default to English language."""
-    from src.question.types import (
-        GenerationParameters,
-        QuestionDifficulty,
-        QuizLanguage,
-    )
-
-    params = GenerationParameters(
-        target_count=5,
-        difficulty=QuestionDifficulty.MEDIUM,
-        # language not specified - should default to English
-    )
-
-    assert params.language == QuizLanguage.ENGLISH
-    assert params.target_count == 5
-    assert params.difficulty == QuestionDifficulty.MEDIUM
-
-
-@pytest.mark.asyncio
-async def test_batch_generate_questions_with_mixed_languages(generation_service):
-    """Test batch generation with both English and Norwegian requests."""
-    from src.question.types import GenerationResult
-
-    requests = [
-        {
-            "quiz_id": str(uuid.uuid4()),
-            "question_type": "multiple_choice",
-            "generation_parameters": {
-                "target_count": 3,
-                "difficulty": "medium",
-                "language": "en",
-            },
-        },
-        {
-            "quiz_id": str(uuid.uuid4()),
-            "question_type": "multiple_choice",
-            "generation_parameters": {
-                "target_count": 2,
-                "difficulty": "easy",
-                "language": "no",
-            },
-        },
-    ]
-
-    mock_result_en = GenerationResult(
-        success=True,
-        questions_generated=3,
-        target_questions=3,
-        metadata={"language": "en"},
-    )
-    mock_result_no = GenerationResult(
-        success=True,
-        questions_generated=2,
-        target_questions=2,
-        metadata={"language": "no"},
-    )
-
-    with patch.object(generation_service, "generate_questions") as mock_generate:
-        mock_generate.side_effect = [mock_result_en, mock_result_no]
-
-        results = await generation_service.batch_generate_questions(requests)
-
-    assert len(results) == 2
-    assert all(result.success for result in results)
-    assert results[0].questions_generated == 3
-    assert results[1].questions_generated == 2
-    # Verify both language requests were processed
-    assert mock_generate.call_count == 2
-
-
-@pytest.mark.parametrize(
-    "provider_name,workflow_name,template_name",
-    [
-        (None, None, None),  # All defaults
-        ("openai", None, None),  # Specific provider
-        (None, "mcq_workflow", None),  # Specific workflow
-        (None, None, "mcq_template"),  # Specific template
-        ("openai", "mcq_workflow", "mcq_template"),  # All specified
-    ],
-)
-@pytest.mark.asyncio
-async def test_generate_questions_with_optional_parameters(
-    generation_service,
-    generation_parameters,
-    mock_content_chunks,
-    provider_name,
-    workflow_name,
-    template_name,
-):
-    """Test question generation with various optional parameters."""
-    from src.question.types import QuestionType
-
-    quiz_id = uuid.uuid4()
-    question_type = QuestionType.MULTIPLE_CHOICE
+    """Test generation when some module content is missing."""
+    quiz_id = mock_quiz.id
+    # Only provide content for one module
+    partial_content = {"module_1": extracted_content["module_1"]}
 
     with (
-        patch.object(generation_service, "_validate_generation_request"),
-        patch.object(
-            generation_service.config_service, "get_config"
-        ) as mock_get_config,
-        patch.object(generation_service.config_service, "get_provider_config"),
-        patch.object(generation_service.config_service, "get_workflow_config"),
         patch(
-            "src.question.services.generation_service.ContentProcessingService"
-        ) as mock_content_service_class,
+            "src.question.services.generation_service.get_async_session"
+        ) as mock_session_ctx,
+        patch(
+            "src.question.services.generation_service.ParallelModuleProcessor"
+        ) as mock_processor_class,
     ):
-        mock_config = MagicMock()
-        mock_config.enable_duplicate_detection = False
-        mock_get_config.return_value = mock_config
+        mock_session = AsyncMock()
+        mock_session.get.return_value = mock_quiz
+        mock_session_ctx.return_value.__aenter__.return_value = mock_session
 
-        # Mock content service
-        mock_content_service = MagicMock()
-        mock_content_service.prepare_content_for_generation = AsyncMock(
-            return_value=mock_content_chunks
+        mock_provider = MagicMock()
+        generation_service.provider_registry.get_provider.return_value = mock_provider
+
+        mock_processor = MagicMock()
+        mock_processor.process_all_modules = AsyncMock(return_value={"module_1": []})
+        mock_processor_class.return_value = mock_processor
+
+        await generation_service.generate_questions_for_quiz(quiz_id, partial_content)
+
+        # Should only process the one module with content
+        call_args = mock_processor.process_all_modules.call_args[0][1]
+        assert len(call_args) == 1
+        assert "module_1" in call_args
+        assert "module_2" not in call_args
+
+
+@pytest.mark.asyncio
+async def test_generate_questions_for_quiz_norwegian_language(
+    generation_service, mock_quiz, extracted_content
+):
+    """Test generation with Norwegian language."""
+    mock_quiz.language = "no"  # Norwegian
+    quiz_id = mock_quiz.id
+
+    with (
+        patch(
+            "src.question.services.generation_service.get_async_session"
+        ) as mock_session_ctx,
+        patch(
+            "src.question.services.generation_service.ParallelModuleProcessor"
+        ) as mock_processor_class,
+    ):
+        mock_session = AsyncMock()
+        mock_session.get.return_value = mock_quiz
+        mock_session_ctx.return_value.__aenter__.return_value = mock_session
+
+        mock_provider = MagicMock()
+        generation_service.provider_registry.get_provider.return_value = mock_provider
+
+        mock_processor = MagicMock()
+        mock_processor.process_all_modules = AsyncMock(return_value={})
+        mock_processor_class.return_value = mock_processor
+
+        await generation_service.generate_questions_for_quiz(quiz_id, extracted_content)
+
+        # Verify processor was created with Norwegian language
+        from src.question.types import QuizLanguage
+
+        mock_processor_class.assert_called_once_with(
+            llm_provider=mock_provider,
+            template_manager=generation_service.template_manager,
+            language=QuizLanguage.NORWEGIAN,
         )
-        mock_content_service.get_content_statistics.return_value = {
-            "total_characters": 500
-        }
-        mock_content_service_class.return_value = mock_content_service
 
-        # Mock provider and workflow
-        generation_service.provider_registry.get_available_providers.return_value = [
-            MagicMock()
-        ]
-        generation_service.provider_registry.get_provider.return_value = MagicMock()
 
-        mock_workflow = MagicMock()
-        mock_workflow.workflow_name = workflow_name or "default_workflow"
-        mock_workflow.execute = AsyncMock(
-            return_value=MagicMock(success=True, metadata={})
+@pytest.mark.asyncio
+async def test_generate_questions_for_quiz_updates_question_count(
+    generation_service, mock_quiz, extracted_content, mock_questions
+):
+    """Test that quiz question count is updated after generation."""
+    quiz_id = mock_quiz.id
+
+    with (
+        patch(
+            "src.question.services.generation_service.get_async_session"
+        ) as mock_session_ctx,
+        patch(
+            "src.question.services.generation_service.ParallelModuleProcessor"
+        ) as mock_processor_class,
+    ):
+        mock_session = AsyncMock()
+        mock_session.get.return_value = mock_quiz
+        mock_session_ctx.return_value.__aenter__.return_value = mock_session
+
+        mock_provider = MagicMock()
+        generation_service.provider_registry.get_provider.return_value = mock_provider
+
+        mock_processor = MagicMock()
+        mock_processor.process_all_modules = AsyncMock(
+            return_value={
+                "module_1": [mock_questions[0]],
+                "module_2": [mock_questions[1]],
+            }
         )
-        generation_service.workflow_registry.get_workflow.return_value = mock_workflow
+        mock_processor_class.return_value = mock_processor
 
-        result = await generation_service.generate_questions(
-            quiz_id=quiz_id,
-            question_type=question_type,
-            generation_parameters=generation_parameters,
-            provider_name=provider_name,
-            workflow_name=workflow_name,
-            template_name=template_name,
+        await generation_service.generate_questions_for_quiz(quiz_id, extracted_content)
+
+        # Verify quiz question count was updated
+        assert mock_quiz.question_count == 2
+        mock_session.commit.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_get_generation_status_success(generation_service, mock_quiz):
+    """Test getting generation status for a quiz."""
+    quiz_id = mock_quiz.id
+
+    with (
+        patch(
+            "src.question.services.generation_service.get_async_session"
+        ) as mock_session_ctx,
+        patch("src.question.service.get_questions_by_quiz") as mock_get_questions,
+    ):
+        mock_session = AsyncMock()
+        mock_session.get.return_value = mock_quiz
+        mock_session_ctx.return_value.__aenter__.return_value = mock_session
+
+        # Mock service call
+        mock_questions = [MagicMock(), MagicMock()]
+        mock_get_questions.return_value = mock_questions
+
+        status = await generation_service.get_generation_status(quiz_id)
+
+        assert status["quiz_id"] == str(quiz_id)
+        assert status["status"] == mock_quiz.status.value
+        assert status["total_questions"] == 2
+        assert status["target_questions"] == 15  # 5 + 10 from mock_quiz
+
+
+@pytest.mark.asyncio
+async def test_get_generation_status_quiz_not_found(generation_service):
+    """Test getting status when quiz is not found."""
+    quiz_id = UUID("00000000-0000-0000-0000-000000000000")
+
+    with patch(
+        "src.question.services.generation_service.get_async_session"
+    ) as mock_session_ctx:
+        mock_session = AsyncMock()
+        mock_session.get.return_value = None
+        mock_session_ctx.return_value.__aenter__.return_value = mock_session
+
+        with pytest.raises(ValueError, match="Quiz .* not found"):
+            await generation_service.get_generation_status(quiz_id)
+
+
+@pytest.mark.asyncio
+async def test_generate_questions_for_quiz_provider_exception(
+    generation_service, mock_quiz, extracted_content
+):
+    """Test handling of provider exceptions."""
+    quiz_id = mock_quiz.id
+
+    with (
+        patch(
+            "src.question.services.generation_service.get_async_session"
+        ) as mock_session_ctx,
+    ):
+        mock_session = AsyncMock()
+        mock_session.get.return_value = mock_quiz
+        mock_session_ctx.return_value.__aenter__.return_value = mock_session
+
+        # Make provider registry raise an exception
+        generation_service.provider_registry.get_provider.side_effect = Exception(
+            "Provider error"
         )
 
-    # Should complete successfully regardless of optional parameters
-    assert hasattr(result, "success")
-    assert hasattr(result, "metadata")
+        with pytest.raises(Exception, match="Provider error"):
+            await generation_service.generate_questions_for_quiz(
+                quiz_id, extracted_content
+            )
+
+
+@pytest.mark.asyncio
+async def test_generate_questions_for_quiz_custom_provider(
+    generation_service, mock_quiz, extracted_content
+):
+    """Test generation with custom provider."""
+    quiz_id = mock_quiz.id
+
+    with (
+        patch(
+            "src.question.services.generation_service.get_async_session"
+        ) as mock_session_ctx,
+        patch(
+            "src.question.services.generation_service.ParallelModuleProcessor"
+        ) as mock_processor_class,
+    ):
+        mock_session = AsyncMock()
+        mock_session.get.return_value = mock_quiz
+        mock_session_ctx.return_value.__aenter__.return_value = mock_session
+
+        mock_provider = MagicMock()
+        generation_service.provider_registry.get_provider.return_value = mock_provider
+
+        mock_processor = MagicMock()
+        mock_processor.process_all_modules = AsyncMock(return_value={})
+        mock_processor_class.return_value = mock_processor
+
+        await generation_service.generate_questions_for_quiz(
+            quiz_id, extracted_content, provider_name="anthropic"
+        )
+
+        # Verify correct provider was requested
+        from src.question.providers import LLMProvider
+
+        generation_service.provider_registry.get_provider.assert_called_once_with(
+            LLMProvider.ANTHROPIC
+        )
+
+
+def test_generation_service_initialization(generation_service):
+    """Test generation service initialization."""
+    assert generation_service.provider_registry is not None
+    assert generation_service.template_manager is not None

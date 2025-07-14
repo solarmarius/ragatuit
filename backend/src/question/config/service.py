@@ -233,8 +233,8 @@ class ConfigurationService:
         logger.info(
             "workflow_config_updated",
             question_type=question_type.value,
-            max_chunk_size=workflow_config.max_chunk_size,
-            max_questions_per_chunk=workflow_config.max_questions_per_chunk,
+            max_questions_per_module=workflow_config.max_questions_per_module,
+            quality_threshold=workflow_config.quality_threshold,
         )
 
     def set_default_provider(self, provider: LLMProvider) -> None:
@@ -399,13 +399,12 @@ class ConfigurationService:
         )
         config.provider_configs[LLMProvider.MOCK] = mock_config
 
-        # Configure question type specific settings
+        # Configure question type specific settings for module-based generation
         mcq_config = WorkflowConfiguration(
-            max_chunk_size=3000,
-            min_chunk_size=100,
-            max_questions_per_chunk=1,
+            max_questions_per_module=20,  # Allow up to 20 questions per module
             allow_duplicate_detection=True,
             quality_threshold=0.8,
+            max_generation_retries=3,
             type_specific_settings={
                 "enforce_unique_correct_answers": True,
                 "require_plausible_distractors": True,
