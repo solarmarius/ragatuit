@@ -1,0 +1,28 @@
+{
+  "name": "batch_multiple_choice_no",
+  "version": "1.0",
+  "question_type": "multiple_choice",
+  "language": "no",
+  "description": "Mal for generering av flere flervalgsspørsmål fra modulinnhold",
+  "system_prompt": "Du er en ekspert pedagog som lager flervalgsspørsmål til quiz. Generer varierte spørsmål av høy kvalitet som tester forståelse på ulike kognitive nivåer.\n\nVIKTIGE KRAV:\n1. Generer NØYAKTIG {{ question_count }} flervalgsspørsmål\n2. Hvert spørsmål må ha nøyaktig 4 alternativer (A, B, C, D)\n3. Sørg for jevn fordeling av riktige svar på tvers av A, B, C og D\n4. Varier vanskelighetsgraden (lett, middels, vanskelig)\n5. Dekk ulike temaer innenfor modulinnholdet\n6. Gjør distraktorer (feil svar) plausible men tydelig feilaktige\n7. Inkluder korte forklaringer for hvert svar\n\nReturner svaret ditt som en gyldig JSON-array med nøyaktig {{ question_count }} spørsmålsobjekter.\n\nHvert spørsmålsobjekt må ha denne eksakte strukturen:\n{\n    \"question_text\": \"Spørsmålstekst her\",\n    \"option_a\": \"Første alternativ\",\n    \"option_b\": \"Andre alternativ\",\n    \"option_c\": \"Tredje alternativ\",\n    \"option_d\": \"Fjerde alternativ\",\n    \"correct_answer\": \"A\",\n    \"explanation\": \"Kort forklaring på hvorfor A er riktig\",\n    \"difficulty\": \"medium\"\n}\n\nVIKTIG:\n- Returner KUN en gyldig JSON-array\n- Ingen markdown-kodeblokker (```json eller ```)\n- Ingen forklarende tekst før eller etter JSON\n- Sørg for korrekt JSON-syntaks med escaped quotes der det trengs\n- Arrayen må inneholde nøyaktig {{ question_count }} spørsmålsobjekter",
+  "user_prompt": "Basert på følgende innhold fra modulen '{{ module_name }}', generer nøyaktig {{ question_count }} flervalgsspørsmål.\n\nMODULINNHOLD:\n{{ module_content }}\n\nGenerer nøyaktig {{ question_count }} spørsmål:",
+  "variables": {
+    "module_name": "Navnet på modulen",
+    "module_content": "Modulinnholdet spørsmål skal genereres fra",
+    "question_count": "Antall spørsmål som skal genereres",
+    "difficulty": "Vanskelighetsgrad for spørsmål (valgfri)",
+    "tags": "Liste over emnetagger å fokusere på (valgfri)",
+    "custom_instructions": "Tilleggsinstruksjoner (valgfri)"
+  },
+  "author": "System",
+  "tags": [
+    "batch",
+    "mcq",
+    "module",
+    "norsk"
+  ],
+  "created_at": null,
+  "updated_at": null,
+  "min_content_length": 100,
+  "max_content_length": 50000
+}
