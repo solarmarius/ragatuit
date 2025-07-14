@@ -145,7 +145,7 @@ async def _execute_generation_workflow(
     generation_service: Any = None,
 ) -> tuple[str, str | None, Exception | None]:
     """
-    Execute the question generation workflow.
+    Execute the module-based question generation workflow.
 
     Returns:
         Tuple of (final_status, error_message, failure_exception)
@@ -153,50 +153,146 @@ async def _execute_generation_workflow(
     try:
         # Use injected generation service or create default
         if generation_service is None:
-            # TODO: Update in Step 10 - temporarily commented out for module-based generation
-            # from src.question.services import GenerationOrchestrationService
-            # generation_service = GenerationOrchestrationService()
-            raise NotImplementedError("Generation service will be updated in Step 10")
+            from src.question.services import QuestionGenerationService
 
-        # Create generation parameters
-        from src.question.types import GenerationParameters
+            generation_service = QuestionGenerationService()
 
-        generation_parameters = GenerationParameters(
-            target_count=target_question_count, language=language
+        # Get quiz to access module configuration
+        from src.database import get_async_session
+        from src.quiz.models import Quiz
+
+        async with get_async_session() as session:
+            quiz = await session.get(Quiz, quiz_id)
+            if not quiz:
+                raise ValueError(f"Quiz {quiz_id} not found")
+
+        # Prepare content using functional content service
+        from src.question.services import prepare_and_validate_content
+
+        logger.info(
+            "generation_workflow_content_preparation_started",
+            quiz_id=str(quiz_id),
+            language=language.value,
+            question_type=question_type.value,
         )
 
-        # Generate questions using modular system
-        result = await generation_service.generate_questions(
-            quiz_id=quiz_id,
-            question_type=question_type,
-            generation_parameters=generation_parameters,
-            provider_name=None,  # Use default provider
-            workflow_name=None,  # Use default workflow
-            template_name=None,  # Use default template
-        )
+        extracted_content = await prepare_and_validate_content(quiz_id)
 
-        if result.success:
-            logger.info(
-                "generation_orchestration_completed",
+        if not extracted_content:
+            logger.warning(
+                "generation_workflow_no_content_found",
                 quiz_id=str(quiz_id),
-                questions_generated=result.questions_generated,
-                target_questions=target_question_count,
+            )
+            return "failed", "No valid content found for question generation", None
+
+        logger.info(
+            "generation_workflow_content_prepared",
+            quiz_id=str(quiz_id),
+            modules_count=len(extracted_content),
+            total_content_size=sum(
+                len(content) for content in extracted_content.values()
+            ),
+        )
+
+        # Generate questions using module-based service
+        provider_name = "openai"  # Use default provider
+        results = await generation_service.generate_questions_for_quiz(
+            quiz_id=quiz_id,
+            extracted_content=extracted_content,
+            provider_name=provider_name,
+        )
+
+        # Process module-level results
+        total_generated = sum(len(questions) for questions in results.values())
+
+        # Get expected counts from quiz module selection
+        expected_counts = {}
+        total_expected = 0
+
+        if quiz.selected_modules:
+            for module_id, module_info in quiz.selected_modules.items():
+                expected_count = module_info.get("question_count", 0)
+                expected_counts[module_id] = expected_count
+                total_expected += expected_count
+        else:
+            # Fallback: distribute target count equally across modules
+            total_expected = target_question_count
+
+        # Log detailed module-level results
+        success_modules = 0
+        failed_modules = 0
+
+        for module_id, questions in results.items():
+            generated_count = len(questions)
+            expected_count = expected_counts.get(module_id, 0)
+
+            if generated_count > 0:
+                success_modules += 1
+                logger.info(
+                    "module_generation_succeeded",
+                    quiz_id=str(quiz_id),
+                    module_id=module_id,
+                    generated=generated_count,
+                    expected=expected_count,
+                    success_rate=f"{(generated_count/expected_count)*100:.1f}%"
+                    if expected_count > 0
+                    else "N/A",
+                )
+            else:
+                failed_modules += 1
+                logger.warning(
+                    "module_generation_failed",
+                    quiz_id=str(quiz_id),
+                    module_id=module_id,
+                    expected=expected_count,
+                )
+
+        # Determine overall success
+        if total_generated == 0:
+            logger.error(
+                "generation_workflow_complete_failure",
+                quiz_id=str(quiz_id),
+                total_generated=total_generated,
+                modules_attempted=len(extracted_content),
+                failed_modules=failed_modules,
+            )
+            return "failed", "No questions were generated from any module", None
+
+        elif total_generated < total_expected * 0.8:  # Allow 20% tolerance
+            # Partial failure - less than 80% of expected questions
+            logger.warning(
+                "generation_workflow_partial_failure",
+                quiz_id=str(quiz_id),
+                total_generated=total_generated,
+                total_expected=total_expected,
+                success_rate=f"{(total_generated/total_expected)*100:.1f}%",
+                success_modules=success_modules,
+                failed_modules=failed_modules,
+            )
+            return (
+                "failed",
+                f"Only generated {total_generated}/{total_expected} questions ({(total_generated/total_expected)*100:.1f}%)",
+                None,
+            )
+
+        else:
+            # Success - adequate questions generated
+            logger.info(
+                "generation_workflow_completed",
+                quiz_id=str(quiz_id),
+                total_generated=total_generated,
+                total_expected=total_expected,
+                success_rate=f"{(total_generated/total_expected)*100:.1f}%",
+                success_modules=success_modules,
+                failed_modules=failed_modules,
                 question_type=question_type.value,
+                language=language.value,
             )
             return "completed", None, None
-        else:
-            error_message = result.error_message
-            logger.error(
-                "generation_orchestration_failed_during_llm",
-                quiz_id=str(quiz_id),
-                error_message=error_message,
-                question_type=question_type.value,
-            )
-            return "failed", error_message, None
 
     except Exception as e:
         logger.error(
-            "generation_orchestration_failed",
+            "generation_workflow_failed",
             quiz_id=str(quiz_id),
             error=str(e),
             error_type=type(e).__name__,
