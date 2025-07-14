@@ -13,15 +13,10 @@ from src.database import get_async_session
 from . import service
 from .formatters import format_question_for_display
 from .schemas import (
-    BatchGenerationRequest,
-    BatchGenerationResponse,
-    GenerationRequest,
-    GenerationResponse,
     QuestionCreateRequest,
     QuestionResponse,
     QuestionUpdateRequest,
 )
-from .services import GenerationOrchestrationService
 from .types import QuestionType
 
 router = APIRouter(prefix="/questions", tags=["questions"])
@@ -463,199 +458,200 @@ async def delete_question(
         )
 
 
-@router.post("/{quiz_id}/generate", response_model=GenerationResponse)
-async def generate_questions(
-    quiz_id: UUID,
-    generation_request: GenerationRequest,
-    current_user: CurrentUser,
-) -> GenerationResponse:
-    """
-    Generate questions for a quiz using AI.
+# TODO: Update in Step 10 - temporarily commented out for module-based generation
+# @router.post("/{quiz_id}/generate", response_model=GenerationResponse)
+# async def generate_questions(
+#     quiz_id: UUID,
+#     generation_request: GenerationRequest,
+#     current_user: CurrentUser,
+# ) -> GenerationResponse:
+#     """
+#     Generate questions for a quiz using AI.
 
-    **Parameters:**
-        quiz_id: Quiz identifier
-        generation_request: Generation parameters
+#     **Parameters:**
+#         quiz_id: Quiz identifier
+#         generation_request: Generation parameters
 
-    **Returns:**
-        Generation result with statistics
-    """
-    logger.info(
-        "question_generation_initiated",
-        user_id=str(current_user.id),
-        quiz_id=str(quiz_id),
-        question_type=generation_request.question_type,
-        target_count=generation_request.target_count,
-    )
+#     **Returns:**
+#         Generation result with statistics
+#     """
+#     logger.info(
+#         "question_generation_initiated",
+#         user_id=str(current_user.id),
+#         quiz_id=str(quiz_id),
+#         question_type=generation_request.question_type,
+#         target_count=generation_request.target_count,
+#     )
 
-    try:
-        # Verify quiz ownership
-        await _verify_quiz_ownership(quiz_id, current_user.id)
+#     try:
+#         # Verify quiz ownership
+#         await _verify_quiz_ownership(quiz_id, current_user.id)
 
-        # Ensure quiz_id matches
-        if generation_request.quiz_id != quiz_id:
-            raise HTTPException(status_code=400, detail="Quiz ID mismatch")
+#         # Ensure quiz_id matches
+#         if generation_request.quiz_id != quiz_id:
+#             raise HTTPException(status_code=400, detail="Quiz ID mismatch")
 
-        # Get generation service
-        generation_service = GenerationOrchestrationService()
+#         # Get generation service
+#         generation_service = QuestionGenerationService()
 
-        # Create generation parameters
-        from .types import GenerationParameters
+#         # Create generation parameters
+#         from .types import GenerationParameters
 
-        generation_parameters = GenerationParameters(
-            target_count=generation_request.target_count,
-            difficulty=generation_request.difficulty,
-            tags=generation_request.tags,
-            custom_instructions=generation_request.custom_instructions,
-        )
+#         generation_parameters = GenerationParameters(
+#             target_count=generation_request.target_count,
+#             difficulty=generation_request.difficulty,
+#             tags=generation_request.tags,
+#             custom_instructions=generation_request.custom_instructions,
+#         )
 
-        # Generate questions
-        result = await generation_service.generate_questions(
-            quiz_id=quiz_id,
-            question_type=generation_request.question_type,
-            generation_parameters=generation_parameters,
-            provider_name=generation_request.provider_name,
-            workflow_name=generation_request.workflow_name,
-            template_name=generation_request.template_name,
-        )
+#         # Generate questions
+#         result = await generation_service.generate_questions(
+#             quiz_id=quiz_id,
+#             question_type=generation_request.question_type,
+#             generation_parameters=generation_parameters,
+#             provider_name=generation_request.provider_name,
+#             workflow_name=generation_request.workflow_name,
+#             template_name=generation_request.template_name,
+#         )
 
-        if result.success:
-            logger.info(
-                "question_generation_completed",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-                questions_generated=result.questions_generated,
-            )
-        else:
-            logger.error(
-                "question_generation_failed",
-                user_id=str(current_user.id),
-                quiz_id=str(quiz_id),
-                error_message=result.error_message,
-                questions_generated=result.questions_generated,
-            )
+#         if result.success:
+#             logger.info(
+#                 "question_generation_completed",
+#                 user_id=str(current_user.id),
+#                 quiz_id=str(quiz_id),
+#                 questions_generated=result.questions_generated,
+#             )
+#         else:
+#             logger.error(
+#                 "question_generation_failed",
+#                 user_id=str(current_user.id),
+#                 quiz_id=str(quiz_id),
+#                 error_message=result.error_message,
+#                 questions_generated=result.questions_generated,
+#             )
 
-        return GenerationResponse(
-            success=result.success,
-            questions_generated=result.questions_generated,
-            target_questions=result.target_questions,
-            error_message=result.error_message,
-            metadata=result.metadata,
-            generated_at=result.generated_at,
-        )
+#         return GenerationResponse(
+#             success=result.success,
+#             questions_generated=result.questions_generated,
+#             target_questions=result.target_questions,
+#             error_message=result.error_message,
+#             metadata=result.metadata,
+#             generated_at=result.generated_at,
+#         )
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(
-            "question_generation_failed",
-            user_id=str(current_user.id),
-            quiz_id=str(quiz_id),
-            error=str(e),
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=500, detail="Failed to generate questions. Please try again."
-        )
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         logger.error(
+#             "question_generation_failed",
+#             user_id=str(current_user.id),
+#             quiz_id=str(quiz_id),
+#             error=str(e),
+#             exc_info=True,
+#         )
+#         raise HTTPException(
+#             status_code=500, detail="Failed to generate questions. Please try again."
+#         )
 
 
-@router.post("/batch/generate", response_model=BatchGenerationResponse)
-async def batch_generate_questions(
-    batch_request: BatchGenerationRequest,
-    current_user: CurrentUser,
-) -> BatchGenerationResponse:
-    """
-    Generate questions for multiple quizzes in batch.
+# @router.post("/batch/generate", response_model=BatchGenerationResponse)
+# async def batch_generate_questions(
+#     batch_request: BatchGenerationRequest,
+#     current_user: CurrentUser,
+# ) -> BatchGenerationResponse:
+#     """
+#     Generate questions for multiple quizzes in batch.
 
-    **Parameters:**
-        batch_request: Batch generation requests
+#     **Parameters:**
+#         batch_request: Batch generation requests
 
-    **Returns:**
-        Batch generation results
-    """
-    logger.info(
-        "batch_question_generation_initiated",
-        user_id=str(current_user.id),
-        request_count=len(batch_request.requests),
-    )
+#     **Returns:**
+#         Batch generation results
+#     """
+#     logger.info(
+#         "batch_question_generation_initiated",
+#         user_id=str(current_user.id),
+#         request_count=len(batch_request.requests),
+#     )
 
-    try:
-        # Verify ownership of all quizzes
-        for request in batch_request.requests:
-            await _verify_quiz_ownership(request.quiz_id, current_user.id)
+#     try:
+#         # Verify ownership of all quizzes
+#         for request in batch_request.requests:
+#             await _verify_quiz_ownership(request.quiz_id, current_user.id)
 
-        # Get generation service
-        generation_service = GenerationOrchestrationService()
+#         # Get generation service
+#         generation_service = QuestionGenerationService()
 
-        # Convert requests to the format expected by the service
-        service_requests = []
-        for request in batch_request.requests:
-            service_requests.append(
-                {
-                    "quiz_id": str(request.quiz_id),
-                    "question_type": request.question_type.value,
-                    "generation_parameters": {
-                        "target_count": request.target_count,
-                        "difficulty": request.difficulty.value
-                        if request.difficulty
-                        else None,
-                        "tags": request.tags,
-                        "custom_instructions": request.custom_instructions,
-                    },
-                    "provider_name": request.provider_name,
-                    "workflow_name": request.workflow_name,
-                    "template_name": request.template_name,
-                }
-            )
+#         # Convert requests to the format expected by the service
+#         service_requests = []
+#         for request in batch_request.requests:
+#             service_requests.append(
+#                 {
+#                     "quiz_id": str(request.quiz_id),
+#                     "question_type": request.question_type.value,
+#                     "generation_parameters": {
+#                         "target_count": request.target_count,
+#                         "difficulty": request.difficulty.value
+#                         if request.difficulty
+#                         else None,
+#                         "tags": request.tags,
+#                         "custom_instructions": request.custom_instructions,
+#                     },
+#                     "provider_name": request.provider_name,
+#                     "workflow_name": request.workflow_name,
+#                     "template_name": request.template_name,
+#                 }
+#             )
 
-        # Execute batch generation
-        results = await generation_service.batch_generate_questions(service_requests)
+#         # Execute batch generation
+#         results = await generation_service.batch_generate_questions(service_requests)
 
-        # Convert results to response format
-        response_results = []
-        for result in results:
-            response_results.append(
-                GenerationResponse(
-                    success=result.success,
-                    questions_generated=result.questions_generated,
-                    target_questions=result.target_questions,
-                    error_message=result.error_message,
-                    metadata=result.metadata,
-                    generated_at=result.generated_at,
-                )
-            )
+#         # Convert results to response format
+#         response_results = []
+#         for result in results:
+#             response_results.append(
+#                 GenerationResponse(
+#                     success=result.success,
+#                     questions_generated=result.questions_generated,
+#                     target_questions=result.target_questions,
+#                     error_message=result.error_message,
+#                     metadata=result.metadata,
+#                     generated_at=result.generated_at,
+#                 )
+#             )
 
-        successful_requests = sum(1 for r in response_results if r.success)
-        total_questions = sum(r.questions_generated for r in response_results)
+#         successful_requests = sum(1 for r in response_results if r.success)
+#         total_questions = sum(r.questions_generated for r in response_results)
 
-        logger.info(
-            "batch_question_generation_completed",
-            user_id=str(current_user.id),
-            total_requests=len(batch_request.requests),
-            successful_requests=successful_requests,
-            total_questions_generated=total_questions,
-        )
+#         logger.info(
+#             "batch_question_generation_completed",
+#             user_id=str(current_user.id),
+#             total_requests=len(batch_request.requests),
+#             successful_requests=successful_requests,
+#             total_questions_generated=total_questions,
+#         )
 
-        return BatchGenerationResponse(
-            results=response_results,
-            total_requests=len(batch_request.requests),
-            successful_requests=successful_requests,
-            failed_requests=len(batch_request.requests) - successful_requests,
-            total_questions_generated=total_questions,
-        )
+#         return BatchGenerationResponse(
+#             results=response_results,
+#             total_requests=len(batch_request.requests),
+#             successful_requests=successful_requests,
+#             failed_requests=len(batch_request.requests) - successful_requests,
+#             total_questions_generated=total_questions,
+#         )
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(
-            "batch_question_generation_failed",
-            user_id=str(current_user.id),
-            error=str(e),
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=500,
-            detail="Failed to generate questions in batch. Please try again.",
-        )
+#     except HTTPException:
+#         raise
+#     except Exception as e:
+#         logger.error(
+#             "batch_question_generation_failed",
+#             user_id=str(current_user.id),
+#             error=str(e),
+#             exc_info=True,
+#         )
+#         raise HTTPException(
+#             status_code=500,
+#             detail="Failed to generate questions in batch. Please try again.",
+#         )
 
 
 async def _verify_quiz_ownership(quiz_id: UUID, user_id: UUID) -> None:

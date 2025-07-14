@@ -22,7 +22,7 @@ from .schemas import (
 # Services
 from .services import (
     ContentProcessingService,
-    GenerationOrchestrationService,
+    QuestionGenerationService,
 )
 
 __all__ = [
@@ -42,7 +42,7 @@ __all__ = [
     "BatchGenerationResponse",
     # Services
     "ContentProcessingService",
-    "GenerationOrchestrationService",
+    "QuestionGenerationService",
     "service",
     # Infrastructure
     "get_configuration_service",

@@ -153,9 +153,10 @@ async def _execute_generation_workflow(
     try:
         # Use injected generation service or create default
         if generation_service is None:
-            from src.question.services import GenerationOrchestrationService
-
-            generation_service = GenerationOrchestrationService()
+            # TODO: Update in Step 10 - temporarily commented out for module-based generation
+            # from src.question.services import GenerationOrchestrationService
+            # generation_service = GenerationOrchestrationService()
+            raise NotImplementedError("Generation service will be updated in Step 10")
 
         # Create generation parameters
         from src.question.types import GenerationParameters
