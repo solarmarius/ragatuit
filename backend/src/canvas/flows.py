@@ -79,7 +79,7 @@ async def extract_content_for_modules(
 
             # Track total content size
             total_content_size += module_size
-            extracted_content[f"module_{module_id}"] = module_content
+            extracted_content[str(module_id)] = module_content
 
             logger.info(
                 "content_extraction_module_completed",
@@ -98,7 +98,7 @@ async def extract_content_for_modules(
                 exc_info=True,
             )
             # Continue with other modules even if one fails
-            extracted_content[f"module_{module_id}"] = []
+            extracted_content[str(module_id)] = []
             continue
 
     return extracted_content

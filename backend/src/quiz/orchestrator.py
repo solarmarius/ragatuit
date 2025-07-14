@@ -157,15 +157,6 @@ async def _execute_generation_workflow(
 
             generation_service = QuestionGenerationService()
 
-        # Get quiz to access module configuration
-        from src.database import get_async_session
-        from src.quiz.models import Quiz
-
-        async with get_async_session() as session:
-            quiz = await session.get(Quiz, quiz_id)
-            if not quiz:
-                raise ValueError(f"Quiz {quiz_id} not found")
-
         # Prepare content using functional content service
         from src.question.services import prepare_and_validate_content
 
@@ -205,18 +196,26 @@ async def _execute_generation_workflow(
         # Process module-level results
         total_generated = sum(len(questions) for questions in results.values())
 
-        # Get expected counts from quiz module selection
+        # Get expected counts from quiz module selection within a fresh session
+        from src.database import get_async_session
+        from src.quiz.models import Quiz
+
         expected_counts = {}
         total_expected = 0
 
-        if quiz.selected_modules:
-            for module_id, module_info in quiz.selected_modules.items():
-                expected_count = module_info.get("question_count", 0)
-                expected_counts[module_id] = expected_count
-                total_expected += expected_count
-        else:
-            # Fallback: distribute target count equally across modules
-            total_expected = target_question_count
+        async with get_async_session() as session:
+            quiz = await session.get(Quiz, quiz_id)
+            if not quiz:
+                raise ValueError(f"Quiz {quiz_id} not found")
+
+            if quiz.selected_modules:
+                for module_id, module_info in quiz.selected_modules.items():
+                    expected_count = module_info.get("question_count", 0)
+                    expected_counts[module_id] = expected_count
+                    total_expected += expected_count
+            else:
+                # Fallback: distribute target count equally across modules
+                total_expected = target_question_count
 
         # Log detailed module-level results
         success_modules = 0

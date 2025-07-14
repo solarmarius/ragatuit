@@ -5,7 +5,6 @@ from uuid import UUID
 
 from src.config import get_logger
 from src.database import get_async_session
-from src.quiz.models import Quiz
 
 from ..providers import get_llm_provider_registry
 from ..templates import get_template_manager
@@ -46,6 +45,8 @@ class QuestionGenerationService:
         """
         try:
             # Get quiz to access module configuration
+            from src.quiz.models import Quiz
+
             async with get_async_session() as session:
                 quiz = await session.get(Quiz, quiz_id)
                 if not quiz:
@@ -128,6 +129,8 @@ class QuestionGenerationService:
             Dictionary with generation status information
         """
         try:
+            from src.quiz.models import Quiz
+
             async with get_async_session() as session:
                 quiz = await session.get(Quiz, quiz_id)
                 if not quiz:

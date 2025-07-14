@@ -249,7 +249,7 @@ class TemplateManager:
 
         # Prepare template variables
         variables = {
-            "content": content,
+            "module_content": content,
             "target_count": generation_parameters.target_count,
             "difficulty": generation_parameters.difficulty.value
             if generation_parameters.difficulty

@@ -142,6 +142,19 @@ class ModuleBatchWorkflow:
                 language=self.language,
             )
 
+            # Debug: Log content being passed to template
+            logger.debug(
+                "module_batch_template_variables",
+                module_id=state.module_id,
+                module_content_length=len(state.module_content),
+                module_content_preview=state.module_content[:200]
+                if state.module_content
+                else "EMPTY_CONTENT",
+                module_name=state.module_name,
+                question_count=state.target_question_count
+                - len(state.generated_questions),
+            )
+
             # Create messages using template
             messages = await self.template_manager.create_messages(
                 QuestionType.MULTIPLE_CHOICE,
@@ -240,11 +253,27 @@ class ModuleBatchWorkflow:
                     # Validate required fields
                     self._validate_mcq_structure(q_data)
 
-                    # Create question object
+                    # Extract difficulty from question data (if present)
+                    difficulty_str = q_data.pop("difficulty", None)
+                    difficulty = None
+                    if difficulty_str:
+                        try:
+                            from ..types.base import QuestionDifficulty
+
+                            difficulty = QuestionDifficulty(difficulty_str.lower())
+                        except (ValueError, AttributeError):
+                            logger.warning(
+                                "module_batch_invalid_difficulty",
+                                module_id=state.module_id,
+                                difficulty_value=difficulty_str,
+                            )
+
+                    # Create question object with difficulty at model level
                     question = Question(
                         quiz_id=state.quiz_id,
                         question_type=QuestionType.MULTIPLE_CHOICE,
-                        question_data=q_data,
+                        question_data=q_data,  # Now without difficulty field
+                        difficulty=difficulty,
                         is_approved=False,
                     )
                     state.generated_questions.append(question)
@@ -528,6 +557,7 @@ class ModuleBatchWorkflow:
             module_id=module_id,
             target_questions=question_count,
             content_length=len(module_content),
+            content_preview=module_content[:200] if module_content else "EMPTY_CONTENT",
         )
 
         try:
