@@ -8,7 +8,7 @@ from uuid import UUID
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
 
-from src.config import get_logger
+from src.config import get_logger, settings
 from src.database import get_async_session
 
 from ..providers import BaseLLMProvider, LLMMessage
@@ -36,12 +36,12 @@ class ModuleBatchState(BaseModel):
     # Workflow state
     generated_questions: list[Question] = Field(default_factory=list)
     retry_count: int = 0
-    max_retries: int = 3
+    max_retries: int = Field(default_factory=lambda: settings.MAX_GENERATION_RETRIES)
 
     # JSON correction state
     parsing_error: bool = False
     correction_attempts: int = 0
-    max_corrections: int = 2
+    max_corrections: int = Field(default_factory=lambda: settings.MAX_JSON_CORRECTIONS)
 
     # Current LLM interaction
     current_prompt: str = ""
@@ -604,7 +604,7 @@ class ParallelModuleProcessor:
         self,
         quiz_id: UUID,
         modules_data: dict[str, dict[str, Any]],
-        max_concurrent: int = 5,
+        max_concurrent: int | None = None,
     ) -> dict[str, list[Question]]:
         """
         Process all modules in parallel with concurrency control.
@@ -612,16 +612,21 @@ class ParallelModuleProcessor:
         Args:
             quiz_id: Quiz identifier
             modules_data: Module data mapped by module ID
-            max_concurrent: Maximum number of concurrent module processing tasks
+            max_concurrent: Maximum number of concurrent module processing tasks (defaults to settings)
 
         Returns:
             Dictionary mapping module IDs to lists of generated questions
         """
+        # Use configured value if not specified
+        if max_concurrent is None:
+            max_concurrent = settings.MAX_CONCURRENT_MODULES
+
         logger.info(
             "parallel_module_processing_started",
             quiz_id=str(quiz_id),
             modules_count=len(modules_data),
             max_concurrent=max_concurrent,
+            configured_max=settings.MAX_CONCURRENT_MODULES,
         )
 
         # Create semaphore to limit concurrent LLM API calls

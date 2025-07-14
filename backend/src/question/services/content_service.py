@@ -3,7 +3,7 @@
 from typing import Any
 from uuid import UUID
 
-from src.config import get_logger
+from src.config import get_logger, settings
 from src.database import get_async_session
 
 logger = get_logger("content_service")
@@ -81,8 +81,9 @@ def validate_module_content(content_dict: dict[str, Any]) -> dict[str, str]:
         module_content = _combine_module_pages(module_id, pages)
 
         if (
-            module_content and len(module_content.strip()) >= 100
-        ):  # Minimum content length
+            module_content
+            and len(module_content.strip()) >= settings.CONTENT_LENGTH_THRESHOLD
+        ):  # Minimum content length from configuration
             validated_modules[module_id] = module_content
             logger.debug(
                 "module_content_validated",
