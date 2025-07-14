@@ -22,7 +22,7 @@ import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirma
 import { QuizPhaseProgress } from "@/components/ui/quiz-phase-progress"
 import { StatusLight } from "@/components/ui/status-light"
 import { useFormattedDate, useQuizStatusPolling } from "@/hooks/common"
-import { FAILURE_REASON, QUIZ_STATUS, UI_SIZES, UI_TEXT } from "@/lib/constants"
+import { FAILURE_REASON, QUESTION_TYPE_LABELS, QUIZ_LANGUAGE_LABELS, QUIZ_STATUS, UI_SIZES, UI_TEXT } from "@/lib/constants"
 
 export const Route = createFileRoute("/_layout/quiz/$id")({
   component: QuizDetail,
@@ -237,6 +237,22 @@ function QuizDetail() {
                       </Text>
                       <Badge variant="outline" colorScheme="purple">
                         {quiz.question_count}
+                      </Badge>
+                    </HStack>
+                    <HStack justify="space-between">
+                      <Text fontWeight="medium" color="gray.700">
+                        Question Type
+                      </Text>
+                      <Badge variant="outline" colorScheme="blue">
+                        {quiz.question_type ? QUESTION_TYPE_LABELS[quiz.question_type] : "Unknown"}
+                      </Badge>
+                    </HStack>
+                    <HStack justify="space-between">
+                      <Text fontWeight="medium" color="gray.700">
+                        Language
+                      </Text>
+                      <Badge variant="outline" colorScheme="green">
+                        {quiz.language ? QUIZ_LANGUAGE_LABELS[quiz.language] : "Unknown"}
                       </Badge>
                     </HStack>
                   </VStack>
