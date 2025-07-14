@@ -604,52 +604,99 @@ class ParallelModuleProcessor:
         self,
         quiz_id: UUID,
         modules_data: dict[str, dict[str, Any]],
+        max_concurrent: int = 5,
     ) -> dict[str, list[Question]]:
-        """Process all modules in parallel."""
+        """
+        Process all modules in parallel with concurrency control.
+
+        Args:
+            quiz_id: Quiz identifier
+            modules_data: Module data mapped by module ID
+            max_concurrent: Maximum number of concurrent module processing tasks
+
+        Returns:
+            Dictionary mapping module IDs to lists of generated questions
+        """
         logger.info(
             "parallel_module_processing_started",
             quiz_id=str(quiz_id),
             modules_count=len(modules_data),
+            max_concurrent=max_concurrent,
         )
 
-        # Create tasks for each module
-        tasks = []
-        for module_id, module_info in modules_data.items():
-            workflow = ModuleBatchWorkflow(
-                llm_provider=self.llm_provider,
-                template_manager=self.template_manager,
-                language=self.language,
-            )
+        # Create semaphore to limit concurrent LLM API calls
+        semaphore = asyncio.Semaphore(max_concurrent)
 
-            task = workflow.process_module(
-                quiz_id=quiz_id,
-                module_id=module_id,
-                module_name=module_info["name"],
-                module_content=module_info["content"],
-                question_count=module_info["question_count"],
-            )
-
-            tasks.append((module_id, task))
-
-        # Execute all tasks in parallel
-        results = {}
-        for module_id, task in tasks:
-            try:
-                questions = await task
-                results[module_id] = questions
-                logger.info(
-                    "parallel_module_completed",
+        async def process_module_with_concurrency_control(
+            module_id: str, module_info: dict[str, Any]
+        ) -> tuple[str, list[Question]]:
+            """Process a single module with concurrency control."""
+            async with semaphore:
+                logger.debug(
+                    "module_processing_started_with_semaphore",
                     module_id=module_id,
-                    questions_generated=len(questions),
+                    concurrent_slots_available=semaphore._value,
                 )
-            except Exception as e:
+
+                workflow = ModuleBatchWorkflow(
+                    llm_provider=self.llm_provider,
+                    template_manager=self.template_manager,
+                    language=self.language,
+                )
+
+                try:
+                    questions = await workflow.process_module(
+                        quiz_id=quiz_id,
+                        module_id=module_id,
+                        module_name=module_info["name"],
+                        module_content=module_info["content"],
+                        question_count=module_info["question_count"],
+                    )
+
+                    logger.info(
+                        "parallel_module_completed",
+                        module_id=module_id,
+                        questions_generated=len(questions),
+                    )
+                    return module_id, questions
+
+                except Exception as e:
+                    logger.error(
+                        "parallel_module_failed",
+                        module_id=module_id,
+                        error=str(e),
+                        exc_info=True,
+                    )
+                    return module_id, []
+
+        # Create tasks for all modules
+        tasks = [
+            process_module_with_concurrency_control(module_id, module_info)
+            for module_id, module_info in modules_data.items()
+        ]
+
+        # Execute all tasks with concurrency control
+        results = {}
+        completed_tasks = await asyncio.gather(*tasks, return_exceptions=True)
+
+        for result in completed_tasks:
+            if isinstance(result, Exception):
                 logger.error(
-                    "parallel_module_failed",
-                    module_id=module_id,
-                    error=str(e),
+                    "module_processing_exception",
+                    error=str(result),
                     exc_info=True,
                 )
-                results[module_id] = []
+                continue
+
+            if isinstance(result, tuple) and len(result) == 2:
+                module_id, questions = result
+                results[module_id] = questions
+            else:
+                logger.error(
+                    "unexpected_result_format",
+                    result_type=type(result).__name__,
+                    result_value=str(result),
+                )
 
         total_questions = sum(len(questions) for questions in results.values())
         logger.info(
@@ -657,6 +704,7 @@ class ParallelModuleProcessor:
             quiz_id=str(quiz_id),
             total_questions=total_questions,
             modules_processed=len(results),
+            max_concurrent_used=max_concurrent,
         )
 
         return results
