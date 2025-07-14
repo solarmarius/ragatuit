@@ -83,16 +83,35 @@ class MCQWorkflow(BaseQuestionWorkflow):
                 if not content_dict:
                     raise ValueError("No extracted content found for quiz")
 
-                # Chunk the content using the base class method
-                content_chunks = self.chunk_content(content_dict)
+                # Prepare the content using the base class method
+                modules_content = self.prepare_module_content(content_dict)
+
+                # Convert to chunks for backward compatibility with MCQ workflow
+                content_chunks = []
+                for _module_id, content in modules_content.items():
+                    # Split large module content into smaller chunks if needed
+                    max_chunk_size = 3000  # Reasonable size for MCQ generation
+                    if len(content) <= max_chunk_size:
+                        content_chunks.append(content)
+                    else:
+                        # Split by paragraphs to maintain context
+                        paragraphs = content.split("\n\n")
+                        current_chunk = ""
+                        for paragraph in paragraphs:
+                            if len(current_chunk) + len(paragraph) <= max_chunk_size:
+                                current_chunk += paragraph + "\n\n"
+                            else:
+                                if current_chunk.strip():
+                                    content_chunks.append(current_chunk.strip())
+                                current_chunk = paragraph + "\n\n"
+                        if current_chunk.strip():
+                            content_chunks.append(current_chunk.strip())
 
                 if not content_chunks:
                     raise ValueError("No valid content chunks found")
 
-                # Convert ContentChunk objects to strings for backward compatibility
-                chunk_strings = [chunk.content for chunk in content_chunks]
-
-                state["content_chunks"] = chunk_strings
+                # Content chunks are already strings
+                state["content_chunks"] = content_chunks
                 state["current_chunk_index"] = 0
                 state["questions_generated"] = 0
                 state["generated_questions"] = []
@@ -100,13 +119,13 @@ class MCQWorkflow(BaseQuestionWorkflow):
                 # Add metadata about content processing
                 state["workflow_metadata"].update(
                     {
-                        "content_chunks_created": len(chunk_strings),
+                        "content_chunks_created": len(content_chunks),
                         "total_content_length": sum(
-                            len(chunk) for chunk in chunk_strings
+                            len(chunk) for chunk in content_chunks
                         ),
-                        "avg_chunk_length": sum(len(chunk) for chunk in chunk_strings)
-                        // len(chunk_strings)
-                        if chunk_strings
+                        "avg_chunk_length": sum(len(chunk) for chunk in content_chunks)
+                        // len(content_chunks)
+                        if content_chunks
                         else 0,
                     }
                 )
@@ -114,7 +133,7 @@ class MCQWorkflow(BaseQuestionWorkflow):
                 logger.info(
                     "mcq_content_preparation_completed",
                     quiz_id=str(state["quiz_id"]),
-                    chunks_created=len(chunk_strings),
+                    chunks_created=len(content_chunks),
                 )
 
                 return state

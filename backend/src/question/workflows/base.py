@@ -16,20 +16,20 @@ logger = get_logger("question_workflow")
 
 
 class WorkflowState(TypedDict):
-    """Base state for question generation workflows."""
+    """Base state for module-based question generation workflows."""
 
     # Input parameters
     quiz_id: UUID
     question_type: QuestionType
     target_question_count: int
-    content_chunks: list[str]
+    extracted_content: dict[str, str]  # module_id -> content
     generation_parameters: GenerationParameters
 
     # Provider configuration
     llm_provider: BaseLLMProvider
 
     # Workflow state
-    current_chunk_index: int
+    current_module_index: int
     questions_generated: int
     generated_questions: list[dict[str, Any]]
 
@@ -57,17 +57,12 @@ class ContentChunk(BaseModel):
 
 
 class WorkflowConfiguration(BaseModel):
-    """Configuration for question generation workflows."""
-
-    # Content processing
-    max_chunk_size: int = Field(default=3000, ge=100, le=10000)
-    min_chunk_size: int = Field(default=100, ge=50, le=1000)
-    overlap_size: int = Field(default=200, ge=0, le=500)
+    """Configuration for module-based question generation workflows."""
 
     # Generation parameters
-    max_questions_per_chunk: int = Field(default=3, ge=1, le=10)
+    max_questions_per_module: int = Field(default=20, ge=1, le=20)
     allow_duplicate_detection: bool = Field(default=True)
-    quality_threshold: float = Field(default=0.8, ge=0.0, le=1.0)
+    quality_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
 
     # Retry configuration
     max_generation_retries: int = Field(default=3, ge=0, le=10)
@@ -178,16 +173,16 @@ class BaseQuestionWorkflow(ABC):
     async def execute(
         self,
         quiz_id: UUID,
-        content_chunks: list[str],
+        extracted_content: dict[str, str],
         generation_parameters: GenerationParameters,
         llm_provider: BaseLLMProvider,
     ) -> GenerationResult:
         """
-        Execute the question generation workflow.
+        Execute the module-based question generation workflow.
 
         Args:
             quiz_id: Quiz identifier
-            content_chunks: List of content chunks
+            extracted_content: Dictionary mapping module_id to module content
             generation_parameters: Generation parameters
             llm_provider: LLM provider instance
 
@@ -200,7 +195,7 @@ class BaseQuestionWorkflow(ABC):
             question_type=self.question_type.value,
             quiz_id=str(quiz_id),
             target_questions=generation_parameters.target_count,
-            content_chunks=len(content_chunks),
+            modules_count=len(extracted_content),
         )
 
         try:
@@ -209,10 +204,10 @@ class BaseQuestionWorkflow(ABC):
                 "quiz_id": quiz_id,
                 "question_type": self.question_type,
                 "target_question_count": generation_parameters.target_count,
-                "content_chunks": content_chunks,
+                "extracted_content": extracted_content,
                 "generation_parameters": generation_parameters,
                 "llm_provider": llm_provider,
-                "current_chunk_index": 0,
+                "current_module_index": 0,
                 "questions_generated": 0,
                 "generated_questions": [],
                 "error_message": None,
@@ -238,10 +233,8 @@ class BaseQuestionWorkflow(ABC):
                 metadata={
                     "workflow_name": self.workflow_name,
                     "question_type": self.question_type.value,
-                    "content_chunks_processed": final_state.get(
-                        "current_chunk_index", 0
-                    ),
-                    "total_content_chunks": len(content_chunks),
+                    "modules_processed": final_state.get("current_module_index", 0),
+                    "total_modules": len(extracted_content),
                     **final_state.get("workflow_metadata", {}),
                 },
             )
@@ -279,119 +272,67 @@ class BaseQuestionWorkflow(ABC):
                 },
             )
 
-    def chunk_content(self, content_dict: dict[str, Any]) -> list[ContentChunk]:
+    def prepare_module_content(self, content_dict: dict[str, Any]) -> dict[str, str]:
         """
-        Split content into manageable chunks.
+        Prepare module content for question generation.
 
         Args:
             content_dict: Content dictionary from quiz
 
         Returns:
-            List of content chunks
+            Dictionary mapping module_id to combined module content
         """
-        chunks = []
+        modules_content = {}
 
         for module_id, pages in content_dict.items():
             if not isinstance(pages, list):
                 continue
 
+            module_content_parts = []
             for page in pages:
                 if not isinstance(page, dict):
                     continue
 
                 page_content = page.get("content", "")
-                if (
-                    not page_content
-                    or len(page_content.strip()) < self.configuration.min_chunk_size
-                ):
+                if not page_content or len(page_content.strip()) < 50:
                     continue
 
-                # Split long content into chunks
-                if len(page_content) <= self.configuration.max_chunk_size:
-                    chunks.append(
-                        ContentChunk(
-                            content=page_content,
-                            source=f"{module_id}/{page.get('id', 'unknown')}",
-                            metadata={
-                                "module_id": module_id,
-                                "page_id": page.get("id"),
-                                "page_title": page.get("title", ""),
-                            },
-                        )
-                    )
-                else:
-                    # Split by paragraphs first, then by sentences if needed
-                    paragraphs = page_content.split("\n\n")
-                    current_chunk = ""
+                # Add page title as context if available
+                page_title = page.get("title", "")
+                if page_title:
+                    module_content_parts.append(f"## {page_title}\n")
 
-                    for paragraph in paragraphs:
-                        if (
-                            len(current_chunk) + len(paragraph)
-                            <= self.configuration.max_chunk_size
-                        ):
-                            current_chunk += paragraph + "\n\n"
-                        else:
-                            if (
-                                current_chunk.strip()
-                                and len(current_chunk.strip())
-                                >= self.configuration.min_chunk_size
-                            ):
-                                chunks.append(
-                                    ContentChunk(
-                                        content=current_chunk.strip(),
-                                        source=f"{module_id}/{page.get('id', 'unknown')}",
-                                        metadata={
-                                            "module_id": module_id,
-                                            "page_id": page.get("id"),
-                                            "page_title": page.get("title", ""),
-                                            "chunk_type": "split",
-                                        },
-                                    )
-                                )
-                            current_chunk = paragraph + "\n\n"
+                module_content_parts.append(page_content.strip())
+                module_content_parts.append("\n\n")  # Separator between pages
 
-                    if (
-                        current_chunk.strip()
-                        and len(current_chunk.strip())
-                        >= self.configuration.min_chunk_size
-                    ):
-                        chunks.append(
-                            ContentChunk(
-                                content=current_chunk.strip(),
-                                source=f"{module_id}/{page.get('id', 'unknown')}",
-                                metadata={
-                                    "module_id": module_id,
-                                    "page_id": page.get("id"),
-                                    "page_title": page.get("title", ""),
-                                    "chunk_type": "split",
-                                },
-                            )
-                        )
+            if module_content_parts:
+                combined_content = "\n".join(module_content_parts).strip()
+                if len(combined_content) >= 100:  # Minimum module content length
+                    modules_content[module_id] = combined_content
 
         logger.info(
-            "content_chunking_completed",
+            "module_content_preparation_completed",
             question_type=self.question_type.value,
-            total_chunks=len(chunks),
-            avg_chunk_size=sum(chunk.get_character_count() for chunk in chunks)
-            // len(chunks)
-            if chunks
+            total_modules=len(modules_content),
+            avg_module_size=sum(len(content) for content in modules_content.values())
+            // len(modules_content)
+            if modules_content
             else 0,
-            avg_word_count=sum(chunk.get_word_count() for chunk in chunks)
-            // len(chunks)
-            if chunks
-            else 0,
+            total_content_size=sum(
+                len(content) for content in modules_content.values()
+            ),
         )
 
-        return chunks
+        return modules_content
 
     async def create_generation_messages(
-        self, content_chunk: str, generation_parameters: GenerationParameters
+        self, module_content: str, generation_parameters: GenerationParameters
     ) -> list[LLMMessage]:
         """
-        Create messages for LLM generation.
+        Create messages for LLM generation from module content.
 
         Args:
-            content_chunk: Content to generate questions from
+            module_content: Module content to generate questions from
             generation_parameters: Generation parameters
 
         Returns:
@@ -402,26 +343,26 @@ class BaseQuestionWorkflow(ABC):
             # Use template manager if available
             messages = await self.template_manager.create_messages(
                 self.question_type,
-                content_chunk,
+                module_content,
                 generation_parameters,
                 language=generation_parameters.language,
             )
         else:
             # Fallback to default implementation
             messages = self._create_default_messages(
-                content_chunk, generation_parameters
+                module_content, generation_parameters
             )
         return messages
 
     @abstractmethod
     def _create_default_messages(
-        self, content_chunk: str, generation_parameters: GenerationParameters
+        self, module_content: str, generation_parameters: GenerationParameters
     ) -> list[LLMMessage]:
         """
-        Create default messages for LLM generation.
+        Create default messages for LLM generation from module content.
 
         Args:
-            content_chunk: Content to generate questions from
+            module_content: Module content to generate questions from
             generation_parameters: Generation parameters
 
         Returns:

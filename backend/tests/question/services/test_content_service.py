@@ -1,28 +1,9 @@
-"""Tests for content processing service."""
+"""Tests for module-based content processing functions."""
 
 import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-
-
-@pytest.fixture
-def mock_workflow_config():
-    """Create mock workflow configuration."""
-    config = MagicMock()
-    config.max_chunk_size = 1000
-    config.min_chunk_size = 50
-    config.overlap_size = 100
-    config.quality_threshold = 0.5
-    return config
-
-
-@pytest.fixture
-def content_service(mock_workflow_config):
-    """Create content processing service instance."""
-    from src.question.services.content_service import ContentProcessingService
-
-    return ContentProcessingService(mock_workflow_config)
 
 
 @pytest.fixture
@@ -34,9 +15,8 @@ def sample_content_dict():
                 "id": "page_1",
                 "title": "Introduction to Python",
                 "content": (
-                    "Python is a high-level programming language. " * 3 + "\n\n"
-                )
-                * 3,
+                    "Python is a high-level programming language. " * 10 + "\n\n"
+                ),
                 "url": "intro-python",
             },
             {
@@ -44,11 +24,10 @@ def sample_content_dict():
                 "title": "Variables and Data Types",
                 "content": (
                     "Python has several built-in data types including integers, floats, strings, and booleans. "
-                    * 3
+                    * 5
                     + "\n\n"
-                )
-                * 3,
-                "url": "variables-types",
+                ),
+                "url": "variables-data-types",
             },
         ],
         "module_2": [
@@ -56,11 +35,9 @@ def sample_content_dict():
                 "id": "page_3",
                 "title": "Control Structures",
                 "content": (
-                    "Control structures in Python include if statements, for loops, and while loops. "
-                    * 3
-                    + "\n\n"
-                )
-                * 4,
+                    "Control structures in Python include if statements, loops, and exception handling. "
+                    * 8
+                ),
                 "url": "control-structures",
             }
         ],
@@ -68,21 +45,15 @@ def sample_content_dict():
 
 
 @pytest.fixture
-def large_content_dict():
-    """Create large content dictionary for chunking tests."""
-    # Create content that's definitely larger than max_chunk_size (1000) with paragraph breaks
-    paragraph = (
-        "This is a very long paragraph that will need to be split into multiple chunks. "
-        * 10
-    )
-    large_content = (paragraph + "\n\n") * 10  # ~8000+ chars with paragraph breaks
-
+def sample_large_content_dict():
+    """Create sample content dictionary with large content."""
     return {
-        "large_module": [
+        "module_large": [
             {
-                "id": "large_page",
-                "title": "Large Content Page",
-                "content": large_content,
+                "id": "page_large",
+                "title": "Large Content",
+                "content": "This is a large content section. "
+                * 200,  # About 6600 characters
                 "url": "large-content",
             }
         ]
@@ -90,480 +61,454 @@ def large_content_dict():
 
 
 @pytest.mark.asyncio
-async def test_get_content_from_quiz_success(content_service):
+async def test_get_content_from_quiz_success():
     """Test successful content retrieval from quiz."""
+    from src.question.services.content_service import get_content_from_quiz
+
     quiz_id = uuid.uuid4()
-    expected_content = {"module_1": [{"id": "page_1", "content": "Test content"}]}
+    mock_content = {"module_1": [{"id": "page_1", "content": "Test content"}]}
 
     with patch(
         "src.question.services.content_service.get_async_session"
-    ) as mock_get_session:
+    ) as mock_session_ctx:
         mock_session = AsyncMock()
-        mock_get_session.return_value.__aenter__.return_value = mock_session
+        mock_session_ctx.return_value.__aenter__.return_value = mock_session
 
-        with patch("src.quiz.service.get_content_from_quiz") as mock_get_content:
-            mock_get_content.return_value = expected_content
+        with patch(
+            "src.quiz.service.get_content_from_quiz", return_value=mock_content
+        ) as mock_get_content:
+            result = await get_content_from_quiz(quiz_id)
 
-            result = await content_service.get_content_from_quiz(quiz_id)
-
-    assert result == expected_content
-    mock_get_content.assert_called_once_with(mock_session, quiz_id)
+            assert result == mock_content
+            mock_get_content.assert_called_once_with(mock_session, quiz_id)
 
 
 @pytest.mark.asyncio
-async def test_get_content_from_quiz_no_content_found(content_service):
+async def test_get_content_from_quiz_no_content_found():
     """Test content retrieval when no content is found."""
+    from src.question.services.content_service import get_content_from_quiz
+
     quiz_id = uuid.uuid4()
 
     with patch(
         "src.question.services.content_service.get_async_session"
-    ) as mock_get_session:
+    ) as mock_session_ctx:
         mock_session = AsyncMock()
-        mock_get_session.return_value.__aenter__.return_value = mock_session
+        mock_session_ctx.return_value.__aenter__.return_value = mock_session
 
-        with patch("src.quiz.service.get_content_from_quiz") as mock_get_content:
-            mock_get_content.return_value = None
-
-            with pytest.raises(ValueError) as exc_info:
-                await content_service.get_content_from_quiz(quiz_id)
-
-    assert f"No extracted content found for quiz {quiz_id}" in str(exc_info.value)
+        with patch("src.quiz.service.get_content_from_quiz", return_value=None):
+            with pytest.raises(ValueError, match="No extracted content found"):
+                await get_content_from_quiz(quiz_id)
 
 
 @pytest.mark.asyncio
-async def test_get_content_from_quiz_exception_handling(content_service):
-    """Test exception handling in content retrieval."""
+async def test_get_content_from_quiz_exception_handling():
+    """Test exception handling during content retrieval."""
+    from src.question.services.content_service import get_content_from_quiz
+
     quiz_id = uuid.uuid4()
 
     with patch(
         "src.question.services.content_service.get_async_session"
-    ) as mock_get_session:
+    ) as mock_session_ctx:
         mock_session = AsyncMock()
-        mock_get_session.return_value.__aenter__.return_value = mock_session
+        mock_session_ctx.return_value.__aenter__.return_value = mock_session
 
-        with patch("src.quiz.service.get_content_from_quiz") as mock_get_content:
-            mock_get_content.side_effect = Exception("Database error")
-
-            with pytest.raises(Exception) as exc_info:
-                await content_service.get_content_from_quiz(quiz_id)
-
-    assert "Database error" in str(exc_info.value)
-
-
-def test_chunk_content_basic(content_service, sample_content_dict):
-    """Test basic content chunking."""
-    chunks = content_service.chunk_content(sample_content_dict)
-
-    assert len(chunks) == 3  # 3 pages should create 3 chunks
-
-    # Verify chunk properties
-    for chunk in chunks:
-        assert hasattr(chunk, "content")
-        assert hasattr(chunk, "source")
-        assert hasattr(chunk, "metadata")
-        assert (
-            len(chunk.content.strip()) >= content_service.configuration.min_chunk_size
-        )
-
-    # Verify metadata
-    chunk_sources = [chunk.source for chunk in chunks]
-    assert "module_1/page_1" in chunk_sources
-    assert "module_2/page_3" in chunk_sources
+        with patch(
+            "src.quiz.service.get_content_from_quiz",
+            side_effect=Exception("Database error"),
+        ):
+            with pytest.raises(Exception, match="Database error"):
+                await get_content_from_quiz(quiz_id)
 
 
-def test_chunk_content_filters_short_content(content_service):
+def test_validate_module_content_basic(sample_content_dict):
+    """Test basic module content validation."""
+    from src.question.services.content_service import validate_module_content
+
+    result = validate_module_content(sample_content_dict)
+
+    assert len(result) == 2  # Two modules should be validated
+    assert "module_1" in result
+    assert "module_2" in result
+
+    # Check that module content is combined correctly
+    module_1_content = result["module_1"]
+    assert "## Introduction to Python" in module_1_content
+    assert "## Variables and Data Types" in module_1_content
+    assert "Python is a high-level programming language" in module_1_content
+
+    module_2_content = result["module_2"]
+    assert "## Control Structures" in module_2_content
+    assert "Control structures in Python" in module_2_content
+
+
+def test_validate_module_content_filters_short_content():
     """Test that short content is filtered out."""
-    short_content_dict = {
-        "module_1": [
+    from src.question.services.content_service import validate_module_content
+
+    content_dict = {
+        "module_short": [
             {
-                "id": "short_page",
+                "id": "page_short",
                 "title": "Short",
-                "content": "Too short",  # Less than min_chunk_size
-                "url": "short",
-            },
+                "content": "Too short",  # Less than 100 characters
+            }
+        ],
+        "module_valid": [
             {
-                "id": "long_page",
-                "title": "Long Enough",
-                "content": "This content is long enough to meet the minimum chunk size requirements. "
+                "id": "page_valid",
+                "title": "Valid Content",
+                "content": "This is a valid content section with enough text to pass validation. "
                 * 3,
-                "url": "long-enough",
-            },
-        ]
-    }
-
-    chunks = content_service.chunk_content(short_content_dict)
-
-    assert len(chunks) == 1  # Only the long content should remain
-    assert "long_page" in chunks[0].source
-
-
-def test_chunk_content_large_content_splitting(content_service, large_content_dict):
-    """Test splitting of large content into multiple chunks."""
-    chunks = content_service.chunk_content(large_content_dict)
-
-    # Should create multiple chunks from the large content
-    assert len(chunks) > 1
-
-    # Each chunk should be within size limits
-    for chunk in chunks:
-        assert len(chunk.content) <= content_service.configuration.max_chunk_size
-
-    # Check that chunks have correct metadata for split content
-    split_chunks = [c for c in chunks if c.metadata.get("chunk_type") == "split"]
-    assert len(split_chunks) > 0
-
-    # Verify chunk indices are sequential
-    chunk_indices = [c.metadata.get("chunk_index") for c in split_chunks]
-    assert chunk_indices == list(range(len(chunk_indices)))
-
-
-def test_chunk_content_invalid_data(content_service):
-    """Test chunking with invalid data structures."""
-    invalid_content_dict = {
-        "module_1": "not_a_list",  # Should be a list
-        "module_2": [
-            "not_a_dict",  # Should be a dict
-            {
-                "id": "valid_page",
-                "content": "Valid content for testing chunking behavior. " * 5,
-                "title": "Valid Page",
-            },
+            }
         ],
     }
 
-    chunks = content_service.chunk_content(invalid_content_dict)
+    result = validate_module_content(content_dict)
 
-    # Should only process the valid page
-    assert len(chunks) == 1
-    assert "valid_page" in chunks[0].source
+    assert len(result) == 1  # Only one module should pass validation
+    assert "module_valid" in result
+    assert "module_short" not in result
+
+
+def test_validate_module_content_invalid_data():
+    """Test handling of invalid data structures."""
+    from src.question.services.content_service import validate_module_content
+
+    content_dict = {
+        "module_invalid": "not a list",  # Invalid format
+        "module_empty": [],  # Empty list
+        "module_valid": [
+            {
+                "id": "page_1",
+                "title": "Valid",
+                "content": "This is valid content with enough text. " * 5,
+            }
+        ],
+    }
+
+    result = validate_module_content(content_dict)
+
+    assert len(result) == 1
+    assert "module_valid" in result
+    assert "module_invalid" not in result
+    assert "module_empty" not in result
 
 
 @pytest.mark.asyncio
-async def test_prepare_content_for_generation_with_quiz_content(content_service):
+async def test_prepare_content_for_generation_with_quiz_content():
     """Test content preparation using quiz content."""
+    from src.question.services.content_service import prepare_content_for_generation
+
     quiz_id = uuid.uuid4()
+    mock_content = {
+        "module_1": [
+            {
+                "id": "page_1",
+                "title": "Test",
+                "content": "Test content for generation. " * 10,
+            }
+        ]
+    }
 
-    with (
-        patch.object(content_service, "get_content_from_quiz") as mock_get_content,
-        patch.object(content_service, "chunk_content") as mock_chunk,
-    ):
-        mock_content = {"module_1": [{"id": "page_1", "content": "test"}]}
-        mock_chunks = [MagicMock()]
+    with patch(
+        "src.question.services.content_service.get_content_from_quiz",
+        return_value=mock_content,
+    ) as mock_get_content:
+        result = await prepare_content_for_generation(quiz_id)
 
-        mock_get_content.return_value = mock_content
-        mock_chunk.return_value = mock_chunks
-
-        result = await content_service.prepare_content_for_generation(quiz_id)
-
-    assert result == mock_chunks
-    mock_get_content.assert_called_once_with(quiz_id)
-    mock_chunk.assert_called_once_with(mock_content)
+        mock_get_content.assert_called_once_with(quiz_id)
+        assert "module_1" in result
+        assert "## Test" in result["module_1"]
 
 
 @pytest.mark.asyncio
-async def test_prepare_content_for_generation_with_custom_content(content_service):
+async def test_prepare_content_for_generation_with_custom_content():
     """Test content preparation using custom content."""
+    from src.question.services.content_service import prepare_content_for_generation
+
     quiz_id = uuid.uuid4()
-    custom_content = {"custom_module": [{"id": "custom_page", "content": "custom"}]}
+    custom_content = {
+        "module_custom": [
+            {
+                "id": "page_custom",
+                "title": "Custom",
+                "content": "Custom content for testing. " * 10,
+            }
+        ]
+    }
 
-    with (
-        patch.object(content_service, "get_content_from_quiz") as mock_get_content,
-        patch.object(content_service, "chunk_content") as mock_chunk,
+    result = await prepare_content_for_generation(quiz_id, custom_content)
+
+    assert "module_custom" in result
+    assert "## Custom" in result["module_custom"]
+
+
+@pytest.mark.asyncio
+async def test_prepare_and_validate_content_with_quality_filter():
+    """Test the convenience function with quality filtering."""
+    from src.question.services.content_service import prepare_and_validate_content
+
+    quiz_id = uuid.uuid4()
+    mock_content = {
+        "module_high_quality": [
+            {
+                "id": "page_1",
+                "title": "High Quality Content",
+                "content": "This is comprehensive content with substantial information. "
+                * 50,
+            }
+        ],
+        "module_low_quality": [
+            {
+                "id": "page_2",
+                "title": "Low Quality",
+                "content": "Short and low quality content.",
+            }
+        ],
+    }
+
+    with patch(
+        "src.question.services.content_service.get_content_from_quiz",
+        return_value=mock_content,
     ):
-        mock_chunks = [MagicMock()]
-        mock_chunk.return_value = mock_chunks
+        # With quality filter (default)
+        result_filtered = await prepare_and_validate_content(quiz_id)
+        assert "module_high_quality" in result_filtered
+        # Low quality module may or may not be filtered depending on score
 
-        result = await content_service.prepare_content_for_generation(
-            quiz_id, custom_content=custom_content
+        # Without quality filter
+        result_unfiltered = await prepare_and_validate_content(
+            quiz_id, quality_filter=False
         )
-
-    assert result == mock_chunks
-    mock_get_content.assert_not_called()  # Should not fetch from quiz
-    mock_chunk.assert_called_once_with(custom_content)
+        assert "module_high_quality" in result_unfiltered
+        # All modules with sufficient length should be present
 
 
-def test_validate_content_quality_filters_low_quality(content_service):
-    """Test content quality validation filters low-quality chunks."""
-    from src.question.workflows import ContentChunk
+def test_validate_content_quality_filters_low_quality():
+    """Test that low-quality module content is filtered out."""
+    from src.question.services.content_service import validate_content_quality
 
-    # Create chunks with different quality scores
-    high_quality_chunk = ContentChunk(
-        content="This is a well-written, comprehensive piece of content with good structure and meaningful information that should pass quality checks.",
-        source="high_quality",
-        metadata={},
-    )
+    modules_content = {
+        "module_high_quality": "This is a comprehensive module with substantial content covering various topics in detail. "
+        * 30,
+        "module_low_quality": "Short low quality content with too much <markup><tags>[brackets]",
+        "module_empty": "",
+    }
 
-    low_quality_chunk = ContentChunk(
-        content="bad",  # Very short, low quality
-        source="low_quality",
-        metadata={},
-    )
+    result = validate_content_quality(modules_content)
 
-    chunks = [high_quality_chunk, low_quality_chunk]
-
-    with patch.object(content_service, "_calculate_content_quality") as mock_quality:
-        # High quality chunk gets good score, low quality gets bad score
-        mock_quality.side_effect = [0.8, 0.2]  # threshold is 0.5
-
-        result = content_service.validate_content_quality(chunks)
-
-    assert len(result) == 1  # Only high quality chunk should remain
-    assert result[0].source == "high_quality"
-    assert result[0].metadata["quality_score"] == 0.8
+    assert "module_high_quality" in result
+    assert "module_low_quality" not in result
+    assert "module_empty" not in result
 
 
-def test_validate_content_quality_empty_input(content_service):
+def test_validate_content_quality_empty_input():
     """Test quality validation with empty input."""
-    result = content_service.validate_content_quality([])
-    assert result == []
+    from src.question.services.content_service import validate_content_quality
+
+    result = validate_content_quality({})
+
+    assert result == {}
 
 
-def test_get_content_statistics_basic(content_service):
-    """Test content statistics calculation."""
-    from src.question.workflows import ContentChunk
+def test_get_content_statistics_basic():
+    """Test basic content statistics calculation."""
+    from src.question.services.content_service import get_content_statistics
 
-    chunks = [
-        ContentChunk(
-            content="First chunk with some content here.", source="chunk_1", metadata={}
-        ),
-        ContentChunk(
-            content="Second chunk has different content length.",
-            source="chunk_2",
-            metadata={},
-        ),
-    ]
+    modules_content = {
+        "module_1": "This is module one content. " * 10,
+        "module_2": "This is module two content. " * 15,
+    }
 
-    stats = content_service.get_content_statistics(chunks)
+    stats = get_content_statistics(modules_content)
 
-    assert stats["total_chunks"] == 2
+    assert stats["total_modules"] == 2
     assert stats["total_characters"] > 0
     assert stats["total_words"] > 0
-    assert stats["avg_chunk_size"] > 0
+    assert stats["avg_module_size"] > 0
     assert stats["avg_word_count"] > 0
-    assert stats["min_chunk_size"] > 0
-    assert stats["max_chunk_size"] > 0
-    assert len(stats["sources"]) == 2
-    assert stats["source_count"] == 2
+    assert "module_1" in stats["module_ids"]
+    assert "module_2" in stats["module_ids"]
 
 
-def test_get_content_statistics_empty_chunks(content_service):
-    """Test statistics calculation with empty chunks list."""
-    stats = content_service.get_content_statistics([])
+def test_get_content_statistics_empty_modules():
+    """Test statistics calculation with empty modules."""
+    from src.question.services.content_service import get_content_statistics
 
-    expected_empty_stats = {
-        "total_chunks": 0,
-        "total_characters": 0,
-        "total_words": 0,
-        "avg_chunk_size": 0,
-        "avg_word_count": 0,
-        "sources": [],
-    }
+    stats = get_content_statistics({})
 
-    for key, value in expected_empty_stats.items():
-        assert stats[key] == value
+    assert stats["total_modules"] == 0
+    assert stats["total_characters"] == 0
+    assert stats["total_words"] == 0
+    assert stats["avg_module_size"] == 0
+    assert stats["avg_word_count"] == 0
+    assert stats["module_ids"] == []
 
 
-def test_calculate_content_quality_high_quality(content_service):
-    """Test quality calculation for high-quality content."""
-    from src.question.workflows import ContentChunk
+def test_calculate_module_quality_score_high_quality():
+    """Test quality score calculation for high-quality content."""
+    from src.question.services.content_service import _calculate_module_quality_score
 
     high_quality_content = (
-        "This is a comprehensive and well-structured piece of educational content. "
-        "It contains multiple sentences with proper punctuation. "
-        "The content provides valuable information that would be useful for generating questions. "
-        "It has good vocabulary diversity and appropriate length for processing."
-    )
+        "This is a comprehensive educational module covering important concepts in computer science. "
+        "The content includes detailed explanations, examples, and practical applications. "
+        "Students will learn about algorithms, data structures, and programming paradigms. "
+    ) * 10
 
-    chunk = ContentChunk(content=high_quality_content, source="test", metadata={})
+    score = _calculate_module_quality_score(high_quality_content)
 
-    quality_score = content_service._calculate_content_quality(chunk)
-
-    assert 0.0 <= quality_score <= 1.0
-    assert quality_score > 0.5  # Should be considered high quality
+    assert score > 0.5  # Should be high quality
 
 
-def test_calculate_content_quality_low_quality(content_service):
-    """Test quality calculation for low-quality content."""
-    from src.question.workflows import ContentChunk
+def test_calculate_module_quality_score_low_quality():
+    """Test quality score calculation for low-quality content."""
+    from src.question.services.content_service import _calculate_module_quality_score
 
-    low_quality_content = "bad bad bad bad bad"  # Repetitive, short
+    low_quality_content = "Short content with <lots><of><markup>[tags][everywhere]"
 
-    chunk = ContentChunk(content=low_quality_content, source="test", metadata={})
+    score = _calculate_module_quality_score(low_quality_content)
 
-    quality_score = content_service._calculate_content_quality(chunk)
-
-    assert 0.0 <= quality_score <= 1.0
-    assert quality_score < 0.5  # Should be considered low quality
+    assert score < 0.5  # Should be low quality
 
 
-def test_calculate_content_quality_empty_content(content_service):
-    """Test quality calculation for empty content."""
-    from src.question.workflows import ContentChunk
+def test_calculate_module_quality_score_empty_content():
+    """Test quality score calculation for empty content."""
+    from src.question.services.content_service import _calculate_module_quality_score
 
-    chunk = ContentChunk(content="", source="test", metadata={})
+    score = _calculate_module_quality_score("")
 
-    quality_score = content_service._calculate_content_quality(chunk)
-
-    assert quality_score == 0.0
+    assert score == 0.0
 
 
-def test_calculate_content_quality_heavily_formatted(content_service):
-    """Test quality calculation for heavily formatted content."""
-    from src.question.workflows import ContentChunk
+def test_combine_module_pages_success():
+    """Test successful combination of module pages."""
+    from src.question.services.content_service import _combine_module_pages
 
-    heavily_formatted = (
-        "<div><p><strong><em><span>Too much</span></em></strong> "
-        "<code><pre>[markup]</pre></code> in this content</p></div>"
-    )
-
-    chunk = ContentChunk(content=heavily_formatted, source="test", metadata={})
-
-    quality_score = content_service._calculate_content_quality(chunk)
-
-    assert 0.0 <= quality_score <= 1.0
-    # Should be penalized for excessive formatting
-    assert quality_score < 0.7
-
-
-def test_process_module_pages_skips_invalid_pages(content_service):
-    """Test that invalid pages are skipped during processing."""
     pages = [
-        "not_a_dict",  # Should be skipped
         {
-            "id": "valid_page",
-            "content": "Valid content that should be processed. " * 5,
-            "title": "Valid Page",
+            "id": "page_1",
+            "title": "First Page",
+            "content": "This is the first page content.",
         },
         {
-            "id": "short_page",
-            "content": "Short",  # Should be skipped due to length
-            "title": "Short Page",
+            "id": "page_2",
+            "title": "Second Page",
+            "content": "This is the second page content.",
         },
     ]
 
-    chunks = content_service._process_module_pages("test_module", pages)
+    result = _combine_module_pages("module_1", pages)
 
-    assert len(chunks) == 1  # Only the valid page should be processed
-    assert "valid_page" in chunks[0].source
-
-
-def test_chunk_page_content_single_chunk(content_service):
-    """Test chunking page content that fits in a single chunk."""
-    page = {"id": "test_page", "title": "Test Page", "url": "test-page"}
-    content = "This content is short enough to fit in a single chunk."
-
-    chunks = content_service._chunk_page_content("test_module", page, content)
-
-    assert len(chunks) == 1
-    chunk = chunks[0]
-    assert chunk.content == content
-    assert chunk.source == "test_module/test_page"
-    assert chunk.metadata["chunk_type"] == "full_page"
-    assert chunk.metadata["module_id"] == "test_module"
-    assert chunk.metadata["page_id"] == "test_page"
+    assert "## First Page" in result
+    assert "## Second Page" in result
+    assert "This is the first page content" in result
+    assert "This is the second page content" in result
 
 
-def test_chunk_page_content_multiple_chunks(content_service):
-    """Test chunking page content that requires splitting."""
-    page = {"id": "large_page", "title": "Large Page", "url": "large-page"}
-    # Create content larger than max_chunk_size with paragraph breaks
-    paragraph = "This is a large piece of content. " * 10
-    content = (paragraph + "\n\n") * 10  # Multiple paragraphs that need splitting
+def test_combine_module_pages_skips_invalid_pages():
+    """Test that invalid pages are skipped during combination."""
+    from src.question.services.content_service import _combine_module_pages
 
-    chunks = content_service._chunk_page_content("test_module", page, content)
+    pages = [
+        "invalid_page_string",  # Invalid format
+        {
+            "id": "page_valid",
+            "title": "Valid Page",
+            "content": "This is valid content for the page.",
+        },
+        {
+            "id": "page_no_content",
+            "title": "No Content",
+            # Missing content field
+        },
+        {
+            "id": "page_short",
+            "title": "Short",
+            "content": "Short",  # Too short (less than 10 chars)
+        },
+    ]
 
-    assert len(chunks) > 1  # Should be split into multiple chunks
+    result = _combine_module_pages("module_1", pages)
 
-    for i, chunk in enumerate(chunks):
-        assert len(chunk.content) <= content_service.configuration.max_chunk_size
-        assert chunk.metadata["chunk_type"] == "split"
-        assert chunk.metadata["chunk_index"] == i
-        assert "large_page" in chunk.source
-
-
-def test_split_large_content_with_overlap(content_service):
-    """Test splitting large content with overlap configuration."""
-    content_service.configuration.overlap_size = 50  # Set overlap
-
-    page = {"id": "test_page", "title": "Test"}
-    content = (
-        "First paragraph content.\n\nSecond paragraph content.\n\nThird paragraph content."
-        * 20
-    )
-
-    chunks = content_service._split_large_content(content, "test_module", page)
-
-    assert len(chunks) > 1
-
-    # Check that chunks have overlap metadata (except the last one)
-    for i, chunk in enumerate(chunks[:-1]):  # All but the last chunk
-        if chunk.metadata.get("chunk_index", 0) > 0:  # Not the first chunk
-            assert "overlap_size" in chunk.metadata
+    assert "## Valid Page" in result
+    assert "This is valid content" in result
+    assert "Short" not in result  # Short content should be filtered
 
 
-def test_split_large_content_no_overlap(content_service):
-    """Test splitting large content without overlap."""
-    content_service.configuration.overlap_size = 0  # No overlap
+def test_calculate_total_content_size():
+    """Test total content size calculation."""
+    from src.question.services.content_service import _calculate_total_content_size
 
-    page = {"id": "test_page", "title": "Test"}
-    content = "First paragraph.\n\nSecond paragraph.\n\nThird paragraph." * 30
-
-    chunks = content_service._split_large_content(content, "test_module", page)
-
-    assert len(chunks) > 1
-
-    # Verify sequential chunk indices
-    chunk_indices = [chunk.metadata["chunk_index"] for chunk in chunks]
-    assert chunk_indices == list(range(len(chunks)))
-
-
-def test_calculate_total_content_size(content_service, sample_content_dict):
-    """Test calculation of total content size."""
-    total_size = content_service._calculate_total_content_size(sample_content_dict)
-
-    # Calculate expected size manually
-    expected_size = 0
-    for pages in sample_content_dict.values():
-        for page in pages:
-            expected_size += len(page["content"])
-
-    assert total_size == expected_size
-    assert total_size > 0
-
-
-def test_calculate_total_content_size_invalid_data(content_service):
-    """Test total size calculation with invalid data."""
-    invalid_data = {
-        "module_1": "not_a_list",
-        "module_2": ["not_a_dict", {"content": "valid content"}],
+    content_dict = {
+        "module_1": [
+            {"id": "page_1", "content": "Content one"},
+            {"id": "page_2", "content": "Content two"},
+        ],
+        "module_2": [
+            {"id": "page_3", "content": "Content three"},
+        ],
     }
 
-    total_size = content_service._calculate_total_content_size(invalid_data)
+    total_size = _calculate_total_content_size(content_dict)
 
-    # Should only count the valid content
-    assert total_size == len("valid content")
+    expected_size = len("Content one") + len("Content two") + len("Content three")
+    assert total_size == expected_size
 
 
-@pytest.mark.parametrize(
-    "chunk_size,min_size,expected_chunks",
-    [
-        (2000, 100, 1),  # Large chunks, will fit in one
-    ],
-)
-def test_chunk_content_various_sizes(
-    content_service, sample_content_dict, chunk_size, min_size, expected_chunks
-):
-    """Test content chunking with various size configurations."""
-    content_service.configuration.max_chunk_size = chunk_size
-    content_service.configuration.min_chunk_size = min_size
+def test_calculate_total_content_size_invalid_data():
+    """Test total content size calculation with invalid data."""
+    from src.question.services.content_service import _calculate_total_content_size
 
-    chunks = content_service.chunk_content(sample_content_dict)
+    content_dict = {
+        "module_invalid": "not a list",
+        "module_valid": [
+            {"id": "page_1", "content": "Valid content"},
+        ],
+    }
 
-    # Verify all chunks meet minimum size requirements
-    for chunk in chunks:
-        assert len(chunk.content) >= min_size
-        # For paragraph-based splitting, chunks may exceed max_chunk_size
-        # if a single paragraph is larger than the limit
+    total_size = _calculate_total_content_size(content_dict)
 
-    # Should have reasonable number of chunks
-    assert len(chunks) >= 1
+    assert total_size == len("Valid content")
+
+
+@pytest.mark.asyncio
+async def test_functional_composition_pipeline():
+    """Test that functions can be easily composed in a pipeline."""
+    from src.question.services.content_service import (
+        get_content_statistics,
+        prepare_and_validate_content,
+        prepare_content_for_generation,
+        validate_content_quality,
+    )
+
+    quiz_id = uuid.uuid4()
+    mock_content = {
+        "module_1": [
+            {
+                "id": "page_1",
+                "title": "Test Content",
+                "content": "This is comprehensive test content for the module. " * 20,
+            }
+        ]
+    }
+
+    with patch(
+        "src.question.services.content_service.get_content_from_quiz",
+        return_value=mock_content,
+    ):
+        # Test functional pipeline
+        content = await prepare_content_for_generation(quiz_id)
+        quality_content = validate_content_quality(content)
+        stats = get_content_statistics(quality_content)
+
+        # Verify pipeline results
+        assert len(content) >= 1
+        assert len(quality_content) >= 1
+        assert stats["total_modules"] >= 1
+        assert stats["total_characters"] > 0
+
+        # Test convenience function does the same thing
+        convenience_result = await prepare_and_validate_content(quiz_id)
+        assert convenience_result == quality_content
