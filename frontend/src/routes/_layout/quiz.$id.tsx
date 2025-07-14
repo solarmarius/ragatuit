@@ -120,9 +120,14 @@ function QuizDetail() {
     return {}
   })()
 
-  const moduleNames = Object.values(selectedModules).filter(
-    (value): value is string => typeof value === "string",
-  )
+  const moduleNames = Object.values(selectedModules)
+    .filter((moduleData): moduleData is { name: string; question_count: number } =>
+      typeof moduleData === "object" &&
+      moduleData !== null &&
+      "name" in moduleData &&
+      typeof moduleData.name === "string"
+    )
+    .map(moduleData => moduleData.name)
 
   // Check if quiz is ready for approval
   const isQuizReadyForApproval = quiz.status === QUIZ_STATUS.READY_FOR_REVIEW
