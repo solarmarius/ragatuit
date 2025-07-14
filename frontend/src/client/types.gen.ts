@@ -136,7 +136,7 @@ export type QuestionResponse = {
 /**
  * Enumeration of supported question types.
  */
-export type QuestionType = "multiple_choice" | "short_answer" | "fill_in_blank"
+export type QuestionType = "multiple_choice" | "fill_in_blank"
 
 /**
  * Schema for updating a question.
@@ -173,6 +173,10 @@ export type Quiz = {
    * Language for question generation
    */
   language?: QuizLanguage
+  /**
+   * Type of questions to generate
+   */
+  question_type?: QuestionType
   /**
    * Consolidated quiz status
    */
@@ -220,6 +224,7 @@ export type QuizCreate = {
   llm_model?: string
   llm_temperature?: number
   language?: QuizLanguage
+  question_type?: QuestionType
 }
 
 /**

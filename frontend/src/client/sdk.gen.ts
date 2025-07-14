@@ -4,51 +4,51 @@ import type { CancelablePromise } from "./core/CancelablePromise"
 import { OpenAPI } from "./core/OpenAPI"
 import { request as __request } from "./core/request"
 import type {
-  AuthAuthCanvasResponse,
   AuthLoginCanvasResponse,
+  AuthAuthCanvasResponse,
   AuthLogoutCanvasResponse,
+  CanvasGetCoursesResponse,
   CanvasGetCourseModulesData,
   CanvasGetCourseModulesResponse,
-  CanvasGetCoursesResponse,
-  CanvasGetFileInfoData,
-  CanvasGetFileInfoResponse,
   CanvasGetModuleItemsData,
   CanvasGetModuleItemsResponse,
   CanvasGetPageContentData,
   CanvasGetPageContentResponse,
-  QuestionsApproveQuestionData,
-  QuestionsApproveQuestionResponse,
-  QuestionsBatchGenerateQuestionsData,
-  QuestionsBatchGenerateQuestionsResponse,
-  QuestionsCreateQuestionData,
-  QuestionsCreateQuestionResponse,
-  QuestionsDeleteQuestionData,
-  QuestionsDeleteQuestionResponse,
-  QuestionsGenerateQuestionsData,
-  QuestionsGenerateQuestionsResponse,
-  QuestionsGetQuestionData,
-  QuestionsGetQuestionResponse,
+  CanvasGetFileInfoData,
+  CanvasGetFileInfoResponse,
   QuestionsGetQuizQuestionsData,
   QuestionsGetQuizQuestionsResponse,
+  QuestionsCreateQuestionData,
+  QuestionsCreateQuestionResponse,
+  QuestionsGetQuestionData,
+  QuestionsGetQuestionResponse,
   QuestionsUpdateQuestionData,
   QuestionsUpdateQuestionResponse,
+  QuestionsDeleteQuestionData,
+  QuestionsDeleteQuestionResponse,
+  QuestionsApproveQuestionData,
+  QuestionsApproveQuestionResponse,
+  QuestionsGenerateQuestionsData,
+  QuestionsGenerateQuestionsResponse,
+  QuestionsBatchGenerateQuestionsData,
+  QuestionsBatchGenerateQuestionsResponse,
+  QuizGetUserQuizzesEndpointResponse,
   QuizCreateNewQuizData,
   QuizCreateNewQuizResponse,
+  QuizGetQuizData,
+  QuizGetQuizResponse,
   QuizDeleteQuizEndpointData,
   QuizDeleteQuizEndpointResponse,
-  QuizExportQuizToCanvasData,
-  QuizExportQuizToCanvasResponse,
-  QuizGetQuizData,
-  QuizGetQuizQuestionStatsData,
-  QuizGetQuizQuestionStatsResponse,
-  QuizGetQuizResponse,
-  QuizGetUserQuizzesEndpointResponse,
   QuizTriggerContentExtractionData,
   QuizTriggerContentExtractionResponse,
   QuizTriggerQuestionGenerationData,
   QuizTriggerQuestionGenerationResponse,
-  UsersDeleteUserMeResponse,
+  QuizGetQuizQuestionStatsData,
+  QuizGetQuizQuestionStatsResponse,
+  QuizExportQuizToCanvasData,
+  QuizExportQuizToCanvasResponse,
   UsersReadUserMeResponse,
+  UsersDeleteUserMeResponse,
   UsersUpdateUserMeData,
   UsersUpdateUserMeResponse,
   UtilsHealthCheckResponse,
@@ -636,7 +636,7 @@ export class QuestionsService {
 
   /**
    * Generate Questions
-   * Generate questions for a quiz using AI.
+   * Generate questions for a quiz using module-based AI generation.
    *
    * **Parameters:**
    * quiz_id: Quiz identifier
@@ -669,7 +669,7 @@ export class QuestionsService {
 
   /**
    * Batch Generate Questions
-   * Generate questions for multiple quizzes in batch.
+   * Generate questions for multiple quizzes in batch using module-based generation.
    *
    * **Parameters:**
    * batch_request: Batch generation requests

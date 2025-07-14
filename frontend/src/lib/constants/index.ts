@@ -13,12 +13,12 @@ export const API_ROUTES = {
   QUIZ: {
     USER_QUIZZES: "/api/v1/quiz/user",
   },
-} as const
+} as const;
 
 export const QUERY_KEYS = {
   CURRENT_USER: ["currentUser"],
   USER_QUIZZES: ["user-quizzes"],
-} as const
+} as const;
 
 // =============================================================================
 // Application Constants
@@ -27,18 +27,18 @@ export const QUERY_KEYS = {
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: "access_token",
   ONBOARDING_COMPLETED: "onboarding_completed",
-} as const
+} as const;
 
 export const QUESTION_TYPES = {
   MULTIPLE_CHOICE: "multiple_choice",
   SHORT_ANSWER: "short_answer",
   FILL_IN_BLANK: "fill_in_blank",
-} as const
+} as const;
 
 export const QUIZ_LANGUAGES = {
   ENGLISH: "en",
   NORWEGIAN: "no",
-} as const
+} as const;
 
 export const QUIZ_STATUS = {
   CREATED: "created",
@@ -48,7 +48,7 @@ export const QUIZ_STATUS = {
   EXPORTING_TO_CANVAS: "exporting_to_canvas",
   PUBLISHED: "published",
   FAILED: "failed",
-} as const
+} as const;
 
 export const FAILURE_REASON = {
   CONTENT_EXTRACTION_ERROR: "content_extraction_error",
@@ -58,7 +58,7 @@ export const FAILURE_REASON = {
   CANVAS_EXPORT_ERROR: "canvas_export_error",
   NETWORK_ERROR: "network_error",
   VALIDATION_ERROR: "validation_error",
-} as const
+} as const;
 
 // =============================================================================
 // UI Constants
@@ -110,7 +110,7 @@ export const UI_SIZES = {
   CONTAINER: {
     MAX_WIDTH: "6xl",
   },
-} as const
+} as const;
 
 export const UI_COLORS = {
   STATUS: {
@@ -136,7 +136,7 @@ export const UI_COLORS = {
     GREEN: "green.50",
     RED: "red.50",
   },
-} as const
+} as const;
 
 export const UI_TEXT = {
   EMPTY_STATES: {
@@ -201,7 +201,7 @@ export const UI_TEXT = {
         "An error occurred while processing your quiz. Please try again or contact support if the problem persists.",
     },
   },
-} as const
+} as const;
 
 // =============================================================================
 // Validation Constants
@@ -219,7 +219,7 @@ export const VALIDATION = {
     RETRY_ATTEMPTS: 3,
     RETRY_DELAY: 1000, // 1 second
   },
-} as const
+} as const;
 
 // =============================================================================
 // Feature Flags
@@ -229,4 +229,4 @@ export const FEATURES = {
   ONBOARDING_ENABLED: true,
   ANALYTICS_ENABLED: false,
   DEV_TOOLS_ENABLED: process.env.NODE_ENV === "development",
-} as const
+} as const;
