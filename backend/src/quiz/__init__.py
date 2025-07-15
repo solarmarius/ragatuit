@@ -18,7 +18,6 @@ from .schemas import (
     QuizPublic,
     QuizQuestionGenerationData,
     QuizUpdate,
-    Status,
 )
 from .service import (
     create_quiz,

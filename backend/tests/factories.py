@@ -142,8 +142,8 @@ class QuestionFactory(BaseFactory):
             is_approved=True,
             approved_at=LazyAttribute(lambda obj: datetime.now(timezone.utc)),
         )
-        short_answer = factory.Trait(
-            question_type=QuestionType.SHORT_ANSWER,
+        fill_in_blank = factory.Trait(
+            question_type=QuestionType.FILL_IN_BLANK,
             question_data=factory.LazyFunction(
                 lambda: {
                     "question_text": "What is the chemical symbol for water?",

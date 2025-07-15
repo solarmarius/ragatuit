@@ -11,13 +11,13 @@ import {
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useCallback, useState } from "react"
 
-import { type QuizLanguage, QuizService } from "@/client"
+import { type QuestionType, type QuizLanguage, QuizService } from "@/client"
 import { CourseSelectionStep } from "@/components/QuizCreation/CourseSelectionStep"
 import { ModuleQuestionSelectionStep } from "@/components/QuizCreation/ModuleQuestionSelectionStep"
 import { ModuleSelectionStep } from "@/components/QuizCreation/ModuleSelectionStep"
 import { QuizSettingsStep } from "@/components/QuizCreation/QuizSettingsStep"
 import { useCustomToast, useErrorHandler } from "@/hooks/common"
-import { QUIZ_LANGUAGES } from "@/lib/constants"
+import { QUESTION_TYPES, QUIZ_LANGUAGES } from "@/lib/constants"
 
 export const Route = createFileRoute("/_layout/create-quiz")({
   component: CreateQuiz,
@@ -32,6 +32,7 @@ interface QuizFormData {
   moduleQuestions?: { [id: string]: number }
   title?: string
   language?: QuizLanguage
+  questionType?: QuestionType
 }
 
 const TOTAL_STEPS = 4 // Course selection, Module selection, Questions per module, Quiz settings
@@ -136,6 +137,7 @@ function CreateQuiz() {
         selected_modules: selectedModulesWithCounts,
         title: formData.title,
         language: formData.language || QUIZ_LANGUAGES.ENGLISH,
+        question_type: formData.questionType || QUESTION_TYPES.MULTIPLE_CHOICE,
       }
 
       const response = await QuizService.createNewQuiz({
@@ -211,10 +213,12 @@ function CreateQuiz() {
           <QuizSettingsStep
             settings={{
               language: formData.language || QUIZ_LANGUAGES.ENGLISH,
+              questionType: formData.questionType || QUESTION_TYPES.MULTIPLE_CHOICE,
             }}
             onSettingsChange={(settings) =>
               updateFormData({
                 language: settings.language,
+                questionType: settings.questionType,
               })
             }
           />

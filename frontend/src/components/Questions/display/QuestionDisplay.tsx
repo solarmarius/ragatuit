@@ -1,16 +1,15 @@
-import { memo } from "react"
+import { memo } from "react";
 
-import type { QuestionResponse } from "@/client"
-import { QUESTION_TYPES } from "@/lib/constants"
-import { FillInBlankDisplay } from "./FillInBlankDisplay"
-import { MCQDisplay } from "./MCQDisplay"
-import { ShortAnswerDisplay } from "./ShortAnswerDisplay"
-import { UnsupportedDisplay } from "./UnsupportedDisplay"
+import type { QuestionResponse } from "@/client";
+import { QUESTION_TYPES } from "@/lib/constants";
+import { FillInBlankDisplay } from "./FillInBlankDisplay";
+import { MCQDisplay } from "./MCQDisplay";
+import { UnsupportedDisplay } from "./UnsupportedDisplay";
 
 interface QuestionDisplayProps {
-  question: QuestionResponse
-  showCorrectAnswer?: boolean
-  showExplanation?: boolean
+  question: QuestionResponse;
+  showCorrectAnswer?: boolean;
+  showExplanation?: boolean;
 }
 
 export const QuestionDisplay = memo(function QuestionDisplay({
@@ -22,16 +21,14 @@ export const QuestionDisplay = memo(function QuestionDisplay({
     question,
     showCorrectAnswer,
     showExplanation,
-  }
+  };
 
   switch (question.question_type) {
     case QUESTION_TYPES.MULTIPLE_CHOICE:
-      return <MCQDisplay {...commonProps} />
-    case QUESTION_TYPES.SHORT_ANSWER:
-      return <ShortAnswerDisplay {...commonProps} />
+      return <MCQDisplay {...commonProps} />;
     case QUESTION_TYPES.FILL_IN_BLANK:
-      return <FillInBlankDisplay {...commonProps} />
+      return <FillInBlankDisplay {...commonProps} />;
     default:
-      return <UnsupportedDisplay questionType={question.question_type} />
+      return <UnsupportedDisplay questionType={question.question_type} />;
   }
-})
+});

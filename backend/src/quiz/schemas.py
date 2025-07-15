@@ -8,8 +8,8 @@ from uuid import UUID
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
-# Import QuizLanguage from question types to avoid circular dependency
-from src.question.types import QuizLanguage
+# Import QuizLanguage and QuestionType from question types to avoid circular dependency
+from src.question.types import QuestionType, QuizLanguage
 
 
 class QuizStatus(str, Enum):
@@ -36,16 +36,6 @@ class FailureReason(str, Enum):
     VALIDATION_ERROR = "validation_error"
 
 
-# Legacy enum for backwards compatibility during migration
-class Status(str, Enum):
-    """Legacy status values - will be removed after migration."""
-
-    PENDING = "pending"
-    PROCESSING = "processing"
-    COMPLETED = "completed"
-    FAILED = "failed"
-
-
 class ModuleSelection(SQLModel):
     """Schema for module selection with question count."""
 
@@ -63,6 +53,7 @@ class QuizCreate(SQLModel):
     llm_model: str = Field(default="o3")
     llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
     language: QuizLanguage = Field(default=QuizLanguage.ENGLISH)
+    question_type: QuestionType = Field(default=QuestionType.MULTIPLE_CHOICE)
 
     @field_validator("selected_modules")
     def validate_modules(cls, v: dict[str, Any]) -> dict[str, Any]:
@@ -110,6 +101,7 @@ class QuizUpdate(SQLModel):
     llm_model: str | None = None
     llm_temperature: float | None = Field(default=None, ge=0.0, le=2.0)
     language: QuizLanguage | None = None
+    question_type: QuestionType | None = None
 
 
 class QuizPublic(SQLModel):
@@ -125,6 +117,7 @@ class QuizPublic(SQLModel):
     llm_model: str
     llm_temperature: float
     language: QuizLanguage
+    question_type: QuestionType
     status: QuizStatus
     failure_reason: FailureReason | None = None
     last_status_update: datetime
@@ -176,6 +169,7 @@ class QuizQuestionGenerationData(SQLModel):
     llm_model: str
     llm_temperature: float
     language: QuizLanguage
+    question_type: QuestionType
 
 
 class QuizExportData(SQLModel):

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from src.auth.models import User
     from src.question.models import Question
 
-from src.question.types import QuizLanguage
+from src.question.types import QuestionType, QuizLanguage
 
 from .schemas import FailureReason, QuizStatus
 
@@ -38,6 +38,10 @@ class Quiz(SQLModel, table=True):
     language: QuizLanguage = Field(
         default=QuizLanguage.ENGLISH,
         description="Language for question generation",
+    )
+    question_type: QuestionType = Field(
+        default=QuestionType.MULTIPLE_CHOICE,
+        description="Type of questions to generate",
     )
     status: QuizStatus = Field(
         default=QuizStatus.CREATED,
