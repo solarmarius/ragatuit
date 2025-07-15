@@ -21,15 +21,6 @@ export interface MCQData {
   explanation?: string | null;
 }
 
-// Short Answer Question Data
-export interface ShortAnswerData {
-  question_text: string;
-  correct_answer: string;
-  answer_variations?: string[];
-  case_sensitive?: boolean;
-  explanation?: string | null;
-}
-
 // Fill in the Blank Question Data
 export interface FillInBlankData {
   question_text: string;
