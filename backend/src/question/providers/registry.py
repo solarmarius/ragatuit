@@ -2,7 +2,14 @@
 
 from src.config import get_logger
 
-from .base import BaseLLMProvider, LLMConfiguration, LLMModel, LLMProvider
+from .base import (
+    DEFAULT_OPENAI_MODEL,
+    DEFAULT_TEMPERATURE,
+    BaseLLMProvider,
+    LLMConfiguration,
+    LLMModel,
+    LLMProvider,
+)
 
 logger = get_logger("llm_provider_registry")
 
@@ -259,8 +266,8 @@ class LLMProviderRegistry:
             if settings.OPENAI_SECRET_KEY:
                 openai_config = LLMConfiguration(
                     provider=LLMProvider.OPENAI,
-                    model="gpt-3.5-turbo",
-                    temperature=0.7,
+                    model=DEFAULT_OPENAI_MODEL,
+                    temperature=DEFAULT_TEMPERATURE,
                     timeout=settings.LLM_API_TIMEOUT,
                     max_retries=settings.MAX_RETRIES,
                     initial_retry_delay=settings.INITIAL_RETRY_DELAY,

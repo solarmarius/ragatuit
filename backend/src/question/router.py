@@ -13,6 +13,7 @@ from src.question.types import QuizLanguage
 from src.quiz.orchestrator import orchestrate_quiz_question_generation
 
 from . import service
+from .config.service import get_configuration_service
 from .formatters import format_question_for_display
 from .schemas import (
     BatchGenerationRequest,
@@ -516,12 +517,16 @@ async def generate_questions(
             questions_before = await service.get_questions_by_quiz(session, quiz_id)
             initial_count = len(questions_before)
 
+        # Get default configuration
+        config_service = get_configuration_service()
+        provider_config = config_service.get_provider_config()
+
         # Trigger orchestrated generation
         await orchestrate_quiz_question_generation(
             quiz_id=quiz_id,
             target_question_count=generation_request.target_count,
-            llm_model=generation_request.provider_name or "gpt-4",
-            llm_temperature=0.7,  # Default temperature
+            llm_model=generation_request.provider_name or provider_config.model,
+            llm_temperature=provider_config.temperature,
             language=language,
             question_type=generation_request.question_type,
         )
@@ -631,12 +636,16 @@ async def batch_generate_questions(
                     )
                     initial_count = len(questions_before)
 
+                # Get default configuration
+                config_service = get_configuration_service()
+                provider_config = config_service.get_provider_config()
+
                 # Trigger orchestrated generation
                 await orchestrate_quiz_question_generation(
                     quiz_id=request.quiz_id,
                     target_question_count=request.target_count,
-                    llm_model=request.provider_name or "gpt-4",
-                    llm_temperature=0.7,
+                    llm_model=request.provider_name or provider_config.model,
+                    llm_temperature=provider_config.temperature,
                     language=language,
                     question_type=request.question_type,
                 )

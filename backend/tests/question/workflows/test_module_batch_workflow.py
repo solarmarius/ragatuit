@@ -14,7 +14,7 @@ from src.question.providers import (
     LLMProvider,
     LLMResponse,
 )
-from src.question.providers.base import BaseLLMProvider
+from src.question.providers.base import DEFAULT_TEMPERATURE, BaseLLMProvider
 from src.question.templates.manager import TemplateManager
 from src.question.types import (
     GenerationParameters,
@@ -29,7 +29,9 @@ class MockLLMProvider(BaseLLMProvider):
 
     def __init__(self, response_content: str = ""):
         config = LLMConfiguration(
-            provider=LLMProvider.OPENAI, model="test-model", temperature=0.7
+            provider=LLMProvider.OPENAI,
+            model="test-model",
+            temperature=DEFAULT_TEMPERATURE,
         )
         super().__init__(config)
         self.response_content = response_content

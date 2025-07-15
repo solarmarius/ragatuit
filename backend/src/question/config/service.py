@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, field_validator
 from src.config import get_logger, settings
 
 from ..providers import LLMConfiguration, LLMProvider
+from ..providers.base import DEFAULT_OPENAI_MODEL, DEFAULT_TEMPERATURE
 from ..types import QuestionType
 from ..workflows import WorkflowConfiguration
 
@@ -378,8 +379,8 @@ class ConfigurationService:
         if settings.OPENAI_SECRET_KEY:
             openai_config = LLMConfiguration(
                 provider=LLMProvider.OPENAI,
-                model="gpt-3.5-turbo",
-                temperature=0.7,
+                model=DEFAULT_OPENAI_MODEL,
+                temperature=DEFAULT_TEMPERATURE,
                 timeout=settings.LLM_API_TIMEOUT,
                 max_retries=settings.MAX_RETRIES,
                 initial_retry_delay=settings.INITIAL_RETRY_DELAY,
@@ -418,26 +419,24 @@ class ConfigurationService:
         self, provider: LLMProvider
     ) -> LLMConfiguration:
         """Create default configuration for a provider."""
+        # Use existing default configuration to avoid duplication
+        default_config = self._create_default_configuration()
+
+        if provider in default_config.provider_configs:
+            return default_config.provider_configs[provider]
+
+        # Fallback for providers not in default config
         if provider == LLMProvider.OPENAI:
             if not settings.OPENAI_SECRET_KEY:
                 raise ValueError("OpenAI API key not configured")
 
             return LLMConfiguration(
                 provider=LLMProvider.OPENAI,
-                model="gpt-3.5-turbo",
-                temperature=0.7,
+                model=DEFAULT_OPENAI_MODEL,
+                temperature=DEFAULT_TEMPERATURE,
                 timeout=settings.LLM_API_TIMEOUT,
                 max_retries=settings.MAX_RETRIES,
                 provider_settings={"api_key": settings.OPENAI_SECRET_KEY},
-            )
-
-        elif provider == LLMProvider.MOCK:
-            return LLMConfiguration(
-                provider=LLMProvider.MOCK,
-                model="mock-model",
-                temperature=0.7,
-                timeout=5.0,
-                max_retries=0,
             )
 
         else:
