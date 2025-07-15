@@ -29,7 +29,7 @@ class MockLLMProvider(BaseLLMProvider):
 
     def __init__(self, response_content: str = ""):
         config = LLMConfiguration(
-            provider=LLMProvider.OPENAI, model="test-model", temperature=0.7
+            provider=LLMProvider.OPENAI, model="test-model", temperature=1.0
         )
         super().__init__(config)
         self.response_content = response_content

@@ -40,7 +40,7 @@ class LLMConfiguration(BaseModel):
 
     provider: LLMProvider
     model: str
-    temperature: float = Field(ge=0.0, le=2.0, default=0.7)
+    temperature: float = Field(ge=0.0, le=2.0, default=1.0)
     max_tokens: int | None = Field(default=None, ge=1)
     timeout: float = Field(default=120.0, ge=1.0)
 

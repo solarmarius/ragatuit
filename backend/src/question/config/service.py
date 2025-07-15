@@ -378,8 +378,8 @@ class ConfigurationService:
         if settings.OPENAI_SECRET_KEY:
             openai_config = LLMConfiguration(
                 provider=LLMProvider.OPENAI,
-                model="gpt-3.5-turbo",
-                temperature=0.7,
+                model="o3-2025-04-16",
+                temperature=1.0,
                 timeout=settings.LLM_API_TIMEOUT,
                 max_retries=settings.MAX_RETRIES,
                 initial_retry_delay=settings.INITIAL_RETRY_DELAY,
@@ -424,8 +424,8 @@ class ConfigurationService:
 
             return LLMConfiguration(
                 provider=LLMProvider.OPENAI,
-                model="gpt-3.5-turbo",
-                temperature=0.7,
+                model="o3-2025-04-16",
+                temperature=1.0,
                 timeout=settings.LLM_API_TIMEOUT,
                 max_retries=settings.MAX_RETRIES,
                 provider_settings={"api_key": settings.OPENAI_SECRET_KEY},

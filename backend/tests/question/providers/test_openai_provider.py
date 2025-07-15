@@ -12,8 +12,8 @@ def config():
 
     return LLMConfiguration(
         provider=LLMProvider.OPENAI,
-        model="gpt-4",
-        temperature=0.7,
+        model="o3-2025-04-16",
+        temperature=1.0,
         max_tokens=2000,
         timeout=30.0,
         provider_settings={"api_key": "test_api_key"},
@@ -45,16 +45,15 @@ async def test_get_available_models(provider):
 
     # Check for expected models
     model_ids = [model.model_id for model in models]
-    assert "gpt-4" in model_ids
-    assert "gpt-4-turbo" in model_ids
+    assert "o3-2025-04-16" in model_ids
 
     # Verify model properties
-    gpt4_model = next(model for model in models if model.model_id == "gpt-4")
-    assert gpt4_model.provider == LLMProvider.OPENAI
-    assert gpt4_model.display_name == "GPT-4"
-    assert gpt4_model.max_tokens == 8192
-    assert gpt4_model.supports_streaming is True
-    assert gpt4_model.cost_per_1k_tokens == 0.03
+    o3_model = next(model for model in models if model.model_id == "o3-2025-04-16")
+    assert o3_model.provider == LLMProvider.OPENAI
+    assert o3_model.display_name == "OpenAI o3"
+    assert o3_model.max_tokens == 200000
+    assert o3_model.supports_streaming is True
+    assert o3_model.cost_per_1k_tokens == 0.015
 
 
 def test_validate_model_valid(provider):
@@ -120,7 +119,7 @@ async def test_generate_response_success(provider):
             response = await provider.generate(messages)
 
         assert response.content == mock_response.content
-        assert response.model == "gpt-4"
+        assert response.model == "o3-2025-04-16"
         assert response.provider == LLMProvider.OPENAI
         assert response.prompt_tokens == 20
         assert response.completion_tokens == 50
@@ -186,8 +185,8 @@ async def test_generate_response_with_custom_config():
     # Use different model and temperature
     custom_config = LLMConfiguration(
         provider=LLMProvider.OPENAI,
-        model="gpt-4-turbo",
-        temperature=0.2,
+        model="o3-2025-04-16",
+        temperature=1.0,
         max_tokens=1000,
         timeout=60.0,
         provider_settings={"api_key": "test_key"},
@@ -209,7 +208,7 @@ async def test_generate_response_with_custom_config():
 
             response = await provider.generate(messages)
 
-    assert response.model == "gpt-4-turbo"
+    assert response.model == "o3-2025-04-16"
 
     # Verify client was configured with custom settings
     mock_chat_openai.assert_called_once()
@@ -233,8 +232,8 @@ async def test_client_lazy_initialization(provider):
         # Verify configuration was passed correctly
         mock_chat_openai.assert_called_once()
         call_kwargs = mock_chat_openai.call_args[1]
-        assert call_kwargs["model"] == "gpt-4"
-        assert call_kwargs["temperature"] == 0.7
+        assert call_kwargs["model"] == "o3-2025-04-16"
+        assert call_kwargs["temperature"] == 1.0
         assert call_kwargs["timeout"] == 30.0
 
         # Verify api_key is passed correctly
@@ -347,9 +346,10 @@ def test_provider_configuration_immutable(provider, config):
 @pytest.mark.parametrize(
     "model,expected_valid",
     [
-        ("gpt-4", True),
-        ("gpt-4-turbo", True),
-        ("gpt-3.5-turbo", True),
+        ("o3-2025-04-16", True),
+        ("gpt-4", False),
+        ("gpt-4-turbo", False),
+        ("gpt-3.5-turbo", False),
         ("claude-3", False),
         ("invalid-model", False),
         ("", False),
@@ -364,7 +364,7 @@ def test_validate_model_various_inputs(config, model, expected_valid):
     test_config = LLMConfiguration(
         provider=LLMProvider.OPENAI,
         model=model,
-        temperature=0.7,
+        temperature=1.0,
         max_tokens=2000,
         timeout=30.0,
         provider_settings={"api_key": "test_api_key"},
@@ -414,7 +414,7 @@ def test_provider_string_representation(provider):
     """Test string representation of provider."""
     str_repr = str(provider)
     assert "OpenAI" in str_repr
-    assert "gpt-4" in str_repr
+    assert "o3-2025-04-16" in str_repr
 
 
 def test_provider_equality(config):
@@ -431,7 +431,7 @@ def test_provider_equality(config):
     # Different configurations should not be equal
     different_config = LLMConfiguration(
         provider=LLMProvider.OPENAI,
-        model="gpt-4-turbo",
+        model="o3-2025-04-16",
         temperature=0.5,
         max_tokens=1000,
         timeout=60.0,

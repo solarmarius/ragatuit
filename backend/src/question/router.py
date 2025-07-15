@@ -520,8 +520,8 @@ async def generate_questions(
         await orchestrate_quiz_question_generation(
             quiz_id=quiz_id,
             target_question_count=generation_request.target_count,
-            llm_model=generation_request.provider_name or "gpt-4",
-            llm_temperature=0.7,  # Default temperature
+            llm_model=generation_request.provider_name or "o3-2025-04-16",
+            llm_temperature=1.0,  # Default temperature
             language=language,
             question_type=generation_request.question_type,
         )
@@ -635,8 +635,8 @@ async def batch_generate_questions(
                 await orchestrate_quiz_question_generation(
                     quiz_id=request.quiz_id,
                     target_question_count=request.target_count,
-                    llm_model=request.provider_name or "gpt-4",
-                    llm_temperature=0.7,
+                    llm_model=request.provider_name or "o3-2025-04-16",
+                    llm_temperature=1.0,
                     language=language,
                     question_type=request.question_type,
                 )
