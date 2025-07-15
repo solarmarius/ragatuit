@@ -244,7 +244,7 @@ function QuizDetail() {
                         Question Type
                       </Text>
                       <Badge variant="outline" colorScheme="blue">
-                        {quiz.question_type ? QUESTION_TYPE_LABELS[quiz.question_type] : "Unknown"}
+                        {QUESTION_TYPE_LABELS[quiz.question_type!]}
                       </Badge>
                     </HStack>
                     <HStack justify="space-between">
@@ -252,7 +252,7 @@ function QuizDetail() {
                         Language
                       </Text>
                       <Badge variant="outline" colorScheme="green">
-                        {quiz.language ? QUIZ_LANGUAGE_LABELS[quiz.language] : "Unknown"}
+                        {QUIZ_LANGUAGE_LABELS[quiz.language!]}
                       </Badge>
                     </HStack>
                   </VStack>
