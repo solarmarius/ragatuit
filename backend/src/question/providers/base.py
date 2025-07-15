@@ -13,6 +13,11 @@ from src.config import get_logger
 logger = get_logger("llm_provider")
 
 
+# Default LLM Configuration Constants
+DEFAULT_OPENAI_MODEL = "o3-2025-04-16"
+DEFAULT_TEMPERATURE = 1.0
+
+
 class LLMProvider(str, Enum):
     """Enumeration of supported LLM providers."""
 
@@ -40,7 +45,7 @@ class LLMConfiguration(BaseModel):
 
     provider: LLMProvider
     model: str
-    temperature: float = Field(ge=0.0, le=2.0, default=1.0)
+    temperature: float = Field(ge=0.0, le=2.0, default=DEFAULT_TEMPERATURE)
     max_tokens: int | None = Field(default=None, ge=1)
     timeout: float = Field(default=120.0, ge=1.0)
 

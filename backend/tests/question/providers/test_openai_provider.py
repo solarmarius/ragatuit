@@ -4,6 +4,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from src.question.providers.base import DEFAULT_OPENAI_MODEL, DEFAULT_TEMPERATURE
+
 
 @pytest.fixture
 def config():
@@ -12,8 +14,8 @@ def config():
 
     return LLMConfiguration(
         provider=LLMProvider.OPENAI,
-        model="o3-2025-04-16",
-        temperature=1.0,
+        model=DEFAULT_OPENAI_MODEL,
+        temperature=DEFAULT_TEMPERATURE,
         max_tokens=2000,
         timeout=30.0,
         provider_settings={"api_key": "test_api_key"},
@@ -45,10 +47,10 @@ async def test_get_available_models(provider):
 
     # Check for expected models
     model_ids = [model.model_id for model in models]
-    assert "o3-2025-04-16" in model_ids
+    assert DEFAULT_OPENAI_MODEL in model_ids
 
     # Verify model properties
-    o3_model = next(model for model in models if model.model_id == "o3-2025-04-16")
+    o3_model = next(model for model in models if model.model_id == DEFAULT_OPENAI_MODEL)
     assert o3_model.provider == LLMProvider.OPENAI
     assert o3_model.display_name == "OpenAI o3"
     assert o3_model.max_tokens == 200000
@@ -119,7 +121,7 @@ async def test_generate_response_success(provider):
             response = await provider.generate(messages)
 
         assert response.content == mock_response.content
-        assert response.model == "o3-2025-04-16"
+        assert response.model == DEFAULT_OPENAI_MODEL
         assert response.provider == LLMProvider.OPENAI
         assert response.prompt_tokens == 20
         assert response.completion_tokens == 50
@@ -208,7 +210,7 @@ async def test_generate_response_with_custom_config():
 
             response = await provider.generate(messages)
 
-    assert response.model == "o3-2025-04-16"
+    assert response.model == DEFAULT_OPENAI_MODEL
 
     # Verify client was configured with custom settings
     mock_chat_openai.assert_called_once()
@@ -232,8 +234,8 @@ async def test_client_lazy_initialization(provider):
         # Verify configuration was passed correctly
         mock_chat_openai.assert_called_once()
         call_kwargs = mock_chat_openai.call_args[1]
-        assert call_kwargs["model"] == "o3-2025-04-16"
-        assert call_kwargs["temperature"] == 1.0
+        assert call_kwargs["model"] == DEFAULT_OPENAI_MODEL
+        assert call_kwargs["temperature"] == DEFAULT_TEMPERATURE
         assert call_kwargs["timeout"] == 30.0
 
         # Verify api_key is passed correctly
@@ -346,7 +348,7 @@ def test_provider_configuration_immutable(provider, config):
 @pytest.mark.parametrize(
     "model,expected_valid",
     [
-        ("o3-2025-04-16", True),
+        (DEFAULT_OPENAI_MODEL, True),
         ("gpt-4", False),
         ("gpt-4-turbo", False),
         ("gpt-3.5-turbo", False),
@@ -364,7 +366,7 @@ def test_validate_model_various_inputs(config, model, expected_valid):
     test_config = LLMConfiguration(
         provider=LLMProvider.OPENAI,
         model=model,
-        temperature=1.0,
+        temperature=DEFAULT_TEMPERATURE,
         max_tokens=2000,
         timeout=30.0,
         provider_settings={"api_key": "test_api_key"},
@@ -414,7 +416,7 @@ def test_provider_string_representation(provider):
     """Test string representation of provider."""
     str_repr = str(provider)
     assert "OpenAI" in str_repr
-    assert "o3-2025-04-16" in str_repr
+    assert DEFAULT_OPENAI_MODEL in str_repr
 
 
 def test_provider_equality(config):
@@ -431,7 +433,7 @@ def test_provider_equality(config):
     # Different configurations should not be equal
     different_config = LLMConfiguration(
         provider=LLMProvider.OPENAI,
-        model="o3-2025-04-16",
+        model=DEFAULT_OPENAI_MODEL,
         temperature=0.5,
         max_tokens=1000,
         timeout=60.0,
