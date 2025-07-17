@@ -3,12 +3,12 @@
 import uuid
 from typing import Any
 
-from pydantic import Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from .base import BaseQuestionData, BaseQuestionType, QuestionType
 
 
-class BlankData(BaseQuestionData):
+class BlankData(BaseModel):
     """Data model for a single blank within a fill-in-blank question."""
 
     position: int = Field(
