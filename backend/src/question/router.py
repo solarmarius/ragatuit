@@ -60,7 +60,7 @@ async def get_quiz_questions(
         "quiz_questions_retrieval_initiated",
         user_id=str(current_user.id),
         quiz_id=str(quiz_id),
-        question_type=question_type.value if question_type else None,
+        question_type=question_type if question_type else None,
         approved_only=approved_only,
     )
 
@@ -185,7 +185,7 @@ async def create_question(
         "question_creation_initiated",
         user_id=str(current_user.id),
         quiz_id=str(quiz_id),
-        question_type=question_request.question_type.value,
+        question_type=question_request.question_type,
     )
 
     try:
@@ -236,7 +236,7 @@ async def create_question(
             user_id=str(current_user.id),
             quiz_id=str(quiz_id),
             question_id=str(question_id),
-            question_type=question_request.question_type.value,
+            question_type=question_request.question_type,
         )
 
         return formatted_question
@@ -485,7 +485,7 @@ async def generate_questions(
         "question_generation_initiated",
         user_id=str(current_user.id),
         quiz_id=str(quiz_id),
-        question_type=generation_request.question_type.value,
+        question_type=generation_request.question_type,
         target_count=generation_request.target_count,
     )
 
@@ -556,7 +556,7 @@ async def generate_questions(
             else "No questions were generated",
             metadata={
                 "provider_name": generation_request.provider_name or "openai",
-                "question_type": generation_request.question_type.value,
+                "question_type": generation_request.question_type,
                 "language": language.value,
                 "initial_count": initial_count,
                 "final_count": final_count,
@@ -669,7 +669,7 @@ async def batch_generate_questions(
                         else "No questions were generated",
                         metadata={
                             "provider_name": request.provider_name or "openai",
-                            "question_type": request.question_type.value,
+                            "question_type": request.question_type,
                             "language": language.value,
                             "quiz_id": str(request.quiz_id),
                         },
@@ -694,7 +694,7 @@ async def batch_generate_questions(
                         error_message=f"Generation failed: {str(quiz_error)}",
                         metadata={
                             "provider_name": request.provider_name or "openai",
-                            "question_type": request.question_type.value,
+                            "question_type": request.question_type,
                             "quiz_id": str(request.quiz_id),
                             "error_type": type(quiz_error).__name__,
                         },
