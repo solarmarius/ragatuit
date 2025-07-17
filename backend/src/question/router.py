@@ -505,12 +505,12 @@ async def generate_questions(
             if not quiz:
                 raise HTTPException(status_code=404, detail="Quiz not found")
 
-        # Extract language from quiz or use default
-        language = (
-            quiz.language
-            if hasattr(quiz, "language") and quiz.language
-            else QuizLanguage.ENGLISH
-        )
+            # Extract language from quiz or use default (within session context)
+            language = (
+                quiz.language
+                if hasattr(quiz, "language") and quiz.language
+                else QuizLanguage.ENGLISH
+            )
 
         # Get the current question count before generation
         async with get_async_session() as session:
@@ -528,7 +528,7 @@ async def generate_questions(
             llm_model=generation_request.provider_name or provider_config.model,
             llm_temperature=provider_config.temperature,
             language=language,
-            question_type=generation_request.question_type,
+            question_type=QuestionType(generation_request.question_type),
         )
 
         # Check the results after generation
@@ -622,12 +622,12 @@ async def batch_generate_questions(
                     if not quiz:
                         raise ValueError(f"Quiz {request.quiz_id} not found")
 
-                # Extract language from quiz or use default
-                language = (
-                    quiz.language
-                    if hasattr(quiz, "language") and quiz.language
-                    else QuizLanguage.ENGLISH
-                )
+                    # Extract language from quiz or use default (within session context)
+                    language = (
+                        quiz.language
+                        if hasattr(quiz, "language") and quiz.language
+                        else QuizLanguage.ENGLISH
+                    )
 
                 # Get the current question count before generation
                 async with get_async_session() as session:
@@ -647,7 +647,7 @@ async def batch_generate_questions(
                     llm_model=request.provider_name or provider_config.model,
                     llm_temperature=provider_config.temperature,
                     language=language,
-                    question_type=request.question_type,
+                    question_type=QuestionType(request.question_type),
                 )
 
                 # Check the results after generation
