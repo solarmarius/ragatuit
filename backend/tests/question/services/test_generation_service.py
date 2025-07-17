@@ -1,7 +1,7 @@
 """Tests for module-based question generation service."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -30,6 +30,7 @@ def generation_service():
 @pytest.fixture
 def mock_quiz():
     """Create mock quiz with module structure."""
+    from src.question.types import QuestionType
     from src.quiz.models import Quiz
     from src.quiz.schemas import QuizStatus
 
@@ -37,6 +38,7 @@ def mock_quiz():
     quiz.id = UUID("12345678-1234-5678-1234-567812345678")
     quiz.status = QuizStatus.GENERATING_QUESTIONS
     quiz.language = "en"
+    quiz.question_type = QuestionType.MULTIPLE_CHOICE
     quiz.selected_modules = {
         "module_1": {"name": "Introduction", "question_count": 5},
         "module_2": {"name": "Advanced Topics", "question_count": 10},
@@ -259,6 +261,7 @@ async def test_generate_questions_for_quiz_norwegian_language(
             llm_provider=mock_provider,
             template_manager=generation_service.template_manager,
             language=QuizLanguage.NORWEGIAN,
+            question_type=mock_quiz.question_type,
         )
 
 
@@ -412,3 +415,102 @@ def test_generation_service_initialization(generation_service):
     """Test generation service initialization."""
     assert generation_service.provider_registry is not None
     assert generation_service.template_manager is not None
+
+
+@pytest.mark.asyncio
+async def test_generate_uses_quiz_question_type(generation_service, mock_quiz):
+    """Test that generation uses the quiz's question type."""
+    extracted_content = {
+        "module_1": "Content for module 1",
+        "module_2": "Content for module 2",
+    }
+
+    with patch(
+        "src.question.services.generation_service.get_async_session"
+    ) as mock_session_ctx:
+        # Mock session context
+        mock_session = AsyncMock()
+        mock_session.get = AsyncMock(return_value=mock_quiz)
+        mock_session.commit = AsyncMock()
+        mock_session_ctx.return_value.__aenter__.return_value = mock_session
+
+        # Mock provider
+        mock_provider = MagicMock()
+        generation_service.provider_registry.get_provider.return_value = mock_provider
+
+        # Mock the ParallelModuleProcessor
+        with patch(
+            "src.question.services.generation_service.ParallelModuleProcessor"
+        ) as MockProcessor:
+            mock_processor_instance = MagicMock()
+            mock_processor_instance.process_all_modules = AsyncMock(
+                return_value={"module_1": [], "module_2": []}
+            )
+            MockProcessor.return_value = mock_processor_instance
+
+            # Call the method
+            await generation_service.generate_questions_for_quiz(
+                quiz_id=mock_quiz.id, extracted_content=extracted_content
+            )
+
+            # Verify ParallelModuleProcessor was called with correct question type
+            from src.question.types import QuestionType, QuizLanguage
+
+            MockProcessor.assert_called_once_with(
+                llm_provider=mock_provider,
+                template_manager=generation_service.template_manager,
+                language=QuizLanguage.ENGLISH,
+                question_type=QuestionType.MULTIPLE_CHOICE,  # From mock quiz
+            )
+
+
+@pytest.mark.asyncio
+async def test_workflow_uses_correct_template():
+    """Test that workflow selects template based on question type."""
+    from src.question.providers.base import BaseLLMProvider
+    from src.question.templates.manager import TemplateManager
+    from src.question.types import QuestionType, QuizLanguage
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    # Create proper mock instances
+    mock_provider = MagicMock(spec=BaseLLMProvider)
+    mock_template_manager = MagicMock(spec=TemplateManager)
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=mock_provider,
+        template_manager=mock_template_manager,
+        language=QuizLanguage.ENGLISH,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+    )
+
+    # Mock template manager to verify calls
+    mock_template_manager.create_messages = AsyncMock(
+        return_value=[
+            MagicMock(content="System prompt"),
+            MagicMock(content="User prompt"),
+        ]
+    )
+
+    # Create test state
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test_module",
+        module_name="Test Module",
+        module_content="Test content",
+        target_question_count=5,
+        llm_provider=mock_provider,
+        template_manager=mock_template_manager,
+    )
+
+    # Execute prepare_prompt
+    await workflow.prepare_prompt(state)
+
+    # Verify template manager was called with correct question type
+    mock_template_manager.create_messages.assert_called_once()
+    call_args = mock_template_manager.create_messages.call_args
+    assert call_args[0][0] == QuestionType.MULTIPLE_CHOICE  # First positional arg
+    assert call_args[1]["template_name"] is None  # Should let manager auto-select
+    assert call_args[1]["language"] == QuizLanguage.ENGLISH

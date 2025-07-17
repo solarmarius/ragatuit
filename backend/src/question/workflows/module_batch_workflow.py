@@ -77,10 +77,12 @@ class ModuleBatchWorkflow:
         llm_provider: BaseLLMProvider,
         template_manager: TemplateManager | None = None,
         language: QuizLanguage = QuizLanguage.ENGLISH,
+        question_type: QuestionType = QuestionType.MULTIPLE_CHOICE,
     ):
         self.llm_provider = llm_provider
         self.template_manager = template_manager or get_template_manager()
         self.language = language
+        self.question_type = question_type
         self.graph = self._build_graph()
 
     def _build_graph(self) -> Any:
@@ -132,9 +134,6 @@ class ModuleBatchWorkflow:
     async def prepare_prompt(self, state: ModuleBatchState) -> ModuleBatchState:
         """Prepare the prompt for batch generation."""
         try:
-            # Get template based on language
-            template_name = f"batch_multiple_choice{'_no' if self.language == QuizLanguage.NORWEGIAN else ''}"
-
             # Create generation parameters
             generation_parameters = GenerationParameters(
                 target_count=state.target_question_count
@@ -153,15 +152,17 @@ class ModuleBatchWorkflow:
                 module_name=state.module_name,
                 question_count=state.target_question_count
                 - len(state.generated_questions),
+                question_type=self.question_type.value,
             )
 
             # Create messages using template
+            # Template will be automatically selected based on question type and language
             messages = await self.template_manager.create_messages(
-                QuestionType.MULTIPLE_CHOICE,
+                self.question_type,
                 state.module_content,
                 generation_parameters,
-                template_name,
-                self.language,
+                template_name=None,  # Let template manager select based on question type
+                language=self.language,
                 extra_variables={
                     "module_name": state.module_name,
                     "question_count": state.target_question_count
@@ -595,10 +596,12 @@ class ParallelModuleProcessor:
         llm_provider: BaseLLMProvider,
         template_manager: TemplateManager | None = None,
         language: QuizLanguage = QuizLanguage.ENGLISH,
+        question_type: QuestionType = QuestionType.MULTIPLE_CHOICE,
     ):
         self.llm_provider = llm_provider
         self.template_manager = template_manager or get_template_manager()
         self.language = language
+        self.question_type = question_type
 
     async def process_all_modules(
         self,
@@ -647,6 +650,7 @@ class ParallelModuleProcessor:
                     llm_provider=self.llm_provider,
                     template_manager=self.template_manager,
                     language=self.language,
+                    question_type=self.question_type,
                 )
 
                 try:
