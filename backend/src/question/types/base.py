@@ -33,7 +33,7 @@ class QuestionType(str, Enum):
     """
 
     MULTIPLE_CHOICE = "multiple_choice"
-    FILL_IN_BLANK = "fill_in_blank"  # Not yet implemented - see ADDING_NEW_TYPES.md
+    FILL_IN_BLANK = "fill_in_blank"
 
 
 class QuestionDifficulty(str, Enum):
