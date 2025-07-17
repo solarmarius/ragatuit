@@ -506,7 +506,7 @@ def test_check_json_error_conditions(test_llm_provider, test_template_manager):
         template_manager=test_template_manager,
     )
 
-    # Needs correction
+    # Needs JSON correction
     state_needs_correction = ModuleBatchState(
         quiz_id=uuid4(),
         module_id="test",
@@ -520,7 +520,7 @@ def test_check_json_error_conditions(test_llm_provider, test_template_manager):
         max_corrections=2,
     )
 
-    assert workflow.check_json_error(state_needs_correction) == "needs_correction"
+    assert workflow.check_error_type(state_needs_correction) == "needs_json_correction"
 
     # Continue (no error)
     state_continue = ModuleBatchState(
@@ -534,7 +534,7 @@ def test_check_json_error_conditions(test_llm_provider, test_template_manager):
         parsing_error=False,
     )
 
-    assert workflow.check_json_error(state_continue) == "continue"
+    assert workflow.check_error_type(state_continue) == "continue"
 
 
 def test_should_retry_conditions(test_llm_provider, test_template_manager):
@@ -821,3 +821,249 @@ def test_question_validation_edge_cases():
 
     with pytest.raises(Exception):
         fib_impl.validate_data(empty_blanks)
+
+
+def test_check_error_type_conditions(test_llm_provider, test_template_manager):
+    """Test error type checking conditions."""
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+    )
+
+    # Test JSON error needs correction
+    state_json_error = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test",
+        module_name="Test",
+        module_content="Test",
+        target_question_count=5,
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        parsing_error=True,
+        correction_attempts=0,
+        max_corrections=2,
+    )
+
+    assert workflow.check_error_type(state_json_error) == "needs_json_correction"
+
+    # Test validation error needs correction
+    state_validation_error = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test",
+        module_name="Test",
+        module_content="Test",
+        target_question_count=5,
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        validation_error=True,
+        validation_correction_attempts=0,
+        max_validation_corrections=2,
+    )
+
+    assert (
+        workflow.check_error_type(state_validation_error)
+        == "needs_validation_correction"
+    )
+
+    # Test continue (no errors)
+    state_continue = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test",
+        module_name="Test",
+        module_content="Test",
+        target_question_count=5,
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        parsing_error=False,
+        validation_error=False,
+    )
+
+    assert workflow.check_error_type(state_continue) == "continue"
+
+    # Test max corrections reached
+    state_max_corrections = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test",
+        module_name="Test",
+        module_content="Test",
+        target_question_count=5,
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        validation_error=True,
+        validation_correction_attempts=2,
+        max_validation_corrections=2,
+    )
+
+    assert workflow.check_error_type(state_max_corrections) == "continue"
+
+
+@pytest.mark.asyncio
+async def test_prepare_validation_correction_workflow_node(
+    test_llm_provider, test_template_manager
+):
+    """Test prepare_validation_correction workflow node."""
+    from src.question.types import QuestionType
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+    )
+
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test-module",
+        module_name="Test Module",
+        module_content="Test content",
+        target_question_count=5,
+        language=QuizLanguage.ENGLISH,
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        validation_error=True,
+        validation_error_details=[
+            "Question validation failed: Missing required field: option_d",
+            "Question validation failed: Invalid correct_answer format",
+        ],
+        validation_correction_attempts=0,
+        raw_response='[{"question_text": "Invalid question"}]',
+    )
+
+    result = await workflow.prepare_validation_correction(state)
+
+    assert result.error_message is None
+    assert result.validation_correction_attempts == 1
+    assert result.validation_error is False
+    assert len(result.validation_error_details) == 0
+    assert result.raw_response == ""
+    assert "validation errors" in result.user_prompt.lower()
+    assert "multiple_choice" in result.user_prompt.lower()
+
+
+@pytest.mark.asyncio
+async def test_prepare_validation_correction_fib_workflow_node(
+    test_llm_provider, test_template_manager
+):
+    """Test prepare_validation_correction workflow node for Fill-in-Blank."""
+    from src.question.types import QuestionType
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        question_type=QuestionType.FILL_IN_BLANK,
+    )
+
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test-module",
+        module_name="Test Module",
+        module_content="Test content",
+        target_question_count=3,
+        language=QuizLanguage.ENGLISH,
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        validation_error=True,
+        validation_error_details=[
+            "Question validation failed: Missing required field: blanks",
+        ],
+        validation_correction_attempts=0,
+        raw_response='[{"question_text": "Invalid question"}]',
+    )
+
+    result = await workflow.prepare_validation_correction(state)
+
+    assert result.error_message is None
+    assert result.validation_correction_attempts == 1
+    assert result.validation_error is False
+    assert "blanks" in result.user_prompt
+    assert "fill_in_blank" in result.user_prompt.lower()
+
+
+@pytest.mark.asyncio
+async def test_validate_batch_sets_validation_error_flags(
+    test_llm_provider, test_template_manager
+):
+    """Test that validate_batch sets validation error flags when all questions fail validation."""
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+    )
+
+    # Create invalid MCQ response (missing required fields)
+    invalid_mcq_response = json.dumps(
+        [
+            {
+                "question_text": "What is 2 + 2?",
+                "option_a": "3",
+                "option_b": "4",
+                # Missing option_c, option_d, and correct_answer
+            }
+        ]
+    )
+
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test-module",
+        module_name="Test Module",
+        module_content="Test content",
+        target_question_count=5,
+        language=QuizLanguage.ENGLISH,
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        raw_response=invalid_mcq_response,
+    )
+
+    result = await workflow.validate_batch(state)
+
+    assert result.validation_error is True
+    assert len(result.validation_error_details) > 0
+    assert result.error_message is None  # No general error, just validation errors
+    assert len(result.generated_questions) == 0  # No questions should be generated
+
+
+def test_get_question_type_examples(test_llm_provider, test_template_manager):
+    """Test question type examples generation."""
+    from src.question.types import QuestionType
+    from src.question.workflows.module_batch_workflow import ModuleBatchWorkflow
+
+    # Test MCQ examples
+    mcq_workflow = ModuleBatchWorkflow(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+    )
+
+    mcq_examples = mcq_workflow._get_question_type_examples()
+    assert "option_a" in mcq_examples
+    assert "option_b" in mcq_examples
+    assert "correct_answer" in mcq_examples
+
+    # Test FIB examples
+    fib_workflow = ModuleBatchWorkflow(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        question_type=QuestionType.FILL_IN_BLANK,
+    )
+
+    fib_examples = fib_workflow._get_question_type_examples()
+    assert "blanks" in fib_examples
+    assert "position" in fib_examples
+    assert "correct_answer" in fib_examples
