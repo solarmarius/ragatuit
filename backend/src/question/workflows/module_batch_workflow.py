@@ -44,7 +44,8 @@ class ModuleBatchState(BaseModel):
     max_corrections: int = Field(default_factory=lambda: settings.MAX_JSON_CORRECTIONS)
 
     # Current LLM interaction
-    current_prompt: str = ""
+    system_prompt: str = ""
+    user_prompt: str = ""
     raw_response: str = ""
 
     # Error handling
@@ -170,8 +171,9 @@ class ModuleBatchWorkflow:
                 },
             )
 
-            # Extract the user prompt (combine system and user for simplicity)
-            state.current_prompt = "\\n\\n".join([msg.content for msg in messages])
+            # Store system and user prompts separately
+            state.system_prompt = messages[0].content
+            state.user_prompt = messages[1].content
 
             logger.info(
                 "module_batch_prompt_prepared",
@@ -199,9 +201,9 @@ class ModuleBatchWorkflow:
             messages = [
                 LLMMessage(
                     role="system",
-                    content="You are an expert educator creating quiz questions.",
+                    content=state.system_prompt,
                 ),
-                LLMMessage(role="user", content=state.current_prompt),
+                LLMMessage(role="user", content=state.user_prompt),
             ]
 
             # Generate questions using LLM provider
@@ -357,7 +359,7 @@ class ModuleBatchWorkflow:
                 "Please provide the corrected JSON array:"
             )
 
-            state.current_prompt = correction_prompt
+            state.user_prompt = correction_prompt
 
             # Increment correction attempts
             state.correction_attempts += 1

@@ -89,7 +89,7 @@ class Settings(BaseSettings):
 
     # LLM settings
     OPENAI_SECRET_KEY: str | None = None
-    LLM_API_TIMEOUT: float = 120.0  # LLM request timeout in seconds (2 minutes)
+    LLM_API_TIMEOUT: float = 500.0  # LLM request timeout in seconds (5 minutes)
 
     # Module-based question generation settings
     MAX_CONCURRENT_MODULES: int = 5  # Maximum concurrent module processing tasks
