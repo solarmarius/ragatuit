@@ -125,10 +125,14 @@ class QuestionTypeRegistry:
 
         try:
             # Import and register default question types
+            from .fill_in_blank import FillInBlankQuestionType
             from .mcq import MultipleChoiceQuestionType
 
             self.register_question_type(
                 QuestionType.MULTIPLE_CHOICE, MultipleChoiceQuestionType()
+            )
+            self.register_question_type(
+                QuestionType.FILL_IN_BLANK, FillInBlankQuestionType()
             )
 
             logger.info(

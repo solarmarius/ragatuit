@@ -390,8 +390,43 @@ async def prepare_questions_for_export(quiz_id: UUID) -> list[dict[str, Any]]:
                             "option_c": typed_data.option_c,
                             "option_d": typed_data.option_d,
                             "correct_answer": typed_data.correct_answer,
+                            "question_type": "multiple_choice",
                         }
                     )
+            elif question.question_type == QuestionType.FILL_IN_BLANK:
+                typed_data = question.get_typed_data(question_registry)
+                from src.question.types.fill_in_blank import FillInBlankData
+
+                if isinstance(typed_data, FillInBlankData):
+                    # Convert blanks to a simple dict format for Canvas export
+                    blanks_data = []
+                    for blank in typed_data.blanks:
+                        blank_dict = {
+                            "position": blank.position,
+                            "correct_answer": blank.correct_answer,
+                            "case_sensitive": blank.case_sensitive,
+                        }
+                        if blank.answer_variations:
+                            blank_dict["answer_variations"] = blank.answer_variations
+                        blanks_data.append(blank_dict)
+
+                    question_data.append(
+                        {
+                            "id": question.id,
+                            "question_text": typed_data.question_text,
+                            "blanks": blanks_data,
+                            "explanation": typed_data.explanation,
+                            "question_type": "fill_in_blank",
+                        }
+                    )
+            else:
+                # Log unsupported question types
+                logger.warning(
+                    "unsupported_question_type_for_export",
+                    quiz_id=str(quiz_id),
+                    question_id=str(question.id),
+                    question_type=question.question_type.value,
+                )
 
         logger.debug(
             "question_data_extracted_for_export",

@@ -999,3 +999,421 @@ async def test_prepare_questions_for_export_norwegian_content():
     assert result[0]["option_a"] == "Bergen"
     assert result[0]["option_c"] == "Oslo"
     assert result[0]["correct_answer"] == "C"
+
+
+# Fill-in-Blank Export Tests
+
+
+@pytest.mark.asyncio
+async def test_prepare_questions_for_export_fill_in_blank_success():
+    """Test successful Fill-in-Blank question export preparation."""
+    from src.question.models import Question, QuestionType
+    from src.question.service import prepare_questions_for_export
+
+    quiz_id = uuid.uuid4()
+
+    # Create Fill-in-Blank questions
+    questions = [
+        Question(
+            id=uuid.uuid4(),
+            quiz_id=quiz_id,
+            question_type=QuestionType.FILL_IN_BLANK,
+            question_data={
+                "question_text": "The capital of France is _____.",
+                "blanks": [
+                    {
+                        "position": 1,
+                        "correct_answer": "Paris",
+                        "answer_variations": ["paris", "PARIS"],
+                        "case_sensitive": False,
+                    }
+                ],
+                "explanation": "Paris is the capital of France.",
+            },
+            is_approved=True,
+        )
+    ]
+
+    # Create proper FillInBlankData instance
+    from src.question.types.fill_in_blank import BlankData, FillInBlankData
+
+    mock_fib_data = FillInBlankData(
+        question_text="The capital of France is _____.",
+        blanks=[
+            BlankData(
+                position=1,
+                correct_answer="Paris",
+                answer_variations=["paris", "PARIS"],
+                case_sensitive=False,
+            )
+        ],
+        explanation="Paris is the capital of France.",
+    )
+
+    # Mock question.get_typed_data to return the mock data
+    for question in questions:
+        object.__setattr__(
+            question, "get_typed_data", MagicMock(return_value=mock_fib_data)
+        )
+
+    with (
+        patch("src.database.get_async_session") as mock_get_session,
+        patch("src.question.service.get_questions_by_quiz", return_value=questions),
+        patch("src.question.service.get_question_type_registry"),
+    ):
+        # Mock the async context manager
+        mock_session = AsyncMock()
+        mock_get_session.return_value.__aenter__.return_value = mock_session
+
+        result = await prepare_questions_for_export(quiz_id)
+
+    assert len(result) == 1
+    assert result[0]["question_text"] == "The capital of France is _____."
+    assert result[0]["question_type"] == "fill_in_blank"
+    assert len(result[0]["blanks"]) == 1
+    assert result[0]["blanks"][0]["position"] == 1
+    assert result[0]["blanks"][0]["correct_answer"] == "Paris"
+    assert result[0]["blanks"][0]["answer_variations"] == ["paris", "PARIS"]
+    assert result[0]["blanks"][0]["case_sensitive"] is False
+    assert result[0]["explanation"] == "Paris is the capital of France."
+
+
+@pytest.mark.asyncio
+async def test_prepare_questions_for_export_fill_in_blank_multiple_blanks():
+    """Test Fill-in-Blank export with multiple blanks."""
+    from src.question.models import Question, QuestionType
+    from src.question.service import prepare_questions_for_export
+
+    quiz_id = uuid.uuid4()
+
+    # Create Fill-in-Blank question with multiple blanks
+    questions = [
+        Question(
+            id=uuid.uuid4(),
+            quiz_id=quiz_id,
+            question_type=QuestionType.FILL_IN_BLANK,
+            question_data={
+                "question_text": "The capital of _____ is _____ and it is located in _____.",
+                "blanks": [
+                    {
+                        "position": 1,
+                        "correct_answer": "France",
+                        "case_sensitive": False,
+                    },
+                    {
+                        "position": 2,
+                        "correct_answer": "Paris",
+                        "answer_variations": ["paris"],
+                        "case_sensitive": False,
+                    },
+                    {
+                        "position": 3,
+                        "correct_answer": "Europe",
+                        "case_sensitive": False,
+                    },
+                ],
+                "explanation": "Paris is the capital of France in Europe.",
+            },
+            is_approved=True,
+        )
+    ]
+
+    # Create proper FillInBlankData instance with multiple blanks
+    from src.question.types.fill_in_blank import BlankData, FillInBlankData
+
+    mock_fib_data = FillInBlankData(
+        question_text="The capital of _____ is _____ and it is located in _____.",
+        blanks=[
+            BlankData(
+                position=1,
+                correct_answer="France",
+                case_sensitive=False,
+            ),
+            BlankData(
+                position=2,
+                correct_answer="Paris",
+                answer_variations=["paris"],
+                case_sensitive=False,
+            ),
+            BlankData(
+                position=3,
+                correct_answer="Europe",
+                case_sensitive=False,
+            ),
+        ],
+        explanation="Paris is the capital of France in Europe.",
+    )
+
+    # Mock question.get_typed_data to return the mock data
+    for question in questions:
+        object.__setattr__(
+            question, "get_typed_data", MagicMock(return_value=mock_fib_data)
+        )
+
+    with (
+        patch("src.database.get_async_session") as mock_get_session,
+        patch("src.question.service.get_questions_by_quiz", return_value=questions),
+        patch("src.question.service.get_question_type_registry"),
+    ):
+        # Mock the async context manager
+        mock_session = AsyncMock()
+        mock_get_session.return_value.__aenter__.return_value = mock_session
+
+        result = await prepare_questions_for_export(quiz_id)
+
+    assert len(result) == 1
+    assert result[0]["question_type"] == "fill_in_blank"
+    assert len(result[0]["blanks"]) == 3
+
+    # Verify all blanks are properly formatted
+    blanks = result[0]["blanks"]
+    assert blanks[0]["position"] == 1
+    assert blanks[0]["correct_answer"] == "France"
+    assert blanks[1]["position"] == 2
+    assert blanks[1]["correct_answer"] == "Paris"
+    assert blanks[1]["answer_variations"] == ["paris"]
+    assert blanks[2]["position"] == 3
+    assert blanks[2]["correct_answer"] == "Europe"
+
+
+@pytest.mark.asyncio
+async def test_prepare_questions_for_export_fill_in_blank_case_sensitive():
+    """Test Fill-in-Blank export with case-sensitive answers."""
+    from src.question.models import Question, QuestionType
+    from src.question.service import prepare_questions_for_export
+
+    quiz_id = uuid.uuid4()
+
+    # Create Fill-in-Blank question with case-sensitive answers
+    questions = [
+        Question(
+            id=uuid.uuid4(),
+            quiz_id=quiz_id,
+            question_type=QuestionType.FILL_IN_BLANK,
+            question_data={
+                "question_text": "The chemical symbol for gold is _____.",
+                "blanks": [
+                    {
+                        "position": 1,
+                        "correct_answer": "Au",
+                        "case_sensitive": True,
+                    }
+                ],
+                "explanation": "Au is the chemical symbol for gold.",
+            },
+            is_approved=True,
+        )
+    ]
+
+    # Create proper FillInBlankData instance
+    from src.question.types.fill_in_blank import BlankData, FillInBlankData
+
+    mock_fib_data = FillInBlankData(
+        question_text="The chemical symbol for gold is _____.",
+        blanks=[
+            BlankData(
+                position=1,
+                correct_answer="Au",
+                case_sensitive=True,
+            )
+        ],
+        explanation="Au is the chemical symbol for gold.",
+    )
+
+    # Mock question.get_typed_data to return the mock data
+    for question in questions:
+        object.__setattr__(
+            question, "get_typed_data", MagicMock(return_value=mock_fib_data)
+        )
+
+    with (
+        patch("src.database.get_async_session") as mock_get_session,
+        patch("src.question.service.get_questions_by_quiz", return_value=questions),
+        patch("src.question.service.get_question_type_registry"),
+    ):
+        # Mock the async context manager
+        mock_session = AsyncMock()
+        mock_get_session.return_value.__aenter__.return_value = mock_session
+
+        result = await prepare_questions_for_export(quiz_id)
+
+    assert len(result) == 1
+    assert result[0]["question_type"] == "fill_in_blank"
+    assert len(result[0]["blanks"]) == 1
+    assert result[0]["blanks"][0]["case_sensitive"] is True
+    assert result[0]["blanks"][0]["correct_answer"] == "Au"
+
+
+@pytest.mark.asyncio
+async def test_prepare_questions_for_export_mixed_question_types():
+    """Test export preparation with mixed MCQ and Fill-in-Blank questions."""
+    from src.question.models import Question, QuestionType
+    from src.question.service import prepare_questions_for_export
+
+    quiz_id = uuid.uuid4()
+
+    # Create mixed question types
+    questions = [
+        Question(
+            id=uuid.uuid4(),
+            quiz_id=quiz_id,
+            question_type=QuestionType.MULTIPLE_CHOICE,
+            question_data={
+                "question_text": "What is 2+2?",
+                "option_a": "3",
+                "option_b": "4",
+                "option_c": "5",
+                "option_d": "6",
+                "correct_answer": "B",
+            },
+            is_approved=True,
+        ),
+        Question(
+            id=uuid.uuid4(),
+            quiz_id=quiz_id,
+            question_type=QuestionType.FILL_IN_BLANK,
+            question_data={
+                "question_text": "The capital of France is _____.",
+                "blanks": [
+                    {
+                        "position": 1,
+                        "correct_answer": "Paris",
+                        "case_sensitive": False,
+                    }
+                ],
+                "explanation": "Paris is the capital of France.",
+            },
+            is_approved=True,
+        ),
+    ]
+
+    # Create proper data instances
+    from src.question.types.fill_in_blank import BlankData, FillInBlankData
+    from src.question.types.mcq import MultipleChoiceData
+
+    mock_mcq_data = MultipleChoiceData(
+        question_text="What is 2+2?",
+        option_a="3",
+        option_b="4",
+        option_c="5",
+        option_d="6",
+        correct_answer="B",
+    )
+
+    mock_fib_data = FillInBlankData(
+        question_text="The capital of France is _____.",
+        blanks=[
+            BlankData(
+                position=1,
+                correct_answer="Paris",
+                case_sensitive=False,
+            )
+        ],
+        explanation="Paris is the capital of France.",
+    )
+
+    # Mock question.get_typed_data to return appropriate data
+    object.__setattr__(
+        questions[0], "get_typed_data", MagicMock(return_value=mock_mcq_data)
+    )
+    object.__setattr__(
+        questions[1], "get_typed_data", MagicMock(return_value=mock_fib_data)
+    )
+
+    with (
+        patch("src.database.get_async_session") as mock_get_session,
+        patch("src.question.service.get_questions_by_quiz", return_value=questions),
+        patch("src.question.service.get_question_type_registry"),
+    ):
+        # Mock the async context manager
+        mock_session = AsyncMock()
+        mock_get_session.return_value.__aenter__.return_value = mock_session
+
+        result = await prepare_questions_for_export(quiz_id)
+
+    assert len(result) == 2
+
+    # Verify MCQ question
+    mcq_question = next(q for q in result if q["question_type"] == "multiple_choice")
+    assert mcq_question["question_text"] == "What is 2+2?"
+    assert mcq_question["option_a"] == "3"
+    assert mcq_question["correct_answer"] == "B"
+
+    # Verify Fill-in-Blank question
+    fib_question = next(q for q in result if q["question_type"] == "fill_in_blank")
+    assert fib_question["question_text"] == "The capital of France is _____."
+    assert len(fib_question["blanks"]) == 1
+    assert fib_question["blanks"][0]["correct_answer"] == "Paris"
+
+
+@pytest.mark.asyncio
+async def test_prepare_questions_for_export_fill_in_blank_with_answer_variations():
+    """Test Fill-in-Blank export with answer variations."""
+    from src.question.models import Question, QuestionType
+    from src.question.service import prepare_questions_for_export
+
+    quiz_id = uuid.uuid4()
+
+    # Create Fill-in-Blank question with multiple answer variations
+    questions = [
+        Question(
+            id=uuid.uuid4(),
+            quiz_id=quiz_id,
+            question_type=QuestionType.FILL_IN_BLANK,
+            question_data={
+                "question_text": "The capital of France is _____.",
+                "blanks": [
+                    {
+                        "position": 1,
+                        "correct_answer": "Paris",
+                        "answer_variations": ["paris", "PARIS", "Paříž", "パリ"],
+                        "case_sensitive": False,
+                    }
+                ],
+                "explanation": "Paris is the capital of France.",
+            },
+            is_approved=True,
+        )
+    ]
+
+    # Create proper FillInBlankData instance
+    from src.question.types.fill_in_blank import BlankData, FillInBlankData
+
+    mock_fib_data = FillInBlankData(
+        question_text="The capital of France is _____.",
+        blanks=[
+            BlankData(
+                position=1,
+                correct_answer="Paris",
+                answer_variations=["paris", "PARIS", "Paříž", "パリ"],
+                case_sensitive=False,
+            )
+        ],
+        explanation="Paris is the capital of France.",
+    )
+
+    # Mock question.get_typed_data to return the mock data
+    for question in questions:
+        object.__setattr__(
+            question, "get_typed_data", MagicMock(return_value=mock_fib_data)
+        )
+
+    with (
+        patch("src.database.get_async_session") as mock_get_session,
+        patch("src.question.service.get_questions_by_quiz", return_value=questions),
+        patch("src.question.service.get_question_type_registry"),
+    ):
+        # Mock the async context manager
+        mock_session = AsyncMock()
+        mock_get_session.return_value.__aenter__.return_value = mock_session
+
+        result = await prepare_questions_for_export(quiz_id)
+
+    assert len(result) == 1
+    assert result[0]["question_type"] == "fill_in_blank"
+    assert len(result[0]["blanks"]) == 1
+
+    blank = result[0]["blanks"][0]
+    assert blank["correct_answer"] == "Paris"
+    assert blank["answer_variations"] == ["paris", "PARIS", "Paříž", "パリ"]
+    assert blank["case_sensitive"] is False
