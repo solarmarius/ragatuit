@@ -7,6 +7,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from mock_bodys import (
     csp_body,
     markov_decision_process_body,
+    naermestenabo_body,
+    naiv_bayes_body,
+    nevralenettverk_body,
     reinforcement_learning_body,
 )
 from pydantic import BaseModel
@@ -120,88 +123,203 @@ mock_courses = [
         "workflow_state": "unpublished",
         "restrict_enrollments_to_course_dates": False,
     },
+    {
+        "id": 37825,
+        "name": "INF-1600 Intro til KI",
+        "account_id": 27925,
+        "uuid": "Z7bzNStMko53AmlPm6R7qYPbBlLUWkGobbpBqlJ3",
+        "start_at": None,
+        "grading_standard_id": None,
+        "is_public": False,
+        "created_at": "2025-03-06T16:18:29Z",
+        "course_code": "ALI-1111",
+        "default_view": "wiki",
+        "root_account_id": 1,
+        "enrollment_term_id": 3,
+        "license": "private",
+        "grade_passback_setting": None,
+        "end_at": None,
+        "public_syllabus": False,
+        "public_syllabus_to_auth": True,
+        "storage_quota_mb": 3145,
+        "is_public_to_auth_users": True,
+        "homeroom_course": False,
+        "course_color": None,
+        "friendly_name": None,
+        "apply_assignment_group_weights": False,
+        "calendar": {
+            "ics": "https://uit.instructure.com/feeds/calendars/course_Z7bzNStMko53AmlPm6R7qYPbBlLUWkGobbpBqlJ3.ics"
+        },
+        "time_zone": "Europe/Copenhagen",
+        "blueprint": False,
+        "template": False,
+        "sis_course_id": None,
+        "integration_id": None,
+        "enrollments": [
+            {
+                "type": "teacher",
+                "role": "TeacherEnrollment",
+                "role_id": 4,
+                "user_id": 71202,
+                "enrollment_state": "active",
+                "limit_privileges_to_course_section": False,
+            }
+        ],
+        "hide_final_grades": False,
+        "workflow_state": "unpublished",
+        "restrict_enrollments_to_course_dates": False,
+    },
 ]
 
-mock_modules = [
-    {
-        "id": 173467,
-        "name": "Admin infomation",
-        "position": 1,
-        "unlock_at": None,
-        "require_sequential_progress": False,
-        "requirement_type": "all",
-        "publish_final_grade": False,
-        "prerequisite_module_ids": [],
-        "published": True,
-        "items_count": 0,
-        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173467/items",
-    },
-    {
-        "id": 173574,
-        "name": "Search",
-        "position": 2,
-        "unlock_at": None,
-        "require_sequential_progress": False,
-        "requirement_type": "all",
-        "publish_final_grade": False,
-        "prerequisite_module_ids": [],
-        "published": False,
-        "items_count": 5,
-        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173574/items",
-    },
-    {
-        "id": 173468,
-        "name": "Constraint Satisfaction Problems",
-        "position": 3,
-        "unlock_at": None,
-        "require_sequential_progress": False,
-        "requirement_type": "all",
-        "publish_final_grade": False,
-        "prerequisite_module_ids": [],
-        "published": True,
-        "items_count": 2,
-        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173468/items",
-    },
-    {
-        "id": 173469,
-        "name": "Sheduling and Adversarial Search",
-        "position": 4,
-        "unlock_at": None,
-        "require_sequential_progress": False,
-        "requirement_type": "all",
-        "publish_final_grade": False,
-        "prerequisite_module_ids": [],
-        "published": False,
-        "items_count": 1,
-        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173469/items",
-    },
-    {
-        "id": 173579,
-        "name": "Markov Decision Processes",
-        "position": 5,
-        "unlock_at": None,
-        "require_sequential_progress": False,
-        "requirement_type": "all",
-        "publish_final_grade": False,
-        "prerequisite_module_ids": [],
-        "published": False,
-        "items_count": 1,
-        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173579/items",
-    },
-    {
-        "id": 173577,
-        "name": "Reinforcement Learning",
-        "position": 6,
-        "unlock_at": None,
-        "require_sequential_progress": False,
-        "requirement_type": "all",
-        "publish_final_grade": False,
-        "prerequisite_module_ids": [],
-        "published": True,
-        "items_count": 3,
-        "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173577/items",
-    },
-]
+mock_modules = {
+    37823: [
+        {
+            "id": 173467,
+            "name": "Admin infomation",
+            "position": 1,
+            "unlock_at": None,
+            "require_sequential_progress": False,
+            "requirement_type": "all",
+            "publish_final_grade": False,
+            "prerequisite_module_ids": [],
+            "published": True,
+            "items_count": 0,
+            "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173467/items",
+        },
+        {
+            "id": 173574,
+            "name": "Search",
+            "position": 2,
+            "unlock_at": None,
+            "require_sequential_progress": False,
+            "requirement_type": "all",
+            "publish_final_grade": False,
+            "prerequisite_module_ids": [],
+            "published": False,
+            "items_count": 5,
+            "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173574/items",
+        },
+        {
+            "id": 173468,
+            "name": "Constraint Satisfaction Problems",
+            "position": 3,
+            "unlock_at": None,
+            "require_sequential_progress": False,
+            "requirement_type": "all",
+            "publish_final_grade": False,
+            "prerequisite_module_ids": [],
+            "published": True,
+            "items_count": 2,
+            "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173468/items",
+        },
+        {
+            "id": 173469,
+            "name": "Sheduling and Adversarial Search",
+            "position": 4,
+            "unlock_at": None,
+            "require_sequential_progress": False,
+            "requirement_type": "all",
+            "publish_final_grade": False,
+            "prerequisite_module_ids": [],
+            "published": False,
+            "items_count": 1,
+            "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173469/items",
+        },
+        {
+            "id": 173579,
+            "name": "Markov Decision Processes",
+            "position": 5,
+            "unlock_at": None,
+            "require_sequential_progress": False,
+            "requirement_type": "all",
+            "publish_final_grade": False,
+            "prerequisite_module_ids": [],
+            "published": False,
+            "items_count": 1,
+            "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173579/items",
+        },
+        {
+            "id": 173577,
+            "name": "Reinforcement Learning",
+            "position": 6,
+            "unlock_at": None,
+            "require_sequential_progress": False,
+            "requirement_type": "all",
+            "publish_final_grade": False,
+            "prerequisite_module_ids": [],
+            "published": True,
+            "items_count": 3,
+            "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173577/items",
+        },
+    ],
+    37825: [
+        {
+            "id": 183467,
+            "name": "Admin infomation",
+            "position": 1,
+            "unlock_at": None,
+            "require_sequential_progress": False,
+            "requirement_type": "all",
+            "publish_final_grade": False,
+            "prerequisite_module_ids": [],
+            "published": True,
+            "items_count": 0,
+            "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173467/items",
+        },
+        {
+            "id": 183468,
+            "name": "Søk og problemløsning",
+            "position": 1,
+            "unlock_at": None,
+            "require_sequential_progress": False,
+            "requirement_type": "all",
+            "publish_final_grade": False,
+            "prerequisite_module_ids": [],
+            "published": True,
+            "items_count": 0,
+            "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173467/items",
+        },
+        {
+            "id": 183469,
+            "name": "Sannsynlighetsregning",
+            "position": 1,
+            "unlock_at": None,
+            "require_sequential_progress": False,
+            "requirement_type": "all",
+            "publish_final_grade": False,
+            "prerequisite_module_ids": [],
+            "published": True,
+            "items_count": 0,
+            "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173467/items",
+        },
+        {
+            "id": 183470,
+            "name": "Maskinlæring",
+            "position": 1,
+            "unlock_at": None,
+            "require_sequential_progress": False,
+            "requirement_type": "all",
+            "publish_final_grade": False,
+            "prerequisite_module_ids": [],
+            "published": True,
+            "items_count": 0,
+            "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173467/items",
+        },
+        {
+            "id": 183471,
+            "name": "Nevrale nettverk",
+            "position": 1,
+            "unlock_at": None,
+            "require_sequential_progress": False,
+            "requirement_type": "all",
+            "publish_final_grade": False,
+            "prerequisite_module_ids": [],
+            "published": True,
+            "items_count": 0,
+            "items_url": "https://uit.instructure.com/api/v1/courses/37823/modules/173467/items",
+        },
+    ],
+}
 
 mock_items = {
     173574: [
@@ -315,6 +433,143 @@ mock_items = {
             "unpublishable": False,
         },
     ],
+    183468: [
+        {
+            "id": 1195254,
+            "title": "Søk og problemløsing - Elements of AI.pdf",
+            "position": 6,
+            "indent": 0,
+            "quiz_lti": False,
+            "type": "File",
+            "module_id": 183670,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1195254",
+            "content_id": 3639896,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/files/3639896",
+            "published": True,
+            "unpublishable": False,
+        },
+        {
+            "id": 1195255,
+            "title": "Søk og spill - Elements of AI.pdf",
+            "position": 7,
+            "indent": 0,
+            "quiz_lti": False,
+            "type": "File",
+            "module_id": 183670,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1195255",
+            "content_id": 3639897,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/files/3639897",
+            "published": True,
+            "unpublishable": False,
+        },
+    ],
+    183469: [
+        {
+            "id": 1195248,
+            "title": "Naiv Bayes",
+            "position": 1,
+            "indent": 0,
+            "quiz_lti": False,
+            "type": "Page",
+            "module_id": 183670,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1195248",
+            "page_url": "naiv-bayes",
+            "publish_at": None,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/pages/naiv-bayes",
+            "published": True,
+            "unpublishable": True,
+        },
+        {
+            "id": 1195251,
+            "title": "Bayes teorem - Elements of AI.pdf",
+            "position": 3,
+            "indent": 0,
+            "quiz_lti": False,
+            "type": "File",
+            "module_id": 183670,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1195251",
+            "content_id": 3639893,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/files/3639893",
+            "published": True,
+            "unpublishable": False,
+        },
+        {
+            "id": 1195253,
+            "title": "Odds og sannsynligheter - Elements of AI.pdf",
+            "position": 5,
+            "indent": 0,
+            "quiz_lti": False,
+            "type": "File",
+            "module_id": 183670,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1195253",
+            "content_id": 3639895,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/files/3639895",
+            "published": True,
+            "unpublishable": False,
+        },
+    ],
+    183470: [
+        {
+            "id": 1195249,
+            "title": "Nærmeste nabo klassifisering",
+            "position": 2,
+            "indent": 0,
+            "quiz_lti": False,
+            "type": "Page",
+            "module_id": 183670,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1195249",
+            "page_url": "naermeste-nabo-klassifisering",
+            "publish_at": None,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/pages/naermeste-nabo-klassifisering",
+            "published": True,
+            "unpublishable": True,
+        },
+        {
+            "id": 1195252,
+            "title": "Forskjellige typer maskinlæring - Elements of AI.pdf",
+            "position": 4,
+            "indent": 0,
+            "quiz_lti": False,
+            "type": "File",
+            "module_id": 183670,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1195252",
+            "content_id": 3639894,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/files/3639894",
+            "published": True,
+            "unpublishable": False,
+        },
+    ],
+    183471: [
+        {
+            "id": 1195256,
+            "title": "Hvordan bygge nevrale nettverk",
+            "position": 8,
+            "indent": 0,
+            "quiz_lti": False,
+            "type": "Page",
+            "module_id": 183670,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1195256",
+            "page_url": "hvordan-bygge-nevrale-nettverk",
+            "publish_at": None,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/pages/hvordan-bygge-nevrale-nettverk",
+            "published": True,
+            "unpublishable": True,
+        },
+        {
+            "id": 1195258,
+            "title": "Prinsippene for nevrale nettverk - Elements of AI.pdf",
+            "position": 9,
+            "indent": 0,
+            "quiz_lti": False,
+            "type": "File",
+            "module_id": 183670,
+            "html_url": "https://uit.instructure.com/courses/37823/modules/items/1195258",
+            "content_id": 3639898,
+            "url": "https://uit.instructure.com/api/v1/courses/37823/files/3639898",
+            "published": True,
+            "unpublishable": False,
+        },
+    ],
 }
 
 mock_pages = {
@@ -390,9 +645,243 @@ mock_pages = {
         "locked_for_user": False,
         "body": reinforcement_learning_body,
     },
+    "naiv-bayes": {
+        "title": "Naiv Bayes",
+        "created_at": "2025-07-17T06:58:30Z",
+        "url": "naiv-bayes",
+        "editing_roles": "teachers",
+        "page_id": 428214,
+        "last_edited_by": {
+            "id": 71202,
+            "anonymous_id": "1ixu",
+            "display_name": "Marius Rungmanee Solaas",
+            "avatar_image_url": "https://uit.instructure.com/images/thumbnails/1711458/KP9GqxzKd0VQzE400AHhImiJtv8fzGV1cR5gfYW2",
+            "html_url": "https://uit.instructure.com/courses/37823/users/71202",
+            "pronouns": None,
+        },
+        "published": True,
+        "hide_from_students": False,
+        "front_page": False,
+        "html_url": "https://uit.instructure.com/courses/37823/pages/naiv-bayes",
+        "todo_date": None,
+        "publish_at": None,
+        "updated_at": "2025-07-17T06:58:47Z",
+        "locked_for_user": False,
+        "body": naiv_bayes_body,
+    },
+    "naermeste-nabo-klassifisering": {
+        "title": "Nærmeste nabo klassifisering",
+        "created_at": "2025-07-17T06:59:29Z",
+        "url": "naermeste-nabo-klassifisering",
+        "editing_roles": "teachers",
+        "page_id": 428215,
+        "last_edited_by": {
+            "id": 71202,
+            "anonymous_id": "1ixu",
+            "display_name": "Marius Rungmanee Solaas",
+            "avatar_image_url": "https://uit.instructure.com/images/thumbnails/1711458/KP9GqxzKd0VQzE400AHhImiJtv8fzGV1cR5gfYW2",
+            "html_url": "https://uit.instructure.com/courses/37823/users/71202",
+            "pronouns": None,
+        },
+        "published": True,
+        "hide_from_students": False,
+        "front_page": False,
+        "html_url": "https://uit.instructure.com/courses/37823/pages/naermeste-nabo-klassifisering",
+        "todo_date": None,
+        "publish_at": None,
+        "updated_at": "2025-07-17T06:59:42Z",
+        "locked_for_user": False,
+        "body": naermestenabo_body,
+    },
+    "hvordan-bygge-nevrale-nettverk": {
+        "title": "Hvordan bygge nevrale nettverk",
+        "created_at": "2025-07-17T07:04:33Z",
+        "url": "hvordan-bygge-nevrale-nettverk",
+        "editing_roles": "teachers",
+        "page_id": 428217,
+        "last_edited_by": {
+            "id": 71202,
+            "anonymous_id": "1ixu",
+            "display_name": "Marius Rungmanee Solaas",
+            "avatar_image_url": "https://uit.instructure.com/images/thumbnails/1711458/KP9GqxzKd0VQzE400AHhImiJtv8fzGV1cR5gfYW2",
+            "html_url": "https://uit.instructure.com/courses/37823/users/71202",
+            "pronouns": None,
+        },
+        "published": True,
+        "hide_from_students": False,
+        "front_page": False,
+        "html_url": "https://uit.instructure.com/courses/37823/pages/hvordan-bygge-nevrale-nettverk",
+        "todo_date": None,
+        "publish_at": None,
+        "updated_at": "2025-07-17T07:04:45Z",
+        "locked_for_user": False,
+        "body": nevralenettverk_body,
+    },
 }
 
 mock_files = {
+    3639898: {
+        "id": 3639898,
+        "folder_id": 708060,
+        "display_name": "Prinsippene for nevrale nettverk - Elements of AI.pdf",
+        "filename": "Prinsippene+for+nevrale+nettverk+-+Elements+of+AI.pdf",
+        "uuid": "Vzh7svEjilTXwa3bKsqJTE7YSJO5LajwYS85LWeU",
+        "upload_status": "success",
+        "content-type": "application/pdf",
+        "url": "https://uit.instructure.com/files/3639898/download?download_frd=1&verifier=Vzh7svEjilTXwa3bKsqJTE7YSJO5LajwYS85LWeU",
+        "size": 543717,
+        "created_at": "2025-07-17T07:05:26Z",
+        "updated_at": "2025-07-17T07:05:26Z",
+        "unlock_at": None,
+        "locked": False,
+        "hidden": False,
+        "lock_at": None,
+        "hidden_for_user": False,
+        "thumbnail_url": None,
+        "modified_at": "2025-07-17T07:05:26Z",
+        "mime_class": "pdf",
+        "media_entry_id": None,
+        "category": "uncategorized",
+        "locked_for_user": False,
+        "visibility_level": "inherit",
+        "canvadoc_session_url": "/api/v1/canvadoc_session?blob=%7B%22user_id%22:107380000000071202,%22attachment_id%22:3639898,%22type%22:%22canvadoc%22%7D&hmac=92a304e7e92d04043ed2da5bf52036aad31bfe70",
+        "crocodoc_session_url": None,
+    },
+    3639894: {
+        "id": 3639894,
+        "folder_id": 708060,
+        "display_name": "Forskjellige typer maskinlæring - Elements of AI.pdf",
+        "filename": "Forskjellige+typer+maskinl%C3%A6ring+-+Elements+of+AI.pdf",
+        "uuid": "HTAQe9YRmsU69iLng0w2vCbpie0I9yUP8WgokGwc",
+        "upload_status": "success",
+        "content-type": "application/pdf",
+        "url": "https://uit.instructure.com/files/3639894/download?download_frd=1&verifier=HTAQe9YRmsU69iLng0w2vCbpie0I9yUP8WgokGwc",
+        "size": 628999,
+        "created_at": "2025-07-17T07:00:15Z",
+        "updated_at": "2025-07-17T07:00:15Z",
+        "unlock_at": None,
+        "locked": False,
+        "hidden": False,
+        "lock_at": None,
+        "hidden_for_user": False,
+        "thumbnail_url": None,
+        "modified_at": "2025-07-17T07:00:15Z",
+        "mime_class": "pdf",
+        "media_entry_id": None,
+        "category": "uncategorized",
+        "locked_for_user": False,
+        "visibility_level": "inherit",
+        "canvadoc_session_url": "/api/v1/canvadoc_session?blob=%7B%22user_id%22:107380000000071202,%22attachment_id%22:3639894,%22type%22:%22canvadoc%22%7D&hmac=6413ca90a4867fabe4ac91fee2ad35fda968f175",
+        "crocodoc_session_url": None,
+    },
+    3639895: {
+        "id": 3639895,
+        "folder_id": 708060,
+        "display_name": "Odds og sannsynligheter - Elements of AI.pdf",
+        "filename": "Odds+og+sannsynligheter+-+Elements+of+AI.pdf",
+        "uuid": "3iVT4ynMHDuZyFIjZpQpNXYUdNdfD49v1HFfgaki",
+        "upload_status": "success",
+        "content-type": "application/pdf",
+        "url": "https://uit.instructure.com/files/3639895/download?download_frd=1&verifier=3iVT4ynMHDuZyFIjZpQpNXYUdNdfD49v1HFfgaki",
+        "size": 527535,
+        "created_at": "2025-07-17T07:00:16Z",
+        "updated_at": "2025-07-17T07:00:16Z",
+        "unlock_at": None,
+        "locked": False,
+        "hidden": False,
+        "lock_at": None,
+        "hidden_for_user": False,
+        "thumbnail_url": None,
+        "modified_at": "2025-07-17T07:00:16Z",
+        "mime_class": "pdf",
+        "media_entry_id": None,
+        "category": "uncategorized",
+        "locked_for_user": False,
+        "visibility_level": "inherit",
+        "canvadoc_session_url": "/api/v1/canvadoc_session?blob=%7B%22user_id%22:107380000000071202,%22attachment_id%22:3639895,%22type%22:%22canvadoc%22%7D&hmac=d492800be1998a51f517743e9d83a7afa201ef12",
+        "crocodoc_session_url": None,
+    },
+    3639893: {
+        "id": 3639893,
+        "folder_id": 708060,
+        "display_name": "Bayes’ teorem - Elements of AI.pdf",
+        "filename": "Bayes%E2%80%99+teorem+-+Elements+of+AI.pdf",
+        "uuid": "SbOJf7xbad99WCARrXbc9elj8fd3mmzzlC5rHBmB",
+        "upload_status": "success",
+        "content-type": "application/pdf",
+        "url": "https://uit.instructure.com/files/3639893/download?download_frd=1&verifier=SbOJf7xbad99WCARrXbc9elj8fd3mmzzlC5rHBmB",
+        "size": 658092,
+        "created_at": "2025-07-17T07:00:14Z",
+        "updated_at": "2025-07-17T07:00:14Z",
+        "unlock_at": None,
+        "locked": False,
+        "hidden": False,
+        "lock_at": None,
+        "hidden_for_user": False,
+        "thumbnail_url": None,
+        "modified_at": "2025-07-17T07:00:14Z",
+        "mime_class": "pdf",
+        "media_entry_id": None,
+        "category": "uncategorized",
+        "locked_for_user": False,
+        "visibility_level": "inherit",
+        "canvadoc_session_url": "/api/v1/canvadoc_session?blob=%7B%22user_id%22:107380000000071202,%22attachment_id%22:3639893,%22type%22:%22canvadoc%22%7D&hmac=376a156d40c7a61329d032dac26a0d2c8afd36cc",
+        "crocodoc_session_url": None,
+    },
+    3639897: {
+        "id": 3639897,
+        "folder_id": 708060,
+        "display_name": "Søk og spill - Elements of AI.pdf",
+        "filename": "S%C3%B8k+og+spill+-+Elements+of+AI.pdf",
+        "uuid": "1M3y7D5Z3YnGkItRAWAQcTUFQonDomHUrDhPCPCf",
+        "upload_status": "success",
+        "content-type": "application/pdf",
+        "url": "https://uit.instructure.com/files/3639897/download?download_frd=1&verifier=1M3y7D5Z3YnGkItRAWAQcTUFQonDomHUrDhPCPCf",
+        "size": 900745,
+        "created_at": "2025-07-17T07:00:18Z",
+        "updated_at": "2025-07-17T07:00:18Z",
+        "unlock_at": None,
+        "locked": False,
+        "hidden": False,
+        "lock_at": None,
+        "hidden_for_user": False,
+        "thumbnail_url": None,
+        "modified_at": "2025-07-17T07:00:18Z",
+        "mime_class": "pdf",
+        "media_entry_id": None,
+        "category": "uncategorized",
+        "locked_for_user": False,
+        "visibility_level": "inherit",
+        "canvadoc_session_url": "/api/v1/canvadoc_session?blob=%7B%22user_id%22:107380000000071202,%22attachment_id%22:3639897,%22type%22:%22canvadoc%22%7D&hmac=6af0bacfbb717842db03a25553c97e44fa00fd90",
+        "crocodoc_session_url": None,
+    },
+    3639896: {
+        "id": 3639896,
+        "folder_id": 708060,
+        "display_name": "Søk og problemløsing - Elements of AI.pdf",
+        "filename": "S%C3%B8k+og+probleml%C3%B8sing+-+Elements+of+AI.pdf",
+        "uuid": "N7dINwwdMPjSY8WQECAqhL5NHKotJty8oFv0xAkJ",
+        "upload_status": "success",
+        "content-type": "application/pdf",
+        "url": "https://uit.instructure.com/files/3639896/download?download_frd=1&verifier=N7dINwwdMPjSY8WQECAqhL5NHKotJty8oFv0xAkJ",
+        "size": 748822,
+        "created_at": "2025-07-17T07:00:17Z",
+        "updated_at": "2025-07-17T07:00:17Z",
+        "unlock_at": None,
+        "locked": False,
+        "hidden": False,
+        "lock_at": None,
+        "hidden_for_user": False,
+        "thumbnail_url": None,
+        "modified_at": "2025-07-17T07:00:17Z",
+        "mime_class": "pdf",
+        "media_entry_id": None,
+        "category": "uncategorized",
+        "locked_for_user": False,
+        "visibility_level": "inherit",
+        "canvadoc_session_url": "/api/v1/canvadoc_session?blob=%7B%22user_id%22:107380000000071202,%22attachment_id%22:3639896,%22type%22:%22canvadoc%22%7D&hmac=6ab86324fa9a2fcada08c576867afc488f3717dd",
+        "crocodoc_session_url": None,
+    },
     3615155: {
         "id": 3615155,
         "folder_id": 708060,
@@ -824,21 +1313,6 @@ def validate_token(authorization: str) -> str:
     return token_data["user_id"]
 
 
-# Canvas API endpoints - Fixed to use proper HTTP headers
-@app.get("/api/v1/users/self/profile")
-async def get_user_profile(authorization: str = Header(None)):
-    """Mock Canvas user profile endpoint"""
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authorization header required")
-
-    user_id = validate_token(authorization)
-
-    if user_id not in mock_users:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    return mock_users[user_id]
-
-
 @app.get("/api/v1/courses")
 async def get_courses(authorization: str = Header(None)):
     """Mock Canvas courses endpoint"""
@@ -857,13 +1331,7 @@ async def get_course_modules(course_id: int, authorization: str = Header(None)):
 
     validate_token(authorization)
 
-    # Only return modules for course ID 37823, otherwise return unauthorized
-    if course_id != 37823:
-        raise HTTPException(
-            status_code=403, detail="Unauthorized access to course modules"
-        )
-
-    return mock_modules
+    return mock_modules.get(course_id, [])
 
 
 @app.get("/api/v1/courses/{course_id}/modules/{module_id}/items")
@@ -877,7 +1345,7 @@ async def get_module_items(
     validate_token(authorization)
 
     # Only return items for course ID 37823, otherwise return unauthorized
-    if course_id != 37823:
+    if course_id != 37823 and course_id != 37825:
         raise HTTPException(
             status_code=403, detail="Unauthorized access to course module items"
         )
@@ -899,7 +1367,7 @@ async def get_page(course_id: int, page_url: str, authorization: str = Header(No
     validate_token(authorization)
 
     # Only return pages for course ID 37823, otherwise return unauthorized
-    if course_id != 37823:
+    if course_id != 37823 and course_id != 37825:
         raise HTTPException(
             status_code=403, detail="Unauthorized access to course pages"
         )
@@ -920,7 +1388,7 @@ async def get_file(course_id: int, file_id: int, authorization: str = Header(Non
     validate_token(authorization)
 
     # Only return files for course ID 37823, otherwise return unauthorized
-    if course_id != 37823:
+    if course_id != 37823 and course_id != 37825:
         raise HTTPException(
             status_code=403, detail="Unauthorized access to course files"
         )
@@ -930,20 +1398,6 @@ async def get_file(course_id: int, file_id: int, authorization: str = Header(Non
         return mock_files[file_id]
     else:
         raise HTTPException(status_code=404, detail="File not found")
-
-
-@app.get("/api/v1/users/{user_id}/profile")
-async def get_user_by_id(user_id: str, authorization: str = Header(None)):
-    """Mock Canvas user by ID endpoint"""
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authorization header required")
-
-    validate_token(authorization)
-
-    if user_id not in mock_users:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    return mock_users[user_id]
 
 
 @app.post("/api/quiz/v1/courses/{course_id}/quizzes")
@@ -956,7 +1410,7 @@ async def create_quiz(
     validate_token(authorization)
 
     # Validate course access
-    if course_id != 37823:
+    if course_id != 37823 and course_id != 37825:
         raise HTTPException(status_code=403, detail="Unauthorized access to course")
 
     # Create quiz object
@@ -1004,7 +1458,7 @@ async def create_quiz_item(
     validate_token(authorization)
 
     # Validate course access
-    if course_id != 37823:
+    if course_id != 37823 and course_id != 37825:
         raise HTTPException(status_code=403, detail="Unauthorized access to course")
 
     # Validate required fields
@@ -1055,7 +1509,7 @@ async def create_quiz_item(
         "hot-spot",
         "choice",
         "numeric",
-        "true-false",
+        "True-False",
         "essay",
     ]
 
