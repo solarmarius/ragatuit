@@ -426,50 +426,151 @@ def convert_question_to_canvas_format(
     Returns:
         Canvas quiz item data structure
     """
+    import uuid
     from datetime import datetime, timezone
 
-    # Map correct answer letter to choice index
-    correct_answer_map = {"A": 0, "B": 1, "C": 2, "D": 3}
-    correct_index = correct_answer_map.get(question["correct_answer"], 0)
-
-    choices = [
-        {
-            "id": f"choice_{i + 1}",
-            "position": i + 1,
-            "item_body": f"<p>{choice}</p>",
-        }
-        for i, choice in enumerate(
-            [
-                question["option_a"],
-                question["option_b"],
-                question["option_c"],
-                question["option_d"],
-            ]
-        )
-    ]
-
+    question_type = question.get("question_type", "multiple_choice")
     item_id = f"item_{question['id']}"
 
-    return {
-        "item": {
-            "id": item_id,
-            "entry_type": "Item",
-            "entry_id": item_id,
-            "position": position,
-            "item_type": "Question",
-            "properties": {"shuffle_answers": True},
-            "points_possible": 1,  # 1 point per question
-            "entry": {
-                "interaction_type_slug": "choice",
-                "item_body": f"<p>{question['question_text']}</p>",
-                "interaction_data": {"choices": choices},
-                "scoring_algorithm": "Equivalence",
-                "scoring_data": {"value": f"choice_{correct_index + 1}"},
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            },
+    if question_type == "fill_in_blank":
+        # Handle Fill-in-Blank questions using Canvas Rich Fill In The Blank format
+
+        # Generate UUIDs for each blank
+        blank_uuids = {}
+        for blank in question["blanks"]:
+            blank_uuids[blank["position"]] = str(uuid.uuid4())
+
+        # Build interaction_data with blanks array
+        interaction_blanks = []
+        for blank in question["blanks"]:
+            interaction_blanks.append(
+                {
+                    "id": blank_uuids[blank["position"]],
+                    "answer_type": "openEntry",
+                }
+            )
+
+        interaction_data = {
+            "blanks": interaction_blanks,
         }
-    }
+
+        # Build scoring_data with scoring information
+        scoring_values = []
+        for blank in question["blanks"]:
+            blank_uuid = blank_uuids[blank["position"]]
+
+            # Choose scoring algorithm based on case sensitivity
+            if blank["case_sensitive"]:
+                scoring_algorithm = "Equivalence"
+            else:
+                # TextCloseEnough is more forgiving for typos
+                scoring_algorithm = "TextCloseEnough"
+
+            # Primary correct answer
+            scoring_values.append(
+                {
+                    "id": blank_uuid,
+                    "scoring_data": {
+                        "value": blank["correct_answer"],
+                        "blank_text": blank["correct_answer"],
+                        "scoring_algorithm": scoring_algorithm,
+                    },
+                }
+            )
+
+            # Add answer variations as additional scoring entries
+            if blank.get("answer_variations"):
+                for variation in blank["answer_variations"]:
+                    scoring_values.append(
+                        {
+                            "id": blank_uuid,
+                            "scoring_data": {
+                                "value": variation,
+                                "blank_text": variation,
+                                "scoring_algorithm": scoring_algorithm,
+                            },
+                        }
+                    )
+
+        scoring_data = {
+            "value": scoring_values,
+            "working_item_body": question["question_text"],
+        }
+
+        return {
+            "item": {
+                "id": item_id,
+                "entry_type": "Item",
+                "entry_id": item_id,
+                "position": position,
+                "item_type": "Question",
+                "properties": {},
+                "points_possible": len(question["blanks"]),  # 1 point per blank
+                "entry": {
+                    "interaction_type_slug": "rich-fill-blank",
+                    "item_body": f"<p>{question['question_text']}</p>",
+                    "interaction_data": interaction_data,
+                    "scoring_algorithm": "Equivalence",
+                    "scoring_data": scoring_data,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                },
+            }
+        }
+    elif question_type == "multiple_choice":
+        # Handle Multiple Choice questions (original logic)
+
+        # Map correct answer letter to choice index
+        correct_answer_map = {"A": 0, "B": 1, "C": 2, "D": 3}
+        correct_index = correct_answer_map.get(question["correct_answer"], 0)
+
+        choices = [
+            {
+                "id": f"choice_{i + 1}",
+                "position": i + 1,
+                "item_body": f"<p>{choice}</p>",
+            }
+            for i, choice in enumerate(
+                [
+                    question["option_a"],
+                    question["option_b"],
+                    question["option_c"],
+                    question["option_d"],
+                ]
+            )
+        ]
+
+        return {
+            "item": {
+                "id": item_id,
+                "entry_type": "Item",
+                "entry_id": item_id,
+                "position": position,
+                "item_type": "Question",
+                "properties": {"shuffle_answers": True},
+                "points_possible": 1,  # 1 point per question
+                "entry": {
+                    "interaction_type_slug": "choice",
+                    "item_body": f"<p>{question['question_text']}</p>",
+                    "interaction_data": {"choices": choices},
+                    "scoring_algorithm": "Equivalence",
+                    "scoring_data": {"value": f"choice_{correct_index + 1}"},
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat(),
+                },
+            }
+        }
+
+    # Handle unknown question types
+    from src.config import get_logger
+
+    logger = get_logger("canvas_service")
+    logger.error(
+        "unsupported_question_type_for_canvas_conversion",
+        question_id=question.get("id"),
+        question_type=question_type,
+    )
+    raise ValueError(f"Unsupported question type for Canvas export: {question_type}")
 
 
 # Re-export for public API
