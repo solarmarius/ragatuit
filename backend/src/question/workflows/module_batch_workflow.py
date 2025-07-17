@@ -253,10 +253,7 @@ class ModuleBatchWorkflow:
             # Validate and create question objects
             for q_data in questions_data:
                 try:
-                    # Validate required fields
-                    self._validate_mcq_structure(q_data)
-
-                    # Extract difficulty from question data (if present)
+                    # Extract difficulty from question data (if present) before validation
                     difficulty_str = q_data.pop("difficulty", None)
                     difficulty = None
                     if difficulty_str:
@@ -271,11 +268,18 @@ class ModuleBatchWorkflow:
                                 difficulty_value=difficulty_str,
                             )
 
-                    # Create question object with difficulty at model level
+                    # Use dynamic validation based on question type
+                    from ..types.registry import get_question_type_registry
+
+                    registry = get_question_type_registry()
+                    question_type_impl = registry.get_question_type(self.question_type)
+                    validated_data = question_type_impl.validate_data(q_data)
+
+                    # Create question object with validated data
                     question = Question(
                         quiz_id=state.quiz_id,
                         question_type=self.question_type,
-                        question_data=q_data,  # Now without difficulty field
+                        question_data=validated_data.model_dump(),
                         difficulty=difficulty,
                         is_approved=False,
                     )
@@ -497,43 +501,6 @@ class ModuleBatchWorkflow:
                 exc_info=True,
             )
             raise
-
-    def _validate_mcq_structure(self, question_data: dict[str, Any]) -> None:
-        """
-        Validate MCQ question data structure.
-
-        Args:
-            question_data: Question data to validate
-
-        Raises:
-            ValueError: If data structure is invalid
-        """
-        required_fields = [
-            "question_text",
-            "option_a",
-            "option_b",
-            "option_c",
-            "option_d",
-            "correct_answer",
-        ]
-
-        for field in required_fields:
-            if field not in question_data:
-                raise ValueError(f"Missing required field: {field}")
-
-        # Validate correct answer format
-        if question_data["correct_answer"] not in ["A", "B", "C", "D"]:
-            raise ValueError(
-                f"Invalid correct answer: {question_data['correct_answer']}"
-            )
-
-        # Validate text lengths
-        if len(question_data["question_text"]) < 10:
-            raise ValueError("Question text too short")
-
-        for option_key in ["option_a", "option_b", "option_c", "option_d"]:
-            if len(question_data[option_key]) < 1:
-                raise ValueError(f"Option {option_key} is empty")
 
     async def process_module(
         self,

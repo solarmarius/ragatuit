@@ -212,16 +212,18 @@ def test_parse_batch_response_invalid_json(test_llm_provider, test_template_mana
         workflow._parse_batch_response("Invalid JSON")
 
 
-def test_validate_mcq_structure_valid(test_llm_provider, test_template_manager):
-    """Test validating valid MCQ structure."""
+def test_dynamic_question_validation_mcq(test_llm_provider, test_template_manager):
+    """Test that dynamic validation works for MCQ questions."""
+    from src.question.types import QuestionType
     from src.question.workflows.module_batch_workflow import ModuleBatchWorkflow
 
     workflow = ModuleBatchWorkflow(
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
+        question_type=QuestionType.MULTIPLE_CHOICE,
     )
 
-    valid_question = {
+    valid_mcq_question = {
         "question_text": "What is 2 + 2?",
         "option_a": "3",
         "option_b": "4",
@@ -230,17 +232,66 @@ def test_validate_mcq_structure_valid(test_llm_provider, test_template_manager):
         "correct_answer": "B",
     }
 
+    # Test that valid MCQ questions pass validation
+    from src.question.types.registry import get_question_type_registry
+
+    registry = get_question_type_registry()
+    question_type_impl = registry.get_question_type(QuestionType.MULTIPLE_CHOICE)
+
     # Should not raise exception
-    workflow._validate_mcq_structure(valid_question)
+    validated_data = question_type_impl.validate_data(valid_mcq_question)
+    assert validated_data.question_text == "What is 2 + 2?"
+    assert validated_data.option_a == "3"
 
 
-def test_validate_mcq_structure_missing_field(test_llm_provider, test_template_manager):
-    """Test validating MCQ structure with missing field."""
+def test_dynamic_question_validation_fib(test_llm_provider, test_template_manager):
+    """Test that dynamic validation works for Fill-in-Blank questions."""
+    from src.question.types import QuestionType
     from src.question.workflows.module_batch_workflow import ModuleBatchWorkflow
 
     workflow = ModuleBatchWorkflow(
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
+        question_type=QuestionType.FILL_IN_BLANK,
+    )
+
+    valid_fib_question = {
+        "question_text": "The capital of France is _____.",
+        "blanks": [
+            {
+                "position": 1,
+                "correct_answer": "Paris",
+                "answer_variations": ["paris", "PARIS"],
+                "case_sensitive": False,
+            }
+        ],
+        "explanation": "Paris is the capital of France.",
+    }
+
+    # Test that valid FIB questions pass validation
+    from src.question.types.registry import get_question_type_registry
+
+    registry = get_question_type_registry()
+    question_type_impl = registry.get_question_type(QuestionType.FILL_IN_BLANK)
+
+    # Should not raise exception
+    validated_data = question_type_impl.validate_data(valid_fib_question)
+    assert validated_data.question_text == "The capital of France is _____."
+    assert len(validated_data.blanks) == 1
+    assert validated_data.blanks[0].correct_answer == "Paris"
+
+
+def test_dynamic_question_validation_invalid_data(
+    test_llm_provider, test_template_manager
+):
+    """Test that dynamic validation properly rejects invalid data."""
+    from src.question.types import QuestionType
+    from src.question.workflows.module_batch_workflow import ModuleBatchWorkflow
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        question_type=QuestionType.MULTIPLE_CHOICE,
     )
 
     invalid_question = {
@@ -251,32 +302,14 @@ def test_validate_mcq_structure_missing_field(test_llm_provider, test_template_m
         # Missing option_d and correct_answer
     }
 
-    with pytest.raises(ValueError, match="Missing required field"):
-        workflow._validate_mcq_structure(invalid_question)
+    # Test that invalid questions raise validation errors
+    from src.question.types.registry import get_question_type_registry
 
+    registry = get_question_type_registry()
+    question_type_impl = registry.get_question_type(QuestionType.MULTIPLE_CHOICE)
 
-def test_validate_mcq_structure_invalid_answer(
-    test_llm_provider, test_template_manager
-):
-    """Test validating MCQ structure with invalid correct answer."""
-    from src.question.workflows.module_batch_workflow import ModuleBatchWorkflow
-
-    workflow = ModuleBatchWorkflow(
-        llm_provider=test_llm_provider,
-        template_manager=test_template_manager,
-    )
-
-    invalid_question = {
-        "question_text": "What is 2 + 2?",
-        "option_a": "3",
-        "option_b": "4",
-        "option_c": "5",
-        "option_d": "6",
-        "correct_answer": "E",  # Invalid answer
-    }
-
-    with pytest.raises(ValueError, match="Invalid correct answer"):
-        workflow._validate_mcq_structure(invalid_question)
+    with pytest.raises(Exception):  # Should raise ValidationError or similar
+        question_type_impl.validate_data(invalid_question)
 
 
 def test_processor_initialization(test_llm_provider, test_template_manager):
@@ -758,37 +791,33 @@ def test_json_parsing_edge_cases():
     assert len(result) == 1
 
 
-def test_mcq_validation_edge_cases():
-    """Test MCQ validation handles various edge cases."""
-    from src.question.workflows.module_batch_workflow import ModuleBatchWorkflow
+def test_question_validation_edge_cases():
+    """Test question validation handles various edge cases through the registry."""
+    from src.question.types import QuestionType
+    from src.question.types.registry import get_question_type_registry
 
-    workflow = ModuleBatchWorkflow(
-        llm_provider=MockLLMProvider(),
-        template_manager=MockTemplateManager(),
-    )
+    registry = get_question_type_registry()
 
-    # Question text too short
-    short_question = {
-        "question_text": "Test?",  # Too short
-        "option_a": "A",
-        "option_b": "B",
-        "option_c": "C",
-        "option_d": "D",
-        "correct_answer": "A",
+    # Test MCQ validation with missing required field
+    mcq_impl = registry.get_question_type(QuestionType.MULTIPLE_CHOICE)
+    missing_field = {
+        "question_text": "What is 2+2?",
+        "option_a": "3",
+        "option_b": "4",
+        "option_c": "5",
+        # Missing option_d and correct_answer
     }
 
-    with pytest.raises(ValueError, match="Question text too short"):
-        workflow._validate_mcq_structure(short_question)
+    # MCQ validation should reject missing required fields
+    with pytest.raises(Exception):
+        mcq_impl.validate_data(missing_field)
 
-    # Empty option
-    empty_option = {
-        "question_text": "What is the capital of France?",
-        "option_a": "",  # Empty option
-        "option_b": "Berlin",
-        "option_c": "Paris",
-        "option_d": "Madrid",
-        "correct_answer": "C",
+    # Test FIB validation with empty blanks
+    fib_impl = registry.get_question_type(QuestionType.FILL_IN_BLANK)
+    empty_blanks = {
+        "question_text": "The capital of France is _____.",
+        "blanks": [],  # Empty blanks
     }
 
-    with pytest.raises(ValueError, match="Option option_a is empty"):
-        workflow._validate_mcq_structure(empty_option)
+    with pytest.raises(Exception):
+        fib_impl.validate_data(empty_blanks)
