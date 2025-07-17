@@ -60,7 +60,7 @@ async def get_quiz_questions(
         "quiz_questions_retrieval_initiated",
         user_id=str(current_user.id),
         quiz_id=str(quiz_id),
-        question_type=question_type.value if question_type else None,
+        question_type=question_type if question_type else None,
         approved_only=approved_only,
     )
 
@@ -185,7 +185,7 @@ async def create_question(
         "question_creation_initiated",
         user_id=str(current_user.id),
         quiz_id=str(quiz_id),
-        question_type=question_request.question_type.value,
+        question_type=question_request.question_type,
     )
 
     try:
@@ -236,7 +236,7 @@ async def create_question(
             user_id=str(current_user.id),
             quiz_id=str(quiz_id),
             question_id=str(question_id),
-            question_type=question_request.question_type.value,
+            question_type=question_request.question_type,
         )
 
         return formatted_question
@@ -485,7 +485,7 @@ async def generate_questions(
         "question_generation_initiated",
         user_id=str(current_user.id),
         quiz_id=str(quiz_id),
-        question_type=generation_request.question_type.value,
+        question_type=generation_request.question_type,
         target_count=generation_request.target_count,
     )
 
@@ -505,12 +505,12 @@ async def generate_questions(
             if not quiz:
                 raise HTTPException(status_code=404, detail="Quiz not found")
 
-        # Extract language from quiz or use default
-        language = (
-            quiz.language
-            if hasattr(quiz, "language") and quiz.language
-            else QuizLanguage.ENGLISH
-        )
+            # Extract language from quiz or use default (within session context)
+            language = (
+                quiz.language
+                if hasattr(quiz, "language") and quiz.language
+                else QuizLanguage.ENGLISH
+            )
 
         # Get the current question count before generation
         async with get_async_session() as session:
@@ -528,7 +528,7 @@ async def generate_questions(
             llm_model=generation_request.provider_name or provider_config.model,
             llm_temperature=provider_config.temperature,
             language=language,
-            question_type=generation_request.question_type,
+            question_type=QuestionType(generation_request.question_type),
         )
 
         # Check the results after generation
@@ -556,7 +556,7 @@ async def generate_questions(
             else "No questions were generated",
             metadata={
                 "provider_name": generation_request.provider_name or "openai",
-                "question_type": generation_request.question_type.value,
+                "question_type": generation_request.question_type,
                 "language": language.value,
                 "initial_count": initial_count,
                 "final_count": final_count,
@@ -622,12 +622,12 @@ async def batch_generate_questions(
                     if not quiz:
                         raise ValueError(f"Quiz {request.quiz_id} not found")
 
-                # Extract language from quiz or use default
-                language = (
-                    quiz.language
-                    if hasattr(quiz, "language") and quiz.language
-                    else QuizLanguage.ENGLISH
-                )
+                    # Extract language from quiz or use default (within session context)
+                    language = (
+                        quiz.language
+                        if hasattr(quiz, "language") and quiz.language
+                        else QuizLanguage.ENGLISH
+                    )
 
                 # Get the current question count before generation
                 async with get_async_session() as session:
@@ -647,7 +647,7 @@ async def batch_generate_questions(
                     llm_model=request.provider_name or provider_config.model,
                     llm_temperature=provider_config.temperature,
                     language=language,
-                    question_type=request.question_type,
+                    question_type=QuestionType(request.question_type),
                 )
 
                 # Check the results after generation
@@ -669,7 +669,7 @@ async def batch_generate_questions(
                         else "No questions were generated",
                         metadata={
                             "provider_name": request.provider_name or "openai",
-                            "question_type": request.question_type.value,
+                            "question_type": request.question_type,
                             "language": language.value,
                             "quiz_id": str(request.quiz_id),
                         },
@@ -694,7 +694,7 @@ async def batch_generate_questions(
                         error_message=f"Generation failed: {str(quiz_error)}",
                         metadata={
                             "provider_name": request.provider_name or "openai",
-                            "question_type": request.question_type.value,
+                            "question_type": request.question_type,
                             "quiz_id": str(request.quiz_id),
                             "error_type": type(quiz_error).__name__,
                         },

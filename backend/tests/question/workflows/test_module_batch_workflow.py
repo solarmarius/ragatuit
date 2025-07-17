@@ -350,8 +350,8 @@ async def test_prepare_prompt_workflow_node(test_llm_provider, test_template_man
     result = await workflow.prepare_prompt(state)
 
     assert result.error_message is None
-    assert "Test system prompt" in result.current_prompt
-    assert "Generate questions from:" in result.current_prompt
+    assert "Test system prompt" in result.system_prompt
+    assert "Generate questions from:" in result.user_prompt
 
 
 @pytest.mark.asyncio
@@ -376,7 +376,8 @@ async def test_generate_batch_workflow_node(test_llm_provider, test_template_man
         language=QuizLanguage.ENGLISH,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
-        current_prompt="Generate questions about France",
+        system_prompt="You are an expert educator creating multiple-choice quiz questions.",
+        user_prompt="Generate questions about France",
     )
 
     result = await workflow.generate_batch(state)

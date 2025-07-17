@@ -21,10 +21,19 @@ T = TypeVar("T", bound="BaseQuestionType")
 
 
 class QuestionType(str, Enum):
-    """Enumeration of supported question types."""
+    """
+    Enumeration of supported question types.
+
+    To add a new question type:
+    1. Add enum value here
+    2. Create implementation in types/{type_name}.py
+    3. Register in registry.py
+    4. Add templates in templates/files/
+    See ADDING_NEW_TYPES.md for detailed instructions.
+    """
 
     MULTIPLE_CHOICE = "multiple_choice"
-    FILL_IN_BLANK = "fill_in_blank"
+    FILL_IN_BLANK = "fill_in_blank"  # Not yet implemented - see ADDING_NEW_TYPES.md
 
 
 class QuestionDifficulty(str, Enum):

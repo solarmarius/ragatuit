@@ -90,6 +90,7 @@ class QuestionGenerationService:
                     llm_provider=provider,
                     template_manager=self.template_manager,
                     language=language,
+                    question_type=quiz.question_type,  # Pass quiz's question type
                 )
 
                 results = await processor.process_all_modules(quiz_id, modules_data)

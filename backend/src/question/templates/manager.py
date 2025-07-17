@@ -141,58 +141,28 @@ class TemplateManager:
         if not self._initialized:
             self.initialize()
 
-        # Normalize language (None means English/default)
+        # Normalize language
         if language is None:
             language = QuizLanguage.ENGLISH
         elif isinstance(language, str):
-            # Handle string values
             language = QuizLanguage(language)
 
-        # If no specific template name, use default for question type
+        # If no specific template name, build default name based on question type
         if template_name is None:
-            # Try language-specific template first
+            template_name = f"batch_{question_type.value}"
             if language == QuizLanguage.NORWEGIAN:
-                template_name = f"default_{question_type.value}_no"
-            else:
-                template_name = f"default_{question_type.value}"
+                template_name += "_no"
 
-        # Try exact match first with language consideration
+        # Try to find the template
         if template_name in self._template_cache:
             template = self._template_cache[template_name]
             if template.question_type == question_type:
-                # Check if template language matches requested language
-                template_lang = template.language or QuizLanguage.ENGLISH
-                if template_lang == language:
-                    return template
+                return template
 
-        # Try language-specific template by appending language suffix
-        if language == QuizLanguage.NORWEGIAN and not template_name.endswith("_no"):
-            language_specific_name = f"{template_name}_no"
-            if language_specific_name in self._template_cache:
-                template = self._template_cache[language_specific_name]
-                if template.question_type == question_type:
-                    return template
-
-        # Try finding by question type and language
-        for template in self._template_cache.values():
-            if template.question_type == question_type:
-                template_lang = template.language or QuizLanguage.ENGLISH
-                if template_lang == language and (
-                    template_name is None or template.name == template_name
-                ):
-                    return template
-
-        # Fallback: try English template if Norwegian was requested but not found
-        if language == QuizLanguage.NORWEGIAN:
-            logger.warning(
-                "norwegian_template_not_found_fallback_to_english",
-                question_type=question_type.value,
-                template_name=template_name,
-            )
-            return self.get_template(question_type, template_name, QuizLanguage.ENGLISH)
-
+        # If not found, raise clear error
         raise ValueError(
-            f"No template found for question type {question_type} with name {template_name} and language {language}"
+            f"No template found for question type {question_type.value} "
+            f"with name {template_name} and language {language.value}"
         )
 
     def list_templates(
@@ -365,11 +335,17 @@ class TemplateManager:
         except Exception as e:
             errors.append(f"User prompt template syntax error: {str(e)}")
 
-        # Check for required variables
-        required_vars = ["content"]
-        for var in required_vars:
-            if var not in template.system_prompt and var not in template.user_prompt:
-                errors.append(f"Template must include required variable: {{{{{var}}}}}")
+        # Check for required variables - either "content" or "module_content"
+        # This allows for backward compatibility while supporting new naming
+        content_vars = ["content", "module_content"]
+        has_content_var = any(
+            var in template.system_prompt or var in template.user_prompt
+            for var in content_vars
+        )
+        if not has_content_var:
+            errors.append(
+                "Template must include either {{content}} or {{module_content}} variable"
+            )
 
         return errors
 
