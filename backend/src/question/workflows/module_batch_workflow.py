@@ -274,7 +274,7 @@ class ModuleBatchWorkflow:
                     # Create question object with difficulty at model level
                     question = Question(
                         quiz_id=state.quiz_id,
-                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        question_type=self.question_type,
                         question_data=q_data,  # Now without difficulty field
                         difficulty=difficulty,
                         is_approved=False,
