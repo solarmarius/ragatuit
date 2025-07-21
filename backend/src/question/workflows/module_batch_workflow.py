@@ -43,6 +43,14 @@ class ModuleBatchState(BaseModel):
     correction_attempts: int = 0
     max_corrections: int = Field(default_factory=lambda: settings.MAX_JSON_CORRECTIONS)
 
+    # Validation error state
+    validation_error: bool = False
+    validation_error_details: list[str] = Field(default_factory=list)
+    validation_correction_attempts: int = 0
+    max_validation_corrections: int = Field(
+        default_factory=lambda: settings.MAX_JSON_CORRECTIONS
+    )
+
     # Current LLM interaction
     system_prompt: str = ""
     user_prompt: str = ""
@@ -96,6 +104,9 @@ class ModuleBatchWorkflow:
         workflow.add_node("validate_batch", self.validate_batch)
         workflow.add_node("check_completion", self.check_completion)
         workflow.add_node("prepare_correction", self.prepare_correction)
+        workflow.add_node(
+            "prepare_validation_correction", self.prepare_validation_correction
+        )
         workflow.add_node("retry_generation", self.retry_generation)
         workflow.add_node("save_questions", self.save_questions)
 
@@ -107,14 +118,16 @@ class ModuleBatchWorkflow:
         # Conditional edge from validate_batch
         workflow.add_conditional_edges(
             "validate_batch",
-            self.check_json_error,
+            self.check_error_type,
             {
-                "needs_correction": "prepare_correction",
+                "needs_json_correction": "prepare_correction",
+                "needs_validation_correction": "prepare_validation_correction",
                 "continue": "check_completion",
             },
         )
 
         workflow.add_edge("prepare_correction", "generate_batch")
+        workflow.add_edge("prepare_validation_correction", "generate_batch")
 
         # Conditional edges from check_completion
         workflow.add_conditional_edges(
@@ -250,13 +263,14 @@ class ModuleBatchWorkflow:
             # Parse the response to extract individual questions
             questions_data = self._parse_batch_response(state.raw_response)
 
+            # Track validation errors for correction
+            validation_errors = []
+            questions_before_validation = len(state.generated_questions)
+
             # Validate and create question objects
             for q_data in questions_data:
                 try:
-                    # Validate required fields
-                    self._validate_mcq_structure(q_data)
-
-                    # Extract difficulty from question data (if present)
+                    # Extract difficulty from question data (if present) before validation
                     difficulty_str = q_data.pop("difficulty", None)
                     difficulty = None
                     if difficulty_str:
@@ -271,17 +285,30 @@ class ModuleBatchWorkflow:
                                 difficulty_value=difficulty_str,
                             )
 
-                    # Create question object with difficulty at model level
+                    # Use dynamic validation based on question type
+                    from ..types.registry import get_question_type_registry
+
+                    registry = get_question_type_registry()
+                    question_type_impl = registry.get_question_type(self.question_type)
+                    validated_data = question_type_impl.validate_data(q_data)
+
+                    # Create question object with validated data
                     question = Question(
                         quiz_id=state.quiz_id,
                         question_type=self.question_type,
-                        question_data=q_data,  # Now without difficulty field
+                        question_data=validated_data.model_dump(),
                         difficulty=difficulty,
                         is_approved=False,
                     )
                     state.generated_questions.append(question)
 
                 except Exception as e:
+                    # Collect validation error details for correction
+                    error_detail = f"Question validation failed: {str(e)}"
+                    if q_data:
+                        error_detail += f" | Question data: {q_data}"
+                    validation_errors.append(error_detail)
+
                     logger.warning(
                         "module_batch_question_validation_failed",
                         module_id=state.module_id,
@@ -289,6 +316,22 @@ class ModuleBatchWorkflow:
                         error=str(e),
                     )
                     continue
+
+            # Check if we have validation errors that need correction
+            questions_after_validation = len(state.generated_questions)
+            if (
+                validation_errors
+                and questions_after_validation == questions_before_validation
+            ):
+                # No questions were successfully validated - set validation error state
+                state.validation_error = True
+                state.validation_error_details = validation_errors
+                logger.warning(
+                    "module_batch_validation_errors_detected",
+                    module_id=state.module_id,
+                    validation_errors=len(validation_errors),
+                    total_questions_attempted=len(questions_data),
+                )
 
             logger.info(
                 "module_batch_validation_completed",
@@ -321,10 +364,19 @@ class ModuleBatchWorkflow:
 
         return state
 
-    def check_json_error(self, state: ModuleBatchState) -> str:
-        """Check if we have a JSON parsing error that needs correction."""
+    def check_error_type(self, state: ModuleBatchState) -> str:
+        """Check what type of error we have and determine correction path."""
+        # Check for JSON parsing errors first
         if state.parsing_error and state.correction_attempts < state.max_corrections:
-            return "needs_correction"
+            return "needs_json_correction"
+
+        # Check for validation errors
+        if (
+            state.validation_error
+            and state.validation_correction_attempts < state.max_validation_corrections
+        ):
+            return "needs_validation_correction"
+
         return "continue"
 
     async def check_completion(self, state: ModuleBatchState) -> ModuleBatchState:
@@ -386,6 +438,94 @@ class ModuleBatchWorkflow:
             state.error_message = f"Failed to prepare correction: {str(e)}"
 
         return state
+
+    async def prepare_validation_correction(
+        self, state: ModuleBatchState
+    ) -> ModuleBatchState:
+        """Prepare a corrective prompt for validation errors."""
+        if not state.validation_error or not state.validation_error_details:
+            return state
+
+        try:
+            # Create a focused validation correction prompt
+            error_summary = "\n".join(
+                f"- {error}" for error in state.validation_error_details
+            )
+
+            # Get question type specific examples
+            question_type_examples = self._get_question_type_examples()
+
+            correction_prompt = (
+                "Your previous questions failed validation. Please fix the validation errors and generate valid questions.\n\n"
+                f"Validation Errors:\n{error_summary}\n\n"
+                f"Required format for {self.question_type.value} questions:\n{question_type_examples}\n\n"
+                "Requirements:\n"
+                "1. Return ONLY a valid JSON array of questions\n"
+                "2. Each question must follow the exact format shown above\n"
+                "3. Ensure all required fields are present and correctly formatted\n"
+                "4. No markdown code blocks or explanatory text\n"
+                f"5. Generate exactly {state.target_question_count - len(state.generated_questions)} questions\n\n"
+                "Please provide the corrected questions in valid JSON format:"
+            )
+
+            state.user_prompt = correction_prompt
+
+            # Increment validation correction attempts
+            state.validation_correction_attempts += 1
+
+            # Reset error state for retry
+            state.validation_error = False
+            state.validation_error_details = []
+            state.error_message = None
+            state.raw_response = ""
+
+            logger.info(
+                "module_batch_validation_correction_prepared",
+                module_id=state.module_id,
+                correction_attempt=state.validation_correction_attempts,
+                max_corrections=state.max_validation_corrections,
+            )
+
+        except Exception as e:
+            logger.error(
+                "module_batch_validation_correction_preparation_failed",
+                module_id=state.module_id,
+                error=str(e),
+                exc_info=True,
+            )
+            state.error_message = f"Failed to prepare validation correction: {str(e)}"
+
+        return state
+
+    def _get_question_type_examples(self) -> str:
+        """Get format examples for the current question type."""
+        if self.question_type == QuestionType.MULTIPLE_CHOICE:
+            return """Example:
+{
+  "question_text": "What is the capital of France?",
+  "option_a": "London",
+  "option_b": "Berlin",
+  "option_c": "Paris",
+  "option_d": "Madrid",
+  "correct_answer": "C",
+  "explanation": "Paris is the capital and largest city of France."
+}"""
+        elif self.question_type == QuestionType.FILL_IN_BLANK:
+            return """Example:
+{
+  "question_text": "The capital of France is ___.",
+  "blanks": [
+    {
+      "position": 1,
+      "correct_answer": "Paris",
+      "answer_variations": ["paris", "PARIS"],
+      "case_sensitive": false
+    }
+  ],
+  "explanation": "Paris is the capital and largest city of France."
+}"""
+        else:
+            return "Please follow the correct format for this question type."
 
     def should_retry(self, state: ModuleBatchState) -> str:
         """Determine if we should retry generation."""
@@ -497,43 +637,6 @@ class ModuleBatchWorkflow:
                 exc_info=True,
             )
             raise
-
-    def _validate_mcq_structure(self, question_data: dict[str, Any]) -> None:
-        """
-        Validate MCQ question data structure.
-
-        Args:
-            question_data: Question data to validate
-
-        Raises:
-            ValueError: If data structure is invalid
-        """
-        required_fields = [
-            "question_text",
-            "option_a",
-            "option_b",
-            "option_c",
-            "option_d",
-            "correct_answer",
-        ]
-
-        for field in required_fields:
-            if field not in question_data:
-                raise ValueError(f"Missing required field: {field}")
-
-        # Validate correct answer format
-        if question_data["correct_answer"] not in ["A", "B", "C", "D"]:
-            raise ValueError(
-                f"Invalid correct answer: {question_data['correct_answer']}"
-            )
-
-        # Validate text lengths
-        if len(question_data["question_text"]) < 10:
-            raise ValueError("Question text too short")
-
-        for option_key in ["option_a", "option_b", "option_c", "option_d"]:
-            if len(question_data[option_key]) < 1:
-                raise ValueError(f"Option {option_key} is empty")
 
     async def process_module(
         self,

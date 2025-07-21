@@ -72,6 +72,52 @@ def test_create_quiz_with_defaults(session: Session):
     assert quiz.llm_temperature == 1.0  # Default
 
 
+def test_create_quiz_with_question_type_persistence(session: Session):
+    """Test that question_type field is properly persisted during quiz creation."""
+    from src.question.types import QuestionType, QuizLanguage
+    from src.quiz.schemas import ModuleSelection, QuizCreate
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    # Test with MULTIPLE_CHOICE
+    mcq_quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="MCQ Test Course",
+        selected_modules={"456": ModuleSelection(name="Module 1", question_count=10)},
+        title="MCQ Quiz",
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        language=QuizLanguage.ENGLISH,
+    )
+
+    mcq_quiz = create_quiz(session, mcq_quiz_data, user.id)
+
+    # Verify MCQ quiz has correct question type
+    assert mcq_quiz.question_type == QuestionType.MULTIPLE_CHOICE
+    assert mcq_quiz.language == QuizLanguage.ENGLISH
+
+    # Test with FILL_IN_BLANK
+    fib_quiz_data = QuizCreate(
+        canvas_course_id=124,
+        canvas_course_name="FIB Test Course",
+        selected_modules={"789": ModuleSelection(name="Module 2", question_count=15)},
+        title="Fill-in-Blank Quiz",
+        question_type=QuestionType.FILL_IN_BLANK,
+        language=QuizLanguage.NORWEGIAN,
+    )
+
+    fib_quiz = create_quiz(session, fib_quiz_data, user.id)
+
+    # Verify FIB quiz has correct question type
+    assert fib_quiz.question_type == QuestionType.FILL_IN_BLANK
+    assert fib_quiz.language == QuizLanguage.NORWEGIAN
+
+    # Verify both quizzes are persisted correctly
+    assert mcq_quiz.id != fib_quiz.id
+    assert mcq_quiz.question_type != fib_quiz.question_type
+
+
 def test_create_quiz_module_id_conversion(session: Session):
     """Test that module IDs are handled correctly as strings."""
     from src.quiz.schemas import ModuleSelection, QuizCreate

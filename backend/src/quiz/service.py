@@ -60,6 +60,7 @@ def create_quiz(session: Session, quiz_create: QuizCreate, owner_id: UUID) -> Qu
         llm_model=quiz_create.llm_model,
         llm_temperature=quiz_create.llm_temperature,
         language=quiz_create.language,
+        question_type=quiz_create.question_type,
         updated_at=datetime.now(timezone.utc),
     )
 
