@@ -1452,6 +1452,44 @@ async def create_quiz(
     return new_quiz
 
 
+@app.delete("/api/quiz/v1/courses/{course_id}/quizzes/{quiz_id}")
+async def delete_quiz(
+    course_id: int,
+    quiz_id: str,
+    authorization: str = Header(None),
+):
+    """Delete a quiz"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Authorization header required")
+
+    validate_token(authorization)
+
+    # Validate course access
+    if course_id != 37823 and course_id != 37825:
+        raise HTTPException(status_code=403, detail="Unauthorized access to course")
+
+    # Find the quiz to delete
+    quiz_index = None
+    for i, quiz in enumerate(mock_quizzes):
+        if quiz["id"] == quiz_id and quiz["course_id"] == course_id:
+            quiz_index = i
+            break
+
+    if quiz_index is None:
+        raise HTTPException(status_code=404, detail="Quiz not found")
+
+    # Remove the quiz from mock_quizzes
+    del mock_quizzes[quiz_index]
+
+    # Also remove any quiz items associated with this quiz
+    global mock_quiz_items
+    mock_quiz_items = [
+        item for item in mock_quiz_items if str(item["quiz_id"]) != quiz_id
+    ]
+
+    return {"message": "Quiz deleted successfully", "deleted_quiz_id": quiz_id}
+
+
 @app.post("/api/quiz/v1/courses/{course_id}/quizzes/{quiz_id}/items")
 async def create_quiz_item(
     course_id: int,
