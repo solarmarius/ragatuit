@@ -8,6 +8,7 @@ import structlog
 from pydantic import (
     AnyUrl,
     BeforeValidator,
+    Field,
     HttpUrl,
     PostgresDsn,
     computed_field,
@@ -102,6 +103,28 @@ class Settings(BaseSettings):
     )
     CONTENT_LENGTH_THRESHOLD: int = (
         100  # Minimum content length for question generation
+    )
+
+    # RAGAS Validation Settings
+    RAGAS_ENABLED: bool = Field(
+        default=True, description="Enable RAGAS validation for generated questions"
+    )
+    RAGAS_FAITHFULNESS_THRESHOLD: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=1.0,
+        description="Minimum faithfulness score for question validation",
+    )
+    RAGAS_SEMANTIC_SIMILARITY_THRESHOLD: float = Field(
+        default=0.6,
+        ge=0.0,
+        le=1.0,
+        description="Minimum semantic similarity score for question validation",
+    )
+    MAX_VALIDATION_RETRIES: int = Field(
+        default=3,
+        ge=0,
+        description="Maximum number of validation retry attempts per question batch",
     )
 
     @computed_field  # type: ignore[prop-decorator]
