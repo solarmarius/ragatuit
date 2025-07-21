@@ -1413,18 +1413,26 @@ async def create_quiz(
     if course_id != 37823 and course_id != 37825:
         raise HTTPException(status_code=403, detail="Unauthorized access to course")
 
+    # Validate quiz data
+    if not quiz_data or "quiz" not in quiz_data:
+        raise HTTPException(status_code=400, detail="Quiz data is required")
+
+    quiz_info = quiz_data["quiz"]
+    if "title" not in quiz_info or not quiz_info["title"]:
+        raise HTTPException(status_code=400, detail="quiz[title] is a required field")
+
     # Create quiz object
     new_quiz = {
-        "id": str(len(mock_quizzes) + 10000),  # 5-digit int starting from 10000
+        "id": str(len(mock_quizzes) + 10000),
         "course_id": course_id,
-        "title": quiz_data.get("title", "Untitled Quiz"),
-        "points_possible": quiz_data.get("points_possible", 0),
-        "due_at": quiz_data.get("due_at"),
-        "lock_at": quiz_data.get("lock_at"),
-        "unlock_at": quiz_data.get("unlock_at"),
+        "title": quiz_info.get("title", "Untitled Quiz"),
+        "points_possible": quiz_info.get("points_possible", 0),
+        "due_at": quiz_info.get("due_at"),
+        "lock_at": quiz_info.get("lock_at"),
+        "unlock_at": quiz_info.get("unlock_at"),
         "published": False,
         "quiz_type": "assignment",
-        "quiz_settings": quiz_data.get(
+        "quiz_settings": quiz_info.get(
             "quiz_settings",
             {
                 "shuffle_questions": True,
@@ -1468,89 +1476,80 @@ async def create_quiz_item(
     item = item_data.get("item", {})
     entry = item.get("entry", {})
 
-    # Validate required fields
-    if not item.get("entry_type"):
-        raise HTTPException(status_code=400, detail="item[entry_type] is required")
-
-    if not entry.get("item_body"):
-        raise HTTPException(
-            status_code=400, detail="item[entry][item_body] is required"
-        )
-
-    if not entry.get("interaction_type_slug"):
-        raise HTTPException(
-            status_code=400, detail="item[entry][interaction_type_slug] is required"
-        )
-
-    if not entry.get("interaction_data"):
-        raise HTTPException(
-            status_code=400, detail="item[entry][interaction_data] is required"
-        )
-
-    if not entry.get("scoring_data"):
-        raise HTTPException(
-            status_code=400, detail="item[entry][scoring_data] is required"
-        )
-
-    if not entry.get("scoring_algorithm"):
-        raise HTTPException(
-            status_code=400, detail="item[entry][scoring_algorithm] is required"
-        )
-
-    # Validate interaction_type_slug
-    valid_interaction_types = [
-        "multi-answer",
-        "matching",
-        "categorization",
-        "file-upload",
-        "formula",
-        "ordering",
-        "rich-fill-blank",
-        "hot-spot",
-        "choice",
-        "numeric",
-        "True-False",
-        "essay",
+    # Basic field validation
+    required_fields = [
+        "entry_type",
+        "item_body",
+        "interaction_type_slug",
+        "interaction_data",
+        "scoring_data",
+        "scoring_algorithm",
     ]
+    for field in required_fields:
+        if field not in entry:
+            raise HTTPException(
+                status_code=400, detail=f"item[entry][{field}] is required"
+            )
 
-    if entry.get("interaction_type_slug") not in valid_interaction_types:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid interaction_type_slug. Must be one of: {', '.join(valid_interaction_types)}",
-        )
+    # Interaction-specific validation
+    interaction_type = entry.get("interaction_type_slug")
+    interaction_data = entry.get("interaction_data", {})
+    scoring_data = entry.get("scoring_data", [])
 
-    # Validate calculator_type if provided
-    if entry.get("calculator_type") and entry.get("calculator_type") not in [
-        "none",
-        "basic",
-        "scientific",
-    ]:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid calculator_type. Must be one of: none, basic, scientific",
-        )
+    if interaction_type == "choice":
+        if "choices" not in interaction_data or not isinstance(
+            interaction_data["choices"], list
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="item[entry][interaction_data][choices] must be a list",
+            )
+        for choice in interaction_data["choices"]:
+            if "id" not in choice or "item_body" not in choice:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Each choice must have an 'id' and 'item_body'",
+                )
+        if not isinstance(scoring_data, list) or not scoring_data:
+            raise HTTPException(
+                status_code=400, detail="item[entry][scoring_data] is required"
+            )
 
-    # Validate points_possible if provided
-    points_possible = item.get("points_possible")
-    if points_possible is not None and points_possible <= 0:
-        raise HTTPException(status_code=400, detail="points_possible must be positive")
+    elif interaction_type == "rich-fill-blank":
+        if "blanks" not in interaction_data or not isinstance(
+            interaction_data["blanks"], list
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="item[entry][interaction_data][blanks] must be a list",
+            )
+        for blank in interaction_data["blanks"]:
+            if "id" not in blank or "blank_name" not in blank:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Each blank must have an 'id' and 'blank_name'",
+                )
+        if not isinstance(scoring_data, list) or not scoring_data:
+            raise HTTPException(
+                status_code=400, detail="item[entry][scoring_data] is required"
+            )
 
     # Create the quiz item
     new_quiz_item = {
-        "id": str(len(mock_quiz_items) + 20000),  # 5-digit int starting from 20000
+        "id": str(len(mock_quiz_items) + 20000),
         "quiz_id": quiz_id,
         "position": item.get("position", len(mock_quiz_items) + 1),
-        "points_possible": points_possible or 1,
+        "points_possible": item.get("points_possible", 1),
         "entry_type": item.get("entry_type"),
         "entry": {
             "title": entry.get("title", "Question"),
             "item_body": entry.get("item_body"),
             "calculator_type": entry.get("calculator_type", "none"),
             "feedback": entry.get("feedback", {}),
-            "interaction_type_slug": entry.get("interaction_type_slug"),
-            "interaction_data": entry.get("interaction_data"),
+            "interaction_type_slug": interaction_type,
+            "interaction_data": interaction_data,
             "properties": entry.get("properties", {}),
-            "scoring_data": entry.get("scoring_data"),
+            "scoring_data": scoring_data,
             "answer_feedback": entry.get("answer_feedback", {}),
             "scoring_algorithm": entry.get("scoring_algorithm"),
         },
