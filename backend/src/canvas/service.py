@@ -561,6 +561,85 @@ def convert_question_to_canvas_format(
     raise ValueError(f"Unsupported question type for Canvas export: {question_type}")
 
 
+@retry_on_failure(max_attempts=2, initial_delay=1.0)
+async def delete_canvas_quiz(canvas_token: str, course_id: int, quiz_id: str) -> bool:
+    """
+    Delete a Canvas quiz by ID.
+
+    Pure function for Canvas API quiz deletion, used for rollback scenarios
+    when question export fails.
+
+    Args:
+        canvas_token: Canvas API authentication token
+        course_id: Canvas course ID
+        quiz_id: Canvas quiz ID to delete
+
+    Returns:
+        True if deletion succeeded, False otherwise
+
+    Raises:
+        ExternalServiceError: If Canvas API call fails with non-404 error
+    """
+    logger.info(
+        "canvas_quiz_deletion_started",
+        course_id=course_id,
+        canvas_quiz_id=quiz_id,
+    )
+
+    url_builder = _get_canvas_url_builder()
+    headers = _get_canvas_headers(canvas_token)
+
+    try:
+        async with httpx.AsyncClient(timeout=settings.CANVAS_API_TIMEOUT) as client:
+            response = await client.delete(
+                url_builder.quiz_api_quizzes(course_id, quiz_id),
+                headers=headers,
+            )
+            response.raise_for_status()
+
+            logger.info(
+                "canvas_quiz_deletion_completed",
+                course_id=course_id,
+                canvas_quiz_id=quiz_id,
+            )
+
+            return True
+
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            # Quiz already deleted or doesn't exist
+            logger.warning(
+                "canvas_quiz_already_deleted",
+                course_id=course_id,
+                canvas_quiz_id=quiz_id,
+            )
+            return True  # Consider this successful
+        else:
+            logger.error(
+                "canvas_quiz_deletion_failed",
+                course_id=course_id,
+                canvas_quiz_id=quiz_id,
+                status_code=e.response.status_code,
+                response_text=e.response.text,
+            )
+            raise ExternalServiceError(
+                "canvas",
+                f"Failed to delete Canvas quiz: {quiz_id}",
+                e.response.status_code,
+            )
+    except Exception as e:
+        logger.error(
+            "canvas_quiz_deletion_error",
+            course_id=course_id,
+            canvas_quiz_id=quiz_id,
+            error=str(e),
+        )
+        raise ExternalServiceError(
+            "canvas",
+            f"Failed to delete Canvas quiz: {quiz_id} - {str(e)}",
+        )
+
+
 # Re-export for public API
 __all__ = [
     "fetch_canvas_module_items",
@@ -570,4 +649,5 @@ __all__ = [
     "create_canvas_quiz",
     "create_canvas_quiz_items",
     "convert_question_to_canvas_format",
+    "delete_canvas_quiz",
 ]

@@ -302,24 +302,40 @@ async def _execute_generation_workflow(
 
 
 async def _execute_export_workflow(
-    _quiz_id: UUID,
+    quiz_id: UUID,
     canvas_token: str,
     quiz_creator: QuizCreatorFunc,
     question_exporter: QuestionExporterFunc,
     export_data: dict[str, Any],
 ) -> dict[str, Any]:
     """
-    Execute the Canvas export workflow.
+    Execute the Canvas export workflow with all-or-nothing approach.
+    Either all questions export successfully or the entire quiz is rolled back.
 
     Returns:
-        Export result dictionary
+        Export result dictionary with success status
     """
+    total_questions = len(export_data["questions"])
+
+    logger.info(
+        "canvas_export_workflow_started",
+        quiz_id=str(quiz_id),
+        total_questions=total_questions,
+        course_id=export_data["course_id"],
+    )
+
     # Create Canvas quiz using injected function
     canvas_quiz = await quiz_creator(
         canvas_token,
         export_data["course_id"],
         export_data["title"],
-        len(export_data["questions"]),
+        total_questions,
+    )
+
+    logger.info(
+        "canvas_quiz_created_for_export",
+        quiz_id=str(quiz_id),
+        canvas_quiz_id=canvas_quiz["id"],
     )
 
     # Export questions using injected function
@@ -330,14 +346,58 @@ async def _execute_export_workflow(
         export_data["questions"],
     )
 
+    # Analyze export results - ALL questions must succeed
     successful_exports = len([r for r in exported_items if r.get("success")])
-    return {
-        "success": True,
-        "canvas_quiz_id": canvas_quiz["id"],
-        "exported_questions": successful_exports,
-        "message": "Quiz successfully exported to Canvas",
-        "exported_items": exported_items,
-    }
+    failed_exports = total_questions - successful_exports
+
+    logger.info(
+        "canvas_export_results_analyzed",
+        quiz_id=str(quiz_id),
+        canvas_quiz_id=canvas_quiz["id"],
+        total_questions=total_questions,
+        successful_exports=successful_exports,
+        failed_exports=failed_exports,
+    )
+
+    # All-or-nothing: Either all questions succeed or we rollback
+    if successful_exports == total_questions:
+        # Complete success - all questions exported
+        logger.info(
+            "canvas_export_complete_success",
+            quiz_id=str(quiz_id),
+            canvas_quiz_id=canvas_quiz["id"],
+            message="All questions exported successfully",
+        )
+
+        return {
+            "success": True,
+            "canvas_quiz_id": canvas_quiz["id"],
+            "exported_questions": successful_exports,
+            "total_questions": total_questions,
+            "should_rollback": False,
+            "message": "Quiz successfully exported to Canvas",
+            "exported_items": exported_items,
+        }
+    else:
+        # Any failure - rollback the entire quiz
+        logger.error(
+            "canvas_export_failure_rollback_needed",
+            quiz_id=str(quiz_id),
+            canvas_quiz_id=canvas_quiz["id"],
+            successful_exports=successful_exports,
+            failed_exports=failed_exports,
+            message=f"Export failed: {failed_exports} out of {total_questions} questions failed to export",
+        )
+
+        return {
+            "success": False,
+            "canvas_quiz_id": canvas_quiz["id"],
+            "exported_questions": successful_exports,
+            "total_questions": total_questions,
+            "should_rollback": True,
+            "message": f"Export failed: {failed_exports} out of {total_questions} questions failed to export. Quiz will be removed from Canvas.",
+            "exported_items": exported_items,
+        }
 
 
 @timeout_operation(OPERATION_TIMEOUTS["content_extraction"])
@@ -707,49 +767,98 @@ async def orchestrate_quiz_export_to_canvas(
         workflow_result = await _execute_export_workflow(
             quiz_id, canvas_token, quiz_creator, question_exporter, export_data
         )
-        canvas_quiz = {"id": workflow_result["canvas_quiz_id"]}
+        canvas_quiz_id = workflow_result["canvas_quiz_id"]
         exported_items = workflow_result["exported_items"]
+        export_success = workflow_result["success"]
 
-        # === Transaction 2: Save Results ===
-        async def _save_export_results(session: Any, quiz_id: UUID) -> dict[str, Any]:
-            """Save the export results to the quiz."""
-            from src.question import service as question_service
+        # === Handle Export Results ===
+        if export_success:
+            # === Success: Save Results ===
+            async def _save_export_success_results(
+                session: Any, quiz_id: UUID
+            ) -> dict[str, Any]:
+                """Save the successful export results to the quiz."""
+                from src.question import service as question_service
 
-            # Update quiz status
-            from .service import update_quiz_status
+                from .service import update_quiz_status
 
-            await update_quiz_status(
-                session,
+                await update_quiz_status(
+                    session,
+                    quiz_id,
+                    QuizStatus.PUBLISHED,
+                    canvas_quiz_id=canvas_quiz_id,
+                )
+
+                # Update individual question Canvas IDs
+                await question_service.update_question_canvas_ids(
+                    session, export_data["questions"], exported_items
+                )
+
+                return {
+                    "success": True,
+                    "canvas_quiz_id": canvas_quiz_id,
+                    "exported_questions": workflow_result["exported_questions"],
+                    "message": workflow_result["message"],
+                }
+
+            result: dict[str, Any] = await execute_in_transaction(
+                _save_export_success_results,
                 quiz_id,
-                QuizStatus.PUBLISHED,
-                canvas_quiz_id=canvas_quiz["id"],
+                isolation_level="REPEATABLE READ",
+                retries=3,
             )
 
-            # Update individual question Canvas IDs
-            await question_service.update_question_canvas_ids(
-                session, export_data["questions"], exported_items
+            logger.info(
+                "quiz_export_orchestration_completed_success",
+                quiz_id=str(quiz_id),
+                canvas_quiz_id=canvas_quiz_id,
+                exported_questions=result["exported_questions"],
             )
 
-            successful_exports = len([r for r in exported_items if r.get("success")])
-            return {
-                "success": True,
-                "canvas_quiz_id": canvas_quiz["id"],
-                "exported_questions": successful_exports,
-                "message": "Quiz successfully exported to Canvas",
-            }
+            return result
 
-        result: dict[str, Any] = await execute_in_transaction(
-            _save_export_results, quiz_id, isolation_level="REPEATABLE READ", retries=3
-        )
+        else:
+            # === Failure: Rollback Canvas Quiz ===
+            logger.warning(
+                "quiz_export_initiating_rollback",
+                quiz_id=str(quiz_id),
+                canvas_quiz_id=canvas_quiz_id,
+                message="Export failed, rolling back Canvas quiz",
+            )
 
-        logger.info(
-            "quiz_export_orchestration_completed",
-            quiz_id=str(quiz_id),
-            canvas_quiz_id=canvas_quiz["id"],
-            exported_questions=result["exported_questions"],
-        )
+            try:
+                from src.canvas.service import delete_canvas_quiz
 
-        return result
+                rollback_success = await delete_canvas_quiz(
+                    canvas_token, export_data["course_id"], canvas_quiz_id
+                )
+
+                if rollback_success:
+                    logger.info(
+                        "quiz_export_rollback_completed",
+                        quiz_id=str(quiz_id),
+                        canvas_quiz_id=canvas_quiz_id,
+                        message="Canvas quiz deleted after export failure",
+                    )
+                else:
+                    logger.warning(
+                        "quiz_export_rollback_failed",
+                        quiz_id=str(quiz_id),
+                        canvas_quiz_id=canvas_quiz_id,
+                        message="Failed to delete Canvas quiz during rollback",
+                    )
+            except Exception as rollback_error:
+                logger.error(
+                    "quiz_export_rollback_error",
+                    quiz_id=str(quiz_id),
+                    canvas_quiz_id=canvas_quiz_id,
+                    error=str(rollback_error),
+                    message="Exception occurred during Canvas quiz rollback",
+                )
+                # Continue with failure handling even if rollback failed
+
+            # Raise exception to trigger failure handling
+            raise RuntimeError(workflow_result["message"])
 
     except Exception as e:
         # === Transaction 3: Mark as Failed ===
