@@ -475,6 +475,59 @@ Follow existing patterns:
 - Add validation for user inputs
 - Write tests for new functionality
 
+## Refactoring for Scalability
+
+### Problem
+
+The initial implementation of the question export functionality in `question/service.py` contained a hardcoded `if/elif/else` block to handle different question types. This approach was not scalable, as it would require modifying the core service logic each time a new question type was added.
+
+### Solution
+
+To address this, the export logic was refactored to leverage the existing polymorphic architecture and the `QuestionTypeRegistry`.
+
+1.  **New `format_for_export` Method**: A new abstract method, `format_for_export`, was added to the `BaseQuestionType` interface. This method is responsible for converting a question's data into a generic dictionary format suitable for export.
+
+    ```python
+    # backend/src/question/types/base.py
+
+    class BaseQuestionType(ABC):
+        # ... existing methods
+        @abstractmethod
+        def format_for_export(self, data: BaseQuestionData) -> dict[str, Any]:
+            """Format question data for generic export."""
+            pass
+    ```
+
+2.  **Concrete Implementations**: The `FillInBlankQuestionType` and `MultipleChoiceQuestionType` classes now provide concrete implementations of the `format_for_export` method, encapsulating their specific formatting logic.
+
+    ```python
+    # backend/src/question/types/fill_in_blank.py
+
+    class FillInBlankQuestionType(BaseQuestionType):
+        # ...
+        def format_for_export(self, data: BaseQuestionData) -> dict[str, Any]:
+            # ... implementation ...
+    ```
+
+3.  **Dynamic Dispatch**: The `prepare_questions_for_export` function in `question/service.py` was refactored to use the `QuestionTypeRegistry` to dynamically call the appropriate `format_for_export` method for each question. This eliminates the conditional block and allows the system to support any registered question type without further modification.
+
+    ```python
+    # backend/src/question/service.py (Refactored)
+
+    async def prepare_questions_for_export(quiz_id: UUID) -> list[dict[str, Any]]:
+        # ...
+        for question in approved_questions:
+            try:
+                question_impl = question_registry.get_question_type(question.question_type)
+                typed_data = question.get_typed_data(question_registry)
+                exported_data = question_impl.format_for_export(typed_data)
+                # ...
+            except ValueError:
+                # ...
+    ```
+
+This refactoring improves the system's design by decoupling the service layer from the specific question type implementations, resulting in a more modular, maintainable, and scalable architecture.
+
 ## Conclusion
 
 The Fill-in-Blank question type implementation provides a complete, production-ready solution that integrates seamlessly with Rag@UiT's existing architecture. The implementation follows established patterns, includes comprehensive testing, and supports both English and Norwegian question generation with Canvas LMS integration.
