@@ -233,3 +233,35 @@ class FillInBlankQuestionType(BaseQuestionType):
             "scoring_data": scoring_data,
             "points_possible": len(data.blanks),
         }
+
+    def format_for_export(self, data: BaseQuestionData) -> dict[str, Any]:
+        """
+        Format fill-in-blank data for generic export.
+
+        Args:
+            data: Validated fill-in-blank data
+
+        Returns:
+            Dictionary with fill-in-blank data for export
+        """
+        if not isinstance(data, FillInBlankData):
+            raise ValueError("Expected FillInBlankData")
+
+        # Convert blanks to a simple dict format for export
+        blanks_data = []
+        for blank in data.blanks:
+            blank_dict = {
+                "position": blank.position,
+                "correct_answer": blank.correct_answer,
+                "case_sensitive": blank.case_sensitive,
+            }
+            if blank.answer_variations:
+                blank_dict["answer_variations"] = blank.answer_variations
+            blanks_data.append(blank_dict)
+
+        return {
+            "question_text": data.question_text,
+            "blanks": blanks_data,
+            "explanation": data.explanation,
+            "question_type": self.question_type.value,
+        }

@@ -13,7 +13,6 @@ from src.config import get_logger
 from .formatters import format_questions_batch
 from .types import (
     Question,
-    # QuestionDifficulty,  # Unused
     QuestionType,
     get_question_type_registry,
 )
@@ -360,8 +359,7 @@ async def prepare_questions_for_export(quiz_id: UUID) -> list[dict[str, Any]]:
         List of question data dictionaries ready for export
     """
     from src.database import get_async_session
-    from src.question.types import QuestionType, get_question_type_registry
-    from src.question.types.mcq import MultipleChoiceData
+    from src.question.types import get_question_type_registry
 
     async with get_async_session() as async_session:
         # Load approved questions with all needed data
@@ -378,54 +376,22 @@ async def prepare_questions_for_export(quiz_id: UUID) -> list[dict[str, Any]]:
         question_data = []
 
         for question in approved_questions:
-            if question.question_type == QuestionType.MULTIPLE_CHOICE:
+            try:
+                question_impl = question_registry.get_question_type(
+                    question.question_type
+                )
                 typed_data = question.get_typed_data(question_registry)
-                if isinstance(typed_data, MultipleChoiceData):
-                    question_data.append(
-                        {
-                            "id": question.id,
-                            "question_text": typed_data.question_text,
-                            "option_a": typed_data.option_a,
-                            "option_b": typed_data.option_b,
-                            "option_c": typed_data.option_c,
-                            "option_d": typed_data.option_d,
-                            "correct_answer": typed_data.correct_answer,
-                            "question_type": "multiple_choice",
-                        }
-                    )
-            elif question.question_type == QuestionType.FILL_IN_BLANK:
-                typed_data = question.get_typed_data(question_registry)
-                from src.question.types.fill_in_blank import FillInBlankData
-
-                if isinstance(typed_data, FillInBlankData):
-                    # Convert blanks to a simple dict format for Canvas export
-                    blanks_data = []
-                    for blank in typed_data.blanks:
-                        blank_dict = {
-                            "position": blank.position,
-                            "correct_answer": blank.correct_answer,
-                            "case_sensitive": blank.case_sensitive,
-                        }
-                        if blank.answer_variations:
-                            blank_dict["answer_variations"] = blank.answer_variations
-                        blanks_data.append(blank_dict)
-
-                    question_data.append(
-                        {
-                            "id": question.id,
-                            "question_text": typed_data.question_text,
-                            "blanks": blanks_data,
-                            "explanation": typed_data.explanation,
-                            "question_type": "fill_in_blank",
-                        }
-                    )
-            else:
+                exported_data = question_impl.format_for_export(typed_data)
+                exported_data["id"] = question.id
+                question_data.append(exported_data)
+            except ValueError as e:
                 # Log unsupported question types
                 logger.warning(
                     "unsupported_question_type_for_export",
                     quiz_id=str(quiz_id),
                     question_id=str(question.id),
                     question_type=question.question_type.value,
+                    error=str(e),
                 )
 
         logger.debug(

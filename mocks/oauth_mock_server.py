@@ -1583,6 +1583,8 @@ async def debug_state():
         "access_tokens": list(access_tokens.keys()),
         "refresh_tokens": list(refresh_tokens.keys()),
         "mock_users": list(mock_users.keys()),
+        "mock_quiz_items": mock_quiz_items,
+        "mock_quizzes": mock_quizzes,
     }
 
 

@@ -130,6 +130,30 @@ class MultipleChoiceQuestionType(BaseQuestionType):
             "points_possible": 1,
         }
 
+    def format_for_export(self, data: BaseQuestionData) -> dict[str, Any]:
+        """
+        Format MCQ data for generic export.
+
+        Args:
+            data: Validated MCQ data
+
+        Returns:
+            Dictionary with MCQ data for export
+        """
+        if not isinstance(data, MultipleChoiceData):
+            raise ValueError("Expected MultipleChoiceData")
+
+        return {
+            "question_text": data.question_text,
+            "option_a": data.option_a,
+            "option_b": data.option_b,
+            "option_c": data.option_c,
+            "option_d": data.option_d,
+            "correct_answer": data.correct_answer,
+            "explanation": data.explanation,
+            "question_type": self.question_type.value,
+        }
+
     def migrate_from_legacy(self, legacy_question: Any) -> MultipleChoiceData:
         """
         Migrate from legacy Question model to new MCQ data format.
