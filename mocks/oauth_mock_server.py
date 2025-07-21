@@ -1510,7 +1510,7 @@ async def create_quiz_item(
                     status_code=400,
                     detail="Each choice must have an 'id' and 'item_body'",
                 )
-        if not isinstance(scoring_data, list) or not scoring_data:
+        if not scoring_data:
             raise HTTPException(
                 status_code=400, detail="item[entry][scoring_data] is required"
             )
@@ -1524,12 +1524,12 @@ async def create_quiz_item(
                 detail="item[entry][interaction_data][blanks] must be a list",
             )
         for blank in interaction_data["blanks"]:
-            if "id" not in blank or "blank_name" not in blank:
+            if "id" not in blank:
                 raise HTTPException(
                     status_code=400,
-                    detail="Each blank must have an 'id' and 'blank_name'",
+                    detail="Each blank must have an 'id'",
                 )
-        if not isinstance(scoring_data, list) or not scoring_data:
+        if not scoring_data:
             raise HTTPException(
                 status_code=400, detail="item[entry][scoring_data] is required"
             )

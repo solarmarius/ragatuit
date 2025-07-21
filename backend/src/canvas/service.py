@@ -241,15 +241,15 @@ async def create_canvas_quiz(
     headers["Content-Type"] = "application/json"
 
     quiz_data = {
-        "title": title,
-        "points_possible": total_points,
-        "quiz_settings": {
-            "shuffle_questions": True,
-            "shuffle_answers": True,
-            "time_limit": 60,  # 60 minutes default
-            "multiple_attempts": False,
-            "scoring_policy": "keep_highest",
-        },
+        "quiz": {
+            "title": title,
+            "points_possible": total_points,
+            "quiz_settings": {
+                "shuffle_questions": False,
+                "shuffle_answers": False,
+                "has_time_limit": False,
+            },
+        }
     }
 
     try:
@@ -427,10 +427,8 @@ def convert_question_to_canvas_format(
         Canvas quiz item data structure
     """
     import uuid
-    from datetime import datetime, timezone
 
     question_type = question.get("question_type", "multiple_choice")
-    item_id = f"item_{question['id']}"
 
     if question_type == "fill_in_blank":
         # Handle Fill-in-Blank questions using Canvas Rich Fill In The Blank format
@@ -499,21 +497,16 @@ def convert_question_to_canvas_format(
 
         return {
             "item": {
-                "id": item_id,
                 "entry_type": "Item",
-                "entry_id": item_id,
-                "position": position,
-                "item_type": "Question",
-                "properties": {},
                 "points_possible": len(question["blanks"]),  # 1 point per blank
+                "position": position,
                 "entry": {
+                    "entry_type": "Item",
                     "interaction_type_slug": "rich-fill-blank",
                     "item_body": f"<p>{question['question_text']}</p>",
                     "interaction_data": interaction_data,
                     "scoring_algorithm": "Equivalence",
                     "scoring_data": scoring_data,
-                    "created_at": datetime.now(timezone.utc).isoformat(),
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
                 },
             }
         }
@@ -542,21 +535,16 @@ def convert_question_to_canvas_format(
 
         return {
             "item": {
-                "id": item_id,
                 "entry_type": "Item",
-                "entry_id": item_id,
-                "position": position,
-                "item_type": "Question",
-                "properties": {"shuffle_answers": True},
                 "points_possible": 1,  # 1 point per question
+                "position": position,
                 "entry": {
+                    "entry_type": "Item",
                     "interaction_type_slug": "choice",
                     "item_body": f"<p>{question['question_text']}</p>",
                     "interaction_data": {"choices": choices},
                     "scoring_algorithm": "Equivalence",
                     "scoring_data": {"value": f"choice_{correct_index + 1}"},
-                    "created_at": datetime.now(timezone.utc).isoformat(),
-                    "updated_at": datetime.now(timezone.utc).isoformat(),
                 },
             }
         }
