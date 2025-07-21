@@ -11,6 +11,8 @@ from pydantic import BaseModel, Field
 from src.config import get_logger, settings
 from src.database import get_async_session
 
+from ...validation.refinement import QuestionRefinementService
+from ...validation.service import ValidationService
 from ..providers import BaseLLMProvider, LLMMessage
 from ..templates.manager import TemplateManager, get_template_manager
 from ..types import GenerationParameters, Question, QuestionType, QuizLanguage
@@ -59,6 +61,22 @@ class ModuleBatchState(BaseModel):
     # Error handling
     error_message: str | None = None
 
+    # RAGAS validation state
+    questions_pending_validation: list[Question] = Field(default_factory=list)
+    validated_questions: list[Question] = Field(default_factory=list)
+    failed_questions: list[Question] = Field(
+        default_factory=list,
+        description="Questions that failed validation and refinement - kept for audit trail",
+    )
+    validation_attempts: int = 0
+    max_validation_retries: int = Field(
+        default_factory=lambda: settings.MAX_VALIDATION_RETRIES
+    )
+    original_target_question_count: int = Field(
+        default=0,
+        description="Original requested question count to prevent over-generation",
+    )
+
     # Metadata
     workflow_metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -102,6 +120,11 @@ class ModuleBatchWorkflow:
         workflow.add_node("prepare_prompt", self.prepare_prompt)
         workflow.add_node("generate_batch", self.generate_batch)
         workflow.add_node("validate_batch", self.validate_batch)
+
+        # Add RAGAS validation node if enabled
+        if settings.RAGAS_ENABLED:
+            workflow.add_node("ragas_validate", self.ragas_validate)
+
         workflow.add_node("check_completion", self.check_completion)
         workflow.add_node("prepare_correction", self.prepare_correction)
         workflow.add_node(
@@ -116,15 +139,27 @@ class ModuleBatchWorkflow:
         workflow.add_edge("generate_batch", "validate_batch")
 
         # Conditional edge from validate_batch
-        workflow.add_conditional_edges(
-            "validate_batch",
-            self.check_error_type,
-            {
-                "needs_json_correction": "prepare_correction",
-                "needs_validation_correction": "prepare_validation_correction",
-                "continue": "check_completion",
-            },
-        )
+        if settings.RAGAS_ENABLED:
+            workflow.add_conditional_edges(
+                "validate_batch",
+                self.check_error_type,
+                {
+                    "needs_json_correction": "prepare_correction",
+                    "needs_validation_correction": "prepare_validation_correction",
+                    "continue": "ragas_validate",
+                },
+            )
+            workflow.add_edge("ragas_validate", "check_completion")
+        else:
+            workflow.add_conditional_edges(
+                "validate_batch",
+                self.check_error_type,
+                {
+                    "needs_json_correction": "prepare_correction",
+                    "needs_validation_correction": "prepare_validation_correction",
+                    "continue": "check_completion",
+                },
+            )
 
         workflow.add_edge("prepare_correction", "generate_batch")
         workflow.add_edge("prepare_validation_correction", "generate_batch")
@@ -384,6 +419,164 @@ class ModuleBatchWorkflow:
         # This is a pass-through node that just passes the state to should_retry
         return state
 
+    async def ragas_validate(self, state: ModuleBatchState) -> ModuleBatchState:
+        """Validate questions using RAGAS and refine failed ones."""
+        if not settings.RAGAS_ENABLED:
+            # If RAGAS is disabled, move all questions to validated_questions
+            state.validated_questions.extend(state.generated_questions)
+            return state
+
+        try:
+            # Initialize validation services
+            validation_service = ValidationService(self.llm_provider)
+            refinement_service = QuestionRefinementService(self.llm_provider)
+
+            # Initialize state fields on first validation attempt
+            if state.original_target_question_count == 0:
+                state.original_target_question_count = state.target_question_count
+
+            # Move generated questions to pending validation if first time
+            if not state.questions_pending_validation and state.generated_questions:
+                state.questions_pending_validation = state.generated_questions.copy()
+                state.generated_questions.clear()
+
+            logger.info(
+                f"Starting RAGAS validation for {len(state.questions_pending_validation)} questions"
+            )
+
+            questions_to_validate = state.questions_pending_validation.copy()
+            state.questions_pending_validation.clear()
+
+            # Validate each question
+            for question in questions_to_validate:
+                try:
+                    # Evaluate question with RAGAS
+                    scores = await validation_service.evaluate_question_async(
+                        question, state.module_content
+                    )
+
+                    # Update question metadata with validation scores
+                    question.validation_metadata.update(
+                        {
+                            "faithfulness_score": scores.get("faithfulness_score", 0.0),
+                            "semantic_similarity_score": scores.get(
+                                "semantic_similarity_score", 0.0
+                            ),
+                            "validation_attempts": state.validation_attempts + 1,
+                            "validated_at": asyncio.get_event_loop().time(),
+                            "ragas_version": "0.3.0",
+                        }
+                    )
+
+                    # Check if validation passed
+                    if validation_service.passes_validation(scores):
+                        question.validation_metadata["validation_status"] = "passed"
+                        state.validated_questions.append(question)
+                        logger.debug(f"Question {question.id} passed validation")
+                    else:
+                        # Try refinement if we haven't exceeded retry limit
+                        if state.validation_attempts < state.max_validation_retries:
+                            logger.info(
+                                f"Refining question {question.id} due to validation failure"
+                            )
+
+                            # Store original scores for audit
+                            question.validation_metadata["original_scores"] = (
+                                scores.copy()
+                            )
+
+                            # Attempt refinement
+                            refined_question = (
+                                await refinement_service.refine_question_async(
+                                    question, scores, state.module_content
+                                )
+                            )
+
+                            # Re-validate refined question
+                            refined_scores = (
+                                await validation_service.evaluate_question_async(
+                                    refined_question, state.module_content
+                                )
+                            )
+
+                            # Update refined question metadata
+                            refined_question.validation_metadata.update(
+                                {
+                                    "faithfulness_score": refined_scores.get(
+                                        "faithfulness_score", 0.0
+                                    ),
+                                    "semantic_similarity_score": refined_scores.get(
+                                        "semantic_similarity_score", 0.0
+                                    ),
+                                    "validation_attempts": state.validation_attempts
+                                    + 1,
+                                    "validated_at": asyncio.get_event_loop().time(),
+                                    "ragas_version": "0.3.0",
+                                    "refinement_applied": True,
+                                }
+                            )
+
+                            # Check if refined question passes
+                            if validation_service.passes_validation(refined_scores):
+                                refined_question.validation_metadata[
+                                    "validation_status"
+                                ] = "refined_and_passed"
+                                state.validated_questions.append(refined_question)
+                                logger.info(
+                                    f"Refined question {question.id} passed validation"
+                                )
+                            else:
+                                refined_question.validation_metadata[
+                                    "validation_status"
+                                ] = "refinement_failed"
+                                state.failed_questions.append(refined_question)
+                                logger.warning(
+                                    f"Refined question {question.id} still failed validation"
+                                )
+                        else:
+                            # Max retries exceeded, mark as failed
+                            question.validation_metadata["validation_status"] = "failed"
+                            state.failed_questions.append(question)
+                            logger.warning(
+                                f"Question {question.id} failed validation after max retries"
+                            )
+
+                except Exception as e:
+                    logger.error(f"Validation error for question {question.id}: {e}")
+                    question.validation_metadata.update(
+                        {
+                            "validation_status": "error",
+                            "validation_error": str(e),
+                            "validation_attempts": state.validation_attempts + 1,
+                        }
+                    )
+                    state.failed_questions.append(question)
+
+            # Increment validation attempts
+            state.validation_attempts += 1
+
+            # Update generated_questions to only include validated questions
+            # Ensure we don't exceed the original target count
+            questions_to_keep = min(
+                len(state.validated_questions), state.original_target_question_count
+            )
+            state.generated_questions = state.validated_questions[:questions_to_keep]
+
+            logger.info(
+                f"RAGAS validation complete. Validated: {len(state.validated_questions)}, "
+                f"Failed: {len(state.failed_questions)}, "
+                f"Final count: {len(state.generated_questions)}"
+            )
+
+            return state
+
+        except Exception as e:
+            logger.error(f"RAGAS validation failed: {e}")
+            # On validation failure, fall back to using original questions
+            state.generated_questions.extend(state.questions_pending_validation)
+            state.questions_pending_validation.clear()
+            return state
+
     async def prepare_correction(self, state: ModuleBatchState) -> ModuleBatchState:
         """Prepare a corrective prompt for JSON parsing errors."""
         if not state.parsing_error or not state.raw_response:
@@ -532,7 +725,12 @@ class ModuleBatchWorkflow:
         if state.error_message:
             return "failed"
 
-        questions_needed = state.target_question_count - len(state.generated_questions)
+        # Use original target count if RAGAS is enabled and set
+        target_count = state.target_question_count
+        if settings.RAGAS_ENABLED and state.original_target_question_count > 0:
+            target_count = state.original_target_question_count
+
+        questions_needed = target_count - len(state.generated_questions)
 
         if questions_needed <= 0:
             return "complete"
@@ -568,22 +766,36 @@ class ModuleBatchWorkflow:
 
     async def save_questions(self, state: ModuleBatchState) -> ModuleBatchState:
         """Save all generated questions to the database."""
-        if not state.generated_questions:
+        if not state.generated_questions and not state.failed_questions:
             return state
 
         try:
             async with get_async_session() as session:
-                # Add questions to session
+                # Add validated/generated questions to session
                 for question in state.generated_questions:
                     session.add(question)
+
+                # Add failed questions for audit trail (if RAGAS enabled)
+                if settings.RAGAS_ENABLED:
+                    for failed_question in state.failed_questions:
+                        # Mark as audit-only in metadata
+                        failed_question.validation_metadata["audit_only"] = True
+                        session.add(failed_question)
 
                 # Commit all questions
                 await session.commit()
 
+                total_saved = len(state.generated_questions) + (
+                    len(state.failed_questions) if settings.RAGAS_ENABLED else 0
+                )
                 logger.info(
                     "module_batch_questions_saved",
                     module_id=state.module_id,
                     questions_saved=len(state.generated_questions),
+                    failed_questions_saved=len(state.failed_questions)
+                    if settings.RAGAS_ENABLED
+                    else 0,
+                    total_saved=total_saved,
                 )
 
         except Exception as e:
