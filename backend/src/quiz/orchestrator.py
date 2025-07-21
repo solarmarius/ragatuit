@@ -857,8 +857,10 @@ async def orchestrate_quiz_export_to_canvas(
                 )
                 # Continue with failure handling even if rollback failed
 
-            # Raise exception to trigger failure handling
-            raise RuntimeError(workflow_result["message"])
+            # Raise specific Canvas export exception to trigger failure handling
+            from src.canvas.exceptions import CanvasQuizExportError
+
+            raise CanvasQuizExportError(workflow_result["message"])
 
     except Exception as e:
         # === Transaction 3: Mark as Failed ===
