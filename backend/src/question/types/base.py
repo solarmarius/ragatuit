@@ -93,6 +93,11 @@ class BaseQuestionType(ABC):
         """Format question data for Canvas LMS export."""
         pass
 
+    @abstractmethod
+    def format_for_export(self, data: BaseQuestionData) -> dict[str, Any]:
+        """Format question data for generic export."""
+        pass
+
 
 class Question(SQLModel, table=True):
     """
