@@ -272,15 +272,15 @@ async def test_create_canvas_quiz_with_correct_payload():
     call_kwargs = mock_post.call_args[1]
 
     expected_payload = {
-        "title": "Math Quiz",
-        "points_possible": 50,
-        "quiz_settings": {
-            "shuffle_questions": True,
-            "shuffle_answers": True,
-            "time_limit": 60,
-            "multiple_attempts": False,
-            "scoring_policy": "keep_highest",
-        },
+        "quiz": {
+            "title": "Math Quiz",
+            "points_possible": 50,
+            "quiz_settings": {
+                "shuffle_questions": False,
+                "shuffle_answers": False,
+                "has_time_limit": False,
+            },
+        }
     }
 
     assert call_kwargs["json"] == expected_payload
@@ -465,7 +465,7 @@ def test_convert_question_to_canvas_format_fill_in_blank_single_blank():
     # Check item structure
     assert "item" in result
     item = result["item"]
-    assert item["item_type"] == "Question"
+    assert item["entry_type"] == "Item"
     assert item["points_possible"] == 1
     assert item["position"] == 1
 
@@ -701,7 +701,7 @@ def test_convert_question_to_canvas_format_multiple_choice():
 
     # Check item structure
     item = result["item"]
-    assert item["item_type"] == "Question"
+    assert item["entry_type"] == "Item"
     assert item["points_possible"] == 1
     assert item["position"] == 1
 
