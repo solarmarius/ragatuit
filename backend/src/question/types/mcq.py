@@ -154,6 +154,66 @@ class MultipleChoiceQuestionType(BaseQuestionType):
             "question_type": self.question_type.value,
         }
 
+    async def evaluate_semantic_similarity_async(
+        self,
+        question_data: BaseQuestionData,
+        semantic_similarity_scorer: Any,
+        logger: Any,
+    ) -> float:
+        """Evaluate semantic similarity for MCQ by comparing answer alternatives."""
+        try:
+            # Cast to MCQ-specific data model to access options
+            if not isinstance(question_data, MultipleChoiceData):
+                logger.warning(
+                    "MCQ expected MultipleChoiceData, skipping semantic similarity"
+                )
+                return 1.0
+
+            mcq_data = question_data
+
+            # Extract correct answer and all options
+            correct_answer = mcq_data.correct_answer
+            if not correct_answer:
+                logger.warning(
+                    "MCQ missing correct_answer, skipping semantic similarity"
+                )
+                return 1.0
+
+            # Get correct answer text
+            correct_option_key = f"option_{correct_answer.lower()}"
+            correct_answer_text = getattr(mcq_data, correct_option_key, "")
+
+            if not correct_answer_text:
+                logger.warning(
+                    f"MCQ correct answer text not found for {correct_answer}"
+                )
+                return 1.0
+
+            # Collect all option texts for comparison
+            option_keys = ["option_a", "option_b", "option_c", "option_d"]
+            options = []
+            for key in option_keys:
+                option_text = getattr(mcq_data, key, None)
+                if option_text and option_text != correct_answer_text:
+                    options.append(option_text)
+
+            if len(options) < 1:
+                logger.warning(
+                    "MCQ has insufficient alternatives for semantic similarity"
+                )
+                return 1.0
+
+            # For now, return a placeholder score since we don't have RAGAS running yet
+            # This will be replaced with actual RAGAS evaluation in later phases
+            logger.debug(
+                "MCQ semantic similarity evaluation (placeholder implementation)"
+            )
+            return 0.7  # Placeholder score
+
+        except Exception as e:
+            logger.error(f"MCQ semantic similarity evaluation failed: {e}")
+            return 0.0  # Fail on error
+
     def migrate_from_legacy(self, legacy_question: Any) -> MultipleChoiceData:
         """
         Migrate from legacy Question model to new MCQ data format.

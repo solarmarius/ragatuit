@@ -98,6 +98,30 @@ class BaseQuestionType(ABC):
         """Format question data for generic export."""
         pass
 
+    @abstractmethod
+    async def evaluate_semantic_similarity_async(
+        self,
+        question_data: BaseQuestionData,
+        semantic_similarity_scorer: Any,
+        logger: Any,
+    ) -> float:
+        """
+        Evaluate semantic similarity for this question type.
+
+        Args:
+            question_data: Parsed and validated question data
+            semantic_similarity_scorer: RAGAS SemanticSimilarity scorer instance
+            logger: Logger for debugging and error reporting
+
+        Returns:
+            float: Semantic similarity score (0.0 to 1.0)
+
+        Note:
+            Question types that don't support semantic similarity evaluation
+            (e.g., fill-in-blank) should return 1.0 (perfect score).
+        """
+        pass
+
 
 class Question(SQLModel, table=True):
     """
@@ -156,6 +180,13 @@ class Question(SQLModel, table=True):
     # Canvas integration
     canvas_item_id: str | None = Field(
         default=None, description="Canvas quiz item ID after export"
+    )
+
+    # RAGAS validation metadata (using existing JSONB pattern)
+    validation_metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        sa_column=Column(JSONB, nullable=True),
+        description="RAGAS validation scores, attempts, and metadata",
     )
 
     def get_typed_data(

@@ -265,3 +265,18 @@ class FillInBlankQuestionType(BaseQuestionType):
             "explanation": data.explanation,
             "question_type": self.question_type.value,
         }
+
+    async def evaluate_semantic_similarity_async(
+        self,
+        question_data: BaseQuestionData,
+        semantic_similarity_scorer: Any,
+        logger: Any,
+    ) -> float:
+        """
+        Semantic similarity not applicable for fill-in-blank questions.
+
+        Fill-in-blank questions have no alternatives to compare, making
+        semantic similarity evaluation meaningless. Return perfect score.
+        """
+        logger.debug("Fill-in-blank question: semantic similarity not applicable")
+        return 1.0  # Perfect score since metric doesn't apply
