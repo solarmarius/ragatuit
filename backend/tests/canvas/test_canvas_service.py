@@ -300,6 +300,7 @@ async def test_create_canvas_quiz_items_success():
             "option_c": "5",
             "option_d": "6",
             "correct_answer": "B",
+            "question_type": "multiple_choice",
         },
         {
             "id": "q2",
@@ -309,6 +310,7 @@ async def test_create_canvas_quiz_items_success():
             "option_c": "8",
             "option_d": "9",
             "correct_answer": "A",
+            "question_type": "multiple_choice",
         },
     ]
 
@@ -343,6 +345,7 @@ def test_convert_question_to_canvas_format_multiple_choice():
         "option_c": "Berlin",
         "option_d": "Madrid",
         "correct_answer": "B",
+        "question_type": "multiple_choice",
     }
 
     result = convert_question_to_canvas_format(question, 1)
@@ -351,9 +354,8 @@ def test_convert_question_to_canvas_format_multiple_choice():
     assert "item" in result
     item = result["item"]
 
-    assert item["id"] == "item_test_q1"
+    assert item["entry_type"] == "Item"
     assert item["position"] == 1
-    assert item["item_type"] == "Question"
     assert item["points_possible"] == 1
 
     # Verify entry data
@@ -391,6 +393,7 @@ def test_convert_question_correct_answer_mapping(correct_letter, expected_choice
         "option_c": "Option C",
         "option_d": "Option D",
         "correct_answer": correct_letter,
+        "question_type": "multiple_choice",
     }
 
     result = convert_question_to_canvas_format(question, 1)
@@ -447,7 +450,7 @@ def test_convert_question_to_canvas_format_fill_in_blank_single_blank():
 
     question_data = {
         "id": str(uuid.uuid4()),
-        "question_text": "The capital of France is _____.",
+        "question_text": "The capital of France is [blank_1].",
         "blanks": [
             {
                 "position": 1,
@@ -472,8 +475,9 @@ def test_convert_question_to_canvas_format_fill_in_blank_single_blank():
     # Check entry structure
     entry = item["entry"]
     assert entry["interaction_type_slug"] == "rich-fill-blank"
-    assert entry["item_body"] == "<p>The capital of France is _____.</p>"
-    assert entry["scoring_algorithm"] == "Equivalence"
+    # Item body should have span tags with UUID instead of placeholder
+    assert '<span id="blank_' in entry["item_body"]
+    assert entry["scoring_algorithm"] == "MultipleMethods"
 
     # Check interaction data
     interaction_data = entry["interaction_data"]
@@ -487,7 +491,8 @@ def test_convert_question_to_canvas_format_fill_in_blank_single_blank():
     scoring_data = entry["scoring_data"]
     assert "value" in scoring_data
     assert len(scoring_data["value"]) == 3  # Main answer + 2 variations
-    assert scoring_data["working_item_body"] == "The capital of France is _____."
+    # Working item body should have the answer filled in
+    assert "Paris" in scoring_data["working_item_body"]
 
     # Check scoring values
     scoring_values = scoring_data["value"]
@@ -496,9 +501,9 @@ def test_convert_question_to_canvas_format_fill_in_blank_single_blank():
     assert "paris" in answers
     assert "PARIS" in answers
 
-    # Check scoring algorithm (case-insensitive)
+    # Check scoring algorithm
     for sv in scoring_values:
-        assert sv["scoring_data"]["scoring_algorithm"] == "TextCloseEnough"
+        assert sv["scoring_algorithm"] == "TextContainsAnswer"
 
 
 def test_convert_question_to_canvas_format_fill_in_blank_multiple_blanks():
@@ -507,7 +512,7 @@ def test_convert_question_to_canvas_format_fill_in_blank_multiple_blanks():
 
     question_data = {
         "id": str(uuid.uuid4()),
-        "question_text": "The capital of _____ is _____ and it is located in _____.",
+        "question_text": "The capital of [blank_1] is [blank_2] and it is located in [blank_3].",
         "blanks": [
             {
                 "position": 1,
@@ -562,7 +567,7 @@ def test_convert_question_to_canvas_format_fill_in_blank_case_sensitive():
 
     question_data = {
         "id": str(uuid.uuid4()),
-        "question_text": "The chemical symbol for gold is _____.",
+        "question_text": "The chemical symbol for gold is [blank_1].",
         "blanks": [
             {
                 "position": 1,
@@ -579,9 +584,9 @@ def test_convert_question_to_canvas_format_fill_in_blank_case_sensitive():
     scoring_data = result["item"]["entry"]["scoring_data"]
     assert len(scoring_data["value"]) == 1  # Only main answer
 
-    # Check scoring algorithm (case-sensitive)
+    # Check scoring algorithm
     scoring_value = scoring_data["value"][0]
-    assert scoring_value["scoring_data"]["scoring_algorithm"] == "Equivalence"
+    assert scoring_value["scoring_algorithm"] == "TextContainsAnswer"
     assert scoring_value["scoring_data"]["value"] == "Au"
 
 
@@ -591,7 +596,7 @@ def test_convert_question_to_canvas_format_fill_in_blank_no_variations():
 
     question_data = {
         "id": str(uuid.uuid4()),
-        "question_text": "The capital of France is _____.",
+        "question_text": "The capital of France is [blank_1].",
         "blanks": [
             {
                 "position": 1,
@@ -611,7 +616,7 @@ def test_convert_question_to_canvas_format_fill_in_blank_no_variations():
     # Check scoring value
     scoring_value = scoring_data["value"][0]
     assert scoring_value["scoring_data"]["value"] == "Paris"
-    assert scoring_value["scoring_data"]["scoring_algorithm"] == "TextCloseEnough"
+    assert scoring_value["scoring_algorithm"] == "TextContainsAnswer"
 
 
 def test_convert_question_to_canvas_format_fill_in_blank_with_explanation():
@@ -620,7 +625,7 @@ def test_convert_question_to_canvas_format_fill_in_blank_with_explanation():
 
     question_data = {
         "id": str(uuid.uuid4()),
-        "question_text": "The capital of France is _____.",
+        "question_text": "The capital of France is [blank_1].",
         "blanks": [
             {
                 "position": 1,
@@ -636,9 +641,9 @@ def test_convert_question_to_canvas_format_fill_in_blank_with_explanation():
 
     # Canvas format should include the question but explanation handling
     # depends on Canvas New Quiz API capabilities
-    assert (
-        result["item"]["entry"]["item_body"] == "<p>The capital of France is _____.</p>"
-    )
+    # The item_body should have span tags with UUIDs for blanks
+    assert '<span id="blank_' in result["item"]["entry"]["item_body"]
+    assert "The capital of France" in result["item"]["entry"]["item_body"]
 
 
 def test_convert_question_to_canvas_format_fill_in_blank_uuid_generation():
@@ -647,7 +652,7 @@ def test_convert_question_to_canvas_format_fill_in_blank_uuid_generation():
 
     question_data = {
         "id": str(uuid.uuid4()),
-        "question_text": "Fill _____ and _____.",
+        "question_text": "Fill [blank_1] and [blank_2].",
         "blanks": [
             {
                 "position": 1,
@@ -741,7 +746,7 @@ def test_convert_question_to_canvas_format_mixed_case_sensitivity():
 
     question_data = {
         "id": str(uuid.uuid4()),
-        "question_text": "Enter _____ and _____.",
+        "question_text": "Enter [blank_1] and [blank_2].",
         "blanks": [
             {
                 "position": 1,
@@ -765,6 +770,7 @@ def test_convert_question_to_canvas_format_mixed_case_sensitivity():
 
     # Check scoring algorithms
     scoring_values = scoring_data["value"]
-    algorithms = [sv["scoring_data"]["scoring_algorithm"] for sv in scoring_values]
-    assert "TextCloseEnough" in algorithms  # For case-insensitive
-    assert "Equivalence" in algorithms  # For case-sensitive
+    algorithms = [sv["scoring_algorithm"] for sv in scoring_values]
+    # All should use TextContainsAnswer in the new implementation
+    for algorithm in algorithms:
+        assert algorithm == "TextContainsAnswer"

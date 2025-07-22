@@ -426,139 +426,60 @@ def convert_question_to_canvas_format(
     Returns:
         Canvas quiz item data structure
     """
-    import uuid
+    from src.question.types.base import QuestionType
+    from src.question.types.registry import get_question_type_registry
 
-    question_type = question.get("question_type", "multiple_choice")
+    question_type_str = question.get("question_type", "multiple_choice")
 
-    if question_type == "fill_in_blank":
-        # Handle Fill-in-Blank questions using Canvas Rich Fill In The Blank format
+    # Map string to QuestionType enum
+    question_type_map = {
+        "multiple_choice": QuestionType.MULTIPLE_CHOICE,
+        "fill_in_blank": QuestionType.FILL_IN_BLANK,
+    }
 
-        # Generate UUIDs for each blank
-        blank_uuids = {}
-        for blank in question["blanks"]:
-            blank_uuids[blank["position"]] = str(uuid.uuid4())
+    question_type_enum = question_type_map.get(question_type_str)
+    if not question_type_enum:
+        from src.config import get_logger
 
-        # Build interaction_data with blanks array
-        interaction_blanks = []
-        for blank in question["blanks"]:
-            interaction_blanks.append(
-                {
-                    "id": blank_uuids[blank["position"]],
-                    "answer_type": "openEntry",
-                }
-            )
+        logger = get_logger("canvas_service")
+        logger.error(
+            "unsupported_question_type_for_canvas_conversion",
+            question_id=question.get("id"),
+            question_type=question_type_str,
+        )
+        raise ValueError(
+            f"Unsupported question type for Canvas export: {question_type_str}"
+        )
 
-        interaction_data = {
-            "blanks": interaction_blanks,
+    # Get the question type implementation from registry
+    registry = get_question_type_registry()
+    question_type_impl = registry.get_question_type(question_type_enum)
+
+    # Convert question dict to the appropriate data model
+    # Filter out fields that aren't part of the data model
+    data_for_validation = {
+        k: v for k, v in question.items() if k not in ["id", "question_type"]
+    }
+
+    # For multiple choice, normalize invalid correct_answer to "A" (for backward compatibility)
+    if question_type_enum == QuestionType.MULTIPLE_CHOICE:
+        if data_for_validation.get("correct_answer") not in ["A", "B", "C", "D"]:
+            data_for_validation["correct_answer"] = "A"
+
+    question_data = question_type_impl.validate_data(data_for_validation)
+
+    # Use the question type's format_for_canvas method
+    canvas_format = question_type_impl.format_for_canvas(question_data)
+
+    # Wrap in the Canvas API structure expected by the API
+    return {
+        "item": {
+            "entry_type": "Item",
+            "points_possible": canvas_format.get("points_possible", 1),
+            "position": position,
+            "entry": canvas_format,
         }
-
-        # Build scoring_data with scoring information
-        scoring_values = []
-        for blank in question["blanks"]:
-            blank_uuid = blank_uuids[blank["position"]]
-
-            # Choose scoring algorithm based on case sensitivity
-            if blank["case_sensitive"]:
-                scoring_algorithm = "Equivalence"
-            else:
-                # TextCloseEnough is more forgiving for typos
-                scoring_algorithm = "TextCloseEnough"
-
-            # Primary correct answer
-            scoring_values.append(
-                {
-                    "id": blank_uuid,
-                    "scoring_data": {
-                        "value": blank["correct_answer"],
-                        "blank_text": blank["correct_answer"],
-                        "scoring_algorithm": scoring_algorithm,
-                    },
-                }
-            )
-
-            # Add answer variations as additional scoring entries
-            if blank.get("answer_variations"):
-                for variation in blank["answer_variations"]:
-                    scoring_values.append(
-                        {
-                            "id": blank_uuid,
-                            "scoring_data": {
-                                "value": variation,
-                                "blank_text": variation,
-                                "scoring_algorithm": scoring_algorithm,
-                            },
-                        }
-                    )
-
-        scoring_data = {
-            "value": scoring_values,
-            "working_item_body": question["question_text"],
-        }
-
-        return {
-            "item": {
-                "entry_type": "Item",
-                "points_possible": len(question["blanks"]),  # 1 point per blank
-                "position": position,
-                "entry": {
-                    "entry_type": "Item",
-                    "interaction_type_slug": "rich-fill-blank",
-                    "item_body": f"<p>{question['question_text']}</p>",
-                    "interaction_data": interaction_data,
-                    "scoring_algorithm": "Equivalence",
-                    "scoring_data": scoring_data,
-                },
-            }
-        }
-    elif question_type == "multiple_choice":
-        # Handle Multiple Choice questions (original logic)
-
-        # Map correct answer letter to choice index
-        correct_answer_map = {"A": 0, "B": 1, "C": 2, "D": 3}
-        correct_index = correct_answer_map.get(question["correct_answer"], 0)
-
-        choices = [
-            {
-                "id": f"choice_{i + 1}",
-                "position": i + 1,
-                "item_body": f"<p>{choice}</p>",
-            }
-            for i, choice in enumerate(
-                [
-                    question["option_a"],
-                    question["option_b"],
-                    question["option_c"],
-                    question["option_d"],
-                ]
-            )
-        ]
-
-        return {
-            "item": {
-                "entry_type": "Item",
-                "points_possible": 1,  # 1 point per question
-                "position": position,
-                "entry": {
-                    "entry_type": "Item",
-                    "interaction_type_slug": "choice",
-                    "item_body": f"<p>{question['question_text']}</p>",
-                    "interaction_data": {"choices": choices},
-                    "scoring_algorithm": "Equivalence",
-                    "scoring_data": {"value": f"choice_{correct_index + 1}"},
-                },
-            }
-        }
-
-    # Handle unknown question types
-    from src.config import get_logger
-
-    logger = get_logger("canvas_service")
-    logger.error(
-        "unsupported_question_type_for_canvas_conversion",
-        question_id=question.get("id"),
-        question_type=question_type,
-    )
-    raise ValueError(f"Unsupported question type for Canvas export: {question_type}")
+    }
 
 
 @retry_on_failure(max_attempts=2, initial_delay=1.0)

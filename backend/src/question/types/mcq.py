@@ -97,36 +97,57 @@ class MultipleChoiceQuestionType(BaseQuestionType):
 
     def format_for_canvas(self, data: BaseQuestionData) -> dict[str, Any]:
         """
-        Format MCQ data for Canvas LMS export.
+        Format MCQ data for Canvas New Quizzes export.
 
         Args:
             data: Validated MCQ data
 
         Returns:
-            Dictionary formatted for Canvas API
+            Dictionary formatted for Canvas New Quizzes API
         """
         if not isinstance(data, MultipleChoiceData):
             raise ValueError("Expected MultipleChoiceData")
 
-        # Canvas expects answers in a specific format
-        answers = []
-        options = data.get_all_options()
+        # Map correct answer letter to choice index
+        correct_answer_map = {"A": 0, "B": 1, "C": 2, "D": 3}
+        correct_index = correct_answer_map.get(data.correct_answer, 0)
 
-        for letter, text in options.items():
-            answers.append(
-                {
-                    "answer_text": text,
-                    "answer_weight": 100 if letter == data.correct_answer else 0,
-                    "answer_comments": data.explanation
-                    if letter == data.correct_answer
-                    else "",
-                }
+        # Build choices array for Canvas
+        choices = [
+            {
+                "id": f"choice_{i + 1}",
+                "position": i + 1,
+                "item_body": f"<p>{choice}</p>",
+            }
+            for i, choice in enumerate(
+                [
+                    data.option_a,
+                    data.option_b,
+                    data.option_c,
+                    data.option_d,
+                ]
             )
+        ]
+
+        # Wrap question text in paragraph tag if not already wrapped
+        item_body = data.question_text
+        if not item_body.strip().startswith("<p>"):
+            item_body = f"<p>{item_body}</p>"
 
         return {
-            "question_type": "multiple_choice_question",
-            "question_text": data.question_text,
-            "answers": answers,
+            "title": f"Question {data.question_text[:50]}...",  # Canvas requires a title
+            "item_body": item_body,
+            "calculator_type": "none",
+            "interaction_data": {"choices": choices},
+            "properties": {
+                "shuffle_rules": {"choices": {"shuffled": True}},
+                "vary_points_by_answer": False,
+            },
+            "scoring_data": {"value": f"choice_{correct_index + 1}"},
+            "answer_feedback": {},
+            "scoring_algorithm": "Equivalence",
+            "interaction_type_slug": "choice",
+            "feedback": {},
             "points_possible": 1,
         }
 
