@@ -32,11 +32,13 @@ export const STORAGE_KEYS = {
 export const QUESTION_TYPES = {
   MULTIPLE_CHOICE: "multiple_choice",
   FILL_IN_BLANK: "fill_in_blank",
+  MATCHING: "matching",
 } as const;
 
 export const QUESTION_TYPE_LABELS = {
   multiple_choice: "Multiple Choice",
   fill_in_blank: "Fill in the Blank",
+  matching: "Matching",
 } as const;
 
 export const QUIZ_LANGUAGES = {

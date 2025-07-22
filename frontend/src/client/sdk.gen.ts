@@ -1145,12 +1145,14 @@ export class UsersService {
 
   /**
    * Delete User Me
-   * Permanently delete current user account and all associated data.
+   * Delete user account while preserving quiz data for research purposes.
    *
    * **⚠️ DESTRUCTIVE OPERATION ⚠️**
    *
    * This endpoint permanently removes the user's account from the system,
-   * including all Canvas OAuth tokens and user data. This action cannot be undone.
+   * including all Canvas OAuth tokens and user data. Associated quizzes and
+   * questions are anonymized (owner_id set to NULL) and soft-deleted to
+   * preserve data for research while removing personal identification.
    *
    * **Authentication:**
    * Requires valid JWT token in Authorization header
@@ -1160,47 +1162,45 @@ export class UsersService {
    * current_user (CurrentUser): Authenticated user from JWT token validation
    *
    * **Returns:**
-   * Message: Confirmation message that the account was deleted
+   * None: 204 No Content response
    *
    * **Usage:**
    * DELETE /api/v1/auth/users/me
    * Authorization: Bearer <jwt_token>
    *
-   * **Example Response:**
-   * {
-   * "message": "User deleted successfully"
-   * }
+   * **Data Handling:**
+   * - **User account**: Permanently deleted (hard delete)
+   * - **Quizzes**: Anonymized (owner_id = NULL) and soft-deleted for research
+   * - **Questions**: Soft-deleted along with quiz cascade
+   * - **Canvas tokens**: Permanently removed
    *
-   * **Data Removed:**
-   * - User account record
-   * - Encrypted Canvas OAuth tokens
-   * - User profile information
-   * - All associated user data
+   * **Privacy Protection:**
+   * - User PII completely removed (GDPR compliant)
+   * - Quiz/question data anonymized but preserved
+   * - No way to trace data back to original user
+   *
+   * **Research Benefits:**
+   * - Preserves question generation patterns
+   * - Maintains dataset for LLM improvement
+   * - Enables usage analytics without user identification
    *
    * **Side Effects:**
    * - All JWT tokens for this user become invalid immediately
    * - User must re-authenticate with Canvas to create a new account
    * - Canvas connection is severed (tokens are deleted)
    * - User loses access to all application features
+   * - Associated quizzes become anonymous and unavailable to users
    *
    * **Security:**
    * - Users can only delete their own account
    * - Requires active authentication (prevents accidental deletion)
    * - Immediate token invalidation prevents further access
-   *
-   * **Frontend Integration:**
-   * - Should show confirmation dialog before calling this endpoint
-   * - Redirect to login page after successful deletion
-   * - Clear any stored authentication state
+   * - Complete anonymization ensures privacy compliance
    *
    * **Recovery:**
    * - No account recovery possible after deletion
    * - User can create new account by authenticating with Canvas again
-   * - Previous data and settings will not be restored
-   *
-   * **Note:**
-   * This operation is final. Consider implementing account deactivation
-   * instead of deletion for better user experience.
+   * - Previous quiz data will not be accessible (anonymized)
    * @returns unknown Successful Response
    * @throws ApiError
    */
