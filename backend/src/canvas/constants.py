@@ -38,6 +38,7 @@ class CanvasScoringAlgorithm:
     # Overall quiz item scoring algorithms
     MULTIPLE_METHODS = "MultipleMethods"  # Used when item has multiple scoring methods
     EQUIVALENCE = "Equivalence"  # Used for single-answer questions (MCQ)
+    PARTIAL_DEEP = "PartialDeep"  # Used for matching questions
 
     # Individual answer/blank scoring algorithms
     TEXT_CONTAINS_ANSWER = (
@@ -50,3 +51,4 @@ class CanvasInteractionType:
 
     CHOICE = "choice"  # Multiple choice questions
     RICH_FILL_BLANK = "rich-fill-blank"  # Fill-in-blank questions
+    MATCHING = "matching"  # Matching questions

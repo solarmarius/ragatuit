@@ -34,6 +34,7 @@ class QuestionType(str, Enum):
 
     MULTIPLE_CHOICE = "multiple_choice"
     FILL_IN_BLANK = "fill_in_blank"
+    MATCHING = "matching"
 
 
 class QuestionDifficulty(str, Enum):
