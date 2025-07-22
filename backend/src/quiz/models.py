@@ -99,6 +99,16 @@ class Quiz(SQLModel, table=True):
     questions: list["Question"] = Relationship(
         back_populates="quiz", cascade_delete=True
     )
+    deleted: bool = Field(
+        default=False,
+        index=True,
+        description="Soft delete flag for data preservation",
+    )
+    deleted_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+        description="Timestamp when quiz was soft deleted",
+    )
 
     @property
     def module_question_distribution(self) -> dict[str, int]:
