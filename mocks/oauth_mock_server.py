@@ -27,6 +27,7 @@ class CanvasScoringAlgorithm:
     MULTIPLE_METHODS = "MultipleMethods"
     EQUIVALENCE = "Equivalence"
     TEXT_CONTAINS_ANSWER = "TextContainsAnswer"
+    PARTIAL_DEEP = "PartialDeep"
 
 
 class CanvasInteractionType:
@@ -1886,6 +1887,266 @@ def validate_multiple_choice_question(entry: dict):
         )
 
 
+def validate_matching_question(entry: dict):
+    """Validate matching question specific fields based on real Canvas API structure."""
+    interaction_data = entry["interaction_data"]
+    scoring_data = entry["scoring_data"]
+
+    # Validate interaction_data structure
+    if "answers" not in interaction_data:
+        raise HTTPException(
+            status_code=400, detail="item[entry][interaction_data][answers] is required"
+        )
+
+    if "questions" not in interaction_data:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][interaction_data][questions] is required",
+        )
+
+    # Validate answers array
+    answers = interaction_data["answers"]
+    if not isinstance(answers, list) or not answers:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][interaction_data][answers] must be a non-empty list",
+        )
+
+    # Validate answers are strings
+    for i, answer in enumerate(answers):
+        if not isinstance(answer, str) or not answer.strip():
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][answers][{i}] must be a non-empty string",
+            )
+
+    # Validate questions array
+    questions = interaction_data["questions"]
+    if not isinstance(questions, list) or not questions:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][interaction_data][questions] must be a non-empty list",
+        )
+
+    # Validate each question
+    question_ids = set()
+    for i, question in enumerate(questions):
+        if not isinstance(question, dict):
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][questions][{i}] must be an object",
+            )
+
+        required_question_fields = ["id", "item_body"]
+        for field in required_question_fields:
+            if field not in question:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"item[entry][interaction_data][questions][{i}][{field}] is required",
+                )
+
+        question_id = question["id"]
+        if not isinstance(question_id, str) or not question_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][questions][{i}][id] must be a non-empty string",
+            )
+
+        if question_id in question_ids:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][questions][{i}][id] must be unique",
+            )
+        question_ids.add(question_id)
+
+        if (
+            not isinstance(question["item_body"], str)
+            or not question["item_body"].strip()
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][questions][{i}][item_body] must be a non-empty string",
+            )
+
+    # Validate scoring_data structure
+    if "value" not in scoring_data:
+        raise HTTPException(
+            status_code=400, detail="item[entry][scoring_data][value] is required"
+        )
+
+    if "edit_data" not in scoring_data:
+        raise HTTPException(
+            status_code=400, detail="item[entry][scoring_data][edit_data] is required"
+        )
+
+    # Validate scoring value mapping
+    scoring_value = scoring_data["value"]
+    if not isinstance(scoring_value, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][scoring_data][value] must be an object",
+        )
+
+    # Validate all question IDs have corresponding scoring values
+    for question_id in question_ids:
+        if question_id not in scoring_value:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][value] must contain scoring for question ID '{question_id}'",
+            )
+
+    # Validate all scoring values reference valid answers
+    for question_id, answer in scoring_value.items():
+        if question_id not in question_ids:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][value] contains unknown question ID '{question_id}'",
+            )
+        if not isinstance(answer, str) or answer not in answers:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][value][{question_id}] must reference a valid answer from answers array",
+            )
+
+    # Validate edit_data structure
+    edit_data = scoring_data["edit_data"]
+    if not isinstance(edit_data, dict):
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][scoring_data][edit_data] must be an object",
+        )
+
+    if "matches" not in edit_data:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][scoring_data][edit_data][matches] is required",
+        )
+
+    if "distractors" not in edit_data:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][scoring_data][edit_data][distractors] is required",
+        )
+
+    # Validate matches array
+    matches = edit_data["matches"]
+    if not isinstance(matches, list) or not matches:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][scoring_data][edit_data][matches] must be a non-empty list",
+        )
+
+    for i, match in enumerate(matches):
+        if not isinstance(match, dict):
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][edit_data][matches][{i}] must be an object",
+            )
+
+        required_match_fields = ["answer_body", "question_id", "question_body"]
+        for field in required_match_fields:
+            if field not in match:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"item[entry][scoring_data][edit_data][matches][{i}][{field}] is required",
+                )
+
+        # Validate match references valid question and answer
+        match_question_id = match["question_id"]
+        match_answer = match["answer_body"]
+        match_question_body = match["question_body"]
+
+        if match_question_id not in question_ids:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][edit_data][matches][{i}][question_id] must reference a valid question ID",
+            )
+
+        if match_answer not in answers:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][edit_data][matches][{i}][answer_body] must reference a valid answer",
+            )
+
+        # Verify consistency with scoring value
+        if scoring_value.get(match_question_id) != match_answer:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][edit_data][matches][{i}] is inconsistent with scoring_data[value]",
+            )
+
+        # Verify question_body matches interaction_data question
+        matching_question = next(
+            (q for q in questions if q["id"] == match_question_id), None
+        )
+        if matching_question and matching_question["item_body"] != match_question_body:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][edit_data][matches][{i}][question_body] must match question item_body",
+            )
+
+    # Validate distractors array
+    distractors = edit_data["distractors"]
+    if not isinstance(distractors, list):
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][scoring_data][edit_data][distractors] must be a list",
+        )
+
+    # Validate distractors are valid answers but not correct answers
+    correct_answers = set(scoring_value.values())
+    for i, distractor in enumerate(distractors):
+        if not isinstance(distractor, str) or not distractor.strip():
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][edit_data][distractors][{i}] must be a non-empty string",
+            )
+
+        if distractor not in answers:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][edit_data][distractors][{i}] must be a valid answer from answers array",
+            )
+
+        if distractor in correct_answers:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][edit_data][distractors][{i}] cannot be a correct answer",
+            )
+
+    # Validate properties structure for matching questions
+    properties = entry.get("properties", {})
+    if "shuffle_rules" in properties:
+        shuffle_rules = properties["shuffle_rules"]
+        if not isinstance(shuffle_rules, dict):
+            raise HTTPException(
+                status_code=400,
+                detail="item[entry][properties][shuffle_rules] must be an object",
+            )
+
+        if "questions" in shuffle_rules:
+            if not isinstance(shuffle_rules["questions"], dict):
+                raise HTTPException(
+                    status_code=400,
+                    detail="item[entry][properties][shuffle_rules][questions] must be an object",
+                )
+
+            if "shuffled" in shuffle_rules["questions"] and not isinstance(
+                shuffle_rules["questions"]["shuffled"], bool
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail="item[entry][properties][shuffle_rules][questions][shuffled] must be a boolean",
+                )
+
+    # Validate scoring algorithm for matching questions
+    if entry["scoring_algorithm"] != CanvasScoringAlgorithm.PARTIAL_DEEP:
+        raise HTTPException(
+            status_code=400,
+            detail=f"item[entry][scoring_algorithm] must be '{CanvasScoringAlgorithm.PARTIAL_DEEP}' for matching questions",
+        )
+
+
 @app.post("/api/quiz/v1/courses/{course_id}/quizzes/{quiz_id}/items")
 async def create_quiz_item(
     course_id: int,
@@ -1913,10 +2174,12 @@ async def create_quiz_item(
         validate_fill_in_blank_question(entry)
     elif interaction_type == "choice":
         validate_multiple_choice_question(entry)
+    elif interaction_type == "matching":
+        validate_matching_question(entry)
     else:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported interaction_type_slug: {interaction_type}. Supported types: 'choice', 'rich-fill-blank'",
+            detail=f"Unsupported interaction_type_slug: {interaction_type}. Supported types: 'choice', 'rich-fill-blank', 'matching'",
         )
 
     # Create the quiz item with complete Canvas structure

@@ -23,6 +23,14 @@ class MatchingPair(BaseModel):
     )
     answer: str = Field(min_length=1, description="The correct answer/right side item")
 
+    @field_validator("question", "answer")
+    @classmethod
+    def validate_not_whitespace_only(cls, v: str) -> str:
+        """Ensure question and answer are not whitespace-only."""
+        if not v.strip():
+            raise ValueError("Field cannot be empty or whitespace-only")
+        return v
+
 
 class MatchingData(BaseQuestionData):
     """Data model for matching questions."""
