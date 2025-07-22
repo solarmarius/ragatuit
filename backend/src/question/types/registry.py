@@ -126,6 +126,7 @@ class QuestionTypeRegistry:
         try:
             # Import and register default question types
             from .fill_in_blank import FillInBlankQuestionType
+            from .matching import MatchingQuestionType
             from .mcq import MultipleChoiceQuestionType
 
             self.register_question_type(
@@ -134,6 +135,7 @@ class QuestionTypeRegistry:
             self.register_question_type(
                 QuestionType.FILL_IN_BLANK, FillInBlankQuestionType()
             )
+            self.register_question_type(QuestionType.MATCHING, MatchingQuestionType())
 
             logger.info(
                 "question_type_registry_initialized",
