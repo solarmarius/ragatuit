@@ -124,9 +124,7 @@ class Question(SQLModel, table=True):
     """
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    quiz_id: uuid.UUID = Field(
-        foreign_key="quiz.id", nullable=False, ondelete="CASCADE", index=True
-    )
+    quiz_id: uuid.UUID = Field(foreign_key="quiz.id", nullable=False, index=True)
     quiz: "Quiz" = Relationship(back_populates="questions")
 
     # Question type discrimination

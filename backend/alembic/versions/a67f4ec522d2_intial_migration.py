@@ -79,7 +79,7 @@ def upgrade():
     sa.Column('canvas_item_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('deleted', sa.Boolean(), nullable=False),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['quiz_id'], ['quiz.id'], ondelete='CASCADE'),
+    sa.ForeignKeyConstraint(['quiz_id'], ['quiz.id']),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_question_deleted'), 'question', ['deleted'], unique=False)
