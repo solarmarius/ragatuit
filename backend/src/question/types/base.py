@@ -124,9 +124,7 @@ class Question(SQLModel, table=True):
     """
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    quiz_id: uuid.UUID = Field(
-        foreign_key="quiz.id", nullable=False, ondelete="CASCADE", index=True
-    )
+    quiz_id: uuid.UUID = Field(foreign_key="quiz.id", nullable=False, index=True)
     quiz: "Quiz" = Relationship(back_populates="questions")
 
     # Question type discrimination
@@ -172,6 +170,18 @@ class Question(SQLModel, table=True):
     # Canvas integration
     canvas_item_id: str | None = Field(
         default=None, description="Canvas quiz item ID after export"
+    )
+
+    # Soft delete fields
+    deleted: bool = Field(
+        default=False,
+        index=True,
+        description="Soft delete flag for data preservation",
+    )
+    deleted_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+        description="Timestamp when question was soft deleted",
     )
 
     def get_typed_data(

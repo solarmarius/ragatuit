@@ -116,9 +116,10 @@ async def get_questions_by_quiz(
     approved_only: bool = False,
     limit: int | None = None,
     offset: int = 0,
+    include_deleted: bool = False,
 ) -> list[Question]:
     """
-    Get questions for a quiz.
+    Get questions for a quiz, filtering out soft-deleted questions by default.
 
     Args:
         session: Database session
@@ -127,6 +128,7 @@ async def get_questions_by_quiz(
         approved_only: Only return approved questions
         limit: Maximum number of questions to return
         offset: Number of questions to skip
+        include_deleted: Include soft-deleted questions in results
 
     Returns:
         List of questions
@@ -142,6 +144,10 @@ async def get_questions_by_quiz(
 
     # Build query
     statement = select(Question).where(Question.quiz_id == quiz_id)
+
+    # Filter out soft-deleted questions unless requested
+    if not include_deleted:
+        statement = statement.where(Question.deleted == False)  # noqa: E712
 
     if question_type:
         statement = statement.where(Question.question_type == question_type)
@@ -178,6 +184,7 @@ async def get_formatted_questions_by_quiz(
     approved_only: bool = False,
     limit: int | None = None,
     offset: int = 0,
+    include_deleted: bool = False,
 ) -> list[dict[str, Any]]:
     """
     Get questions for a quiz and format them for display in a single session.
@@ -189,6 +196,7 @@ async def get_formatted_questions_by_quiz(
         approved_only: Only return approved questions
         limit: Maximum number of questions to return
         offset: Number of questions to skip
+        include_deleted: Include soft-deleted questions in results
 
     Returns:
         List of formatted question dictionaries
@@ -204,7 +212,7 @@ async def get_formatted_questions_by_quiz(
 
     # Get questions
     questions = await get_questions_by_quiz(
-        session, quiz_id, question_type, approved_only, limit, offset
+        session, quiz_id, question_type, approved_only, limit, offset, include_deleted
     )
 
     # Format questions using the new formatter module
@@ -220,19 +228,24 @@ async def get_formatted_questions_by_quiz(
 
 
 async def get_question_by_id(
-    session: AsyncSession, question_id: UUID
+    session: AsyncSession, question_id: UUID, include_deleted: bool = False
 ) -> Question | None:
     """
-    Get a specific question by ID.
+    Get a specific question by ID, filtering out soft-deleted questions by default.
 
     Args:
         session: Database session
         question_id: Question identifier
+        include_deleted: Include soft-deleted questions in results
 
     Returns:
         Question instance or None if not found
     """
-    result = await session.execute(select(Question).where(Question.id == question_id))
+    statement = select(Question).where(Question.id == question_id)
+    if not include_deleted:
+        statement = statement.where(Question.deleted == False)  # noqa: E712
+
+    result = await session.execute(statement)
     return result.scalar_one_or_none()
 
 
@@ -311,7 +324,7 @@ async def delete_question(
     session: AsyncSession, question_id: UUID, quiz_owner_id: UUID
 ) -> bool:
     """
-    Delete a question by ID (with ownership verification).
+    Soft delete a question by ID (with ownership verification).
 
     Args:
         session: Database session
@@ -319,11 +332,11 @@ async def delete_question(
         quiz_owner_id: Quiz owner ID for verification
 
     Returns:
-        True if deleted, False if not found or unauthorized
+        True if soft deleted, False if not found or unauthorized
     """
     logger.debug("question_deletion_started", question_id=str(question_id))
 
-    # Get question with quiz ownership check
+    # Get question with quiz ownership check, including soft-deleted to prevent double deletion
     from src.quiz.models import Quiz
 
     result = await session.execute(
@@ -334,14 +347,17 @@ async def delete_question(
     )
     question = result.scalar_one_or_none()
 
-    if not question:
+    if not question or question.deleted:
         logger.warning("question_not_found_for_deletion", question_id=str(question_id))
         return False
 
-    await session.delete(question)
+    # Perform soft delete
+    question.deleted = True
+    question.deleted_at = datetime.now(timezone.utc)
+    session.add(question)
     await session.commit()
 
-    logger.info("question_deleted_successfully", question_id=str(question_id))
+    logger.info("question_soft_deleted_successfully", question_id=str(question_id))
     return True
 
 

@@ -540,19 +540,24 @@ async def test_delete_question_success(async_session):
     # Mock a question for the delete query response
     mock_question = MagicMock()
     mock_question.id = question_id
+    mock_question.deleted = False  # Not yet soft-deleted
 
     # Mock the join query result
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = mock_question
     async_session.execute = AsyncMock(return_value=mock_result)
-    async_session.delete = AsyncMock()
+    async_session.add = MagicMock()  # For soft delete
     async_session.commit = AsyncMock()
 
     result = await delete_question(async_session, question_id, quiz_owner_id)
 
     assert result is True
-    async_session.delete.assert_called_once_with(mock_question)
+    # Verify soft delete was performed (not hard delete)
+    async_session.add.assert_called_once_with(mock_question)
     async_session.commit.assert_called_once()
+    # Verify question was marked as deleted
+    assert mock_question.deleted is True
+    assert mock_question.deleted_at is not None
 
 
 @pytest.mark.asyncio

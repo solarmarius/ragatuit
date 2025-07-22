@@ -1,8 +1,8 @@
-"""Initial migration
+"""Intial migration
 
-Revision ID: a051a87cf73b
+Revision ID: a67f4ec522d2
 Revises:
-Create Date: 2025-07-14 15:23:45.569310
+Create Date: 2025-07-22 10:18:41.681429
 
 """
 from alembic import op
@@ -11,7 +11,7 @@ import sqlmodel.sql.sqltypes
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'a051a87cf73b'
+revision = 'a67f4ec522d2'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -35,7 +35,7 @@ def upgrade():
     op.create_index(op.f('ix_user_canvas_id'), 'user', ['canvas_id'], unique=True)
     op.create_table('quiz',
     sa.Column('id', sa.Uuid(), nullable=False),
-    sa.Column('owner_id', sa.Uuid(), nullable=False),
+    sa.Column('owner_id', sa.Uuid(), nullable=True),
     sa.Column('canvas_course_id', sa.Integer(), nullable=False),
     sa.Column('canvas_course_name', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('selected_modules', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
@@ -55,10 +55,13 @@ def upgrade():
     sa.Column('canvas_quiz_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('exported_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('generation_metadata', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
-    sa.ForeignKeyConstraint(['owner_id'], ['user.id'], ondelete='CASCADE'),
+    sa.Column('deleted', sa.Boolean(), nullable=False),
+    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['owner_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_quiz_canvas_course_id'), 'quiz', ['canvas_course_id'], unique=False)
+    op.create_index(op.f('ix_quiz_deleted'), 'quiz', ['deleted'], unique=False)
     op.create_index(op.f('ix_quiz_failure_reason'), 'quiz', ['failure_reason'], unique=False)
     op.create_index(op.f('ix_quiz_owner_id'), 'quiz', ['owner_id'], unique=False)
     op.create_index(op.f('ix_quiz_status'), 'quiz', ['status'], unique=False)
@@ -74,9 +77,12 @@ def upgrade():
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
     sa.Column('updated_at', sa.DateTime(timezone=True), nullable=True),
     sa.Column('canvas_item_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-    sa.ForeignKeyConstraint(['quiz_id'], ['quiz.id'], ondelete='CASCADE'),
+    sa.Column('deleted', sa.Boolean(), nullable=False),
+    sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
+    sa.ForeignKeyConstraint(['quiz_id'], ['quiz.id']),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_index(op.f('ix_question_deleted'), 'question', ['deleted'], unique=False)
     op.create_index(op.f('ix_question_difficulty'), 'question', ['difficulty'], unique=False)
     op.create_index(op.f('ix_question_is_approved'), 'question', ['is_approved'], unique=False)
     op.create_index(op.f('ix_question_question_type'), 'question', ['question_type'], unique=False)
@@ -90,10 +96,12 @@ def downgrade():
     op.drop_index(op.f('ix_question_question_type'), table_name='question')
     op.drop_index(op.f('ix_question_is_approved'), table_name='question')
     op.drop_index(op.f('ix_question_difficulty'), table_name='question')
+    op.drop_index(op.f('ix_question_deleted'), table_name='question')
     op.drop_table('question')
     op.drop_index(op.f('ix_quiz_status'), table_name='quiz')
     op.drop_index(op.f('ix_quiz_owner_id'), table_name='quiz')
     op.drop_index(op.f('ix_quiz_failure_reason'), table_name='quiz')
+    op.drop_index(op.f('ix_quiz_deleted'), table_name='quiz')
     op.drop_index(op.f('ix_quiz_canvas_course_id'), table_name='quiz')
     op.drop_table('quiz')
     op.drop_index(op.f('ix_user_canvas_id'), table_name='user')

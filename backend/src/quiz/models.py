@@ -22,9 +22,7 @@ class Quiz(SQLModel, table=True):
     """Quiz model representing a quiz with questions generated from Canvas content."""
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    owner_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE", index=True
-    )
+    owner_id: uuid.UUID | None = Field(foreign_key="user.id", nullable=True, index=True)
     owner: Optional["User"] = Relationship(back_populates="quizzes")
     canvas_course_id: int = Field(index=True)
     canvas_course_name: str
@@ -98,6 +96,16 @@ class Quiz(SQLModel, table=True):
     )
     questions: list["Question"] = Relationship(
         back_populates="quiz", cascade_delete=True
+    )
+    deleted: bool = Field(
+        default=False,
+        index=True,
+        description="Soft delete flag for data preservation",
+    )
+    deleted_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+        description="Timestamp when quiz was soft deleted",
     )
 
     @property
