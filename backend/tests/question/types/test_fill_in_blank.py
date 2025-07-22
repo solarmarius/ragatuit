@@ -122,11 +122,14 @@ def test_fill_in_blank_data_creation():
         BlankData(position=2, correct_answer="2.2 million"),
     ]
     data = FillInBlankData(
-        question_text="The capital of France is _____ with _____ residents.",
+        question_text="The capital of France is [blank_1] with [blank_2] residents.",
         blanks=blanks,
         explanation="Paris is the capital of France.",
     )
-    assert data.question_text == "The capital of France is _____ with _____ residents."
+    assert (
+        data.question_text
+        == "The capital of France is [blank_1] with [blank_2] residents."
+    )
     assert len(data.blanks) == 2
     assert data.blanks[0].position == 1
     assert data.blanks[1].position == 2
@@ -267,7 +270,7 @@ def test_fill_in_blank_question_type_validate_data():
 
     question_type = FillInBlankQuestionType()
     data = {
-        "question_text": "The capital of France is _____.",
+        "question_text": "The capital of France is [blank_1].",
         "blanks": [
             {
                 "position": 1,
@@ -281,7 +284,7 @@ def test_fill_in_blank_question_type_validate_data():
 
     result = question_type.validate_data(data)
     assert isinstance(result, FillInBlankData)
-    assert result.question_text == "The capital of France is _____."
+    assert result.question_text == "The capital of France is [blank_1]."
     assert len(result.blanks) == 1
     assert result.blanks[0].correct_answer == "Paris"
 
@@ -424,7 +427,7 @@ def test_fill_in_blank_question_type_format_for_canvas_multiple_blanks():
 
     question_type = FillInBlankQuestionType()
     data = FillInBlankData(
-        question_text="The capital of _____ is _____.",
+        question_text="The capital of [blank_1] is [blank_2].",
         blanks=[
             BlankData(position=1, correct_answer="France"),
             BlankData(position=2, correct_answer="Paris"),
@@ -482,7 +485,7 @@ def test_fill_in_blank_end_to_end_workflow():
 
     # Create question data
     data = FillInBlankData(
-        question_text="The capital of France is _____ and it is located in _____.",
+        question_text="The capital of France is [blank_1] and it is located in [blank_2].",
         blanks=[
             BlankData(
                 position=1,
@@ -524,7 +527,7 @@ def test_fill_in_blank_validation_round_trip():
 
     question_type = FillInBlankQuestionType()
     original_data = {
-        "question_text": "The capital of France is _____.",
+        "question_text": "The capital of France is [blank_1].",
         "blanks": [
             {
                 "position": 1,

@@ -256,7 +256,7 @@ def test_dynamic_question_validation_fib(test_llm_provider, test_template_manage
     )
 
     valid_fib_question = {
-        "question_text": "The capital of France is _____.",
+        "question_text": "The capital of France is [blank_1].",
         "blanks": [
             {
                 "position": 1,
@@ -276,7 +276,7 @@ def test_dynamic_question_validation_fib(test_llm_provider, test_template_manage
 
     # Should not raise exception
     validated_data = question_type_impl.validate_data(valid_fib_question)
-    assert validated_data.question_text == "The capital of France is _____."
+    assert validated_data.question_text == "The capital of France is [blank_1]."
     assert len(validated_data.blanks) == 1
     assert validated_data.blanks[0].correct_answer == "Paris"
 
@@ -815,7 +815,7 @@ def test_question_validation_edge_cases():
     # Test FIB validation with empty blanks
     fib_impl = registry.get_question_type(QuestionType.FILL_IN_BLANK)
     empty_blanks = {
-        "question_text": "The capital of France is _____.",
+        "question_text": "The capital of France is [blank_1].",
         "blanks": [],  # Empty blanks
     }
 
