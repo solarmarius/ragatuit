@@ -1,13 +1,19 @@
 """Fill-in-Blank Question type implementation."""
 
 import uuid
+from collections.abc import Callable
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
 from src.canvas.constants import CanvasInteractionType, CanvasScoringAlgorithm
 
-from .base import BaseQuestionData, BaseQuestionType, QuestionType
+from .base import (
+    BaseQuestionData,
+    BaseQuestionType,
+    QuestionType,
+    generate_canvas_title,
+)
 
 
 class BlankData(BaseModel):
@@ -156,6 +162,33 @@ class FillInBlankQuestionType(BaseQuestionType):
             "question_type": self.question_type.value,
         }
 
+    def _replace_placeholders(
+        self,
+        text: str,
+        blanks: list[BlankData],
+        replacement_func: Callable[[BlankData], str] | None = None,
+    ) -> str:
+        """Replace [blank_N] placeholders in text with specified replacements.
+
+        Args:
+            text: Text containing [blank_N] placeholders
+            blanks: List of BlankData objects
+            replacement_func: Function that takes a BlankData and returns replacement string.
+                             If None, returns the correct_answer.
+
+        Returns:
+            Text with placeholders replaced
+        """
+        result = text
+        for blank in blanks:
+            placeholder = f"[blank_{blank.position}]"
+            if replacement_func:
+                replacement = replacement_func(blank)
+            else:
+                replacement = blank.correct_answer
+            result = result.replace(placeholder, replacement)
+        return result
+
     def format_for_canvas(self, data: BaseQuestionData) -> dict[str, Any]:
         """
         Format fill-in-blank data for Canvas Rich Fill In The Blank export.
@@ -174,11 +207,11 @@ class FillInBlankQuestionType(BaseQuestionType):
 
         # Build the HTML body with span tags for blanks
         # Replace [blank_N] placeholders with <span id="blank_uuid">
-        item_body = data.question_text
-        for blank in data.blanks:
-            placeholder = f"[blank_{blank.position}]"
-            span_tag = f'<span id="blank_{blank_uuids[blank.position]}"></span>'
-            item_body = item_body.replace(placeholder, span_tag)
+        item_body = self._replace_placeholders(
+            data.question_text,
+            data.blanks,
+            lambda blank: f'<span id="blank_{blank_uuids[blank.position]}"></span>',
+        )
 
         # Wrap in paragraph tag if not already wrapped
         if not item_body.strip().startswith("<p>"):
@@ -230,12 +263,7 @@ class FillInBlankQuestionType(BaseQuestionType):
                     )
 
         # Build working_item_body with answers filled in
-        working_item_body = data.question_text
-        for blank in data.blanks:
-            placeholder = f"[blank_{blank.position}]"
-            working_item_body = working_item_body.replace(
-                placeholder, blank.correct_answer
-            )
+        working_item_body = self._replace_placeholders(data.question_text, data.blanks)
 
         # Wrap in paragraph tag if not already wrapped
         if not working_item_body.strip().startswith("<p>"):
@@ -248,7 +276,7 @@ class FillInBlankQuestionType(BaseQuestionType):
 
         # Build the complete Canvas API structure
         return {
-            "title": f"Question {data.question_text[:50]}...",  # Canvas requires a title
+            "title": generate_canvas_title(data.question_text),
             "item_body": item_body,
             "calculator_type": "none",
             "interaction_data": interaction_data,

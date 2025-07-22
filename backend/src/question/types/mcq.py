@@ -6,7 +6,12 @@ from pydantic import Field, field_validator
 
 from src.canvas.constants import CanvasInteractionType, CanvasScoringAlgorithm
 
-from .base import BaseQuestionData, BaseQuestionType, QuestionType
+from .base import (
+    BaseQuestionData,
+    BaseQuestionType,
+    QuestionType,
+    generate_canvas_title,
+)
 
 
 class MultipleChoiceData(BaseQuestionData):
@@ -137,7 +142,7 @@ class MultipleChoiceQuestionType(BaseQuestionType):
             item_body = f"<p>{item_body}</p>"
 
         return {
-            "title": f"Question {data.question_text[:50]}...",  # Canvas requires a title
+            "title": generate_canvas_title(data.question_text),
             "item_body": item_body,
             "calculator_type": "none",
             "interaction_data": {"choices": choices},

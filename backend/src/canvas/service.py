@@ -463,7 +463,18 @@ def convert_question_to_canvas_format(
 
     # For multiple choice, normalize invalid correct_answer to "A" (for backward compatibility)
     if question_type_enum == QuestionType.MULTIPLE_CHOICE:
-        if data_for_validation.get("correct_answer") not in ["A", "B", "C", "D"]:
+        original_answer = data_for_validation.get("correct_answer")
+        if original_answer not in ["A", "B", "C", "D"]:
+            from src.config import get_logger
+
+            logger = get_logger("canvas_service")
+            logger.warning(
+                "normalized_correct_answer",
+                question_id=question.get("id"),
+                original_answer=original_answer,
+                normalized_answer="A",
+                question_text=data_for_validation.get("question_text", "")[:50] + "...",
+            )
             data_for_validation["correct_answer"] = "A"
 
     question_data = question_type_impl.validate_data(data_for_validation)
