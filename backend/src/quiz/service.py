@@ -135,14 +135,34 @@ def delete_quiz(session: Session, quiz_id: UUID, user_id: UUID) -> bool:
     # Get quiz including soft-deleted ones to prevent double deletion
     quiz = get_quiz_by_id(session, quiz_id, include_deleted=True)
     if quiz and quiz.owner_id == user_id and not quiz.deleted:
+        # Cascade soft delete to all associated questions
+        from src.question.models import Question
+
+        # Get all non-deleted questions for this quiz
+        questions = session.exec(
+            select(Question)
+            .where(Question.quiz_id == quiz_id)
+            .where(Question.deleted == False)  # noqa: E712
+        ).all()
+
+        question_count = len(questions)
+        # Soft delete all questions
+        for question in questions:
+            question.deleted = True
+            question.deleted_at = datetime.now(timezone.utc)
+            session.add(question)
+
+        # Soft delete the quiz
         quiz.deleted = True
         quiz.deleted_at = datetime.now(timezone.utc)
         session.add(quiz)
         session.commit()
+
         logger.info(
-            "quiz_soft_deleted",
+            "quiz_and_questions_soft_deleted",
             quiz_id=str(quiz_id),
             user_id=str(user_id),
+            questions_deleted=question_count,
         )
         return True
     return False

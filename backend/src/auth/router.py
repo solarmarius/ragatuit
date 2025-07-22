@@ -545,13 +545,33 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> None:
         canvas_id=current_user.canvas_id,
     )
 
-    # Anonymize and soft-delete all user's quizzes
+    # Anonymize and soft-delete all user's quizzes and their questions
     user_quizzes = session.exec(
         select(Quiz).where(Quiz.owner_id == current_user.id)
     ).all()
 
     quiz_count = len(user_quizzes)
+    total_questions_deleted = 0
+
     for quiz in user_quizzes:
+        # Cascade soft delete to all associated questions
+        from src.question.models import Question
+
+        questions = session.exec(
+            select(Question)
+            .where(Question.quiz_id == quiz.id)
+            .where(Question.deleted == False)  # noqa: E712
+        ).all()
+
+        question_count = len(questions)
+        total_questions_deleted += question_count
+
+        # Soft delete all questions
+        for question in questions:
+            question.deleted = True
+            question.deleted_at = datetime.now(timezone.utc)
+            session.add(question)
+
         # Anonymize the quiz by removing owner association
         quiz.owner_id = None
         # Soft delete the quiz to preserve data for research
@@ -560,9 +580,10 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> None:
         session.add(quiz)
 
     logger.info(
-        "user_quizzes_anonymized",
+        "user_quizzes_and_questions_anonymized",
         user_id=str(current_user.id),
         quiz_count=quiz_count,
+        questions_deleted=total_questions_deleted,
     )
 
     # Hard delete the user account (complete removal)
@@ -573,4 +594,5 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> None:
         "user_deletion_completed",
         user_id=str(current_user.id),
         quiz_count=quiz_count,
+        questions_deleted=total_questions_deleted,
     )
