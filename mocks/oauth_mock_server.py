@@ -19,6 +19,23 @@ app = FastAPI(title="Mock Canvas Server", version="1.0.0")
 mock_quizzes = []
 mock_quiz_items = []
 
+
+# Canvas API constants for validation
+class CanvasScoringAlgorithm:
+    """Canvas New Quizzes API scoring algorithms."""
+
+    MULTIPLE_METHODS = "MultipleMethods"
+    EQUIVALENCE = "Equivalence"
+    TEXT_CONTAINS_ANSWER = "TextContainsAnswer"
+
+
+class CanvasInteractionType:
+    """Canvas New Quizzes API interaction types."""
+
+    CHOICE = "choice"
+    RICH_FILL_BLANK = "rich-fill-blank"
+
+
 # Mock data storage
 mock_users = {
     "12345": {
@@ -1729,9 +1746,9 @@ def validate_fill_in_blank_question(entry: dict):
             )
 
         if score_value["scoring_algorithm"] not in [
-            "TextContainsAnswer",
-            "Equivalence",
-            "TextCloseEnough",
+            CanvasScoringAlgorithm.TEXT_CONTAINS_ANSWER,
+            CanvasScoringAlgorithm.EQUIVALENCE,
+            "TextCloseEnough",  # Keep this as string since not in our constants
         ]:
             raise HTTPException(
                 status_code=400,
@@ -1747,10 +1764,10 @@ def validate_fill_in_blank_question(entry: dict):
         )
 
     # Validate scoring algorithm
-    if entry["scoring_algorithm"] != "MultipleMethods":
+    if entry["scoring_algorithm"] != CanvasScoringAlgorithm.MULTIPLE_METHODS:
         raise HTTPException(
             status_code=400,
-            detail="item[entry][scoring_algorithm] must be 'MultipleMethods' for fill-in-blank questions",
+            detail=f"item[entry][scoring_algorithm] must be '{CanvasScoringAlgorithm.MULTIPLE_METHODS}' for fill-in-blank questions",
         )
 
 
@@ -1862,10 +1879,10 @@ def validate_multiple_choice_question(entry: dict):
             )
 
     # Validate scoring algorithm
-    if entry["scoring_algorithm"] != "Equivalence":
+    if entry["scoring_algorithm"] != CanvasScoringAlgorithm.EQUIVALENCE:
         raise HTTPException(
             status_code=400,
-            detail="item[entry][scoring_algorithm] must be 'Equivalence' for multiple choice questions",
+            detail=f"item[entry][scoring_algorithm] must be '{CanvasScoringAlgorithm.EQUIVALENCE}' for multiple choice questions",
         )
 
 

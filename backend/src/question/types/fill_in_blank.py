@@ -5,6 +5,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from src.canvas.constants import CanvasInteractionType, CanvasScoringAlgorithm
+
 from .base import BaseQuestionData, BaseQuestionType, QuestionType
 
 
@@ -209,7 +211,7 @@ class FillInBlankQuestionType(BaseQuestionType):
                         "value": blank.correct_answer,
                         "blank_text": blank.correct_answer,
                     },
-                    "scoring_algorithm": "TextContainsAnswer",
+                    "scoring_algorithm": CanvasScoringAlgorithm.TEXT_CONTAINS_ANSWER,
                 }
             )
 
@@ -223,7 +225,7 @@ class FillInBlankQuestionType(BaseQuestionType):
                                 "value": variation,
                                 "blank_text": variation,
                             },
-                            "scoring_algorithm": "TextContainsAnswer",
+                            "scoring_algorithm": CanvasScoringAlgorithm.TEXT_CONTAINS_ANSWER,
                         }
                     )
 
@@ -253,8 +255,8 @@ class FillInBlankQuestionType(BaseQuestionType):
             "properties": {"shuffle_rules": {"blanks": {}}},
             "scoring_data": scoring_data,
             "answer_feedback": {},
-            "scoring_algorithm": "MultipleMethods",
-            "interaction_type_slug": "rich-fill-blank",
+            "scoring_algorithm": CanvasScoringAlgorithm.MULTIPLE_METHODS,
+            "interaction_type_slug": CanvasInteractionType.RICH_FILL_BLANK,
             "feedback": {},
             "points_possible": len(
                 data.blanks

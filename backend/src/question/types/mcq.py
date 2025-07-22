@@ -4,6 +4,8 @@ from typing import Any
 
 from pydantic import Field, field_validator
 
+from src.canvas.constants import CanvasInteractionType, CanvasScoringAlgorithm
+
 from .base import BaseQuestionData, BaseQuestionType, QuestionType
 
 
@@ -145,8 +147,8 @@ class MultipleChoiceQuestionType(BaseQuestionType):
             },
             "scoring_data": {"value": f"choice_{correct_index + 1}"},
             "answer_feedback": {},
-            "scoring_algorithm": "Equivalence",
-            "interaction_type_slug": "choice",
+            "scoring_algorithm": CanvasScoringAlgorithm.EQUIVALENCE,
+            "interaction_type_slug": CanvasInteractionType.CHOICE,
             "feedback": {},
             "points_possible": 1,
         }
