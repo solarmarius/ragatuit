@@ -174,6 +174,18 @@ class Question(SQLModel, table=True):
         default=None, description="Canvas quiz item ID after export"
     )
 
+    # Soft delete fields
+    deleted: bool = Field(
+        default=False,
+        index=True,
+        description="Soft delete flag for data preservation",
+    )
+    deleted_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+        description="Timestamp when question was soft deleted",
+    )
+
     def get_typed_data(
         self, question_registry: "QuestionTypeRegistry"
     ) -> BaseQuestionData:
