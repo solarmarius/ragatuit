@@ -210,7 +210,7 @@ def test_get_user_quizzes_empty(session: Session):
 
 
 def test_delete_quiz_as_owner_success(session: Session):
-    """Test successful quiz deletion by owner."""
+    """Test successful quiz soft deletion by owner."""
     from src.quiz.service import delete_quiz
     from tests.conftest import create_quiz_in_session
 
@@ -222,11 +222,16 @@ def test_delete_quiz_as_owner_success(session: Session):
 
     assert result is True
 
-    # Verify quiz is deleted
+    # Verify quiz is soft-deleted (not returned by default query)
     from src.quiz.service import get_quiz_by_id
 
     deleted_quiz = get_quiz_by_id(session, quiz_id)
     assert deleted_quiz is None
+
+    # But exists when including deleted
+    soft_deleted_quiz = get_quiz_by_id(session, quiz_id, include_deleted=True)
+    assert soft_deleted_quiz is not None
+    assert soft_deleted_quiz.deleted is True
 
 
 def test_delete_quiz_not_owner_fails(session: Session):
@@ -608,17 +613,26 @@ def test_quiz_lifecycle_creation_to_deletion(session: Session):
     assert len(user_quizzes) == 1
     assert user_quizzes[0].id == quiz_id
 
-    # Delete quiz
+    # Delete quiz (soft delete)
     delete_result = delete_quiz(session, quiz_id, user.id)
     assert delete_result is True
 
-    # Verify deletion
+    # Verify soft deletion
     deleted_quiz = get_quiz_by_id(session, quiz_id)
     assert deleted_quiz is None
 
-    # Verify user has no quizzes
+    # But quiz exists when including deleted
+    soft_deleted_quiz = get_quiz_by_id(session, quiz_id, include_deleted=True)
+    assert soft_deleted_quiz is not None
+    assert soft_deleted_quiz.deleted is True
+
+    # Verify user has no active quizzes (soft-deleted excluded by default)
     user_quizzes_after = get_user_quizzes(session, user.id)
     assert len(user_quizzes_after) == 0
+
+    # But quiz appears when including deleted
+    user_quizzes_all = get_user_quizzes(session, user.id, include_deleted=True)
+    assert len(user_quizzes_all) == 1
 
 
 def test_multiple_users_quiz_isolation(session: Session):
@@ -836,3 +850,323 @@ async def test_reserve_quiz_job_includes_language_setting(async_session):
     assert result["target_questions"] == 50
     assert result["llm_model"] == "gpt-4"
     assert result["llm_temperature"] == 0.7
+
+
+# Soft Delete Tests
+
+
+def test_delete_quiz_soft_delete_success(session: Session):
+    """Test quiz soft deletion preserves data for research."""
+    from src.quiz.service import delete_quiz, get_quiz_by_id
+    from tests.conftest import create_quiz_in_session
+
+    quiz = create_quiz_in_session(session)
+    quiz_id = quiz.id
+    owner_id = quiz.owner_id
+
+    result = delete_quiz(session, quiz_id, owner_id)
+
+    assert result is True
+
+    # Verify quiz is soft-deleted (not returned by default query)
+    deleted_quiz = get_quiz_by_id(session, quiz_id)
+    assert deleted_quiz is None
+
+    # But can be retrieved when including deleted
+    soft_deleted_quiz = get_quiz_by_id(session, quiz_id, include_deleted=True)
+    assert soft_deleted_quiz is not None
+    assert soft_deleted_quiz.deleted is True
+    assert soft_deleted_quiz.deleted_at is not None
+
+
+def test_quiz_cascade_soft_delete_to_questions(session: Session):
+    """Test quiz deletion cascades soft delete to associated questions."""
+    from src.quiz.service import delete_quiz
+    from tests.conftest import create_quiz_in_session
+
+    # Create quiz with questions
+    quiz = create_quiz_in_session(session)
+
+    # Create some questions for the quiz
+    from src.question.models import Question
+    from src.question.types import QuestionType
+
+    question1 = Question(
+        quiz_id=quiz.id,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        question_data={"question_text": "Test Q1", "choices": ["A", "B"]},
+    )
+    question2 = Question(
+        quiz_id=quiz.id,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        question_data={"question_text": "Test Q2", "choices": ["C", "D"]},
+    )
+    session.add_all([question1, question2])
+    session.commit()
+    session.refresh(question1)
+    session.refresh(question2)
+
+    # Delete the quiz
+    result = delete_quiz(session, quiz.id, quiz.owner_id)
+    assert result is True
+
+    # Verify questions are also soft-deleted by checking directly
+    from sqlmodel import select
+
+    q1_soft_deleted = session.exec(
+        select(Question).where(Question.id == question1.id)
+    ).first()
+    q2_soft_deleted = session.exec(
+        select(Question).where(Question.id == question2.id)
+    ).first()
+
+    assert q1_soft_deleted.deleted is True
+    assert q1_soft_deleted.deleted_at is not None
+    assert q2_soft_deleted.deleted is True
+    assert q2_soft_deleted.deleted_at is not None
+
+
+def test_get_user_quizzes_excludes_soft_deleted(session: Session):
+    """Test get_user_quizzes excludes soft-deleted quizzes by default."""
+    from src.quiz.service import delete_quiz, get_user_quizzes
+    from tests.conftest import create_quiz_in_session, create_user_in_session
+
+    user = create_user_in_session(session)
+
+    # Create two quizzes
+    quiz1 = create_quiz_in_session(session, owner=user, title="Active Quiz")
+    quiz2 = create_quiz_in_session(session, owner=user, title="To Delete Quiz")
+
+    # Initially both should be returned
+    user_quizzes = get_user_quizzes(session, user.id)
+    assert len(user_quizzes) == 2
+
+    # Soft delete one quiz
+    delete_quiz(session, quiz2.id, user.id)
+
+    # Only active quiz should be returned
+    user_quizzes_after = get_user_quizzes(session, user.id)
+    assert len(user_quizzes_after) == 1
+    assert user_quizzes_after[0].title == "Active Quiz"
+
+    # Both should be returned when including deleted
+    user_quizzes_all = get_user_quizzes(session, user.id, include_deleted=True)
+    assert len(user_quizzes_all) == 2
+
+
+def test_get_quiz_by_id_include_deleted_parameter(session: Session):
+    """Test get_quiz_by_id include_deleted parameter works correctly."""
+    from src.quiz.service import delete_quiz, get_quiz_by_id
+    from tests.conftest import create_quiz_in_session
+
+    quiz = create_quiz_in_session(session)
+    quiz_id = quiz.id
+
+    # Initially quiz is returned
+    active_quiz = get_quiz_by_id(session, quiz_id)
+    assert active_quiz is not None
+
+    # Soft delete the quiz
+    delete_quiz(session, quiz_id, quiz.owner_id)
+
+    # Default query excludes soft-deleted
+    deleted_quiz = get_quiz_by_id(session, quiz_id)
+    assert deleted_quiz is None
+
+    # include_deleted=True returns soft-deleted quiz
+    soft_deleted_quiz = get_quiz_by_id(session, quiz_id, include_deleted=True)
+    assert soft_deleted_quiz is not None
+    assert soft_deleted_quiz.deleted is True
+
+
+@pytest.mark.asyncio
+async def test_get_question_counts_excludes_soft_deleted_questions(async_session):
+    """Test get_question_counts excludes soft-deleted questions by default."""
+    from src.auth.models import User
+    from src.question.types import QuestionType
+    from src.quiz.models import Quiz
+    from src.quiz.service import get_question_counts
+
+    # Create user and quiz
+    user = User(
+        canvas_id=140,
+        name="Test User",
+        access_token="test_access_token",
+        refresh_token="test_refresh_token",
+    )
+    async_session.add(user)
+    await async_session.commit()
+    await async_session.refresh(user)
+
+    quiz = Quiz(
+        owner_id=user.id,
+        canvas_course_id=123,
+        canvas_course_name="Test Course",
+        selected_modules={"1": {"name": "Module 1", "question_count": 10}},
+        title="Test Quiz",
+    )
+    async_session.add(quiz)
+    await async_session.commit()
+    await async_session.refresh(quiz)
+
+    # Store quiz_id immediately after refresh to avoid lazy loading issues
+    quiz_id = quiz.id
+
+    # Create questions
+    from src.question.types.base import Question
+
+    question1 = Question(
+        quiz_id=quiz_id,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        question_data={"question_text": "Q1", "choices": ["A", "B"]},
+        is_approved=True,
+    )
+    question2 = Question(
+        quiz_id=quiz_id,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        question_data={"question_text": "Q2", "choices": ["C", "D"]},
+        is_approved=False,
+    )
+    question3 = Question(
+        quiz_id=quiz_id,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        question_data={"question_text": "Q3", "choices": ["E", "F"]},
+        is_approved=True,
+        deleted=True,  # Soft-deleted question
+    )
+    async_session.add_all([question1, question2, question3])
+    await async_session.commit()
+
+    # Get counts excluding soft-deleted
+    counts = await get_question_counts(async_session, quiz_id)
+    assert counts["total"] == 2  # Excludes soft-deleted question3
+    assert counts["approved"] == 1  # Only question1 is approved and not deleted
+
+    # Get counts including soft-deleted
+    counts_all = await get_question_counts(async_session, quiz_id, include_deleted=True)
+    assert counts_all["total"] == 3  # Includes all questions
+    assert counts_all["approved"] == 2  # question1 and question3 are approved
+
+
+def test_prevent_double_soft_deletion(session: Session):
+    """Test that attempting to soft delete an already soft-deleted quiz fails."""
+    from src.quiz.service import delete_quiz, get_quiz_by_id
+    from tests.conftest import create_quiz_in_session
+
+    quiz = create_quiz_in_session(session)
+    quiz_id = quiz.id
+    owner_id = quiz.owner_id
+
+    # First deletion succeeds
+    result1 = delete_quiz(session, quiz_id, owner_id)
+    assert result1 is True
+
+    # Second deletion fails (quiz already soft-deleted)
+    result2 = delete_quiz(session, quiz_id, owner_id)
+    assert result2 is False
+
+    # Verify quiz is still soft-deleted (not hard deleted)
+    soft_deleted_quiz = get_quiz_by_id(session, quiz_id, include_deleted=True)
+    assert soft_deleted_quiz is not None
+    assert soft_deleted_quiz.deleted is True
+
+
+@pytest.mark.asyncio
+async def test_async_functions_respect_soft_delete_filter(async_session):
+    """Test async functions respect soft delete filtering."""
+    from src.auth.models import User
+    from src.quiz.models import Quiz
+    from src.quiz.service import get_content_from_quiz, get_quiz_for_update
+
+    # Create user and quiz
+    user = User(
+        canvas_id=141,
+        name="Async Test User",
+        access_token="test_access_token",
+        refresh_token="test_refresh_token",
+    )
+    async_session.add(user)
+    await async_session.commit()
+    await async_session.refresh(user)
+
+    quiz = Quiz(
+        owner_id=user.id,
+        canvas_course_id=123,
+        canvas_course_name="Test Course",
+        selected_modules={"1": {"name": "Module 1", "question_count": 10}},
+        title="Test Quiz",
+        deleted=True,  # Create as soft-deleted
+        extracted_content={"test": "content"},
+    )
+    async_session.add(quiz)
+    await async_session.commit()
+    await async_session.refresh(quiz)
+
+    # Store quiz_id before using it in async operations
+    quiz_id = quiz.id
+
+    # Async functions should exclude soft-deleted by default
+    quiz_for_update = await get_quiz_for_update(async_session, quiz_id)
+    assert quiz_for_update is None
+
+    content = await get_content_from_quiz(async_session, quiz_id)
+    assert content is None
+
+    # But include when requested
+    quiz_for_update_inc = await get_quiz_for_update(
+        async_session, quiz_id, include_deleted=True
+    )
+    assert quiz_for_update_inc is not None
+
+    content_inc = await get_content_from_quiz(
+        async_session, quiz_id, include_deleted=True
+    )
+    assert content_inc == {"test": "content"}
+
+
+def test_soft_delete_preserves_all_quiz_data(session: Session):
+    """Test soft deletion preserves all quiz data for research purposes."""
+    from src.quiz.service import delete_quiz, get_quiz_by_id
+    from tests.conftest import create_quiz_in_session
+
+    # Create quiz with comprehensive data
+    quiz = create_quiz_in_session(
+        session,
+        title="Research Quiz",
+        question_count=50,
+        llm_model="gpt-4",
+        llm_temperature=0.8,
+        selected_modules={
+            "123": {"name": "AI Module", "question_count": 25},
+            "456": {"name": "ML Module", "question_count": 25},
+        },
+    )
+
+    original_data = {
+        "title": quiz.title,
+        "question_count": quiz.question_count,
+        "llm_model": quiz.llm_model,
+        "llm_temperature": quiz.llm_temperature,
+        "selected_modules": quiz.selected_modules,
+        "canvas_course_id": quiz.canvas_course_id,
+        "canvas_course_name": quiz.canvas_course_name,
+    }
+
+    # Soft delete the quiz
+    result = delete_quiz(session, quiz.id, quiz.owner_id)
+    assert result is True
+
+    # Retrieve soft-deleted quiz and verify all data is preserved
+    soft_deleted_quiz = get_quiz_by_id(session, quiz.id, include_deleted=True)
+    assert soft_deleted_quiz is not None
+    assert soft_deleted_quiz.deleted is True
+    assert soft_deleted_quiz.deleted_at is not None
+
+    # Verify all original data is preserved
+    assert soft_deleted_quiz.title == original_data["title"]
+    assert soft_deleted_quiz.question_count == original_data["question_count"]
+    assert soft_deleted_quiz.llm_model == original_data["llm_model"]
+    assert soft_deleted_quiz.llm_temperature == original_data["llm_temperature"]
+    assert soft_deleted_quiz.selected_modules == original_data["selected_modules"]
+    assert soft_deleted_quiz.canvas_course_id == original_data["canvas_course_id"]
+    assert soft_deleted_quiz.canvas_course_name == original_data["canvas_course_name"]
