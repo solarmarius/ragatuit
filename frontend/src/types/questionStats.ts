@@ -54,6 +54,12 @@ export interface FillInBlankStats extends QuestionTypeStats {
   case_sensitive_questions: number;
 }
 
+export interface MatchingStats extends QuestionTypeStats {
+  average_pairs_per_question: number;
+  questions_with_distractors: number;
+  most_complex_question_pairs: number;
+}
+
 // Type guard for question stats
 export function isQuestionStats(data: any): data is QuestionStats {
   return (
@@ -80,6 +86,7 @@ export function createEmptyStats(): QuestionStats {
     by_question_type: {
       multiple_choice: { total: 0, approved: 0, approval_rate: 0 },
       fill_in_blank: { total: 0, approved: 0, approval_rate: 0 },
+      matching: { total: 0, approved: 0, approval_rate: 0 },
     },
   };
 }
@@ -106,6 +113,7 @@ export function mergeLegacyStats(
         ),
       },
       fill_in_blank: { total: 0, approved: 0, approval_rate: 0 },
+      matching: { total: 0, approved: 0, approval_rate: 0 },
     },
   };
 }

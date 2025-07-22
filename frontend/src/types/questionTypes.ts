@@ -33,10 +33,22 @@ export interface FillInBlankData {
   explanation?: string | null;
 }
 
+// Matching Question Data
+export interface MatchingData {
+  question_text: string;
+  pairs: Array<{
+    question: string; // Left column item
+    answer: string;   // Right column correct match
+  }>;
+  distractors?: string[] | null; // Extra wrong answers (0-5)
+  explanation?: string | null;   // Optional explanation
+}
+
 // Discriminated union for all question data types
 export type QuestionData =
   | ({ type: "multiple_choice" } & MCQData)
-  | ({ type: "fill_in_blank" } & FillInBlankData);
+  | ({ type: "fill_in_blank" } & FillInBlankData)
+  | ({ type: "matching" } & MatchingData);
 
 // Strongly typed question response
 export interface TypedQuestionResponse<T extends QuestionType = QuestionType> {
@@ -47,7 +59,9 @@ export interface TypedQuestionResponse<T extends QuestionType = QuestionType> {
     ? MCQData
     : T extends "fill_in_blank"
       ? FillInBlankData
-      : never;
+      : T extends "matching"
+        ? MatchingData
+        : never;
   difficulty?: QuestionDifficulty | null;
   tags?: string[] | null;
   is_approved: boolean;
@@ -61,6 +75,7 @@ export interface TypedQuestionResponse<T extends QuestionType = QuestionType> {
 export type MCQQuestionResponse = TypedQuestionResponse<"multiple_choice">;
 export type FillInBlankQuestionResponse =
   TypedQuestionResponse<"fill_in_blank">;
+export type MatchingQuestionResponse = TypedQuestionResponse<"matching">;
 
 // Type guards for question data
 export function isMCQData(data: unknown): data is MCQData {
@@ -102,6 +117,57 @@ export function isFillInBlankData(data: unknown): data is FillInBlankData {
   );
 }
 
+export function isMatchingData(data: unknown): data is MatchingData {
+  if (typeof data !== "object" || data === null) {
+    return false;
+  }
+
+  const obj = data as Record<string, unknown>;
+
+  // Validate required fields
+  if (typeof obj.question_text !== "string") {
+    return false;
+  }
+
+  // Validate pairs array
+  if (!Array.isArray(obj.pairs) || obj.pairs.length < 3 || obj.pairs.length > 10) {
+    return false;
+  }
+
+  // Validate each pair structure
+  for (const pair of obj.pairs) {
+    if (
+      typeof pair !== "object" ||
+      pair === null ||
+      typeof (pair as any).question !== "string" ||
+      typeof (pair as any).answer !== "string"
+    ) {
+      return false;
+    }
+  }
+
+  // Validate optional distractors
+  if (obj.distractors !== undefined && obj.distractors !== null) {
+    if (!Array.isArray(obj.distractors) || obj.distractors.length > 5) {
+      return false;
+    }
+    for (const distractor of obj.distractors) {
+      if (typeof distractor !== "string") {
+        return false;
+      }
+    }
+  }
+
+  // Validate optional explanation
+  if (obj.explanation !== undefined && obj.explanation !== null) {
+    if (typeof obj.explanation !== "string") {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 // Type guard for question responses
 export function isQuestionType<T extends QuestionType>(
   question: QuestionResponse,
@@ -130,6 +196,11 @@ export function extractQuestionData<T extends QuestionType>(
     case "fill_in_blank":
       if (!isFillInBlankData(data)) {
         throw new Error("Invalid Fill in Blank question data structure");
+      }
+      return data as unknown as TypedQuestionResponse<T>["question_data"];
+    case "matching":
+      if (!isMatchingData(data)) {
+        throw new Error("Invalid Matching question data structure");
       }
       return data as unknown as TypedQuestionResponse<T>["question_data"];
     default: {
