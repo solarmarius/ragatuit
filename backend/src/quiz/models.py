@@ -22,9 +22,7 @@ class Quiz(SQLModel, table=True):
     """Quiz model representing a quiz with questions generated from Canvas content."""
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    owner_id: uuid.UUID = Field(
-        foreign_key="user.id", nullable=False, ondelete="CASCADE", index=True
-    )
+    owner_id: uuid.UUID | None = Field(foreign_key="user.id", nullable=True, index=True)
     owner: Optional["User"] = Relationship(back_populates="quizzes")
     canvas_course_id: int = Field(index=True)
     canvas_course_name: str
