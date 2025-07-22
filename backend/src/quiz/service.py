@@ -77,40 +77,52 @@ def create_quiz(session: Session, quiz_create: QuizCreate, owner_id: UUID) -> Qu
     return quiz
 
 
-def get_quiz_by_id(session: Session, quiz_id: UUID) -> Quiz | None:
+def get_quiz_by_id(
+    session: Session, quiz_id: UUID, include_deleted: bool = False
+) -> Quiz | None:
     """
-    Get quiz by ID.
+    Get quiz by ID, filtering out soft-deleted quizzes by default.
 
     Args:
         session: Database session
         quiz_id: Quiz ID
+        include_deleted: Include soft-deleted quizzes in results
 
     Returns:
         Quiz instance or None
     """
-    return session.get(Quiz, quiz_id)
+    statement = select(Quiz).where(Quiz.id == quiz_id)
+    if not include_deleted:
+        statement = statement.where(Quiz.deleted == False)  # noqa: E712
+
+    return session.exec(statement).first()
 
 
-def get_user_quizzes(session: Session, user_id: UUID) -> list[Quiz]:
+def get_user_quizzes(
+    session: Session, user_id: UUID, include_deleted: bool = False
+) -> list[Quiz]:
     """
-    Get all quizzes for a user.
+    Get all quizzes for a user, filtering out soft-deleted quizzes by default.
 
     Args:
         session: Database session
         user_id: User ID
+        include_deleted: Include soft-deleted quizzes in results
 
     Returns:
         List of user's quizzes
     """
-    statement = (
-        select(Quiz).where(Quiz.owner_id == user_id).order_by(Quiz.created_at.desc())  # type: ignore
-    )
+    statement = select(Quiz).where(Quiz.owner_id == user_id)
+    if not include_deleted:
+        statement = statement.where(Quiz.deleted == False)  # noqa: E712
+
+    statement = statement.order_by(Quiz.created_at.desc())  # type: ignore
     return list(session.exec(statement).all())
 
 
 def delete_quiz(session: Session, quiz_id: UUID, user_id: UUID) -> bool:
     """
-    Delete a quiz if owned by the user.
+    Soft delete a quiz if owned by the user.
 
     Args:
         session: Database session
@@ -118,14 +130,17 @@ def delete_quiz(session: Session, quiz_id: UUID, user_id: UUID) -> bool:
         user_id: User ID (must be owner)
 
     Returns:
-        True if deleted, False if not found or not owner
+        True if soft deleted, False if not found or not owner
     """
-    quiz = session.get(Quiz, quiz_id)
-    if quiz and quiz.owner_id == user_id:
-        session.delete(quiz)
+    # Get quiz including soft-deleted ones to prevent double deletion
+    quiz = get_quiz_by_id(session, quiz_id, include_deleted=True)
+    if quiz and quiz.owner_id == user_id and not quiz.deleted:
+        quiz.deleted = True
+        quiz.deleted_at = datetime.now(timezone.utc)
+        session.add(quiz)
         session.commit()
         logger.info(
-            "quiz_deleted",
+            "quiz_soft_deleted",
             quiz_id=str(quiz_id),
             user_id=str(user_id),
         )
@@ -133,50 +148,61 @@ def delete_quiz(session: Session, quiz_id: UUID, user_id: UUID) -> bool:
     return False
 
 
-async def get_quiz_for_update(session: AsyncSession, quiz_id: UUID) -> Quiz | None:
+async def get_quiz_for_update(
+    session: AsyncSession, quiz_id: UUID, include_deleted: bool = False
+) -> Quiz | None:
     """
-    Get quiz for update with row lock.
+    Get quiz for update with row lock, filtering out soft-deleted quizzes by default.
 
     Args:
         session: Async database session
         quiz_id: Quiz ID
+        include_deleted: Include soft-deleted quizzes in results
 
     Returns:
         Quiz instance or None
     """
-    result = await session.execute(
-        select(Quiz).where(Quiz.id == quiz_id).with_for_update()
-    )
+    statement = select(Quiz).where(Quiz.id == quiz_id)
+    if not include_deleted:
+        statement = statement.where(Quiz.deleted == False)  # noqa: E712
+
+    result = await session.execute(statement.with_for_update())
     return result.scalar_one_or_none()
 
 
 async def get_content_from_quiz(
-    session: AsyncSession, quiz_id: UUID
+    session: AsyncSession, quiz_id: UUID, include_deleted: bool = False
 ) -> dict[str, Any] | None:
     """
-    Get extracted content from quiz.
+    Get extracted content from quiz, filtering out soft-deleted quizzes by default.
 
     Args:
         session: Async database session
         quiz_id: Quiz ID
+        include_deleted: Include soft-deleted quizzes in results
 
     Returns:
         Extracted content or None
     """
-    result = await session.execute(
-        select(Quiz.extracted_content).where(Quiz.id == quiz_id)
-    )
+    statement = select(Quiz.extracted_content).where(Quiz.id == quiz_id)
+    if not include_deleted:
+        statement = statement.where(Quiz.deleted == False)  # noqa: E712
+
+    result = await session.execute(statement)
     content = result.scalar_one_or_none()
     return content
 
 
-async def get_question_counts(session: AsyncSession, quiz_id: UUID) -> dict[str, int]:
+async def get_question_counts(
+    session: AsyncSession, quiz_id: UUID, include_deleted: bool = False
+) -> dict[str, int]:
     """
-    Get question counts for a quiz.
+    Get question counts for a quiz, filtering out soft-deleted questions by default.
 
     Args:
         session: Async database session
         quiz_id: Quiz ID
+        include_deleted: Include soft-deleted questions in counts
 
     Returns:
         Dict with 'total' and 'approved' question counts
@@ -186,13 +212,16 @@ async def get_question_counts(session: AsyncSession, quiz_id: UUID) -> dict[str,
 
     logger.debug("question_counts_requested", quiz_id=str(quiz_id))
 
-    # Query for total and approved question counts
-    result = await session.execute(
-        select(
-            func.count().label("total"),
-            func.sum(cast(Question.is_approved, Integer)).label("approved"),
-        ).where(Question.quiz_id == quiz_id)
-    )
+    # Query for total and approved question counts, filtering out soft-deleted
+    statement = select(
+        func.count().label("total"),
+        func.sum(cast(Question.is_approved, Integer)).label("approved"),
+    ).where(Question.quiz_id == quiz_id)
+
+    if not include_deleted:
+        statement = statement.where(Question.deleted == False)  # noqa: E712
+
+    result = await session.execute(statement)
 
     row = result.first()
     if row is None:
