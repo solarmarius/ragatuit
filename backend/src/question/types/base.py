@@ -99,6 +99,22 @@ class BaseQuestionType(ABC):
         pass
 
 
+def generate_canvas_title(question_text: str, max_length: int = 50) -> str:
+    """Generate a Canvas-compatible title from question text.
+
+    Args:
+        question_text: The question text to generate title from
+        max_length: Maximum length for the title (default: 50)
+
+    Returns:
+        Title formatted as "Question {truncated_text}..."
+    """
+    if len(question_text) <= max_length:
+        return f"Question {question_text}"
+    else:
+        return f"Question {question_text[:max_length]}..."
+
+
 class Question(SQLModel, table=True):
     """
     Polymorphic question model supporting multiple question types.

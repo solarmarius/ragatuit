@@ -1019,7 +1019,7 @@ async def test_prepare_questions_for_export_fill_in_blank_success():
             quiz_id=quiz_id,
             question_type=QuestionType.FILL_IN_BLANK,
             question_data={
-                "question_text": "The capital of France is _____.",
+                "question_text": "The capital of France is [blank_1].",
                 "blanks": [
                     {
                         "position": 1,
@@ -1038,7 +1038,7 @@ async def test_prepare_questions_for_export_fill_in_blank_success():
     from src.question.types.fill_in_blank import BlankData, FillInBlankData
 
     mock_fib_data = FillInBlankData(
-        question_text="The capital of France is _____.",
+        question_text="The capital of France is [blank_1].",
         blanks=[
             BlankData(
                 position=1,
@@ -1068,7 +1068,7 @@ async def test_prepare_questions_for_export_fill_in_blank_success():
         result = await prepare_questions_for_export(quiz_id)
 
     assert len(result) == 1
-    assert result[0]["question_text"] == "The capital of France is _____."
+    assert result[0]["question_text"] == "The capital of France is [blank_1]."
     assert result[0]["question_type"] == "fill_in_blank"
     assert len(result[0]["blanks"]) == 1
     assert result[0]["blanks"][0]["position"] == 1
@@ -1093,7 +1093,7 @@ async def test_prepare_questions_for_export_fill_in_blank_multiple_blanks():
             quiz_id=quiz_id,
             question_type=QuestionType.FILL_IN_BLANK,
             question_data={
-                "question_text": "The capital of _____ is _____ and it is located in _____.",
+                "question_text": "The capital of [blank_1] is [blank_2] and it is located in [blank_3].",
                 "blanks": [
                     {
                         "position": 1,
@@ -1122,7 +1122,7 @@ async def test_prepare_questions_for_export_fill_in_blank_multiple_blanks():
     from src.question.types.fill_in_blank import BlankData, FillInBlankData
 
     mock_fib_data = FillInBlankData(
-        question_text="The capital of _____ is _____ and it is located in _____.",
+        question_text="The capital of [blank_1] is [blank_2] and it is located in [blank_3].",
         blanks=[
             BlankData(
                 position=1,
@@ -1191,7 +1191,7 @@ async def test_prepare_questions_for_export_fill_in_blank_case_sensitive():
             quiz_id=quiz_id,
             question_type=QuestionType.FILL_IN_BLANK,
             question_data={
-                "question_text": "The chemical symbol for gold is _____.",
+                "question_text": "The chemical symbol for gold is [blank_1].",
                 "blanks": [
                     {
                         "position": 1,
@@ -1209,7 +1209,7 @@ async def test_prepare_questions_for_export_fill_in_blank_case_sensitive():
     from src.question.types.fill_in_blank import BlankData, FillInBlankData
 
     mock_fib_data = FillInBlankData(
-        question_text="The chemical symbol for gold is _____.",
+        question_text="The chemical symbol for gold is [blank_1].",
         blanks=[
             BlankData(
                 position=1,
@@ -1273,7 +1273,7 @@ async def test_prepare_questions_for_export_mixed_question_types():
             quiz_id=quiz_id,
             question_type=QuestionType.FILL_IN_BLANK,
             question_data={
-                "question_text": "The capital of France is _____.",
+                "question_text": "The capital of France is [blank_1].",
                 "blanks": [
                     {
                         "position": 1,
@@ -1301,7 +1301,7 @@ async def test_prepare_questions_for_export_mixed_question_types():
     )
 
     mock_fib_data = FillInBlankData(
-        question_text="The capital of France is _____.",
+        question_text="The capital of France is [blank_1].",
         blanks=[
             BlankData(
                 position=1,
@@ -1341,7 +1341,7 @@ async def test_prepare_questions_for_export_mixed_question_types():
 
     # Verify Fill-in-Blank question
     fib_question = next(q for q in result if q["question_type"] == "fill_in_blank")
-    assert fib_question["question_text"] == "The capital of France is _____."
+    assert fib_question["question_text"] == "The capital of France is [blank_1]."
     assert len(fib_question["blanks"]) == 1
     assert fib_question["blanks"][0]["correct_answer"] == "Paris"
 
@@ -1361,7 +1361,7 @@ async def test_prepare_questions_for_export_fill_in_blank_with_answer_variations
             quiz_id=quiz_id,
             question_type=QuestionType.FILL_IN_BLANK,
             question_data={
-                "question_text": "The capital of France is _____.",
+                "question_text": "The capital of France is [blank_1].",
                 "blanks": [
                     {
                         "position": 1,
@@ -1380,7 +1380,7 @@ async def test_prepare_questions_for_export_fill_in_blank_with_answer_variations
     from src.question.types.fill_in_blank import BlankData, FillInBlankData
 
     mock_fib_data = FillInBlankData(
-        question_text="The capital of France is _____.",
+        question_text="The capital of France is [blank_1].",
         blanks=[
             BlankData(
                 position=1,

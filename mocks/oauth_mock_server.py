@@ -19,6 +19,23 @@ app = FastAPI(title="Mock Canvas Server", version="1.0.0")
 mock_quizzes = []
 mock_quiz_items = []
 
+
+# Canvas API constants for validation
+class CanvasScoringAlgorithm:
+    """Canvas New Quizzes API scoring algorithms."""
+
+    MULTIPLE_METHODS = "MultipleMethods"
+    EQUIVALENCE = "Equivalence"
+    TEXT_CONTAINS_ANSWER = "TextContainsAnswer"
+
+
+class CanvasInteractionType:
+    """Canvas New Quizzes API interaction types."""
+
+    CHOICE = "choice"
+    RICH_FILL_BLANK = "rich-fill-blank"
+
+
 # Mock data storage
 mock_users = {
     "12345": {
@@ -1490,6 +1507,385 @@ async def delete_quiz(
     return {"message": "Quiz deleted successfully", "deleted_quiz_id": quiz_id}
 
 
+def is_valid_uuid(value: str) -> bool:
+    """Validate if string is a valid UUID format."""
+    try:
+        uuid.UUID(value)
+        return True
+    except (ValueError, TypeError):
+        return False
+
+
+def validate_quiz_item_structure(item_data: dict) -> tuple[dict, dict]:
+    """Comprehensive validation for Canvas New Quiz item structure."""
+    if not item_data:
+        raise HTTPException(status_code=400, detail="Item data is required")
+
+    item = item_data.get("item", {})
+    if not item:
+        raise HTTPException(status_code=400, detail="item field is required")
+
+    entry = item.get("entry", {})
+    if not entry:
+        raise HTTPException(status_code=400, detail="item[entry] field is required")
+
+    # Validate top-level item fields
+    if "entry_type" not in item:
+        raise HTTPException(status_code=400, detail="item[entry_type] is required")
+    if item["entry_type"] != "Item":
+        raise HTTPException(status_code=400, detail="item[entry_type] must be 'Item'")
+
+    if "points_possible" in item:
+        if (
+            not isinstance(item["points_possible"], (int, float))
+            or item["points_possible"] <= 0
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="item[points_possible] must be a positive number",
+            )
+
+    if "position" in item:
+        if not isinstance(item["position"], int) or item["position"] <= 0:
+            raise HTTPException(
+                status_code=400, detail="item[position] must be a positive integer"
+            )
+
+    # Validate required entry fields
+    required_entry_fields = [
+        "title",
+        "item_body",
+        "interaction_type_slug",
+        "interaction_data",
+        "scoring_data",
+        "scoring_algorithm",
+    ]
+
+    for field in required_entry_fields:
+        if field not in entry:
+            raise HTTPException(
+                status_code=400, detail=f"item[entry][{field}] is required"
+            )
+
+    # Validate entry field types
+    if not isinstance(entry["title"], str) or not entry["title"].strip():
+        raise HTTPException(
+            status_code=400, detail="item[entry][title] must be a non-empty string"
+        )
+
+    if not isinstance(entry["item_body"], str) or not entry["item_body"].strip():
+        raise HTTPException(
+            status_code=400, detail="item[entry][item_body] must be a non-empty string"
+        )
+
+    if "calculator_type" in entry and entry["calculator_type"] not in [
+        "none",
+        "basic",
+        "scientific",
+    ]:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][calculator_type] must be 'none', 'basic', or 'scientific'",
+        )
+
+    # Validate required object fields
+    required_objects = [
+        "interaction_data",
+        "properties",
+        "scoring_data",
+        "answer_feedback",
+        "feedback",
+    ]
+    for field in required_objects:
+        if field in entry and not isinstance(entry[field], dict):
+            raise HTTPException(
+                status_code=400, detail=f"item[entry][{field}] must be an object"
+            )
+
+    return item, entry
+
+
+def validate_fill_in_blank_question(entry: dict):
+    """Validate fill-in-blank question specific fields."""
+    interaction_data = entry["interaction_data"]
+    scoring_data = entry["scoring_data"]
+
+    # Validate interaction_data structure
+    if "blanks" not in interaction_data:
+        raise HTTPException(
+            status_code=400, detail="item[entry][interaction_data][blanks] is required"
+        )
+
+    blanks = interaction_data["blanks"]
+    if not isinstance(blanks, list) or not blanks:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][interaction_data][blanks] must be a non-empty list",
+        )
+
+    # Validate each blank
+    blank_ids = set()
+    for i, blank in enumerate(blanks):
+        if not isinstance(blank, dict):
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][blanks][{i}] must be an object",
+            )
+
+        if "id" not in blank:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][blanks][{i}][id] is required",
+            )
+
+        blank_id = blank["id"]
+        if not isinstance(blank_id, str) or not is_valid_uuid(blank_id):
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][blanks][{i}][id] must be a valid UUID",
+            )
+
+        if blank_id in blank_ids:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][blanks][{i}][id] must be unique",
+            )
+        blank_ids.add(blank_id)
+
+        if "answer_type" not in blank:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][blanks][{i}][answer_type] is required",
+            )
+
+        if blank["answer_type"] not in ["openEntry", "dropdown", "wordbank"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][blanks][{i}][answer_type] must be 'openEntry', 'dropdown', or 'wordbank'",
+            )
+
+    # Validate scoring_data structure
+    if "value" not in scoring_data:
+        raise HTTPException(
+            status_code=400, detail="item[entry][scoring_data][value] is required"
+        )
+
+    scoring_values = scoring_data["value"]
+    if not isinstance(scoring_values, list) or not scoring_values:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][scoring_data][value] must be a non-empty list",
+        )
+
+    if "working_item_body" not in scoring_data:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][scoring_data][working_item_body] is required",
+        )
+
+    if not isinstance(scoring_data["working_item_body"], str):
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][scoring_data][working_item_body] must be a string",
+        )
+
+    # Validate each scoring value
+    scoring_blank_ids = set()
+    for i, score_value in enumerate(scoring_values):
+        if not isinstance(score_value, dict):
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][value][{i}] must be an object",
+            )
+
+        if "id" not in score_value:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][value][{i}][id] is required",
+            )
+
+        score_id = score_value["id"]
+        if not isinstance(score_id, str) or not is_valid_uuid(score_id):
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][value][{i}][id] must be a valid UUID",
+            )
+
+        scoring_blank_ids.add(score_id)
+
+        if "scoring_data" not in score_value:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][value][{i}][scoring_data] is required",
+            )
+
+        nested_scoring = score_value["scoring_data"]
+        if not isinstance(nested_scoring, dict):
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][value][{i}][scoring_data] must be an object",
+            )
+
+        required_scoring_fields = ["value", "blank_text"]
+        for field in required_scoring_fields:
+            if field not in nested_scoring:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"item[entry][scoring_data][value][{i}][scoring_data][{field}] is required",
+                )
+            if not isinstance(nested_scoring[field], str):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"item[entry][scoring_data][value][{i}][scoring_data][{field}] must be a string",
+                )
+
+        if "scoring_algorithm" not in score_value:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][value][{i}][scoring_algorithm] is required",
+            )
+
+        if score_value["scoring_algorithm"] not in [
+            CanvasScoringAlgorithm.TEXT_CONTAINS_ANSWER,
+            CanvasScoringAlgorithm.EQUIVALENCE,
+            "TextCloseEnough",  # Keep this as string since not in our constants
+        ]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][value][{i}][scoring_algorithm] must be a valid algorithm",
+            )
+
+    # Validate consistency between blanks and scoring_data
+    if not scoring_blank_ids.issubset(blank_ids):
+        missing_ids = scoring_blank_ids - blank_ids
+        raise HTTPException(
+            status_code=400,
+            detail=f"Scoring data references blank IDs not found in interaction_data: {missing_ids}",
+        )
+
+    # Validate scoring algorithm
+    if entry["scoring_algorithm"] != CanvasScoringAlgorithm.MULTIPLE_METHODS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"item[entry][scoring_algorithm] must be '{CanvasScoringAlgorithm.MULTIPLE_METHODS}' for fill-in-blank questions",
+        )
+
+
+def validate_multiple_choice_question(entry: dict):
+    """Validate multiple choice question specific fields."""
+    interaction_data = entry["interaction_data"]
+    scoring_data = entry["scoring_data"]
+
+    # Validate interaction_data structure
+    if "choices" not in interaction_data:
+        raise HTTPException(
+            status_code=400, detail="item[entry][interaction_data][choices] is required"
+        )
+
+    choices = interaction_data["choices"]
+    if not isinstance(choices, list) or not choices:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][interaction_data][choices] must be a non-empty list",
+        )
+
+    # Validate each choice
+    choice_ids = set()
+    for i, choice in enumerate(choices):
+        if not isinstance(choice, dict):
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][choices][{i}] must be an object",
+            )
+
+        required_choice_fields = ["id", "position", "item_body"]
+        for field in required_choice_fields:
+            if field not in choice:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"item[entry][interaction_data][choices][{i}][{field}] is required",
+                )
+
+        choice_id = choice["id"]
+        if not isinstance(choice_id, str) or not choice_id.startswith("choice_"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][choices][{i}][id] must be a string starting with 'choice_'",
+            )
+
+        if choice_id in choice_ids:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][choices][{i}][id] must be unique",
+            )
+        choice_ids.add(choice_id)
+
+        if not isinstance(choice["position"], int) or choice["position"] <= 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][choices][{i}][position] must be a positive integer",
+            )
+
+        if not isinstance(choice["item_body"], str) or not choice["item_body"].strip():
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][choices][{i}][item_body] must be a non-empty string",
+            )
+
+    # Validate scoring_data structure
+    if "value" not in scoring_data:
+        raise HTTPException(
+            status_code=400, detail="item[entry][scoring_data][value] is required"
+        )
+
+    correct_choice = scoring_data["value"]
+    if not isinstance(correct_choice, str) or correct_choice not in choice_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][scoring_data][value] must reference a valid choice ID",
+        )
+
+    # Validate properties structure for multiple choice
+    properties = entry.get("properties", {})
+    if "shuffle_rules" in properties:
+        shuffle_rules = properties["shuffle_rules"]
+        if not isinstance(shuffle_rules, dict):
+            raise HTTPException(
+                status_code=400,
+                detail="item[entry][properties][shuffle_rules] must be an object",
+            )
+
+        if "choices" in shuffle_rules:
+            if not isinstance(shuffle_rules["choices"], dict):
+                raise HTTPException(
+                    status_code=400,
+                    detail="item[entry][properties][shuffle_rules][choices] must be an object",
+                )
+
+            if "shuffled" in shuffle_rules["choices"] and not isinstance(
+                shuffle_rules["choices"]["shuffled"], bool
+            ):
+                raise HTTPException(
+                    status_code=400,
+                    detail="item[entry][properties][shuffle_rules][choices][shuffled] must be a boolean",
+                )
+
+        if "vary_points_by_answer" in properties and not isinstance(
+            properties["vary_points_by_answer"], bool
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="item[entry][properties][vary_points_by_answer] must be a boolean",
+            )
+
+    # Validate scoring algorithm
+    if entry["scoring_algorithm"] != CanvasScoringAlgorithm.EQUIVALENCE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"item[entry][scoring_algorithm] must be '{CanvasScoringAlgorithm.EQUIVALENCE}' for multiple choice questions",
+        )
+
+
 @app.post("/api/quiz/v1/courses/{course_id}/quizzes/{quiz_id}/items")
 async def create_quiz_item(
     course_id: int,
@@ -1497,7 +1893,7 @@ async def create_quiz_item(
     authorization: str = Header(None),
     item_data: dict = Body(None),
 ):
-    """Create a quiz item in a quiz"""
+    """Create a quiz item in a quiz with comprehensive Canvas API validation"""
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization header required")
 
@@ -1507,92 +1903,44 @@ async def create_quiz_item(
     if course_id != 37823 and course_id != 37825:
         raise HTTPException(status_code=403, detail="Unauthorized access to course")
 
-    # Validate required fields
-    if not item_data:
-        raise HTTPException(status_code=400, detail="Item data is required")
+    # Comprehensive structure validation
+    item, entry = validate_quiz_item_structure(item_data)
 
-    item = item_data.get("item", {})
-    entry = item.get("entry", {})
+    # Question-type specific validation
+    interaction_type = entry["interaction_type_slug"]
 
-    # Basic field validation
-    required_fields = [
-        "entry_type",
-        "item_body",
-        "interaction_type_slug",
-        "interaction_data",
-        "scoring_data",
-        "scoring_algorithm",
-    ]
-    for field in required_fields:
-        if field not in entry:
-            raise HTTPException(
-                status_code=400, detail=f"item[entry][{field}] is required"
-            )
+    if interaction_type == "rich-fill-blank":
+        validate_fill_in_blank_question(entry)
+    elif interaction_type == "choice":
+        validate_multiple_choice_question(entry)
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported interaction_type_slug: {interaction_type}. Supported types: 'choice', 'rich-fill-blank'",
+        )
 
-    # Interaction-specific validation
-    interaction_type = entry.get("interaction_type_slug")
-    interaction_data = entry.get("interaction_data", {})
-    scoring_data = entry.get("scoring_data", [])
-
-    if interaction_type == "choice":
-        if "choices" not in interaction_data or not isinstance(
-            interaction_data["choices"], list
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail="item[entry][interaction_data][choices] must be a list",
-            )
-        for choice in interaction_data["choices"]:
-            if "id" not in choice or "item_body" not in choice:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Each choice must have an 'id' and 'item_body'",
-                )
-        if not scoring_data:
-            raise HTTPException(
-                status_code=400, detail="item[entry][scoring_data] is required"
-            )
-
-    elif interaction_type == "rich-fill-blank":
-        if "blanks" not in interaction_data or not isinstance(
-            interaction_data["blanks"], list
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail="item[entry][interaction_data][blanks] must be a list",
-            )
-        for blank in interaction_data["blanks"]:
-            if "id" not in blank:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Each blank must have an 'id'",
-                )
-        if not scoring_data:
-            raise HTTPException(
-                status_code=400, detail="item[entry][scoring_data] is required"
-            )
-
-    # Create the quiz item
+    # Create the quiz item with complete Canvas structure
     new_quiz_item = {
         "id": str(len(mock_quiz_items) + 20000),
-        "quiz_id": quiz_id,
         "position": item.get("position", len(mock_quiz_items) + 1),
-        "points_possible": item.get("points_possible", 1),
-        "entry_type": item.get("entry_type"),
+        "points_possible": item.get("points_possible", 1.0),
+        "properties": item.get("properties", {}),
+        "entry_type": "Item",
+        "entry_editable": True,
+        "stimulus_quiz_entry_id": "",
+        "status": "mutable",
         "entry": {
-            "title": entry.get("title", "Question"),
-            "item_body": entry.get("item_body"),
+            "title": entry["title"],
+            "item_body": entry["item_body"],
             "calculator_type": entry.get("calculator_type", "none"),
-            "feedback": entry.get("feedback", {}),
-            "interaction_type_slug": interaction_type,
-            "interaction_data": interaction_data,
+            "interaction_data": entry["interaction_data"],
             "properties": entry.get("properties", {}),
-            "scoring_data": scoring_data,
+            "scoring_data": entry["scoring_data"],
             "answer_feedback": entry.get("answer_feedback", {}),
-            "scoring_algorithm": entry.get("scoring_algorithm"),
+            "scoring_algorithm": entry["scoring_algorithm"],
+            "interaction_type_slug": interaction_type,
+            "feedback": entry.get("feedback", {}),
         },
-        "created_at": datetime.now().isoformat() + "Z",
-        "updated_at": datetime.now().isoformat() + "Z",
     }
 
     # Store the quiz item

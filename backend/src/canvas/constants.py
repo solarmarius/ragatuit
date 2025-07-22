@@ -30,3 +30,23 @@ CANVAS_QUIZ_ITEM_TYPE = "Question"
 CANVAS_QUIZ_ENTRY_TYPE = "Item"
 CANVAS_QUIZ_INTERACTION_TYPE = "choice"
 CANVAS_QUIZ_SCORING_ALGORITHM = "Equivalence"
+
+
+class CanvasScoringAlgorithm:
+    """Canvas New Quizzes API scoring algorithms."""
+
+    # Overall quiz item scoring algorithms
+    MULTIPLE_METHODS = "MultipleMethods"  # Used when item has multiple scoring methods
+    EQUIVALENCE = "Equivalence"  # Used for single-answer questions (MCQ)
+
+    # Individual answer/blank scoring algorithms
+    TEXT_CONTAINS_ANSWER = (
+        "TextContainsAnswer"  # Used for fill-in-blank individual answers
+    )
+
+
+class CanvasInteractionType:
+    """Canvas New Quizzes API interaction types."""
+
+    CHOICE = "choice"  # Multiple choice questions
+    RICH_FILL_BLANK = "rich-fill-blank"  # Fill-in-blank questions

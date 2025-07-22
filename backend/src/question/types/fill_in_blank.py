@@ -1,11 +1,19 @@
 """Fill-in-Blank Question type implementation."""
 
 import uuid
+from collections.abc import Callable
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from .base import BaseQuestionData, BaseQuestionType, QuestionType
+from src.canvas.constants import CanvasInteractionType, CanvasScoringAlgorithm
+
+from .base import (
+    BaseQuestionData,
+    BaseQuestionType,
+    QuestionType,
+    generate_canvas_title,
+)
 
 
 class BlankData(BaseModel):
@@ -154,6 +162,33 @@ class FillInBlankQuestionType(BaseQuestionType):
             "question_type": self.question_type.value,
         }
 
+    def _replace_placeholders(
+        self,
+        text: str,
+        blanks: list[BlankData],
+        replacement_func: Callable[[BlankData], str] | None = None,
+    ) -> str:
+        """Replace [blank_N] placeholders in text with specified replacements.
+
+        Args:
+            text: Text containing [blank_N] placeholders
+            blanks: List of BlankData objects
+            replacement_func: Function that takes a BlankData and returns replacement string.
+                             If None, returns the correct_answer.
+
+        Returns:
+            Text with placeholders replaced
+        """
+        result = text
+        for blank in blanks:
+            placeholder = f"[blank_{blank.position}]"
+            if replacement_func:
+                replacement = replacement_func(blank)
+            else:
+                replacement = blank.correct_answer
+            result = result.replace(placeholder, replacement)
+        return result
+
     def format_for_canvas(self, data: BaseQuestionData) -> dict[str, Any]:
         """
         Format fill-in-blank data for Canvas Rich Fill In The Blank export.
@@ -169,6 +204,18 @@ class FillInBlankQuestionType(BaseQuestionType):
 
         # Generate UUIDs for each blank
         blank_uuids = {blank.position: str(uuid.uuid4()) for blank in data.blanks}
+
+        # Build the HTML body with span tags for blanks
+        # Replace [blank_N] placeholders with <span id="blank_uuid">
+        item_body = self._replace_placeholders(
+            data.question_text,
+            data.blanks,
+            lambda blank: f'<span id="blank_{blank_uuids[blank.position]}"></span>',
+        )
+
+        # Wrap in paragraph tag if not already wrapped
+        if not item_body.strip().startswith("<p>"):
+            item_body = f"<p>{item_body}</p>"
 
         # Build interaction_data with blanks array
         interaction_blanks = []
@@ -189,13 +236,6 @@ class FillInBlankQuestionType(BaseQuestionType):
         for blank in data.blanks:
             blank_uuid = blank_uuids[blank.position]
 
-            # Choose scoring algorithm based on case sensitivity and variations
-            if blank.case_sensitive:
-                scoring_algorithm = "Equivalence"
-            else:
-                # TextCloseEnough is more forgiving for typos
-                scoring_algorithm = "TextCloseEnough"
-
             # Primary correct answer
             scoring_values.append(
                 {
@@ -203,8 +243,8 @@ class FillInBlankQuestionType(BaseQuestionType):
                     "scoring_data": {
                         "value": blank.correct_answer,
                         "blank_text": blank.correct_answer,
-                        "scoring_algorithm": scoring_algorithm,
                     },
+                    "scoring_algorithm": CanvasScoringAlgorithm.TEXT_CONTAINS_ANSWER,
                 }
             )
 
@@ -217,21 +257,38 @@ class FillInBlankQuestionType(BaseQuestionType):
                             "scoring_data": {
                                 "value": variation,
                                 "blank_text": variation,
-                                "scoring_algorithm": scoring_algorithm,
                             },
+                            "scoring_algorithm": CanvasScoringAlgorithm.TEXT_CONTAINS_ANSWER,
                         }
                     )
 
+        # Build working_item_body with answers filled in
+        working_item_body = self._replace_placeholders(data.question_text, data.blanks)
+
+        # Wrap in paragraph tag if not already wrapped
+        if not working_item_body.strip().startswith("<p>"):
+            working_item_body = f"<p>{working_item_body}</p>"
+
         scoring_data = {
             "value": scoring_values,
-            "working_item_body": data.question_text,
+            "working_item_body": working_item_body,
         }
 
+        # Build the complete Canvas API structure
         return {
-            "question_type": "rich-fill-blank",
+            "title": generate_canvas_title(data.question_text),
+            "item_body": item_body,
+            "calculator_type": "none",
             "interaction_data": interaction_data,
+            "properties": {"shuffle_rules": {"blanks": {}}},
             "scoring_data": scoring_data,
-            "points_possible": len(data.blanks),
+            "answer_feedback": {},
+            "scoring_algorithm": CanvasScoringAlgorithm.MULTIPLE_METHODS,
+            "interaction_type_slug": CanvasInteractionType.RICH_FILL_BLANK,
+            "feedback": {},
+            "points_possible": len(
+                data.blanks
+            ),  # Add points_possible for Canvas service
         }
 
     def format_for_export(self, data: BaseQuestionData) -> dict[str, Any]:
