@@ -264,12 +264,15 @@ export type MatchingFormData = z.infer<typeof matchingSchema>
 export interface CategorizationFormData {
   questionText: string;
   categories: Array<{
+    id: string; // Stable ID for the category
     name: string;
     items: Array<{
+      id: string; // Stable ID for the item
       text: string;
     }>;
   }>;
   distractors?: Array<{
+    id: string; // Stable ID for the distractor
     text: string;
   }>;
   explanation?: string;
@@ -282,10 +285,12 @@ export const categorizationSchema = z
     categories: z
       .array(
         z.object({
+          id: z.string(), // Stable ID for the category
           name: nonEmptyString.min(1, "Category name is required"),
           items: z
             .array(
               z.object({
+                id: z.string(), // Stable ID for the item
                 text: nonEmptyString.min(1, "Item text is required"),
               })
             )
@@ -305,6 +310,7 @@ export const categorizationSchema = z
     distractors: z
       .array(
         z.object({
+          id: z.string(), // Stable ID for the distractor
           text: nonEmptyString.min(1, "Distractor text is required"),
         })
       )
@@ -429,8 +435,10 @@ export const validationMessages = {
   maxItems: "Maximum 20 items allowed",
   duplicateCategories: "Duplicate category names are not allowed",
   duplicateItems: "Duplicate item texts are not allowed",
-  duplicateCategoricationDistractors: "Duplicate distractor texts are not allowed",
+  duplicateCategorizationDistractors: "Duplicate distractor texts are not allowed",
   itemsNotAssigned: "All items must be assigned to categories",
   distractorMatchesItem: "Distractors cannot match any item texts",
   categoryNeedsItems: "Each category must have at least one item",
+  categoriesHelp: "At least 2 categories required, maximum 8 categories allowed.",
+  distractorsHelp: "Optional incorrect items that don't belong to any category. Maximum 5 allowed.",
 }

@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Box, VStack, Text, SimpleGrid, Badge, Card } from "@chakra-ui/react";
+import { Box, VStack, Text, SimpleGrid, Card } from "@chakra-ui/react";
 import type { QuestionResponse } from "@/client";
 import { extractQuestionData } from "@/types/questionTypes";
 import { ExplanationBox } from "../shared/ExplanationBox";

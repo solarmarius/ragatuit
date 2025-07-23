@@ -1,4 +1,4 @@
-import { memo, useCallback } from "react";
+import { memo, useCallback, useMemo } from "react";
 import {
   VStack,
   HStack,
@@ -11,15 +11,20 @@ import {
   Textarea,
   Input,
 } from "@chakra-ui/react";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { useForm, useFieldArray, Controller, Control, FieldErrors } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { MdAdd, MdDelete } from "react-icons/md";
 import type { QuestionResponse, QuestionUpdateRequest } from "@/client";
 import { extractQuestionData } from "@/types/questionTypes";
 import type { CategorizationFormData } from "@/lib/validation/questionSchemas";
-import { categorizationSchema } from "@/lib/validation/questionSchemas";
+import { categorizationSchema, validationMessages } from "@/lib/validation/questionSchemas";
 import { FormField, FormGroup } from "@/components/forms";
 import { ErrorEditor } from "./ErrorEditor";
+
+// Utility function to generate stable IDs
+function generateId(prefix: string): string {
+  return `${prefix}_${Math.random().toString(36).substr(2, 9)}`;
+}
 
 interface CategorizationEditorProps {
   question: QuestionResponse;
@@ -42,21 +47,26 @@ function CategorizationEditorComponent({
   try {
     const categorizationData = extractQuestionData(question, "categorization");
 
-    // Transform backend data to new form data format
-    const defaultFormData: CategorizationFormData = {
+    // Transform backend data to new form data format with stable IDs
+    const defaultFormData: CategorizationFormData = useMemo(() => ({
       questionText: categorizationData.question_text,
       categories: categorizationData.categories.map((cat) => ({
+        id: cat.id, // Preserve existing backend ID
         name: cat.name,
         items: cat.correct_items.map((itemId) => {
           const item = categorizationData.items.find((i) => i.id === itemId);
-          return { text: item?.text || "" };
+          return {
+            id: itemId, // Preserve existing backend ID
+            text: item?.text || ""
+          };
         }),
       })),
       distractors: categorizationData.distractors?.map((dist) => ({
+        id: dist.id, // Preserve existing backend ID
         text: dist.text,
       })) || [],
       explanation: categorizationData.explanation || "",
-    };
+    }), [categorizationData]);
 
     const {
       control,
@@ -89,7 +99,7 @@ function CategorizationEditorComponent({
     // Handle form submission - transform back to backend format
     const onSubmit = useCallback(
       (formData: CategorizationFormData) => {
-        // Generate items array and category mappings
+        // Use existing stable IDs from form data
         const items: Array<{ id: string; text: string }> = [];
         const categories: Array<{
           id: string;
@@ -97,24 +107,20 @@ function CategorizationEditorComponent({
           correct_items: string[];
         }> = [];
 
-        let itemIndex = 0;
-
-        // Process each category and its items
-        formData.categories.forEach((formCategory, catIndex) => {
+        // Process each category and its items with stable IDs
+        formData.categories.forEach((formCategory) => {
           const categoryItemIds: string[] = [];
 
           formCategory.items.forEach((formItem) => {
-            const itemId = `item_${itemIndex}`;
             items.push({
-              id: itemId,
+              id: formItem.id, // Use existing stable ID
               text: formItem.text,
             });
-            categoryItemIds.push(itemId);
-            itemIndex++;
+            categoryItemIds.push(formItem.id);
           });
 
           categories.push({
-            id: `cat_${catIndex}`,
+            id: formCategory.id, // Use existing stable ID
             name: formCategory.name,
             correct_items: categoryItemIds,
           });
@@ -126,8 +132,8 @@ function CategorizationEditorComponent({
             categories,
             items,
             distractors: formData.distractors?.length
-              ? formData.distractors.map((dist, index) => ({
-                  id: `dist_${index}`,
+              ? formData.distractors.map((dist) => ({
+                  id: dist.id, // Use existing stable ID
                   text: dist.text,
                 }))
               : null,
@@ -144,8 +150,12 @@ function CategorizationEditorComponent({
     const handleAddCategory = useCallback(() => {
       if (categoryFields.length < 8) {
         appendCategory({
+          id: generateId("cat"),
           name: "",
-          items: [{ text: "" }]
+          items: [{
+            id: generateId("item"),
+            text: ""
+          }]
         });
       }
     }, [appendCategory, categoryFields.length]);
@@ -153,7 +163,10 @@ function CategorizationEditorComponent({
     // Add new distractor
     const handleAddDistractor = useCallback(() => {
       if (distractorFields.length < 5) {
-        appendDistractor({ text: "" });
+        appendDistractor({
+          id: generateId("dist"),
+          text: ""
+        });
       }
     }, [appendDistractor, distractorFields.length]);
 
@@ -217,7 +230,7 @@ function CategorizationEditorComponent({
             </SimpleGrid>
 
             <Text fontSize="sm" color="gray.600" mt={2}>
-              At least 2 categories required, maximum 8 categories allowed.
+              {validationMessages.categoriesHelp}
             </Text>
           </FormGroup>
 
@@ -286,7 +299,7 @@ function CategorizationEditorComponent({
             </SimpleGrid>
 
             <Text fontSize="sm" color="gray.600" mt={2}>
-              Optional incorrect items that don't belong to any category. Maximum 5 allowed.
+              {validationMessages.distractorsHelp}
             </Text>
           </FormGroup>
 
@@ -341,8 +354,8 @@ function CategorizationEditorComponent({
  */
 interface CategoryEditorProps {
   categoryIndex: number;
-  control: any;
-  errors: any;
+  control: Control<CategorizationFormData>;
+  errors: FieldErrors<CategorizationFormData>;
   onRemoveCategory: () => void;
   canRemoveCategory: boolean;
 }
@@ -364,7 +377,10 @@ function CategoryEditor({
   });
 
   const handleAddItem = useCallback(() => {
-    appendItem({ text: "" });
+    appendItem({
+      id: generateId("item"),
+      text: ""
+    });
   }, [appendItem]);
 
   return (
