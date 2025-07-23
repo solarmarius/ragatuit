@@ -4,7 +4,10 @@
  */
 
 import { z } from "zod";
-import type { QuestionType } from "@/client";
+import { QUESTION_TYPES } from "@/lib/constants";
+
+// Define a stable local type for QuestionType to avoid dependency on auto-generated code
+export type QuestionType = typeof QUESTION_TYPES[keyof typeof QUESTION_TYPES];
 
 // Base validation helpers
 const nonEmptyString = z.string().min(1, "This field is required");
@@ -127,11 +130,11 @@ export type MatchingFormData = z.infer<typeof matchingSchema>;
 // Helper function to get schema by question type
 export function getSchemaByType(questionType: QuestionType): z.ZodSchema<any> {
   switch (questionType) {
-    case "multiple_choice":
+    case QUESTION_TYPES.MULTIPLE_CHOICE:
       return mcqSchema;
-    case "fill_in_blank":
+    case QUESTION_TYPES.FILL_IN_BLANK:
       return fillInBlankSchema;
-    case "matching":
+    case QUESTION_TYPES.MATCHING:
       return matchingSchema;
     default:
       throw new Error(`No schema defined for question type: ${questionType}`);
@@ -139,11 +142,11 @@ export function getSchemaByType(questionType: QuestionType): z.ZodSchema<any> {
 }
 
 // Helper function to get form data type by question type
-export type FormDataByType<T extends QuestionType> = T extends "multiple_choice"
+export type FormDataByType<T extends QuestionType> = T extends typeof QUESTION_TYPES.MULTIPLE_CHOICE
   ? MCQFormData
-  : T extends "fill_in_blank"
+  : T extends typeof QUESTION_TYPES.FILL_IN_BLANK
     ? FillInBlankFormData
-    : T extends "matching"
+    : T extends typeof QUESTION_TYPES.MATCHING
       ? MatchingFormData
       : never;
 
