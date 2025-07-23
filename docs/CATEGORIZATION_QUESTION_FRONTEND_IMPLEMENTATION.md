@@ -708,7 +708,7 @@ CategorizationDisplay.displayName = "CategorizationDisplay";
 
 **File**: `frontend/src/components/Questions/editors/CategorizationEditor.tsx`
 
-Complete editor component with form management:
+**UPDATED IMPLEMENTATION**: Complete editor component with category-based item management that mirrors the display layout:
 
 ```typescript
 import { memo, useCallback } from "react";
@@ -1186,21 +1186,33 @@ export const CategorizationEditor = memo(CategorizationEditorComponent);
 CategorizationEditor.displayName = "CategorizationEditor";
 ```
 
-**Purpose**: Provides comprehensive editing interface for categorization questions with validation and dynamic field management.
+**Purpose**: Provides intuitive editing interface for categorization questions that mirrors the display layout, with category-based item management and seamless data transformation.
 
-**Key Features**:
-- Dynamic category management (add/remove, 2-8 limit)
-- Dynamic item management (add/remove, 6-20 limit)
-- Item-to-category assignment interface
-- Dynamic distractor management (add/remove, 0-5 limit)
-- Form validation with Zod schema integration
-- React Hook Form for optimal performance
-- Visual feedback for errors and requirements
-- Disabled states for limits and validation
+**Key Features (Updated Implementation)**:
+- **Category-Based Item Management**: Items are managed directly within each category card with dedicated "+ Add Item" buttons
+- **Display-Mirroring Layout**: Uses identical responsive grid layout as CategorizationDisplay for consistency
+- **Nested Form Structure**: Categories contain their own items arrays, eliminating confusing global item assignment
+- **Proper Data Transformation**: Seamlessly converts between frontend form structure and backend API format
+- **Dynamic Management**: Add/remove categories (2-8 limit), items within categories, and distractors (0-5 limit)
+- **Visual Feedback**: Green styling for items within categories, proper validation messages, disabled states
+- **Form Validation**: Updated Zod schema validates items within categories and enforces business rules
+- **Chakra UI v3 Compatibility**: Uses correct prop names (error vs invalid, disabled vs isDisabled, icons as children)
+- **Optimized Performance**: React Hook Form with nested field arrays and memoized components
+
+**Editor UI Improvements Made**:
+- **Redesigned Data Model**: Changed from global items with assignment IDs to items nested directly within categories
+- **Eliminated Confusing Assignment System**: Removed the "Category assignment will be implemented in a future version" placeholder text
+- **Added Intuitive Item Management**: Each category card has its own "+ Add Item" button for direct item creation within that category
+- **Mirror Display Layout**: Editor now uses the same responsive grid layout and visual structure as the display component
+- **Visual Consistency**: Items within categories use green styling to match the display component's color coding
+- **Proper Form Structure**: Updated CategorizationFormData interface to match the intuitive UI structure
+- **Seamless Data Flow**: Implemented bidirectional transformation between UI form structure and backend API format
+- **Fixed Chakra UI v3 Compatibility**: Updated all props to use correct v3 naming conventions
+- **Enhanced Validation**: Updated Zod schema to validate the new nested structure and enforce business rules
 
 **Testing**: Run `npx tsc --noEmit` to verify TypeScript compilation passes.
 
-**Commit**: `git add -A && git commit -m "feat: add CategorizationEditor component"`
+**Commit**: `git add -A && git commit -m "feat: redesign categorization editor with category-based item management"`
 
 #### Step 6: Update Router Components
 
@@ -1410,18 +1422,18 @@ interface CategorizationData {
 }
 ```
 
-#### Form Data Structure
+#### Form Data Structure (Updated)
 
 ```typescript
 interface CategorizationFormData {
   questionText: string;
   categories: Array<{
     name: string;
-    correctItems: string[]; // Item indices that belong to this category
+    items: Array<{        // ← CHANGED: Items now nested within categories
+      text: string;
+    }>;
   }>;
-  items: Array<{
-    text: string;
-  }>;
+  // ← REMOVED: Global items array eliminated
   distractors?: Array<{
     text: string;
   }>;
@@ -1429,7 +1441,13 @@ interface CategorizationFormData {
 }
 ```
 
-#### Example Data
+**Key Changes**:
+- **Nested Items**: Items are now stored directly within each category instead of globally
+- **Eliminated Global Items**: Removed the confusing global `items` array
+- **Simplified Assignment**: No more `correctItems` ID arrays - items belong to their parent category
+- **Intuitive Structure**: Form data structure now matches the UI layout
+
+#### Example Backend Data (CategorizationData)
 
 ```json
 {
@@ -1467,15 +1485,58 @@ interface CategorizationFormData {
 }
 ```
 
-#### Validation Rules
+#### Example Form Data (CategorizationFormData)
 
-- **Categories**: 2-8 categories required
+```json
+{
+  "questionText": "Categorize these animals by their biological classification.",
+  "categories": [
+    {
+      "name": "Mammals",
+      "items": [
+        {"text": "Dolphin"},
+        {"text": "Elephant"}
+      ]
+    },
+    {
+      "name": "Birds",
+      "items": [
+        {"text": "Eagle"},
+        {"text": "Penguin"}
+      ]
+    },
+    {
+      "name": "Reptiles",
+      "items": [
+        {"text": "Snake"},
+        {"text": "Lizard"}
+      ]
+    }
+  ],
+  "distractors": [
+    {"text": "Jellyfish"},
+    {"text": "Coral"}
+  ],
+  "explanation": "These categories represent the main vertebrate animal classes based on biological characteristics."
+}
+```
+
+**Data Transformation**: The editor automatically converts between these two formats, allowing the UI to use the intuitive nested structure while maintaining backend API compatibility.
+
+#### Validation Rules (Updated)
+
+- **Categories**: 2-8 categories required, each must have at least 1 item
 - **Category Names**: 1-100 characters, must be unique (case-insensitive)
-- **Items**: 6-20 items required
-- **Item Texts**: 1-200 characters, must be unique (case-insensitive)
-- **Item Assignment**: Each item must be assigned to exactly one category
-- **Distractors**: 0-5 optional, must be unique, cannot match any item text
+- **Total Items**: 6-20 items required across all categories combined
+- **Item Texts**: 1-200 characters, must be unique across all categories (case-insensitive)
+- **Item Distribution**: Items are automatically assigned to their parent category (no manual assignment needed)
+- **Distractors**: 0-5 optional, must be unique, cannot match any item text from any category
 - **Explanation**: Optional, can be null or empty string
+
+**Validation Improvements**:
+- **Cross-category validation**: Item texts are validated for uniqueness across all categories
+- **Total item counting**: Validation checks total items across all categories (not per-category)
+- **Simplified rules**: No complex assignment validation needed since items belong to their parent category
 
 ### 4.4 Configuration
 

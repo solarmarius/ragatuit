@@ -49,7 +49,9 @@ function CategorizationDisplayComponent({
                 <Card.Body>
                   <VStack gap={2} align="stretch">
                     {category.correct_items.map((itemId) => {
-                      const item = categorizationData.items.find((i) => i.id === itemId);
+                      const item = categorizationData.items.find(
+                        (i) => i.id === itemId
+                      );
                       return item ? (
                         <Box
                           key={itemId}
@@ -71,40 +73,31 @@ function CategorizationDisplayComponent({
         </Box>
 
         {/* Distractors */}
-        {categorizationData.distractors && categorizationData.distractors.length > 0 && (
-          <Box>
-            <Text fontSize="sm" fontWeight="semibold" color="gray.600" mb={3}>
-              Distractors:
-            </Text>
-            <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} gap={3}>
-              {categorizationData.distractors.map((distractor) => (
-                <Box
-                  key={distractor.id}
-                  p={3}
-                  borderWidth={1}
-                  borderRadius="md"
-                  borderColor="red.200"
-                  bg="red.50"
-                  position="relative"
-                >
-                  <Text fontSize="sm" textAlign="center">
-                    {distractor.text}
-                  </Text>
-                  <Badge
-                    position="absolute"
-                    top={1}
-                    right={1}
-                    size="sm"
-                    colorScheme="red"
+        {categorizationData.distractors &&
+          categorizationData.distractors.length > 0 && (
+            <Box>
+              <Text fontSize="sm" fontWeight="semibold" color="gray.600" mb={3}>
+                Distractors:
+              </Text>
+              <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} gap={3}>
+                {categorizationData.distractors.map((distractor) => (
+                  <Box
+                    key={distractor.id}
+                    p={3}
+                    borderWidth={1}
+                    borderRadius="md"
+                    borderColor="red.200"
+                    bg="red.50"
+                    position="relative"
                   >
-                    Distractor
-                  </Badge>
-                </Box>
-              ))}
-            </SimpleGrid>
-          </Box>
-        )}
-
+                    <Text fontSize="sm" textAlign="center">
+                      {distractor.text}
+                    </Text>
+                  </Box>
+                ))}
+              </SimpleGrid>
+            </Box>
+          )}
 
         {/* Explanation */}
         {showExplanation && categorizationData.explanation && (
