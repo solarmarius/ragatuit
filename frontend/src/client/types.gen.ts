@@ -135,8 +135,15 @@ export type QuestionResponse = {
 
 /**
  * Enumeration of supported question types.
+ *
+ * To add a new question type:
+ * 1. Add enum value here
+ * 2. Create implementation in types/{type_name}.py
+ * 3. Register in registry.py
+ * 4. Add templates in templates/files/
+ * See ADDING_NEW_TYPES.md for detailed instructions.
  */
-export type QuestionType = "multiple_choice" | "fill_in_blank"
+export type QuestionType = "multiple_choice" | "fill_in_blank" | "matching"
 
 /**
  * Schema for updating a question.
@@ -157,7 +164,7 @@ export type QuestionUpdateRequest = {
  */
 export type Quiz = {
   id?: string
-  owner_id: string
+  owner_id: string | null
   canvas_course_id: number
   canvas_course_name: string
   selected_modules?: {
@@ -209,6 +216,14 @@ export type Quiz = {
   generation_metadata?: {
     [key: string]: unknown
   }
+  /**
+   * Soft delete flag for data preservation
+   */
+  deleted?: boolean
+  /**
+   * Timestamp when quiz was soft deleted
+   */
+  deleted_at?: string | null
 }
 
 /**

@@ -3,6 +3,7 @@ import { memo } from "react";
 import type { QuestionResponse } from "@/client";
 import { QUESTION_TYPES } from "@/lib/constants";
 import { FillInBlankDisplay } from "./FillInBlankDisplay";
+import { MatchingDisplay } from "./MatchingDisplay";
 import { MCQDisplay } from "./MCQDisplay";
 import { UnsupportedDisplay } from "./UnsupportedDisplay";
 
@@ -28,6 +29,8 @@ export const QuestionDisplay = memo(function QuestionDisplay({
       return <MCQDisplay {...commonProps} />;
     case QUESTION_TYPES.FILL_IN_BLANK:
       return <FillInBlankDisplay {...commonProps} />;
+    case QUESTION_TYPES.MATCHING:
+      return <MatchingDisplay {...commonProps} />;
     default:
       return <UnsupportedDisplay questionType={question.question_type} />;
   }

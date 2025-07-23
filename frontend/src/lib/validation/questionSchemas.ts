@@ -4,6 +4,10 @@
  */
 
 import { z } from "zod";
+import { QUESTION_TYPES } from "@/lib/constants";
+
+// Define a stable local type for QuestionType to avoid dependency on auto-generated code
+export type QuestionType = typeof QUESTION_TYPES[keyof typeof QUESTION_TYPES];
 
 // Base validation helpers
 const nonEmptyString = z.string().min(1, "This field is required");
@@ -52,24 +56,99 @@ export const fillInBlankSchema = z.object({
 
 export type FillInBlankFormData = z.infer<typeof fillInBlankSchema>;
 
+// Matching Question Schema
+export const matchingSchema = z
+  .object({
+    questionText: nonEmptyString,
+    pairs: z
+      .array(
+        z.object({
+          question: nonEmptyString.min(1, "Question text is required"),
+          answer: nonEmptyString.min(1, "Answer text is required"),
+        })
+      )
+      .min(3, "At least 3 matching pairs are required")
+      .max(10, "Maximum 10 matching pairs allowed")
+      .refine(
+        (pairs) => {
+          // Check for duplicate questions
+          const questions = pairs.map((p) => p.question.toLowerCase().trim());
+          return new Set(questions).size === questions.length;
+        },
+        { message: "Duplicate questions are not allowed" }
+      )
+      .refine(
+        (pairs) => {
+          // Check for duplicate answers
+          const answers = pairs.map((p) => p.answer.toLowerCase().trim());
+          return new Set(answers).size === answers.length;
+        },
+        { message: "Duplicate answers are not allowed" }
+      ),
+    distractors: z
+      .array(z.string().min(1, "Distractor cannot be empty"))
+      .max(5, "Maximum 5 distractors allowed")
+      .optional()
+      .refine(
+        (distractors) => {
+          if (!distractors) return true;
+          // Check for duplicate distractors
+          const unique = new Set(
+            distractors.map((d) => d.toLowerCase().trim())
+          );
+          return unique.size === distractors.length;
+        },
+        { message: "Duplicate distractors are not allowed" }
+      ),
+    explanation: optionalString,
+  })
+  .refine(
+    (data) => {
+      // Ensure distractors don't match correct answers
+      if (!data.distractors) return true;
+
+      const correctAnswers = new Set(
+        data.pairs.map((p) => p.answer.toLowerCase().trim())
+      );
+
+      for (const distractor of data.distractors) {
+        if (correctAnswers.has(distractor.toLowerCase().trim())) {
+          return false;
+        }
+      }
+
+      return true;
+    },
+    {
+      message: "Distractors cannot match any correct answers",
+      path: ["distractors"],
+    }
+  );
+
+export type MatchingFormData = z.infer<typeof matchingSchema>;
+
 // Helper function to get schema by question type
-export function getSchemaByType(type: string) {
-  switch (type) {
-    case "multiple_choice":
+export function getSchemaByType(questionType: QuestionType): z.ZodSchema<any> {
+  switch (questionType) {
+    case QUESTION_TYPES.MULTIPLE_CHOICE:
       return mcqSchema;
-    case "fill_in_blank":
+    case QUESTION_TYPES.FILL_IN_BLANK:
       return fillInBlankSchema;
+    case QUESTION_TYPES.MATCHING:
+      return matchingSchema;
     default:
-      throw new Error(`Unsupported question type: ${type}`);
+      throw new Error(`No schema defined for question type: ${questionType}`);
   }
 }
 
 // Helper function to get form data type by question type
-export type FormDataByType<T extends string> = T extends "multiple_choice"
+export type FormDataByType<T extends QuestionType> = T extends typeof QUESTION_TYPES.MULTIPLE_CHOICE
   ? MCQFormData
-  : T extends "fill_in_blank"
+  : T extends typeof QUESTION_TYPES.FILL_IN_BLANK
     ? FillInBlankFormData
-    : never;
+    : T extends typeof QUESTION_TYPES.MATCHING
+      ? MatchingFormData
+      : never;
 
 // Common validation messages
 export const validationMessages = {
@@ -80,4 +159,11 @@ export const validationMessages = {
   invalidUrl: "Please enter a valid URL",
   positiveNumber: "Must be a positive number",
   uniquePositions: "Each blank must have a unique position",
+  duplicateQuestions: "Duplicate questions are not allowed",
+  duplicateAnswers: "Duplicate answers are not allowed",
+  duplicateDistractors: "Duplicate distractors are not allowed",
+  distractorMatchesAnswer: "Distractors cannot match any correct answers",
+  minMatchingPairs: "At least 3 matching pairs are required",
+  maxMatchingPairs: "Maximum 10 matching pairs allowed",
+  maxDistractors: "Maximum 5 distractors allowed",
 };

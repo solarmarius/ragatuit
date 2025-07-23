@@ -38,6 +38,11 @@ export function QuizSettingsStep({
       label: "Fill in the Blank",
       description: "Generate questions with blank spaces to fill in",
     },
+    {
+      value: QUESTION_TYPES.MATCHING,
+      label: "Matching Questions",
+      description: "Generate matching questions with pairs and distractors",
+    },
   ];
 
   const languageOptions = [
