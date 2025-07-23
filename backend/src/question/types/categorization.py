@@ -81,13 +81,13 @@ class CategorizationData(BaseQuestionData):
             raise ValueError("Maximum 8 categories allowed")
 
         # Check for duplicate category names (case-insensitive)
-        names = [cat.name.strip().lower() for cat in v]
-        if len(set(names)) != len(names):
+        names_lower = {cat.name.strip().lower() for cat in v}
+        if len(names_lower) != len(v):
             raise ValueError("Duplicate category names are not allowed")
 
         # Check for duplicate category IDs
-        ids = [cat.id for cat in v]
-        if len(set(ids)) != len(ids):
+        category_ids = {cat.id for cat in v}
+        if len(category_ids) != len(v):
             raise ValueError("Duplicate category IDs are not allowed")
 
         return v
@@ -102,13 +102,13 @@ class CategorizationData(BaseQuestionData):
             raise ValueError("Maximum 20 items allowed")
 
         # Check for duplicate item texts (case-insensitive)
-        texts = [item.text.strip().lower() for item in v]
-        if len(set(texts)) != len(texts):
+        texts_lower = {item.text.strip().lower() for item in v}
+        if len(texts_lower) != len(v):
             raise ValueError("Duplicate item texts are not allowed")
 
         # Check for duplicate item IDs
-        ids = [item.id for item in v]
-        if len(set(ids)) != len(ids):
+        item_ids = {item.id for item in v}
+        if len(item_ids) != len(v):
             raise ValueError("Duplicate item IDs are not allowed")
 
         return v
@@ -126,13 +126,13 @@ class CategorizationData(BaseQuestionData):
             raise ValueError("Maximum 5 distractors allowed")
 
         # Check for duplicate distractor texts (case-insensitive)
-        texts = [item.text.strip().lower() for item in v]
-        if len(set(texts)) != len(texts):
+        distractor_texts = {item.text.strip().lower() for item in v}
+        if len(distractor_texts) != len(v):
             raise ValueError("Duplicate distractor texts are not allowed")
 
         # Check for duplicate distractor IDs
-        ids = [item.id for item in v]
-        if len(set(ids)) != len(ids):
+        distractor_ids = {item.id for item in v}
+        if len(distractor_ids) != len(v):
             raise ValueError("Duplicate distractor IDs are not allowed")
 
         return v
@@ -285,7 +285,8 @@ class CategorizationQuestionType(BaseQuestionType):
                 "item_body": category.name,
             }
 
-        # Build distractors dictionary (all items not belonging to any category)
+        # Canvas expects all items (including correct ones) in the distractors field
+        # The scoring_data determines which items belong to which categories
         canvas_distractors = {}
         all_items = data.get_all_items()
 
