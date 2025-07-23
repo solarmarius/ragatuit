@@ -119,7 +119,7 @@ export const FillInBlankEditor = memo(function FillInBlankEditor({
       }
 
       return formErrors
-    }, [errors])
+    }, [errors, watchedQuestionText, watchedBlanks])
 
     // Smart blank addition based on question text
     const addBlank = () => {
