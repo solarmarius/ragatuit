@@ -265,10 +265,9 @@ export interface CategorizationFormData {
   questionText: string;
   categories: Array<{
     name: string;
-    correctItems: string[]; // Item IDs that belong to this category
-  }>;
-  items: Array<{
-    text: string;
+    items: Array<{
+      text: string;
+    }>;
   }>;
   distractors?: Array<{
     text: string;
@@ -284,8 +283,12 @@ export const categorizationSchema = z
       .array(
         z.object({
           name: nonEmptyString.min(1, "Category name is required"),
-          correctItems: z
-            .array(z.string())
+          items: z
+            .array(
+              z.object({
+                text: nonEmptyString.min(1, "Item text is required"),
+              })
+            )
             .min(1, "Each category must have at least one item"),
         })
       )
@@ -298,22 +301,6 @@ export const categorizationSchema = z
           return new Set(names).size === names.length;
         },
         { message: "Duplicate category names are not allowed" }
-      ),
-    items: z
-      .array(
-        z.object({
-          text: nonEmptyString.min(1, "Item text is required"),
-        })
-      )
-      .min(6, "At least 6 items are required")
-      .max(20, "Maximum 20 items allowed")
-      .refine(
-        (items) => {
-          // Check for duplicate item texts
-          const texts = items.map((i) => i.text.toLowerCase().trim());
-          return new Set(texts).size === texts.length;
-        },
-        { message: "Duplicate item texts are not allowed" }
       ),
     distractors: z
       .array(
@@ -336,15 +323,31 @@ export const categorizationSchema = z
   })
   .refine(
     (data) => {
-      // Validate that all items are assigned to categories
-      const totalAssignedItems = data.categories.reduce(
-        (sum, cat) => sum + cat.correctItems.length,
+      // Validate total items are within limits (6-20)
+      const totalItems = data.categories.reduce(
+        (sum, cat) => sum + cat.items.length,
         0
       );
-      return totalAssignedItems === data.items.length;
+      return totalItems >= 6 && totalItems <= 20;
     },
     {
-      message: "All items must be assigned to categories",
+      message: "Total items must be between 6 and 20",
+      path: ["categories"],
+    }
+  )
+  .refine(
+    (data) => {
+      // Check for duplicate item texts across all categories
+      const allItemTexts: string[] = [];
+      for (const category of data.categories) {
+        for (const item of category.items) {
+          allItemTexts.push(item.text.toLowerCase().trim());
+        }
+      }
+      return new Set(allItemTexts).size === allItemTexts.length;
+    },
+    {
+      message: "Duplicate item texts are not allowed",
       path: ["categories"],
     }
   )
@@ -353,10 +356,15 @@ export const categorizationSchema = z
       // Ensure distractors don't match any item texts
       if (!data.distractors) return true;
 
-      const itemTexts = new Set(data.items.map((i) => i.text.toLowerCase().trim()));
+      const allItemTexts = new Set<string>();
+      for (const category of data.categories) {
+        for (const item of category.items) {
+          allItemTexts.add(item.text.toLowerCase().trim());
+        }
+      }
 
       for (const distractor of data.distractors) {
-        if (itemTexts.has(distractor.text.toLowerCase().trim())) {
+        if (allItemTexts.has(distractor.text.toLowerCase().trim())) {
           return false;
         }
       }

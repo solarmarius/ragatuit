@@ -559,7 +559,7 @@ Complete display component following established patterns:
 
 ```typescript
 import { memo } from "react";
-import { Box, VStack, HStack, Text, SimpleGrid, Badge, Card } from "@chakra-ui/react";
+import { Box, VStack, Text, SimpleGrid, Badge, Card } from "@chakra-ui/react";
 import type { QuestionResponse } from "@/client";
 import { extractQuestionData } from "@/types/questionTypes";
 import { ExplanationBox } from "../shared/ExplanationBox";
@@ -577,25 +577,12 @@ interface CategorizationDisplayProps {
  */
 function CategorizationDisplayComponent({
   question,
-  showCorrectAnswer = false,
+  showCorrectAnswer: _showCorrectAnswer = false, // Always show answers in teacher-facing view
   showExplanation = false,
 }: CategorizationDisplayProps) {
+  // Note: showCorrectAnswer is kept for API consistency but we always show answers for teachers
   try {
     const categorizationData = extractQuestionData(question, "categorization");
-
-    // Create a mapping of item IDs to category names for easy lookup
-    const itemToCategoryMap = new Map<string, string>();
-    categorizationData.categories.forEach((category) => {
-      category.correct_items.forEach((itemId) => {
-        itemToCategoryMap.set(itemId, category.name);
-      });
-    });
-
-    // Combine all items (main items + distractors) for display
-    const allItems = [
-      ...categorizationData.items,
-      ...(categorizationData.distractors || []),
-    ];
 
     return (
       <VStack gap={6} align="stretch">
@@ -620,141 +607,62 @@ function CategorizationDisplayComponent({
                   </Text>
                 </Card.Header>
                 <Card.Body>
-                  {showCorrectAnswer ? (
-                    <VStack gap={2} align="stretch">
-                      {category.correct_items.map((itemId) => {
-                        const item = categorizationData.items.find((i) => i.id === itemId);
-                        return item ? (
-                          <Box
-                            key={itemId}
-                            p={2}
-                            bg="green.50"
-                            borderRadius="sm"
-                            borderLeft="3px solid"
-                            borderColor="green.300"
-                          >
-                            <Text fontSize="sm">{item.text}</Text>
-                          </Box>
-                        ) : null;
-                      })}
-                    </VStack>
-                  ) : (
-                    <Text fontSize="sm" color="gray.500" fontStyle="italic">
-                      Items will be placed here
-                    </Text>
-                  )}
+                  <VStack gap={2} align="stretch">
+                    {category.correct_items.map((itemId) => {
+                      const item = categorizationData.items.find((i) => i.id === itemId);
+                      return item ? (
+                        <Box
+                          key={itemId}
+                          p={2}
+                          bg="green.50"
+                          borderRadius="sm"
+                          borderLeft="3px solid"
+                          borderColor="green.300"
+                        >
+                          <Text fontSize="sm">{item.text}</Text>
+                        </Box>
+                      ) : null;
+                    })}
+                  </VStack>
                 </Card.Body>
               </Card.Root>
             ))}
           </SimpleGrid>
         </Box>
 
-        {/* Items to Categorize */}
-        <Box>
-          <Text fontSize="sm" fontWeight="semibold" color="gray.600" mb={3}>
-            Items to Categorize:
-          </Text>
-          <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} spacing={3}>
-            {allItems.map((item) => {
-              const correctCategory = itemToCategoryMap.get(item.id);
-              const isDistractor = !correctCategory;
-
-              return (
+        {/* Distractors */}
+        {categorizationData.distractors && categorizationData.distractors.length > 0 && (
+          <Box>
+            <Text fontSize="sm" fontWeight="semibold" color="gray.600" mb={3}>
+              Distractors:
+            </Text>
+            <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} gap={3}>
+              {categorizationData.distractors.map((distractor) => (
                 <Box
-                  key={item.id}
+                  key={distractor.id}
                   p={3}
                   borderWidth={1}
                   borderRadius="md"
-                  borderColor={
-                    showCorrectAnswer
-                      ? isDistractor
-                        ? "red.200"
-                        : "green.200"
-                      : "gray.200"
-                  }
-                  bg={
-                    showCorrectAnswer
-                      ? isDistractor
-                        ? "red.50"
-                        : "green.50"
-                      : "white"
-                  }
+                  borderColor="red.200"
+                  bg="red.50"
                   position="relative"
-                  cursor={showCorrectAnswer ? "default" : "pointer"}
-                  _hover={
-                    !showCorrectAnswer
-                      ? {
-                          borderColor: "blue.300",
-                          bg: "blue.50",
-                        }
-                      : {}
-                  }
                 >
                   <Text fontSize="sm" textAlign="center">
-                    {item.text}
+                    {distractor.text}
                   </Text>
-
-                  {showCorrectAnswer && (
-                    <Badge
-                      position="absolute"
-                      top={1}
-                      right={1}
-                      size="sm"
-                      colorScheme={isDistractor ? "red" : "green"}
-                    >
-                      {isDistractor ? "Distractor" : correctCategory}
-                    </Badge>
-                  )}
+                  <Badge
+                    position="absolute"
+                    top={1}
+                    right={1}
+                    size="sm"
+                    colorScheme="red"
+                  >
+                    Distractor
+                  </Badge>
                 </Box>
-              );
-            })}
-          </SimpleGrid>
-        </Box>
-
-        {/* Correct Answer Summary (when showing answers) */}
-        {showCorrectAnswer && (
-          <Card.Root variant="outline" bg="blue.50">
-            <Card.Header>
-              <Text fontSize="sm" fontWeight="semibold" color="blue.800">
-                Correct Categorization:
-              </Text>
-            </Card.Header>
-            <Card.Body>
-              <VStack gap={3} align="stretch">
-                {categorizationData.categories.map((category) => (
-                  <Box key={category.id}>
-                    <Text fontSize="sm" fontWeight="medium" mb={2}>
-                      {category.name}:
-                    </Text>
-                    <HStack wrap="wrap" spacing={2}>
-                      {category.correct_items.map((itemId) => {
-                        const item = categorizationData.items.find((i) => i.id === itemId);
-                        return item ? (
-                          <Badge key={itemId} colorScheme="green" variant="subtle">
-                            {item.text}
-                          </Badge>
-                        ) : null;
-                      })}
-                    </HStack>
-                  </Box>
-                ))}
-                {categorizationData.distractors && categorizationData.distractors.length > 0 && (
-                  <Box>
-                    <Text fontSize="sm" fontWeight="medium" mb={2}>
-                      Distractors (don't belong to any category):
-                    </Text>
-                    <HStack wrap="wrap" spacing={2}>
-                      {categorizationData.distractors.map((distractor) => (
-                        <Badge key={distractor.id} colorScheme="red" variant="subtle">
-                          {distractor.text}
-                        </Badge>
-                      ))}
-                    </HStack>
-                  </Box>
-                )}
-              </VStack>
-            </Card.Body>
-          </Card.Root>
+              ))}
+            </SimpleGrid>
+          </Box>
         )}
 
         {/* Explanation */}
@@ -776,15 +684,21 @@ export const CategorizationDisplay = memo(CategorizationDisplayComponent);
 CategorizationDisplay.displayName = "CategorizationDisplay";
 ```
 
-**Purpose**: Renders categorization questions with proper visual layout and answer highlighting.
+**Purpose**: Renders categorization questions optimized for teacher review and verification.
 
 **Key Features**:
-- Category cards showing structure
-- Item pool for categorization
-- Color-coded correct/incorrect assignments when `showCorrectAnswer` is true
-- Correct categorization summary section
-- Responsive grid layout
-- Error boundary with fallback component
+- **Category cards**: Always display correct items organized by category with green highlighting
+- **Distractors section**: Only shows incorrect items that don't belong to any category (conditional rendering)
+- **Teacher-focused design**: Eliminates redundant information for cleaner instructor workflow
+- **Visual clarity**: Red color coding and "Distractor" badges for easy identification
+- **Responsive grid layout**: Adapts to different screen sizes with proper spacing
+- **Error boundary**: Fallback component handles malformed question data gracefully
+
+**UI Improvements Made**:
+- **Removed redundant "Correct Categorization" summary** that duplicated category card information
+- **Simplified distractors display** to show only when distractors exist in the question
+- **Eliminated mixed item pool** that confused correct items with distractors
+- **Maintained API consistency** with `showCorrectAnswer` prop while optimizing for teacher use
 
 **Testing**: Run `npx tsc --noEmit` to verify TypeScript compilation passes.
 

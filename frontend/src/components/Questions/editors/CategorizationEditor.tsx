@@ -30,7 +30,8 @@ interface CategorizationEditorProps {
 
 /**
  * Editor component for categorization questions.
- * Allows editing of categories, items, item assignments, distractors, and explanation.
+ * Allows editing of categories with their items, distractors, and explanation.
+ * Mirrors the layout of CategorizationDisplay for intuitive editing.
  */
 function CategorizationEditorComponent({
   question,
@@ -41,15 +42,15 @@ function CategorizationEditorComponent({
   try {
     const categorizationData = extractQuestionData(question, "categorization");
 
-    // Transform backend data to form data format
+    // Transform backend data to new form data format
     const defaultFormData: CategorizationFormData = {
       questionText: categorizationData.question_text,
       categories: categorizationData.categories.map((cat) => ({
         name: cat.name,
-        correctItems: cat.correct_items,
-      })),
-      items: categorizationData.items.map((item) => ({
-        text: item.text,
+        items: cat.correct_items.map((itemId) => {
+          const item = categorizationData.items.find((i) => i.id === itemId);
+          return { text: item?.text || "" };
+        }),
       })),
       distractors: categorizationData.distractors?.map((dist) => ({
         text: dist.text,
@@ -77,15 +78,6 @@ function CategorizationEditorComponent({
     });
 
     const {
-      fields: itemFields,
-      append: appendItem,
-      remove: removeItem,
-    } = useFieldArray({
-      control,
-      name: "items",
-    });
-
-    const {
       fields: distractorFields,
       append: appendDistractor,
       remove: removeDistractor,
@@ -94,51 +86,69 @@ function CategorizationEditorComponent({
       name: "distractors",
     });
 
-    // Note: Item assignment to categories will be implemented in future version
-
-    // Handle form submission
+    // Handle form submission - transform back to backend format
     const onSubmit = useCallback(
       (formData: CategorizationFormData) => {
-        // Transform form data back to backend format
+        // Generate items array and category mappings
+        const items: Array<{ id: string; text: string }> = [];
+        const categories: Array<{
+          id: string;
+          name: string;
+          correct_items: string[];
+        }> = [];
+
+        let itemIndex = 0;
+
+        // Process each category and its items
+        formData.categories.forEach((formCategory, catIndex) => {
+          const categoryItemIds: string[] = [];
+
+          formCategory.items.forEach((formItem) => {
+            const itemId = `item_${itemIndex}`;
+            items.push({
+              id: itemId,
+              text: formItem.text,
+            });
+            categoryItemIds.push(itemId);
+            itemIndex++;
+          });
+
+          categories.push({
+            id: `cat_${catIndex}`,
+            name: formCategory.name,
+            correct_items: categoryItemIds,
+          });
+        });
+
         const updateData: QuestionUpdateRequest = {
           question_data: {
             question_text: formData.questionText,
-            categories: formData.categories.map((cat, index) => ({
-              id: `cat_${index}`, // Generate IDs for new categories
-              name: cat.name,
-              correct_items: cat.correctItems,
-            })),
-            items: formData.items.map((item, index) => ({
-              id: `item_${index}`, // Generate IDs for new items
-              text: item.text,
-            })),
+            categories,
+            items,
             distractors: formData.distractors?.length
               ? formData.distractors.map((dist, index) => ({
-                  id: `dist_${index}`, // Generate IDs for new distractors
+                  id: `dist_${index}`,
                   text: dist.text,
                 }))
               : null,
             explanation: formData.explanation || null,
           },
         };
+
         onSave(updateData);
       },
       [onSave]
     );
 
-    // Add new category
+    // Add new category with one empty item
     const handleAddCategory = useCallback(() => {
       if (categoryFields.length < 8) {
-        appendCategory({ name: "", correctItems: [] });
+        appendCategory({
+          name: "",
+          items: [{ text: "" }]
+        });
       }
     }, [appendCategory, categoryFields.length]);
-
-    // Add new item
-    const handleAddItem = useCallback(() => {
-      if (itemFields.length < 20) {
-        appendItem({ text: "" });
-      }
-    }, [appendItem, itemFields.length]);
 
     // Add new distractor
     const handleAddDistractor = useCallback(() => {
@@ -169,7 +179,7 @@ function CategorizationEditorComponent({
             />
           </FormField>
 
-          {/* Categories Section */}
+          {/* Categories Section - Mirrors Display Layout */}
           <FormGroup>
             <HStack justify="space-between" mb={4}>
               <Text fontSize="md" fontWeight="semibold">
@@ -193,134 +203,21 @@ function CategorizationEditorComponent({
               </Text>
             )}
 
-            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-              {categoryFields.map((field, index) => (
-                <Card.Root key={field.id} variant="outline">
-                  <Card.Header>
-                    <HStack justify="space-between">
-                      <Text fontSize="sm" fontWeight="medium">
-                        Category {index + 1}
-                      </Text>
-                      <IconButton
-                        aria-label={`Remove category ${index + 1}`}
-                        size="sm"
-                        colorScheme="red"
-                        variant="ghost"
-                        onClick={() => removeCategory(index)}
-                        disabled={categoryFields.length <= 2}
-                      >
-                        <MdDelete />
-                      </IconButton>
-                    </HStack>
-                  </Card.Header>
-                  <Card.Body>
-                    <VStack gap={3} align="stretch">
-                      <FormField
-                        label="Category Name"
-                        isRequired
-                        error={errors.categories?.[index]?.name?.message}
-                      >
-                        <Controller
-                          name={`categories.${index}.name`}
-                          control={control}
-                          render={({ field: inputField }) => (
-                            <Input
-                              {...inputField}
-                              placeholder="Enter category name..."
-                              size="sm"
-                            />
-                          )}
-                        />
-                      </FormField>
-
-                      <FormField
-                        label="Assigned Items"
-                        error={errors.categories?.[index]?.correctItems?.message}
-                      >
-                        <Text fontSize="sm" color="gray.600">
-                          Category assignment will be implemented in a future version.
-                          For now, items are automatically distributed among categories.
-                        </Text>
-                      </FormField>
-                    </VStack>
-                  </Card.Body>
-                </Card.Root>
+            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={4}>
+              {categoryFields.map((field, categoryIndex) => (
+                <CategoryEditor
+                  key={field.id}
+                  categoryIndex={categoryIndex}
+                  control={control}
+                  errors={errors}
+                  onRemoveCategory={() => removeCategory(categoryIndex)}
+                  canRemoveCategory={categoryFields.length > 2}
+                />
               ))}
             </SimpleGrid>
 
             <Text fontSize="sm" color="gray.600" mt={2}>
               At least 2 categories required, maximum 8 categories allowed.
-            </Text>
-          </FormGroup>
-
-          {/* Items Section */}
-          <FormGroup>
-            <HStack justify="space-between" mb={4}>
-              <Text fontSize="md" fontWeight="semibold">
-                Items ({itemFields.length}/20)
-              </Text>
-              <Button
-                size="sm"
-                onClick={handleAddItem}
-                disabled={itemFields.length >= 20}
-                colorScheme="blue"
-                variant="outline"
-              >
-                <MdAdd />
-                Add Item
-              </Button>
-            </HStack>
-
-            {errors.items && (
-              <Text color="red.500" fontSize="sm" mb={3}>
-                {errors.items.message}
-              </Text>
-            )}
-
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={3}>
-              {itemFields.map((field, index) => (
-                <Card.Root key={field.id} variant="outline" size="sm">
-                  <Card.Body>
-                    <HStack>
-                      <Box flex={1}>
-                        <FormField
-                          label={`Item ${index + 1}`}
-                          isRequired
-                          error={errors.items?.[index]?.text?.message}
-                        >
-                          <Controller
-                            name={`items.${index}.text`}
-                            control={control}
-                            render={({ field: inputField }) => (
-                              <Input
-                                {...inputField}
-                                placeholder="Enter item text..."
-                                size="sm"
-                              />
-                            )}
-                          />
-                        </FormField>
-                      </Box>
-                      <IconButton
-                        aria-label={`Remove item ${index + 1}`}
-                        size="sm"
-                        colorScheme="red"
-                        variant="ghost"
-                        onClick={() => removeItem(index)}
-                        disabled={itemFields.length <= 6}
-                        alignSelf="flex-end"
-                        mb={2}
-                      >
-                        <MdDelete />
-                      </IconButton>
-                    </HStack>
-                  </Card.Body>
-                </Card.Root>
-              ))}
-            </SimpleGrid>
-
-            <Text fontSize="sm" color="gray.600" mt={2}>
-              At least 6 items required, maximum 20 items allowed.
             </Text>
           </FormGroup>
 
@@ -348,7 +245,7 @@ function CategorizationEditorComponent({
               </Text>
             )}
 
-            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={3}>
+            <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} gap={3}>
               {distractorFields.map((field, index) => (
                 <Card.Root key={field.id} variant="outline" size="sm">
                   <Card.Body>
@@ -437,6 +334,138 @@ function CategorizationEditorComponent({
       />
     );
   }
+}
+
+/**
+ * Individual category editor component matching the display layout
+ */
+interface CategoryEditorProps {
+  categoryIndex: number;
+  control: any;
+  errors: any;
+  onRemoveCategory: () => void;
+  canRemoveCategory: boolean;
+}
+
+function CategoryEditor({
+  categoryIndex,
+  control,
+  errors,
+  onRemoveCategory,
+  canRemoveCategory,
+}: CategoryEditorProps) {
+  const {
+    fields: itemFields,
+    append: appendItem,
+    remove: removeItem,
+  } = useFieldArray({
+    control,
+    name: `categories.${categoryIndex}.items`,
+  });
+
+  const handleAddItem = useCallback(() => {
+    appendItem({ text: "" });
+  }, [appendItem]);
+
+  return (
+    <Card.Root variant="outline">
+      <Card.Header>
+        <HStack justify="space-between">
+          <Text fontSize="sm" fontWeight="medium">
+            Category {categoryIndex + 1}
+          </Text>
+          <IconButton
+            aria-label={`Remove category ${categoryIndex + 1}`}
+            size="sm"
+            colorScheme="red"
+            variant="ghost"
+            onClick={onRemoveCategory}
+            disabled={!canRemoveCategory}
+          >
+            <MdDelete />
+          </IconButton>
+        </HStack>
+      </Card.Header>
+      <Card.Body>
+        <VStack gap={3} align="stretch">
+          {/* Category Name */}
+          <FormField
+            label="Category Name"
+            isRequired
+            error={errors.categories?.[categoryIndex]?.name?.message}
+          >
+            <Controller
+              name={`categories.${categoryIndex}.name`}
+              control={control}
+              render={({ field }) => (
+                <Input
+                  {...field}
+                  placeholder="Enter category name..."
+                  size="sm"
+                />
+              )}
+            />
+          </FormField>
+
+          {/* Items in Category */}
+          <Box>
+            <HStack justify="space-between" mb={2}>
+              <Text fontSize="sm" fontWeight="medium">
+                Items ({itemFields.length})
+              </Text>
+              <Button
+                size="xs"
+                onClick={handleAddItem}
+                colorScheme="green"
+                variant="outline"
+              >
+                <MdAdd />
+                Add Item
+              </Button>
+            </HStack>
+
+            <VStack gap={2} align="stretch">
+              {itemFields.map((field, itemIndex) => (
+                <HStack key={field.id}>
+                  <Box flex={1}>
+                    <Controller
+                      name={`categories.${categoryIndex}.items.${itemIndex}.text`}
+                      control={control}
+                      render={({ field: inputField }) => (
+                        <Input
+                          {...inputField}
+                          placeholder="Enter item text..."
+                          size="sm"
+                          bg="green.50"
+                          borderColor="green.300"
+                        />
+                      )}
+                    />
+                  </Box>
+                  <IconButton
+                    aria-label={`Remove item ${itemIndex + 1}`}
+                    size="sm"
+                    colorScheme="red"
+                    variant="ghost"
+                    onClick={() => removeItem(itemIndex)}
+                    disabled={itemFields.length <= 1}
+                  >
+                    <MdDelete />
+                  </IconButton>
+                </HStack>
+              ))}
+            </VStack>
+
+            {errors.categories?.[categoryIndex]?.items && (
+              <Text color="red.500" fontSize="sm" mt={1}>
+                {errors.categories?.[categoryIndex]?.items?.message}
+              </Text>
+            )}
+          </Box>
+        </VStack>
+      </Card.Body>
+    </Card.Root>
+  );
 }
 
 /**
