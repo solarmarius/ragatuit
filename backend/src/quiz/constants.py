@@ -45,9 +45,13 @@ MIN_TITLE_LENGTH = 1
 TRANSACTION_ISOLATION_LEVEL = "REPEATABLE READ"
 TRANSACTION_RETRIES = 3
 
-# Operation timeouts (in seconds)
+# Operation timeouts (in seconds) - Increased for concurrent operations support (100+ users)
 OPERATION_TIMEOUTS = {
-    "content_extraction": 300,  # 5 minutes timeout for content extraction
-    "question_generation": 600,  # 10 minutes timeout for question generation
-    "canvas_export": 180,  # 3 minutes timeout for Canvas export
+    "content_extraction": 900,  # 15 minutes timeout for content extraction
+    "question_generation": 1800,  # 30 minutes timeout for question generation
+    "canvas_export": 600,  # 10 minutes timeout for Canvas export
 }
+
+# Logging configuration for concurrent operations
+CORRELATION_ID_HEADER = "X-Correlation-ID"
+LOG_CONCURRENT_OPERATIONS = True

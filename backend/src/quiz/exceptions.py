@@ -85,8 +85,13 @@ def categorize_generation_error(
         # This indicates no meaningful content was available for generation
         return FailureReason.NO_CONTENT_FOUND
     elif isinstance(exception, OrchestrationTimeoutError):
-        # Operation timed out
-        return FailureReason.LLM_GENERATION_ERROR
+        # Categorize timeout based on operation type
+        operation = getattr(exception, "operation", "unknown")
+        if "content_extraction" in operation:
+            return FailureReason.CONTENT_EXTRACTION_ERROR
+        else:
+            # Default to generation error for question generation timeouts
+            return FailureReason.LLM_GENERATION_ERROR
     elif error_message and "No questions generated" in error_message:
         # This indicates the LLM failed to generate any questions
         return FailureReason.NO_QUESTIONS_GENERATED
