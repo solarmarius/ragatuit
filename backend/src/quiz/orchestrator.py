@@ -128,22 +128,11 @@ async def _handle_orchestration_failure(
 
         async def _update_failed_status(session: Any, quiz_id: UUID) -> None:
             """Update quiz status to failed with appropriate failure reason."""
-            from .exceptions import categorize_generation_error
+            from .exceptions import determine_failure_reason
             from .service import update_quiz_status
 
             # Determine appropriate failure reason based on operation and error
-            if operation_name == "content_extraction":
-                if isinstance(error, OrchestrationTimeoutError):
-                    failure_reason = FailureReason.CONTENT_EXTRACTION_ERROR
-                else:
-                    failure_reason = FailureReason.CONTENT_EXTRACTION_ERROR
-            elif operation_name == "question_generation":
-                failure_reason = categorize_generation_error(error, str(error))
-            elif operation_name == "canvas_export":
-                failure_reason = FailureReason.CANVAS_EXPORT_ERROR
-            else:
-                # Default fallback
-                failure_reason = FailureReason.VALIDATION_ERROR
+            failure_reason = determine_failure_reason(operation_name, error, str(error))
 
             await update_quiz_status(
                 session, quiz_id, QuizStatus.FAILED, failure_reason
