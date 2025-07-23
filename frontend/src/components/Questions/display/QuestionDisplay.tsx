@@ -4,6 +4,7 @@ import type { QuestionResponse } from "@/client";
 import { QUESTION_TYPES } from "@/lib/constants";
 import { FillInBlankDisplay } from "./FillInBlankDisplay";
 import { MatchingDisplay } from "./MatchingDisplay";
+import { CategorizationDisplay } from "./CategorizationDisplay";
 import { MCQDisplay } from "./MCQDisplay";
 import { UnsupportedDisplay } from "./UnsupportedDisplay";
 
@@ -31,6 +32,8 @@ export const QuestionDisplay = memo(function QuestionDisplay({
       return <FillInBlankDisplay {...commonProps} />;
     case QUESTION_TYPES.MATCHING:
       return <MatchingDisplay {...commonProps} />;
+    case QUESTION_TYPES.CATEGORIZATION:
+      return <CategorizationDisplay {...commonProps} />;
     default:
       return <UnsupportedDisplay questionType={question.question_type} />;
   }
