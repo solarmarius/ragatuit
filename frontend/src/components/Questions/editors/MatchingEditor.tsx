@@ -40,6 +40,8 @@ export const MatchingEditor = memo(function MatchingEditor({
     const {
       control,
       handleSubmit,
+      watch,
+      setValue,
       formState: { errors, isDirty },
     } = useForm<MatchingFormData>({
       resolver: zodResolver(matchingSchema),
@@ -60,14 +62,41 @@ export const MatchingEditor = memo(function MatchingEditor({
       name: "pairs",
     });
 
-    const {
-      fields: distractorFields,
-      append: appendDistractor,
-      remove: removeDistractor,
-    } = useFieldArray({
-      control,
-      name: "distractors",
-    } as any);
+    // Handle distractors as array of strings
+    const distractors = watch("distractors") || [];
+
+    const handleDistractorChange = useCallback(
+      (index: number, value: string) => {
+        const newDistractors = [...distractors];
+        newDistractors[index] = value;
+        setValue("distractors", newDistractors, {
+          shouldValidate: true,
+          shouldDirty: true
+        });
+      },
+      [distractors, setValue]
+    );
+
+    const appendDistractor = useCallback(
+      (value: string) => {
+        setValue("distractors", [...distractors, value], {
+          shouldValidate: true,
+          shouldDirty: true
+        });
+      },
+      [distractors, setValue]
+    );
+
+    const removeDistractor = useCallback(
+      (index: number) => {
+        const newDistractors = distractors.filter((_, i) => i !== index);
+        setValue("distractors", newDistractors, {
+          shouldValidate: true,
+          shouldDirty: true
+        });
+      },
+      [distractors, setValue]
+    );
 
     const onSubmit = useCallback(
       (formData: MatchingFormData) => {
@@ -93,10 +122,10 @@ export const MatchingEditor = memo(function MatchingEditor({
     }, [appendPair, pairFields.length]);
 
     const handleAddDistractor = useCallback(() => {
-      if (distractorFields.length < 5) {
-        (appendDistractor as any)("");
+      if (distractors.length < 5) {
+        appendDistractor("");
       }
-    }, [appendDistractor, distractorFields.length]);
+    }, [appendDistractor, distractors.length]);
 
     return (
       <FormGroup>
@@ -206,7 +235,7 @@ export const MatchingEditor = memo(function MatchingEditor({
 
         <Fieldset.Root>
           <Fieldset.Legend>
-            Distractors ({distractorFields.length}/5)
+            Distractors ({distractors.length}/5)
           </Fieldset.Legend>
           <VStack gap={3} align="stretch">
             {errors.distractors && (
@@ -215,24 +244,19 @@ export const MatchingEditor = memo(function MatchingEditor({
               </Text>
             )}
 
-            {distractorFields.map((field, index) => (
-              <HStack key={field.id} align="flex-start">
+            {distractors.map((distractor: string, index: number) => (
+              <HStack key={`distractor-${index}`} align="flex-start">
                 <Box flex={1}>
-                  <Controller
-                    name={`distractors.${index}`}
-                    control={control}
-                    render={({ field: inputField }) => (
-                      <FormField
-                        label={`Distractor ${index + 1}`}
-                        error={errors.distractors?.[index]?.message}
-                      >
-                        <Input
-                          {...inputField}
-                          placeholder="Enter incorrect answer option..."
-                        />
-                      </FormField>
-                    )}
-                  />
+                  <FormField
+                    label={`Distractor ${index + 1}`}
+                    error={errors.distractors?.[index]?.message}
+                  >
+                    <Input
+                      value={distractor}
+                      onChange={(e) => handleDistractorChange(index, e.target.value)}
+                      placeholder="Enter incorrect answer option..."
+                    />
+                  </FormField>
                 </Box>
                 <Button
                   size="sm"
@@ -249,7 +273,7 @@ export const MatchingEditor = memo(function MatchingEditor({
 
             <Button
               onClick={handleAddDistractor}
-              disabled={distractorFields.length >= 5}
+              disabled={distractors.length >= 5}
               variant="outline"
               colorScheme="blue"
               size="sm"
