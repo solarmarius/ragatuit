@@ -4,6 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { getNextBlankPosition, validateBlankTextComprehensive } from "@/lib/utils/fillInBlankUtils"
 import { type FillInBlankFormData, fillInBlankSchema } from "@/lib/validation"
 import type { BlankValidationError } from "@/types/fillInBlankValidation"
+import { BlankValidationErrorCode } from "@/types/fillInBlankValidation"
 import { extractQuestionData } from "@/types/questionTypes"
 import {
   Box,
@@ -93,14 +94,14 @@ export const FillInBlankEditor = memo(function FillInBlankEditor({
       // Extract errors from form state
       if (errors.questionText?.message) {
         formErrors.push({
-          code: "INVALID_TAG_FORMAT" as any,
+          code: BlankValidationErrorCode.INVALID_TAG_FORMAT,
           message: errors.questionText.message,
         })
       }
 
       if (errors.blanks?.message) {
         formErrors.push({
-          code: "MISSING_BLANK_CONFIG" as any,
+          code: BlankValidationErrorCode.MISSING_BLANK_CONFIG,
           message: errors.blanks.message,
         })
       }
@@ -110,7 +111,7 @@ export const FillInBlankEditor = memo(function FillInBlankEditor({
         errors.blanks.forEach((blankError, index) => {
           if (blankError?.message) {
             formErrors.push({
-              code: "MISSING_BLANK_CONFIG" as any,
+              code: BlankValidationErrorCode.MISSING_BLANK_CONFIG,
               message: `Blank ${index + 1}: ${blankError.message}`,
             })
           }

@@ -81,60 +81,7 @@ export interface ValidationContext {
   isSynchronized: boolean
 }
 
-/**
- * Validation severity levels
- */
-export enum ValidationSeverity {
-  ERROR = "error",
-  WARNING = "warning",
-  INFO = "info",
-}
 
-/**
- * Enhanced validation error with severity
- */
-export interface EnhancedValidationError extends BlankValidationError {
-  severity: ValidationSeverity
-  field?: "questionText" | "blanks" | "both"
-  suggestion?: string
-}
-
-/**
- * Comprehensive validation result with enhanced errors
- */
-export interface EnhancedValidationResult {
-  isValid: boolean
-  errors: EnhancedValidationError[]
-  warnings: EnhancedValidationError[]
-  canSave: boolean
-  summary: {
-    totalErrors: number
-    totalWarnings: number
-    criticalErrors: number
-  }
-}
-
-/**
- * Validation rule configuration
- */
-export interface ValidationRuleConfig {
-  enableRealTimeValidation: boolean
-  maxBlanks: number
-  requireSequentialPositions: boolean
-  allowPositionGaps: boolean
-  caseSensitiveTagMatching: boolean
-}
-
-/**
- * Default validation configuration
- */
-export const DEFAULT_VALIDATION_CONFIG: ValidationRuleConfig = {
-  enableRealTimeValidation: true,
-  maxBlanks: 10,
-  requireSequentialPositions: true,
-  allowPositionGaps: false,
-  caseSensitiveTagMatching: false,
-}
 
 /**
  * Error message functions for consistent messaging
