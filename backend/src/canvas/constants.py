@@ -41,6 +41,7 @@ class CanvasScoringAlgorithm:
     PARTIAL_DEEP = "PartialDeep"  # Used for matching questions
 
     # Individual answer/blank scoring algorithms
+    ALL_OR_NOTHING = "AllOrNothing"  # Used for categorization individual categories
     TEXT_CONTAINS_ANSWER = (
         "TextContainsAnswer"  # Used for fill-in-blank individual answers
     )
@@ -52,3 +53,4 @@ class CanvasInteractionType:
     CHOICE = "choice"  # Multiple choice questions
     RICH_FILL_BLANK = "rich-fill-blank"  # Fill-in-blank questions
     MATCHING = "matching"  # Matching questions
+    CATEGORIZATION = "categorization"  # Categorization questions
