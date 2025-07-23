@@ -260,6 +260,117 @@ export const matchingSchema = z
 
 export type MatchingFormData = z.infer<typeof matchingSchema>
 
+// Categorization form data interface
+export interface CategorizationFormData {
+  questionText: string;
+  categories: Array<{
+    name: string;
+    correctItems: string[]; // Item IDs that belong to this category
+  }>;
+  items: Array<{
+    text: string;
+  }>;
+  distractors?: Array<{
+    text: string;
+  }>;
+  explanation?: string;
+}
+
+// Categorization validation schema
+export const categorizationSchema = z
+  .object({
+    questionText: nonEmptyString,
+    categories: z
+      .array(
+        z.object({
+          name: nonEmptyString.min(1, "Category name is required"),
+          correctItems: z
+            .array(z.string())
+            .min(1, "Each category must have at least one item"),
+        })
+      )
+      .min(2, "At least 2 categories are required")
+      .max(8, "Maximum 8 categories allowed")
+      .refine(
+        (categories) => {
+          // Check for duplicate category names
+          const names = categories.map((c) => c.name.toLowerCase().trim());
+          return new Set(names).size === names.length;
+        },
+        { message: "Duplicate category names are not allowed" }
+      ),
+    items: z
+      .array(
+        z.object({
+          text: nonEmptyString.min(1, "Item text is required"),
+        })
+      )
+      .min(6, "At least 6 items are required")
+      .max(20, "Maximum 20 items allowed")
+      .refine(
+        (items) => {
+          // Check for duplicate item texts
+          const texts = items.map((i) => i.text.toLowerCase().trim());
+          return new Set(texts).size === texts.length;
+        },
+        { message: "Duplicate item texts are not allowed" }
+      ),
+    distractors: z
+      .array(
+        z.object({
+          text: nonEmptyString.min(1, "Distractor text is required"),
+        })
+      )
+      .max(5, "Maximum 5 distractors allowed")
+      .optional()
+      .refine(
+        (distractors) => {
+          if (!distractors) return true;
+          // Check for duplicate distractor texts
+          const texts = distractors.map((d) => d.text.toLowerCase().trim());
+          return new Set(texts).size === texts.length;
+        },
+        { message: "Duplicate distractor texts are not allowed" }
+      ),
+    explanation: optionalString,
+  })
+  .refine(
+    (data) => {
+      // Validate that all items are assigned to categories
+      const totalAssignedItems = data.categories.reduce(
+        (sum, cat) => sum + cat.correctItems.length,
+        0
+      );
+      return totalAssignedItems === data.items.length;
+    },
+    {
+      message: "All items must be assigned to categories",
+      path: ["categories"],
+    }
+  )
+  .refine(
+    (data) => {
+      // Ensure distractors don't match any item texts
+      if (!data.distractors) return true;
+
+      const itemTexts = new Set(data.items.map((i) => i.text.toLowerCase().trim()));
+
+      for (const distractor of data.distractors) {
+        if (itemTexts.has(distractor.text.toLowerCase().trim())) {
+          return false;
+        }
+      }
+
+      return true;
+    },
+    {
+      message: "Distractors cannot match any item texts",
+      path: ["distractors"],
+    }
+  );
+
+export type CategorizationFormDataInferred = z.infer<typeof categorizationSchema>;
+
 // Helper function to get schema by question type
 export function getSchemaByType(questionType: QuestionType): z.ZodSchema<any> {
   switch (questionType) {
@@ -269,6 +380,8 @@ export function getSchemaByType(questionType: QuestionType): z.ZodSchema<any> {
       return fillInBlankSchema
     case QUESTION_TYPES.MATCHING:
       return matchingSchema
+    case QUESTION_TYPES.CATEGORIZATION:
+      return categorizationSchema
     default:
       throw new Error(`No schema defined for question type: ${questionType}`)
   }
@@ -282,7 +395,9 @@ export type FormDataByType<T extends QuestionType> =
       ? FillInBlankFormData
       : T extends typeof QUESTION_TYPES.MATCHING
         ? MatchingFormData
-        : never
+        : T extends typeof QUESTION_TYPES.CATEGORIZATION
+          ? CategorizationFormData
+          : never
 
 // Common validation messages
 export const validationMessages = {
@@ -300,4 +415,14 @@ export const validationMessages = {
   minMatchingPairs: "At least 3 matching pairs are required",
   maxMatchingPairs: "Maximum 10 matching pairs allowed",
   maxDistractors: "Maximum 5 distractors allowed",
+  minCategories: "At least 2 categories are required",
+  maxCategories: "Maximum 8 categories allowed",
+  minItems: "At least 6 items are required",
+  maxItems: "Maximum 20 items allowed",
+  duplicateCategories: "Duplicate category names are not allowed",
+  duplicateItems: "Duplicate item texts are not allowed",
+  duplicateCategoricationDistractors: "Duplicate distractor texts are not allowed",
+  itemsNotAssigned: "All items must be assigned to categories",
+  distractorMatchesItem: "Distractors cannot match any item texts",
+  categoryNeedsItems: "Each category must have at least one item",
 }
