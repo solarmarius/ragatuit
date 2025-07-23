@@ -68,6 +68,34 @@ class StatusTransitionError(OrchestrationError):
         self.target_status = target_status
 
 
+def determine_failure_reason(
+    operation_name: str, exception: Exception | None, error_message: str | None = None
+) -> FailureReason:
+    """
+    Determine appropriate failure reason based on operation type and exception.
+
+    Args:
+        operation_name: Name of the operation that failed (e.g., "content_extraction")
+        exception: The exception that occurred
+        error_message: Optional error message from the operation
+
+    Returns:
+        Appropriate FailureReason for the error type and operation
+    """
+    if operation_name == "content_extraction":
+        # All content extraction failures map to content extraction error
+        return FailureReason.CONTENT_EXTRACTION_ERROR
+    elif operation_name == "canvas_export":
+        # All canvas export failures map to canvas export error
+        return FailureReason.CANVAS_EXPORT_ERROR
+    elif operation_name == "question_generation":
+        # Use existing generation-specific logic
+        return categorize_generation_error(exception, error_message)
+    else:
+        # Default fallback for unknown operations
+        return FailureReason.VALIDATION_ERROR
+
+
 def categorize_generation_error(
     exception: Exception | None, error_message: str | None = None
 ) -> FailureReason:
@@ -85,7 +113,7 @@ def categorize_generation_error(
         # This indicates no meaningful content was available for generation
         return FailureReason.NO_CONTENT_FOUND
     elif isinstance(exception, OrchestrationTimeoutError):
-        # Operation timed out
+        # Question generation timeout
         return FailureReason.LLM_GENERATION_ERROR
     elif error_message and "No questions generated" in error_message:
         # This indicates the LLM failed to generate any questions

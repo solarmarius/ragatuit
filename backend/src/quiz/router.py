@@ -22,6 +22,7 @@ from .orchestrator import (
     orchestrate_quiz_content_extraction,
     orchestrate_quiz_export_to_canvas,
     orchestrate_quiz_question_generation,
+    safe_background_orchestration,
 )
 from .schemas import QuizCreate
 from .service import (
@@ -98,9 +99,12 @@ async def create_new_quiz(
         # Import Canvas dependencies for injection
         from src.canvas.flows import extract_content_for_modules, get_content_summary
 
-        # Trigger content extraction in the background using orchestrator
+        # Trigger content extraction in the background using safe orchestrator wrapper
         background_tasks.add_task(
+            safe_background_orchestration,
             orchestrate_quiz_content_extraction,
+            "content_extraction",
+            quiz.id,
             quiz.id,
             quiz_data.canvas_course_id,
             [int(module_id) for module_id in quiz_data.selected_modules.keys()],
@@ -287,9 +291,12 @@ async def trigger_content_extraction(
         # Import Canvas dependencies for injection
         from src.canvas.flows import extract_content_for_modules, get_content_summary
 
-        # Trigger content extraction in the background using orchestrator
+        # Trigger content extraction in the background using safe orchestrator wrapper
         background_tasks.add_task(
+            safe_background_orchestration,
             orchestrate_quiz_content_extraction,
+            "content_extraction",
+            quiz.id,
             quiz.id,
             extraction_params["course_id"],
             extraction_params["module_ids"],
@@ -464,9 +471,12 @@ async def trigger_question_generation(
             session, quiz.id, current_user.id
         )
 
-        # Trigger question generation in the background using orchestrator
+        # Trigger question generation in the background using safe orchestrator wrapper
         background_tasks.add_task(
+            safe_background_orchestration,
             orchestrate_quiz_question_generation,
+            "question_generation",
+            quiz.id,
             quiz.id,
             generation_params["question_count"],
             generation_params["llm_model"],
@@ -637,9 +647,12 @@ async def export_quiz_to_canvas(
             export_questions_batch_flow,
         )
 
-        # Trigger background export using orchestrator
+        # Trigger background export using safe orchestrator wrapper
         background_tasks.add_task(
+            safe_background_orchestration,
             orchestrate_quiz_export_to_canvas,
+            "canvas_export",
+            quiz.id,
             quiz.id,
             canvas_token,
             create_canvas_quiz_flow,  # Inject Canvas quiz creator
