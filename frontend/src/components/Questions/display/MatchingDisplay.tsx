@@ -20,15 +20,10 @@ export const MatchingDisplay = memo(function MatchingDisplay({
     const matchingData = extractQuestionData(question, "matching");
 
     // Combine correct answers with distractors for answer column
-    const allAnswers = [
+    const displayAnswers = [
       ...matchingData.pairs.map((pair) => pair.answer),
       ...(matchingData.distractors || []),
     ];
-
-    // Shuffle answers if not showing correct answers (for display purposes)
-    const displayAnswers = showCorrectAnswer
-      ? allAnswers
-      : [...allAnswers].sort(() => Math.random() - 0.5);
 
     return (
       <VStack gap={4} align="stretch">
@@ -146,7 +141,6 @@ export const MatchingDisplay = memo(function MatchingDisplay({
       </VStack>
     );
   } catch (error) {
-    console.error("Error rendering matching question:", error);
     return <ErrorDisplay error="Error loading matching question data" />;
   }
 });
