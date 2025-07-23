@@ -39,6 +39,7 @@ class CanvasScoringAlgorithm:
     MULTIPLE_METHODS = "MultipleMethods"  # Used when item has multiple scoring methods
     EQUIVALENCE = "Equivalence"  # Used for single-answer questions (MCQ)
     PARTIAL_DEEP = "PartialDeep"  # Used for matching questions
+    CATEGORIZATION = "Categorization"  # Used for categorization questions
 
     # Individual answer/blank scoring algorithms
     ALL_OR_NOTHING = "AllOrNothing"  # Used for categorization individual categories

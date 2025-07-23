@@ -307,8 +307,8 @@ class CategorizationQuestionType(BaseQuestionType):
                     "id": category.id,
                     "scoring_data": {
                         "value": category.correct_items,
-                        "scoring_algorithm": CanvasScoringAlgorithm.ALL_OR_NOTHING,
                     },
+                    "scoring_algorithm": CanvasScoringAlgorithm.ALL_OR_NOTHING,
                 }
             )
 
@@ -335,7 +335,7 @@ class CategorizationQuestionType(BaseQuestionType):
                 "score_method": "all_or_nothing",
             },
             "answer_feedback": {},
-            "scoring_algorithm": CanvasScoringAlgorithm.PARTIAL_DEEP,
+            "scoring_algorithm": CanvasScoringAlgorithm.CATEGORIZATION,
             "interaction_type_slug": CanvasInteractionType.CATEGORIZATION,
             "feedback": {},
             "points_possible": points_possible,
