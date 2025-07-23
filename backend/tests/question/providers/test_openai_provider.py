@@ -49,13 +49,20 @@ async def test_get_available_models(provider):
     model_ids = [model.model_id for model in models]
     assert DEFAULT_OPENAI_MODEL in model_ids
 
-    # Verify model properties
-    o3_model = next(model for model in models if model.model_id == DEFAULT_OPENAI_MODEL)
-    assert o3_model.provider == LLMProvider.OPENAI
-    assert o3_model.display_name == "OpenAI o3"
-    assert o3_model.max_tokens == 200000
-    assert o3_model.supports_streaming is True
-    assert o3_model.cost_per_1k_tokens == 0.015
+    # Verify model properties for default model (o4-mini)
+    default_model = next(
+        model for model in models if model.model_id == DEFAULT_OPENAI_MODEL
+    )
+    assert default_model.provider == LLMProvider.OPENAI
+    assert default_model.display_name == "OpenAI o4 Mini"
+    assert default_model.max_tokens == 200000
+    assert default_model.supports_streaming is False
+    assert default_model.cost_per_1k_tokens == 0.011
+
+    # Verify both models are available
+    model_ids = [model.model_id for model in models]
+    assert "o4-mini-2025-04-16" in model_ids
+    assert "o3-2025-04-16" in model_ids
 
 
 def test_validate_model_valid(provider):
@@ -187,7 +194,7 @@ async def test_generate_response_with_custom_config():
     # Use different model and temperature
     custom_config = LLMConfiguration(
         provider=LLMProvider.OPENAI,
-        model="o3-2025-04-16",
+        model="o4-mini-2025-04-16",
         temperature=1.0,
         max_tokens=1000,
         timeout=60.0,
@@ -349,6 +356,7 @@ def test_provider_configuration_immutable(provider, config):
     "model,expected_valid",
     [
         (DEFAULT_OPENAI_MODEL, True),
+        ("o3-2025-04-16", True),  # Keep o3 as valid option
         ("gpt-4", False),
         ("gpt-4-turbo", False),
         ("gpt-3.5-turbo", False),
