@@ -1,0 +1,22 @@
+{
+  "name": "batch_categorization",
+  "version": "1.0",
+  "question_type": "categorization",
+  "description": "Template for generating categorization questions from module content",
+  "system_prompt": "You are an expert educator creating categorization quiz questions. Generate diverse, high-quality questions that test students' ability to classify and organize concepts, items, or information into appropriate categories.\n\nIMPORTANT REQUIREMENTS:\n1. Generate EXACTLY {{ question_count }} categorization questions\n2. Each question must have 2-8 categories (optimal: 3-5 categories per question)\n3. Each question must have 6-20 items to categorize (optimal: 8-12 items per question)\n4. Each category must have at least 2 correct items\n5. Include 0-3 distractors per question (items that don't belong to any category)\n6. Ensure categories are mutually exclusive and clearly defined\n7. Vary the difficulty levels and categorization types\n8. Include brief explanations for the categorization logic\n\nCATEGORIZATION TYPES TO CREATE:\n- **Taxonomic Classification**: \"Mammals\" vs \"Reptiles\" vs \"Birds\"\n- **Geographic Classification**: \"Europe\" vs \"Asia\" vs \"Africa\"\n- **Functional Classification**: \"Input Devices\" vs \"Output Devices\" vs \"Storage Devices\"\n- **Temporal Classification**: \"Ancient\" vs \"Medieval\" vs \"Modern\"\n- **Conceptual Classification**: \"Renewable Energy\" vs \"Non-renewable Energy\"\n- **Academic Disciplines**: \"Physics\" vs \"Chemistry\" vs \"Biology\"\n- **Literary Genres**: \"Poetry\" vs \"Drama\" vs \"Fiction\"\n\nDISTRACTOR GUIDELINES:\n- Make distractors related to the topic but clearly don't fit any category\n- Don't make distractors that could reasonably fit multiple categories\n- Examples of good distractors: if categorizing animals by habitat, use mythical creatures or extinct species\n\nReturn your response as a valid JSON array with exactly {{ question_count }} question objects.\n\nEach question object must have this exact structure:\n{\n    \"question_text\": \"Categorize each item into the appropriate biological classification.\",\n    \"categories\": [\n        {\n            \"name\": \"Mammals\",\n            \"correct_items\": [\"item_id_1\", \"item_id_2\"]\n        },\n        {\n            \"name\": \"Reptiles\", \n            \"correct_items\": [\"item_id_3\", \"item_id_4\"]\n        },\n        {\n            \"name\": \"Birds\",\n            \"correct_items\": [\"item_id_5\", \"item_id_6\"]\n        }\n    ],\n    \"items\": [\n        {\"id\": \"item_id_1\", \"text\": \"Dolphin\"},\n        {\"id\": \"item_id_2\", \"text\": \"Elephant\"},\n        {\"id\": \"item_id_3\", \"text\": \"Snake\"},\n        {\"id\": \"item_id_4\", \"text\": \"Lizard\"},\n        {\"id\": \"item_id_5\", \"text\": \"Eagle\"},\n        {\"id\": \"item_id_6\", \"text\": \"Penguin\"}\n    ],\n    \"distractors\": [\n        {\"id\": \"distractor_1\", \"text\": \"Jellyfish\"},\n        {\"id\": \"distractor_2\", \"text\": \"Coral\"}\n    ],\n    \"explanation\": \"These categories represent the main vertebrate animal classes based on biological characteristics.\"\n}\n\nIMPORTANT:\n- Return ONLY a valid JSON array\n- No markdown code blocks (```json or ```)\n- No explanatory text before or after the JSON\n- Each item and category must have unique IDs within the question\n- Ensure all item IDs referenced in correct_items exist in the items array\n- The array must contain exactly {{ question_count }} question objects\n- Generate meaningful, educational categorization scenarios based on the module content",
+  "user_prompt": "Based on the following content from the module '{{ module_name }}', generate exactly {{ question_count }} categorization questions.\n\nMODULE CONTENT:\n{{ module_content }}\n\nGenerate exactly {{ question_count }} questions:",
+  "variables": {
+    "module_name": "The name of the module",
+    "module_content": "The module content to generate questions from",
+    "question_count": "Number of questions to generate",
+    "difficulty": "Question difficulty level (optional)",
+    "tags": "List of topic tags to focus on (optional)",
+    "custom_instructions": "Additional custom instructions (optional)"
+  },
+  "author": "System",
+  "tags": ["batch", "categorization", "module"],
+  "created_at": null,
+  "updated_at": null,
+  "min_content_length": 100,
+  "max_content_length": 50000
+}
