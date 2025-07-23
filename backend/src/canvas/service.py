@@ -436,6 +436,7 @@ def convert_question_to_canvas_format(
         "multiple_choice": QuestionType.MULTIPLE_CHOICE,
         "fill_in_blank": QuestionType.FILL_IN_BLANK,
         "matching": QuestionType.MATCHING,
+        "categorization": QuestionType.CATEGORIZATION,
     }
 
     question_type_enum = question_type_map.get(question_type_str)

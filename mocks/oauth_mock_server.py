@@ -2147,6 +2147,233 @@ def validate_matching_question(entry: dict):
         )
 
 
+def validate_categorization_question(entry: dict):
+    """Validate categorization question specific fields based on real Canvas API structure."""
+    interaction_data = entry["interaction_data"]
+    scoring_data = entry["scoring_data"]
+
+    # Validate interaction_data structure
+    if "categories" not in interaction_data:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][interaction_data][categories] is required",
+        )
+
+    if "distractors" not in interaction_data:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][interaction_data][distractors] is required",
+        )
+
+    if "category_order" not in interaction_data:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][interaction_data][category_order] is required",
+        )
+
+    # Validate categories
+    categories = interaction_data["categories"]
+    if not isinstance(categories, dict) or not categories:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][interaction_data][categories] must be a non-empty object",
+        )
+
+    category_ids = set()
+    for category_id, category in categories.items():
+        if not isinstance(category_id, str) or not category_id:
+            raise HTTPException(
+                status_code=400,
+                detail="item[entry][interaction_data][categories] keys must be non-empty strings",
+            )
+
+        if not isinstance(category, dict):
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][categories][{category_id}] must be an object",
+            )
+
+        required_category_fields = ["id", "item_body"]
+        for field in required_category_fields:
+            if field not in category:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"item[entry][interaction_data][categories][{category_id}][{field}] is required",
+                )
+
+        if category["id"] != category_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][categories][{category_id}][id] must match the key",
+            )
+
+        if (
+            not isinstance(category["item_body"], str)
+            or not category["item_body"].strip()
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][categories][{category_id}][item_body] must be a non-empty string",
+            )
+
+        category_ids.add(category_id)
+
+    # Validate distractors
+    distractors = interaction_data["distractors"]
+    if not isinstance(distractors, dict) or not distractors:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][interaction_data][distractors] must be a non-empty object",
+        )
+
+    distractor_ids = set()
+    for distractor_id, distractor in distractors.items():
+        if not isinstance(distractor_id, str) or not distractor_id:
+            raise HTTPException(
+                status_code=400,
+                detail="item[entry][interaction_data][distractors] keys must be non-empty strings",
+            )
+
+        if not isinstance(distractor, dict):
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][distractors][{distractor_id}] must be an object",
+            )
+
+        required_distractor_fields = ["id", "item_body"]
+        for field in required_distractor_fields:
+            if field not in distractor:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"item[entry][interaction_data][distractors][{distractor_id}][{field}] is required",
+                )
+
+        if distractor["id"] != distractor_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][distractors][{distractor_id}][id] must match the key",
+            )
+
+        if (
+            not isinstance(distractor["item_body"], str)
+            or not distractor["item_body"].strip()
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][distractors][{distractor_id}][item_body] must be a non-empty string",
+            )
+
+        distractor_ids.add(distractor_id)
+
+    # Validate category_order
+    category_order = interaction_data["category_order"]
+    if not isinstance(category_order, list) or not category_order:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][interaction_data][category_order] must be a non-empty list",
+        )
+
+    for i, cat_id in enumerate(category_order):
+        if not isinstance(cat_id, str) or cat_id not in category_ids:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][category_order][{i}] must reference a valid category ID",
+            )
+
+    # Validate scoring_data structure
+    if "value" not in scoring_data:
+        raise HTTPException(
+            status_code=400, detail="item[entry][scoring_data][value] is required"
+        )
+
+    if "score_method" not in scoring_data:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][scoring_data][score_method] is required",
+        )
+
+    # Validate score_method
+    if scoring_data["score_method"] != "all_or_nothing":
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][scoring_data][score_method] must be 'all_or_nothing' for categorization questions",
+        )
+
+    # Validate scoring value array
+    scoring_value = scoring_data["value"]
+    if not isinstance(scoring_value, list) or not scoring_value:
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][scoring_data][value] must be a non-empty list",
+        )
+
+    assigned_items = set()
+    for i, category_score in enumerate(scoring_value):
+        if not isinstance(category_score, dict):
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][value][{i}] must be an object",
+            )
+
+        required_score_fields = ["id", "scoring_data", "scoring_algorithm"]
+        for field in required_score_fields:
+            if field not in category_score:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"item[entry][scoring_data][value][{i}][{field}] is required",
+                )
+
+        category_id = category_score["id"]
+        if category_id not in category_ids:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][value][{i}][id] must reference a valid category ID",
+            )
+
+        if category_score["scoring_algorithm"] != "AllOrNothing":
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][value][{i}][scoring_algorithm] must be 'AllOrNothing'",
+            )
+
+        # Validate category scoring_data
+        cat_scoring_data = category_score["scoring_data"]
+        if not isinstance(cat_scoring_data, dict) or "value" not in cat_scoring_data:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][value][{i}][scoring_data][value] is required",
+            )
+
+        item_list = cat_scoring_data["value"]
+        if not isinstance(item_list, list) or not item_list:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][scoring_data][value][{i}][scoring_data][value] must be a non-empty list",
+            )
+
+        for j, item_id in enumerate(item_list):
+            if not isinstance(item_id, str) or item_id not in distractor_ids:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"item[entry][scoring_data][value][{i}][scoring_data][value][{j}] must reference a valid distractor ID",
+                )
+
+            if item_id in assigned_items:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"item[entry][scoring_data][value][{i}][scoring_data][value][{j}] item is assigned to multiple categories",
+                )
+
+            assigned_items.add(item_id)
+
+    # Validate scoring algorithm
+    if entry["scoring_algorithm"] != "Categorization":
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][scoring_algorithm] must be 'Categorization' for categorization questions",
+        )
+
+
 @app.post("/api/quiz/v1/courses/{course_id}/quizzes/{quiz_id}/items")
 async def create_quiz_item(
     course_id: int,
@@ -2176,10 +2403,12 @@ async def create_quiz_item(
         validate_multiple_choice_question(entry)
     elif interaction_type == "matching":
         validate_matching_question(entry)
+    elif interaction_type == "categorization":
+        validate_categorization_question(entry)
     else:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported interaction_type_slug: {interaction_type}. Supported types: 'choice', 'rich-fill-blank', 'matching'",
+            detail=f"Unsupported interaction_type_slug: {interaction_type}. Supported types: 'choice', 'rich-fill-blank', 'matching', 'categorization'",
         )
 
     # Create the quiz item with complete Canvas structure
