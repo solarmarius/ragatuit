@@ -44,7 +44,7 @@ def upgrade():
     sa.Column('llm_model', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('llm_temperature', sa.Float(), nullable=False),
     sa.Column('language', sa.Enum('ENGLISH', 'NORWEGIAN', name='quizlanguage'), nullable=False),
-    sa.Column('question_type', sa.Enum('MULTIPLE_CHOICE', 'FILL_IN_BLANK', 'MATCHING', name='questiontype'), nullable=False),
+    sa.Column('question_type', sa.Enum('MULTIPLE_CHOICE', 'FILL_IN_BLANK', 'MATCHING', 'CATEGORIZATION', name='questiontype'), nullable=False),
     sa.Column('status', sa.Enum('CREATED', 'EXTRACTING_CONTENT', 'GENERATING_QUESTIONS', 'READY_FOR_REVIEW', 'EXPORTING_TO_CANVAS', 'PUBLISHED', 'FAILED', name='quizstatus'), nullable=False),
     sa.Column('failure_reason', sa.Enum('CONTENT_EXTRACTION_ERROR', 'NO_CONTENT_FOUND', 'LLM_GENERATION_ERROR', 'NO_QUESTIONS_GENERATED', 'CANVAS_EXPORT_ERROR', 'NETWORK_ERROR', 'VALIDATION_ERROR', name='failurereason'), nullable=True),
     sa.Column('last_status_update', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
