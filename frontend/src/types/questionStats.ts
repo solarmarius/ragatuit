@@ -60,6 +60,13 @@ export interface MatchingStats extends QuestionTypeStats {
   most_complex_question_pairs: number;
 }
 
+export interface CategorizationStats extends QuestionTypeStats {
+  average_categories_per_question: number;
+  average_items_per_question: number;
+  questions_with_distractors: number;
+  most_complex_question_categories: number;
+}
+
 // Type guard for question stats
 export function isQuestionStats(data: any): data is QuestionStats {
   return (
@@ -87,6 +94,7 @@ export function createEmptyStats(): QuestionStats {
       multiple_choice: { total: 0, approved: 0, approval_rate: 0 },
       fill_in_blank: { total: 0, approved: 0, approval_rate: 0 },
       matching: { total: 0, approved: 0, approval_rate: 0 },
+      categorization: { total: 0, approved: 0, approval_rate: 0 },
     },
   };
 }
@@ -114,6 +122,7 @@ export function mergeLegacyStats(
       },
       fill_in_blank: { total: 0, approved: 0, approval_rate: 0 },
       matching: { total: 0, approved: 0, approval_rate: 0 },
+      categorization: { total: 0, approved: 0, approval_rate: 0 },
     },
   };
 }

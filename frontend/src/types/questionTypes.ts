@@ -44,11 +44,31 @@ export interface MatchingData {
   explanation?: string | null;   // Optional explanation
 }
 
+// Categorization Question Data
+export interface CategorizationData {
+  question_text: string;
+  categories: Array<{
+    id: string;
+    name: string;
+    correct_items: string[]; // IDs of items that belong to this category
+  }>;
+  items: Array<{
+    id: string;
+    text: string;
+  }>;
+  distractors?: Array<{
+    id: string;
+    text: string;
+  }> | null; // Optional incorrect items that don't belong to any category
+  explanation?: string | null;
+}
+
 // Discriminated union for all question data types
 export type QuestionData =
   | ({ type: "multiple_choice" } & MCQData)
   | ({ type: "fill_in_blank" } & FillInBlankData)
-  | ({ type: "matching" } & MatchingData);
+  | ({ type: "matching" } & MatchingData)
+  | ({ type: "categorization" } & CategorizationData);
 
 // Strongly typed question response
 export interface TypedQuestionResponse<T extends QuestionType = QuestionType> {
@@ -61,7 +81,9 @@ export interface TypedQuestionResponse<T extends QuestionType = QuestionType> {
       ? FillInBlankData
       : T extends "matching"
         ? MatchingData
-        : never;
+        : T extends "categorization"
+          ? CategorizationData
+          : never;
   difficulty?: QuestionDifficulty | null;
   tags?: string[] | null;
   is_approved: boolean;
@@ -76,6 +98,7 @@ export type MCQQuestionResponse = TypedQuestionResponse<"multiple_choice">;
 export type FillInBlankQuestionResponse =
   TypedQuestionResponse<"fill_in_blank">;
 export type MatchingQuestionResponse = TypedQuestionResponse<"matching">;
+export type CategorizationQuestionResponse = TypedQuestionResponse<"categorization">;
 
 // Type guards for question data
 export function isMCQData(data: unknown): data is MCQData {
@@ -168,6 +191,80 @@ export function isMatchingData(data: unknown): data is MatchingData {
   return true;
 }
 
+export function isCategorizationData(data: unknown): data is CategorizationData {
+  if (typeof data !== "object" || data === null) {
+    return false;
+  }
+
+  const obj = data as Record<string, unknown>;
+
+  // Validate required fields
+  if (typeof obj.question_text !== "string") {
+    return false;
+  }
+
+  // Validate categories array
+  if (!Array.isArray(obj.categories) || obj.categories.length < 2 || obj.categories.length > 8) {
+    return false;
+  }
+
+  // Validate each category structure
+  for (const category of obj.categories) {
+    if (
+      typeof category !== "object" ||
+      category === null ||
+      typeof (category as any).id !== "string" ||
+      typeof (category as any).name !== "string" ||
+      !Array.isArray((category as any).correct_items)
+    ) {
+      return false;
+    }
+  }
+
+  // Validate items array
+  if (!Array.isArray(obj.items) || obj.items.length < 6 || obj.items.length > 20) {
+    return false;
+  }
+
+  // Validate each item structure
+  for (const item of obj.items) {
+    if (
+      typeof item !== "object" ||
+      item === null ||
+      typeof (item as any).id !== "string" ||
+      typeof (item as any).text !== "string"
+    ) {
+      return false;
+    }
+  }
+
+  // Validate optional distractors
+  if (obj.distractors !== undefined && obj.distractors !== null) {
+    if (!Array.isArray(obj.distractors) || obj.distractors.length > 5) {
+      return false;
+    }
+    for (const distractor of obj.distractors) {
+      if (
+        typeof distractor !== "object" ||
+        distractor === null ||
+        typeof (distractor as any).id !== "string" ||
+        typeof (distractor as any).text !== "string"
+      ) {
+        return false;
+      }
+    }
+  }
+
+  // Validate optional explanation
+  if (obj.explanation !== undefined && obj.explanation !== null) {
+    if (typeof obj.explanation !== "string") {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 // Type guard for question responses
 export function isQuestionType<T extends QuestionType>(
   question: QuestionResponse,
@@ -201,6 +298,11 @@ export function extractQuestionData<T extends QuestionType>(
     case "matching":
       if (!isMatchingData(data)) {
         throw new Error("Invalid Matching question data structure");
+      }
+      return data as unknown as TypedQuestionResponse<T>["question_data"];
+    case "categorization":
+      if (!isCategorizationData(data)) {
+        throw new Error("Invalid Categorization question data structure");
       }
       return data as unknown as TypedQuestionResponse<T>["question_data"];
     default: {

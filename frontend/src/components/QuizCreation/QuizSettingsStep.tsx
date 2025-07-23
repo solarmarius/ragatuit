@@ -43,6 +43,11 @@ export function QuizSettingsStep({
       label: "Matching Questions",
       description: "Generate matching questions with pairs and distractors",
     },
+    {
+      value: QUESTION_TYPES.CATEGORIZATION,
+      label: "Categorization Questions",
+      description: "Generate questions where students categorize items into groups",
+    },
   ];
 
   const languageOptions = [

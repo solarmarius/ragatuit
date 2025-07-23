@@ -143,7 +143,11 @@ export type QuestionResponse = {
  * 4. Add templates in templates/files/
  * See ADDING_NEW_TYPES.md for detailed instructions.
  */
-export type QuestionType = "multiple_choice" | "fill_in_blank" | "matching"
+export type QuestionType =
+  | "multiple_choice"
+  | "fill_in_blank"
+  | "matching"
+  | "categorization"
 
 /**
  * Schema for updating a question.

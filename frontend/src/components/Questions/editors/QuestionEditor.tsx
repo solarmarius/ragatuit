@@ -4,6 +4,7 @@ import type { QuestionResponse, QuestionUpdateRequest } from "@/client";
 import { QUESTION_TYPES } from "@/lib/constants";
 import { FillInBlankEditor } from "./FillInBlankEditor";
 import { MatchingEditor } from "./MatchingEditor";
+import { CategorizationEditor } from "./CategorizationEditor";
 import { MCQEditor } from "./MCQEditor";
 import { UnsupportedEditor } from "./UnsupportedEditor";
 
@@ -34,6 +35,8 @@ export const QuestionEditor = memo(function QuestionEditor({
       return <FillInBlankEditor {...commonProps} />;
     case QUESTION_TYPES.MATCHING:
       return <MatchingEditor {...commonProps} />;
+    case QUESTION_TYPES.CATEGORIZATION:
+      return <CategorizationEditor {...commonProps} />;
     default:
       return (
         <UnsupportedEditor
