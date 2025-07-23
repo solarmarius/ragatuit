@@ -91,35 +91,38 @@ export const FillInBlankEditor = memo(function FillInBlankEditor({
     const validationErrors = useMemo((): BlankValidationError[] => {
       const formErrors: BlankValidationError[] = []
 
-      // Extract errors from form state
-      if (errors.questionText?.message) {
-        formErrors.push({
-          code: BlankValidationErrorCode.INVALID_TAG_FORMAT,
-          message: errors.questionText.message,
-        })
-      }
+      // Only show errors if form is still invalid and has actual validation issues
+      if (!isValid) {
+        // Extract errors from form state
+        if (errors.questionText?.message) {
+          formErrors.push({
+            code: BlankValidationErrorCode.INVALID_TAG_FORMAT,
+            message: errors.questionText.message,
+          })
+        }
 
-      if (errors.blanks?.message) {
-        formErrors.push({
-          code: BlankValidationErrorCode.MISSING_BLANK_CONFIG,
-          message: errors.blanks.message,
-        })
-      }
+        if (errors.blanks?.message) {
+          formErrors.push({
+            code: BlankValidationErrorCode.MISSING_BLANK_CONFIG,
+            message: errors.blanks.message,
+          })
+        }
 
-      // Check for individual blank errors
-      if (errors.blanks && Array.isArray(errors.blanks)) {
-        errors.blanks.forEach((blankError, index) => {
-          if (blankError?.message) {
-            formErrors.push({
-              code: BlankValidationErrorCode.MISSING_BLANK_CONFIG,
-              message: `Blank ${index + 1}: ${blankError.message}`,
-            })
-          }
-        })
+        // Check for individual blank errors
+        if (errors.blanks && Array.isArray(errors.blanks)) {
+          errors.blanks.forEach((blankError, index) => {
+            if (blankError?.message) {
+              formErrors.push({
+                code: BlankValidationErrorCode.MISSING_BLANK_CONFIG,
+                message: `Blank ${index + 1}: ${blankError.message}`,
+              })
+            }
+          })
+        }
       }
 
       return formErrors
-    }, [errors, watchedQuestionText, watchedBlanks])
+    }, [errors, watchedQuestionText, watchedBlanks, isValid])
 
     // Smart blank addition based on question text
     const addBlank = () => {
