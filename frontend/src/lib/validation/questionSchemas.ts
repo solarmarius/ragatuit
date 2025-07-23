@@ -5,13 +5,7 @@
 
 import { QUESTION_TYPES } from "@/lib/constants"
 import {
-  areBlanksSynchronized,
-  findDuplicatePositions,
-  findInvalidBlankTags,
-  getBlankPositions,
-  getExtraBlankConfigurations,
-  getMissingBlankConfigurations,
-  validateSequentialPositions,
+  validateBlankTextComprehensive,
 } from "@/lib/utils/fillInBlankUtils"
 import {
   BlankValidationErrorCode,
@@ -71,13 +65,15 @@ export const fillInBlankSchema = z
     const { questionText, blanks } = data
     const configuredPositions = blanks.map((blank) => blank.position)
 
+    // Single-pass comprehensive validation for optimal performance
+    const validation = validateBlankTextComprehensive(questionText, configuredPositions)
+
     // 1. Validate question text format
-    const invalidTags = findInvalidBlankTags(questionText)
-    if (invalidTags.length > 0) {
+    if (validation.invalidTags.length > 0) {
       const error = createValidationError(
         BlankValidationErrorCode.INVALID_TAG_FORMAT,
         {
-          invalidTags,
+          invalidTags: validation.invalidTags,
         },
       )
       ctx.addIssue({
@@ -88,12 +84,11 @@ export const fillInBlankSchema = z
     }
 
     // 2. Check for duplicate positions in question text
-    const duplicatePositions = findDuplicatePositions(questionText)
-    if (duplicatePositions.length > 0) {
+    if (validation.duplicatePositions.length > 0) {
       const error = createValidationError(
         BlankValidationErrorCode.DUPLICATE_POSITIONS,
         {
-          positions: duplicatePositions,
+          positions: validation.duplicatePositions,
         },
       )
       ctx.addIssue({
@@ -104,15 +99,11 @@ export const fillInBlankSchema = z
     }
 
     // 3. Validate sequential positions in question text
-    const textPositions = getBlankPositions(questionText)
-    if (
-      textPositions.length > 0 &&
-      !validateSequentialPositions(textPositions)
-    ) {
+    if (validation.hasPositionGaps) {
       const error = createValidationError(
-        BlankValidationErrorCode.NON_SEQUENTIAL_POSITIONS,
+        BlankValidationErrorCode.POSITION_GAP,
         {
-          positions: textPositions,
+          positions: validation.positions,
         },
       )
       ctx.addIssue({
@@ -125,15 +116,11 @@ export const fillInBlankSchema = z
     // 4. Check synchronization between question text and blank configurations
     if (questionText && blanks.length > 0) {
       // Check for missing blank configurations
-      const missingConfigurations = getMissingBlankConfigurations(
-        questionText,
-        configuredPositions,
-      )
-      if (missingConfigurations.length > 0) {
+      if (validation.missingConfigurations.length > 0) {
         const error = createValidationError(
           BlankValidationErrorCode.MISSING_BLANK_CONFIG,
           {
-            missingPositions: missingConfigurations,
+            missingPositions: validation.missingConfigurations,
           },
         )
         ctx.addIssue({
@@ -144,15 +131,11 @@ export const fillInBlankSchema = z
       }
 
       // Check for extra blank configurations
-      const extraConfigurations = getExtraBlankConfigurations(
-        questionText,
-        configuredPositions,
-      )
-      if (extraConfigurations.length > 0) {
+      if (validation.extraConfigurations.length > 0) {
         const error = createValidationError(
           BlankValidationErrorCode.EXTRA_BLANK_CONFIG,
           {
-            extraPositions: extraConfigurations,
+            extraPositions: validation.extraConfigurations,
           },
         )
         ctx.addIssue({
@@ -163,12 +146,12 @@ export const fillInBlankSchema = z
       }
 
       // Overall synchronization check
-      if (!areBlanksSynchronized(questionText, configuredPositions)) {
+      if (!validation.isSynchronized) {
         // Only add this error if no specific missing/extra configuration errors were found
         // to avoid duplicate error messages
         if (
-          missingConfigurations.length === 0 &&
-          extraConfigurations.length === 0
+          validation.missingConfigurations.length === 0 &&
+          validation.extraConfigurations.length === 0
         ) {
           const error = createValidationError(
             BlankValidationErrorCode.UNSYNCHRONIZED_BLANKS,
@@ -183,7 +166,7 @@ export const fillInBlankSchema = z
     }
 
     // 5. Validate content requirements
-    if (questionText && textPositions.length === 0) {
+    if (questionText && validation.positions.length === 0) {
       const error = createValidationError(
         BlankValidationErrorCode.NO_BLANKS_IN_TEXT,
       )
@@ -194,7 +177,7 @@ export const fillInBlankSchema = z
       })
     }
 
-    if (blanks.length === 0 && textPositions.length > 0) {
+    if (blanks.length === 0 && validation.positions.length > 0) {
       const error = createValidationError(
         BlankValidationErrorCode.NO_BLANK_CONFIGURATIONS,
       )

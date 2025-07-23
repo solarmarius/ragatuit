@@ -171,3 +171,107 @@ export function areBlanksSynchronized(
     (pos, index) => pos === sortedConfigPositions[index],
   )
 }
+
+/**
+ * Comprehensive validation data extracted from question text in a single pass
+ */
+export interface BlankValidationData {
+  /** All valid blank positions found in text */
+  positions: number[]
+  /** Invalid blank tag strings found in text */
+  invalidTags: string[]
+  /** Position numbers that appear multiple times */
+  duplicatePositions: number[]
+  /** Whether positions are sequential starting from any number */
+  hasPositionGaps: boolean
+  /** Positions missing from blank configurations */
+  missingConfigurations: number[]
+  /** Positions in configurations but not in text */
+  extraConfigurations: number[]
+  /** Whether text and configurations are perfectly synchronized */
+  isSynchronized: boolean
+}
+
+/**
+ * Performs comprehensive validation of question text in a single pass for optimal performance
+ * @param questionText - The question text to analyze
+ * @param configuredPositions - Array of positions from blank configurations
+ * @returns Complete validation data object
+ */
+export function validateBlankTextComprehensive(
+  questionText: string,
+  configuredPositions: number[] = [],
+): BlankValidationData {
+  if (!questionText) {
+    return {
+      positions: [],
+      invalidTags: [],
+      duplicatePositions: [],
+      hasPositionGaps: false,
+      missingConfigurations: [],
+      extraConfigurations: configuredPositions.slice(),
+      isSynchronized: configuredPositions.length === 0,
+    }
+  }
+
+  // Single pass: find all potential blank-like patterns
+  const potentialTags = questionText.match(/\[blank_[^\]]*\]/gi) || []
+
+  const validPositions: number[] = []
+  const invalidTags: string[] = []
+  const positionCounts: Record<number, number> = {}
+
+  // Process each tag once
+  potentialTags.forEach((tag) => {
+    if (validateBlankTagFormat(tag)) {
+      const match = tag.match(/\[blank_(\d+)\]/)
+      if (match) {
+        const position = Number.parseInt(match[1], 10)
+        validPositions.push(position)
+        positionCounts[position] = (positionCounts[position] || 0) + 1
+      }
+    } else {
+      invalidTags.push(tag)
+    }
+  })
+
+  // Get unique positions and sort them
+  const uniquePositions = [...new Set(validPositions)].sort((a, b) => a - b)
+
+  // Find duplicates
+  const duplicatePositions = Object.entries(positionCounts)
+    .filter(([_, count]) => count > 1)
+    .map(([position, _]) => Number.parseInt(position, 10))
+    .sort((a, b) => a - b)
+
+  // Check for gaps (only between consecutive positions, not requiring start from 1)
+  const hasPositionGaps = uniquePositions.length > 1 &&
+    uniquePositions.some((pos, index) => {
+      if (index === 0) return false
+      return pos !== uniquePositions[index - 1] + 1
+    })
+
+  // Compare with configured positions
+  const missingConfigurations = uniquePositions.filter(
+    (pos) => !configuredPositions.includes(pos)
+  )
+  const extraConfigurations = configuredPositions.filter(
+    (pos) => !uniquePositions.includes(pos)
+  )
+
+  // Check synchronization
+  const isSynchronized =
+    uniquePositions.length === configuredPositions.length &&
+    missingConfigurations.length === 0 &&
+    extraConfigurations.length === 0
+
+  return {
+    positions: uniquePositions,
+    invalidTags,
+    duplicatePositions,
+    hasPositionGaps,
+    missingConfigurations,
+    extraConfigurations,
+    isSynchronized,
+  }
+}
