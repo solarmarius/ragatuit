@@ -1,7 +1,7 @@
 import type { QuestionResponse, QuestionUpdateRequest } from "@/client"
 import { FormField, FormGroup } from "@/components/forms"
 import { Checkbox } from "@/components/ui/checkbox"
-import { getNextBlankPosition } from "@/lib/utils/fillInBlankUtils"
+import { getNextBlankPosition, getBlankPositions } from "@/lib/utils/fillInBlankUtils"
 import { type FillInBlankFormData, fillInBlankSchema } from "@/lib/validation"
 import type { BlankValidationError } from "@/types/fillInBlankValidation"
 import { extractQuestionData } from "@/types/questionTypes"
@@ -56,8 +56,9 @@ export const FillInBlankEditor = memo(function FillInBlankEditor({
       },
     })
 
-    // Watch question text for real-time validation
+    // Watch question text and blanks for real-time validation
     const watchedQuestionText = useWatch({ control, name: "questionText" })
+    const watchedBlanks = useWatch({ control, name: "blanks" })
 
     const { fields, append, remove } = useFieldArray({
       control,
@@ -122,13 +123,30 @@ export const FillInBlankEditor = memo(function FillInBlankEditor({
     // Smart blank addition based on question text
     const addBlank = () => {
       if (watchedQuestionText) {
-        const nextPosition = getNextBlankPosition(watchedQuestionText)
-        append({
-          position: nextPosition,
-          correctAnswer: "",
-          answerVariations: "",
-          caseSensitive: false,
-        })
+        const textPositions = getBlankPositions(watchedQuestionText)
+        const configuredPositions = watchedBlanks?.map(blank => blank.position) || []
+
+        // Find the first position in question text that doesn't have a configuration
+        const missingPosition = textPositions.find(pos => !configuredPositions.includes(pos))
+
+        if (missingPosition) {
+          // Add blank for missing position from question text
+          append({
+            position: missingPosition,
+            correctAnswer: "",
+            answerVariations: "",
+            caseSensitive: false,
+          })
+        } else {
+          // No missing positions, add next sequential position
+          const nextPosition = getNextBlankPosition(watchedQuestionText)
+          append({
+            position: nextPosition,
+            correctAnswer: "",
+            answerVariations: "",
+            caseSensitive: false,
+          })
+        }
       } else {
         // Fallback to old behavior if no question text
         const newPosition = Math.max(...fields.map((_, i) => i + 1), 0) + 1
