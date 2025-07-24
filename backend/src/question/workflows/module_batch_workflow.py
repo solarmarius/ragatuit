@@ -713,16 +713,27 @@ class ModuleBatchWorkflow:
             # Convert dict result back to ModuleBatchState for type safety
             final_state = ModuleBatchState(**final_state_dict)
 
+            # Calculate total questions (preserved + newly generated)
+            total_questions = len(final_state.successful_questions_preserved) + len(
+                final_state.generated_questions
+            )
+
             logger.info(
                 "module_batch_processing_completed",
                 module_id=module_id,
-                questions_generated=len(final_state.generated_questions),
+                questions_generated=total_questions,
+                questions_preserved=len(final_state.successful_questions_preserved),
+                questions_newly_generated=len(final_state.generated_questions),
                 target_questions=question_count,
                 success=final_state.error_message is None,
             )
 
-            # Ensure we return a list of Questions
-            return list(final_state.generated_questions)
+            # Return all questions (preserved + newly generated)
+            all_questions = (
+                final_state.successful_questions_preserved
+                + final_state.generated_questions
+            )
+            return list(all_questions)
 
         except Exception as e:
             logger.error(
