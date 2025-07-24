@@ -1,10 +1,34 @@
-import { Box, Button, Card, HStack, Text, VStack, Badge } from "@chakra-ui/react"
+import {
+  Badge,
+  Box,
+  Button,
+  Card,
+  HStack,
+  Text,
+  VStack,
+} from "@chakra-ui/react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { MdAutoAwesome, MdRefresh } from "react-icons/md"
 
-import { QuizService, type Quiz } from "@/client"
+import { type Quiz, QuizService } from "@/client"
 import { useCustomToast, useErrorHandler } from "@/hooks/common"
 import { QUIZ_STATUS } from "@/lib/constants"
+
+/**
+ * Interface for generation metadata structure stored in quiz.generation_metadata
+ */
+interface GenerationMetadata {
+  /** List of successful batch keys (format: "{module_id}_{question_type}_{target_count}") */
+  successful_batches?: string[]
+  /** List of failed batch keys */
+  failed_batches?: string[]
+  /** Total target number of questions across all batches */
+  total_questions_target?: number
+  /** Total number of questions successfully saved */
+  total_questions_saved?: number
+  /** Success rate as a decimal (0.0 to 1.0) */
+  batch_success_rate?: number
+}
 
 interface QuestionGenerationTriggerProps {
   quiz: Quiz
@@ -19,9 +43,10 @@ export function QuestionGenerationTrigger({
 
   // Determine if this is a retry scenario
   const isPartialRetry = quiz.status === QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL
-  const isFailedRetry = quiz.status === QUIZ_STATUS.FAILED &&
+  const isFailedRetry =
+    quiz.status === QUIZ_STATUS.FAILED &&
     (quiz.failure_reason === "llm_generation_error" ||
-     quiz.failure_reason === "no_questions_generated")
+      quiz.failure_reason === "no_questions_generated")
 
   const triggerGenerationMutation = useMutation({
     mutationFn: async () => {
@@ -34,8 +59,11 @@ export function QuestionGenerationTrigger({
       })
     },
     onSuccess: (response) => {
-      const successMessage = response.message ||
-        (isPartialRetry ? "Failed batch retry started" : "Question generation started")
+      const successMessage =
+        response.message ||
+        (isPartialRetry
+          ? "Failed batch retry started"
+          : "Question generation started")
       showSuccessToast(successMessage)
       queryClient.invalidateQueries({ queryKey: ["quiz", quiz.id] })
     },
@@ -56,19 +84,24 @@ export function QuestionGenerationTrigger({
   const getProgressInfo = () => {
     if (!isPartialRetry || !quiz.generation_metadata) return null
 
-    const metadata = quiz.generation_metadata as any
-    const totalQuestions = Number(metadata.total_questions_target) || Number(quiz.question_count) || 0
+    // Type-safe access to generation metadata
+    const metadata = quiz.generation_metadata as GenerationMetadata
+    const totalQuestions =
+      Number(metadata.total_questions_target) ||
+      Number(quiz.question_count) ||
+      0
     const savedQuestions = Number(metadata.total_questions_saved) || 0
     const remainingQuestions = totalQuestions - savedQuestions
-    const successRate = totalQuestions > 0 ? (savedQuestions / totalQuestions) * 100 : 0
+    const successRate =
+      totalQuestions > 0 ? (savedQuestions / totalQuestions) * 100 : 0
 
     return {
       totalQuestions,
       savedQuestions,
       remainingQuestions,
       successRate,
-      successfulBatches: Array.isArray(metadata.successful_batches) ? metadata.successful_batches.length : 0,
-      failedBatches: Array.isArray(metadata.failed_batches) ? metadata.failed_batches.length : 0,
+      successfulBatches: metadata.successful_batches?.length ?? 0,
+      failedBatches: metadata.failed_batches?.length ?? 0,
     }
   }
 
@@ -80,13 +113,16 @@ export function QuestionGenerationTrigger({
         <VStack gap={4} align="stretch">
           <Box textAlign="center">
             <Text fontSize="xl" fontWeight="bold" mb={2}>
-              {isPartialRetry ? "Partial Success - Retry Available" : "Question Generation Failed"}
+              {isPartialRetry
+                ? "Partial Success - Retry Available"
+                : "Question Generation Failed"}
             </Text>
             <Text color="gray.600" mb={4}>
               {isPartialRetry
-                ? `Some questions were generated successfully. Click below to retry generating the remaining ${progressInfo?.remainingQuestions || 0} questions.`
-                : `The previous question generation attempt failed. Click below to retry generating ${quiz.question_count} multiple-choice questions.`
-              }
+                ? `Some questions were generated successfully. Click below to retry generating the remaining ${
+                    progressInfo?.remainingQuestions || 0
+                  } questions.`
+                : `The previous question generation attempt failed. Click below to retry generating ${quiz.question_count} multiple-choice questions.`}
             </Text>
           </Box>
 
@@ -109,13 +145,20 @@ export function QuestionGenerationTrigger({
                   </Badge>
                 </HStack>
 
-                <HStack justify="space-between" width="100%" fontSize="sm" color="purple.600">
+                <HStack
+                  justify="space-between"
+                  width="100%"
+                  fontSize="sm"
+                  color="purple.600"
+                >
                   <Text>{progressInfo.savedQuestions} saved</Text>
                   <Text>{progressInfo.remainingQuestions} remaining</Text>
                 </HStack>
 
                 <HStack gap={4} fontSize="sm" color="purple.600">
-                  <Text>✓ {progressInfo.successfulBatches} batches succeeded</Text>
+                  <Text>
+                    ✓ {progressInfo.successfulBatches} batches succeeded
+                  </Text>
                   <Text>✗ {progressInfo.failedBatches} batches failed</Text>
                 </HStack>
               </VStack>
@@ -150,7 +193,9 @@ export function QuestionGenerationTrigger({
             width="100%"
           >
             {isPartialRetry ? <MdRefresh /> : <MdAutoAwesome />}
-            {isPartialRetry ? "Retry Failed Batches" : "Retry Question Generation"}
+            {isPartialRetry
+              ? "Retry Failed Batches"
+              : "Retry Question Generation"}
           </Button>
         </VStack>
       </Card.Body>
