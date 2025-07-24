@@ -8,6 +8,7 @@ composition and dependency injection to maintain clean domain boundaries.
 import asyncio
 import uuid
 from collections.abc import Callable
+from datetime import datetime
 from functools import wraps
 from typing import Any, TypeVar
 from uuid import UUID
@@ -277,7 +278,7 @@ async def _execute_content_extraction_workflow(
 
 async def _execute_generation_workflow(
     quiz_id: UUID,
-    target_question_count: int,
+    _target_question_count: int,
     _llm_model: str,
     _llm_temperature: float,
     language: QuizLanguage,
@@ -285,7 +286,7 @@ async def _execute_generation_workflow(
     generation_service: Any = None,
 ) -> tuple[str, str | None, Exception | None]:
     """
-    Execute the module-based question generation workflow.
+    Execute the module-based question generation workflow with batch-level tracking.
 
     Returns:
         Tuple of (final_status, error_message, failure_exception)
@@ -325,109 +326,110 @@ async def _execute_generation_workflow(
             ),
         )
 
-        # Generate questions using module-based service
+        # Generate questions using module-based service with batch tracking
         provider_name = "openai"  # Use default provider
-        results = await generation_service.generate_questions_for_quiz(
-            quiz_id=quiz_id,
-            extracted_content=extracted_content,
-            provider_name=provider_name,
+        batch_results = (
+            await generation_service.generate_questions_for_quiz_with_batch_tracking(
+                quiz_id=quiz_id,
+                extracted_content=extracted_content,
+                provider_name=provider_name,
+            )
         )
 
-        # Process module-level results
-        total_generated = sum(len(questions) for questions in results.values())
+        # Analyze batch-level results
+        successful_batches = []
+        failed_batches = []
+        total_generated = 0
+        total_target = 0
 
-        # Get expected counts from quiz module selection within a fresh session
+        # Get expected counts from quiz module selection
         from src.database import get_async_session
         from src.quiz.models import Quiz
-
-        expected_counts = {}
-        total_expected = 0
 
         async with get_async_session() as session:
             quiz = await session.get(Quiz, quiz_id)
             if not quiz:
                 raise ValueError(f"Quiz {quiz_id} not found")
 
-            if quiz.selected_modules:
-                for module_id, module_info in quiz.selected_modules.items():
-                    expected_count = module_info.get("question_count", 0)
-                    expected_counts[module_id] = expected_count
-                    total_expected += expected_count
-            else:
-                # Fallback: distribute target count equally across modules
-                total_expected = target_question_count
+            # Build batch analysis
+            for module_id, module_info in quiz.selected_modules.items():
+                expected_count = module_info.get("question_count", 0)
+                total_target += expected_count
 
-        # Log detailed module-level results
-        success_modules = 0
-        failed_modules = 0
+                batch_key = f"{module_id}_{question_type.value}_{expected_count}"
+                actual_count = len(batch_results.get(module_id, []))
+                total_generated += actual_count
 
-        for module_id, questions in results.items():
-            generated_count = len(questions)
-            expected_count = expected_counts.get(module_id, 0)
+                if actual_count == expected_count:
+                    # 100% success - batch completed fully
+                    successful_batches.append(
+                        {
+                            "batch_key": batch_key,
+                            "module_id": module_id,
+                            "module_name": module_info.get("name", "Unknown"),
+                            "question_type": question_type.value,
+                            "target_count": expected_count,
+                            "generated_count": actual_count,
+                            "status": "success",
+                            "questions_saved": True,
+                        }
+                    )
+                else:
+                    # Failed batch - didn't meet target
+                    failed_batches.append(
+                        {
+                            "batch_key": batch_key,
+                            "module_id": module_id,
+                            "module_name": module_info.get("name", "Unknown"),
+                            "question_type": question_type.value,
+                            "target_count": expected_count,
+                            "generated_count": actual_count,
+                            "status": "failed",
+                            "questions_saved": False,
+                            "error": f"Generated {actual_count}/{expected_count} questions",
+                        }
+                    )
 
-            if generated_count > 0:
-                success_modules += 1
-                logger.info(
-                    "module_generation_succeeded",
-                    quiz_id=str(quiz_id),
-                    module_id=module_id,
-                    generated=generated_count,
-                    expected=expected_count,
-                    success_rate=f"{(generated_count/expected_count)*100:.1f}%"
-                    if expected_count > 0
-                    else "N/A",
-                )
-            else:
-                failed_modules += 1
-                logger.warning(
-                    "module_generation_failed",
-                    quiz_id=str(quiz_id),
-                    module_id=module_id,
-                    expected=expected_count,
-                )
+        # Store batch results in quiz metadata
+        await _store_generation_metadata(
+            quiz_id, successful_batches, failed_batches, total_generated, total_target
+        )
 
-        # Determine overall success
-        if total_generated == 0:
+        # Determine overall status based on batch results
+        if len(successful_batches) == 0:
+            # Complete failure - no batches succeeded
             logger.error(
                 "generation_workflow_complete_failure",
                 quiz_id=str(quiz_id),
                 total_generated=total_generated,
-                modules_attempted=len(extracted_content),
-                failed_modules=failed_modules,
+                total_target=total_target,
+                failed_batches=len(failed_batches),
             )
             return "failed", "No questions were generated from any module", None
 
-        elif total_generated < total_expected * 0.8:  # Allow 20% tolerance
-            # Partial failure - less than 80% of expected questions
-            logger.warning(
-                "generation_workflow_partial_failure",
-                quiz_id=str(quiz_id),
-                total_generated=total_generated,
-                total_expected=total_expected,
-                success_rate=f"{(total_generated/total_expected)*100:.1f}%",
-                success_modules=success_modules,
-                failed_modules=failed_modules,
-            )
-            return (
-                "failed",
-                f"Only generated {total_generated}/{total_expected} questions ({(total_generated/total_expected)*100:.1f}%)",
-                None,
-            )
-
-        else:
-            # Success - adequate questions generated
+        elif len(failed_batches) == 0:
+            # Complete success - all batches succeeded
             logger.info(
-                "generation_workflow_completed",
+                "generation_workflow_complete_success",
                 quiz_id=str(quiz_id),
                 total_generated=total_generated,
-                total_expected=total_expected,
-                success_rate=f"{(total_generated/total_expected)*100:.1f}%",
-                success_modules=success_modules,
-                failed_modules=failed_modules,
-                question_type=question_type.value,
-                language=language.value,
+                total_target=total_target,
+                successful_batches=len(successful_batches),
             )
             return "completed", None, None
+
+        else:
+            # Partial success - some batches succeeded, some failed
+            logger.info(
+                "generation_workflow_partial_success",
+                quiz_id=str(quiz_id),
+                total_generated=total_generated,
+                total_target=total_target,
+                successful_batches=len(successful_batches),
+                failed_batches=len(failed_batches),
+                success_rate=f"{(total_generated/total_target)*100:.1f}%",
+            )
+            return "partial_success", None, None
 
     except Exception as e:
         logger.error(
@@ -439,6 +441,78 @@ async def _execute_generation_workflow(
             exc_info=True,
         )
         return "failed", str(e), e
+
+
+async def _store_generation_metadata(
+    quiz_id: UUID,
+    successful_batches: list[dict[str, Any]],
+    failed_batches: list[dict[str, Any]],
+    total_generated: int,
+    total_target: int,
+) -> None:
+    """Store batch-level generation results in quiz metadata."""
+    from src.database import get_async_session
+    from src.quiz.models import Quiz
+
+    async with get_async_session() as session:
+        quiz = await session.get(Quiz, quiz_id)
+        if not quiz:
+            return
+
+        # Create generation attempt record
+        batch_results_dict: dict[str, Any] = {}
+
+        # Add successful batches to record
+        for batch in successful_batches:
+            batch_results_dict[batch["batch_key"]] = batch
+
+        # Add failed batches to record
+        for batch in failed_batches:
+            batch_results_dict[batch["batch_key"]] = batch
+
+        attempt_record = {
+            "attempt_number": len(
+                quiz.generation_metadata.get("generation_attempts", [])
+            )
+            + 1,
+            "timestamp": datetime.utcnow().isoformat(),
+            "overall_status": "partial_success"
+            if failed_batches
+            else "complete_success",
+            "batch_results": batch_results_dict,
+        }
+
+        # Update quiz metadata
+        if not quiz.generation_metadata:
+            quiz.generation_metadata = {}
+
+        if "generation_attempts" not in quiz.generation_metadata:
+            quiz.generation_metadata["generation_attempts"] = []
+
+        quiz.generation_metadata["generation_attempts"].append(attempt_record)
+
+        # Update summary information
+        quiz.generation_metadata.update(
+            {
+                "failed_batches": [batch["batch_key"] for batch in failed_batches],
+                "successful_batches": [
+                    batch["batch_key"] for batch in successful_batches
+                ],
+                "total_questions_saved": total_generated,
+                "total_questions_target": total_target,
+                "last_updated": datetime.utcnow().isoformat(),
+            }
+        )
+
+        await session.commit()
+
+        logger.info(
+            "generation_metadata_stored",
+            quiz_id=str(quiz_id),
+            successful_batches=len(successful_batches),
+            failed_batches=len(failed_batches),
+            attempt_number=attempt_record["attempt_number"],
+        )
 
 
 async def _execute_export_workflow(
@@ -754,13 +828,19 @@ async def orchestrate_quiz_question_generation(
         error_message: str | None = None,
         exception: Exception | None = None,
     ) -> None:
-        """Save the generation result to the quiz."""
+        """Save the generation result to the quiz with batch-level status support."""
         from .service import update_quiz_status
 
         if status == "completed":
+            # All batches succeeded - full success
             await update_quiz_status(session, quiz_id, QuizStatus.READY_FOR_REVIEW)
+        elif status == "partial_success":
+            # Some batches succeeded - partial success, user can review and retry
+            await update_quiz_status(
+                session, quiz_id, QuizStatus.READY_FOR_REVIEW_PARTIAL
+            )
         elif status == "failed":
-            # Determine appropriate failure reason based on exception type
+            # No batches succeeded - complete failure
             from .exceptions import categorize_generation_error
 
             failure_reason = categorize_generation_error(exception, error_message)
