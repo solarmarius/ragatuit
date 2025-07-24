@@ -19,6 +19,7 @@ class QuizStatus(str, Enum):
     EXTRACTING_CONTENT = "extracting_content"
     GENERATING_QUESTIONS = "generating_questions"
     READY_FOR_REVIEW = "ready_for_review"
+    READY_FOR_REVIEW_PARTIAL = "ready_for_review_partial"
     EXPORTING_TO_CANVAS = "exporting_to_canvas"
     PUBLISHED = "published"
     FAILED = "failed"
