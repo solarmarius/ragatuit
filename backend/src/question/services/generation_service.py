@@ -95,10 +95,8 @@ class QuestionGenerationService:
 
                 results = await processor.process_all_modules(quiz_id, modules_data)
 
-                # Update quiz total question count
+                # Calculate total generated questions for logging (but don't update quiz.question_count)
                 total_generated = sum(len(questions) for questions in results.values())
-                quiz.question_count = total_generated
-                await session.commit()
 
                 logger.info(
                     "module_generation_completed",

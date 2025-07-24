@@ -298,9 +298,9 @@ async def test_generate_questions_for_quiz_updates_question_count(
 
         await generation_service.generate_questions_for_quiz(quiz_id, extracted_content)
 
-        # Verify quiz question count was updated
-        assert mock_quiz.question_count == 2
-        mock_session.commit.assert_called_once()
+        # Verify quiz question count preserves original target (should NOT be updated)
+        assert mock_quiz.question_count == 0  # Original value preserved
+        mock_session.commit.assert_not_called()  # No database update needed
 
 
 @pytest.mark.asyncio
