@@ -48,8 +48,13 @@ def is_quiz_ready_for_generation(quiz: Quiz) -> bool:
     Returns:
         True if quiz can be used for question generation
     """
-    # Can generate questions after content extraction completes or from failed state
-    return quiz.status in [QuizStatus.EXTRACTING_CONTENT, QuizStatus.FAILED]
+    # Can generate questions after content extraction completes, from failed state,
+    # or for retry from partial success state
+    return quiz.status in [
+        QuizStatus.EXTRACTING_CONTENT,
+        QuizStatus.FAILED,
+        QuizStatus.READY_FOR_REVIEW_PARTIAL,
+    ]
 
 
 def is_quiz_ready_for_export(quiz: Quiz) -> bool:
@@ -62,8 +67,11 @@ def is_quiz_ready_for_export(quiz: Quiz) -> bool:
     Returns:
         True if quiz can be exported to Canvas
     """
-    # Allow export from READY_FOR_REVIEW status
-    if quiz.status == QuizStatus.READY_FOR_REVIEW:
+    # Allow export from READY_FOR_REVIEW status or partial success status
+    if quiz.status in [
+        QuizStatus.READY_FOR_REVIEW,
+        QuizStatus.READY_FOR_REVIEW_PARTIAL,
+    ]:
         return True
 
     # Allow retry of Canvas export if it previously failed
