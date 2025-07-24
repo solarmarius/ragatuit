@@ -824,7 +824,7 @@ def test_categorization_question_type_format_for_canvas():
     )
     assert result["calculator_type"] == "none"
     assert result["interaction_type_slug"] == "categorization"
-    assert result["scoring_algorithm"] == "PartialDeep"
+    assert result["scoring_algorithm"] == "Categorization"
     assert result["points_possible"] == 2  # 2 categories
 
     # Validate interaction_data

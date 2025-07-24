@@ -1188,7 +1188,7 @@ class TestCategorizationQuestionType:
         assert result["item_body"] == "<p>Categorize these animals by their biological class</p>"
         assert result["calculator_type"] == "none"
         assert result["interaction_type_slug"] == "categorization"
-        assert result["scoring_algorithm"] == "PartialDeep"
+        assert result["scoring_algorithm"] == "Categorization"
         assert result["points_possible"] == 2  # 2 categories
 
         # Validate interaction_data
@@ -1518,7 +1518,7 @@ class CategorizationData(BaseQuestionData):
     "score_method": "all_or_nothing"
   },
   "interaction_type_slug": "categorization",
-  "scoring_algorithm": "PartialDeep"
+  "scoring_algorithm": "Categorization"
 }
 ```
 
