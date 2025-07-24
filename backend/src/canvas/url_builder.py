@@ -48,8 +48,9 @@ class CanvasURLBuilder:
 
     def modules(self, course_id: int, module_id: int | None = None) -> str:
         """Build modules URL."""
-        base = f"{self.courses(course_id)}/modules?per_page=50"
-        return f"{base}/{module_id}" if module_id else base
+        base = f"{self.courses(course_id)}/modules"
+        base_list = f"{self.courses(course_id)}/modules/?per_page=50"
+        return f"{base}/{module_id}" if module_id else base_list
 
     def module_items(self, course_id: int, module_id: int) -> str:
         """Build module items URL."""
