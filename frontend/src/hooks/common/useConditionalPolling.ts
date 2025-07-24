@@ -36,12 +36,12 @@
  */
 export function useConditionalPolling<T>(
   shouldPoll: (data: T | undefined) => boolean,
-  interval = 5000,
+  interval = 5000
 ) {
   return (query: { state: { data?: T } }) => {
-    const data = query?.state?.data
-    return shouldPoll(data) ? interval : false
-  }
+    const data = query?.state?.data;
+    return shouldPoll(data) ? interval : false;
+  };
 }
 
 /**
@@ -66,32 +66,32 @@ export function useConditionalPolling<T>(
  */
 export function useQuizStatusPolling() {
   return (query: { state: { data?: any } }) => {
-    const data = query?.state?.data
-    if (!data) return 2000 // Poll every 2 seconds when no data
+    const data = query?.state?.data;
+    if (!data) return 2000; // Poll every 2 seconds when no data
 
-    const status = data.status
-    if (!status) return 5000 // Default polling if no status
+    const status = data.status;
+    if (!status) return 5000; // Default polling if no status
 
     // Different polling intervals based on status
     const activeStatuses = [
       "extracting_content",
       "generating_questions",
       "exporting_to_canvas",
-    ]
+    ];
 
     if (activeStatuses.includes(status)) {
-      return 2000 // Poll every 2 seconds for active processes
+      return 5000; // Poll every 5 seconds for active processes
     }
 
     if (status === "ready_for_review") {
-      return 10000 // Poll every 10 seconds for review state
+      return 10000; // Poll every 10 seconds for review state
     }
 
     // No polling for terminal states
     if (status === "published" || status === "failed") {
-      return false
+      return false;
     }
 
-    return 5000 // Default polling interval for other states
-  }
+    return 5000; // Default polling interval for other states
+  };
 }
