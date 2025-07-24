@@ -51,6 +51,11 @@ class ModuleBatchState(BaseModel):
         default_factory=lambda: settings.MAX_JSON_CORRECTIONS
     )
 
+    # Smart retry state for failed question tracking
+    failed_questions_data: list[dict[str, Any]] = Field(default_factory=list)
+    failed_questions_errors: list[str] = Field(default_factory=list)
+    successful_questions_preserved: list[Question] = Field(default_factory=list)
+
     # Current LLM interaction
     system_prompt: str = ""
     user_prompt: str = ""
@@ -148,10 +153,16 @@ class ModuleBatchWorkflow:
     async def prepare_prompt(self, state: ModuleBatchState) -> ModuleBatchState:
         """Prepare the prompt for batch generation."""
         try:
+            # Calculate remaining questions needed (accounting for preserved questions)
+            remaining_questions = (
+                state.target_question_count
+                - len(state.generated_questions)
+                - len(state.successful_questions_preserved)
+            )
+
             # Create generation parameters
             generation_parameters = GenerationParameters(
-                target_count=state.target_question_count
-                - len(state.generated_questions),
+                target_count=remaining_questions,
                 language=self.language,
             )
 
@@ -164,8 +175,7 @@ class ModuleBatchWorkflow:
                 if state.module_content
                 else "EMPTY_CONTENT",
                 module_name=state.module_name,
-                question_count=state.target_question_count
-                - len(state.generated_questions),
+                question_count=remaining_questions,
                 question_type=self.question_type.value,
             )
 
@@ -179,8 +189,7 @@ class ModuleBatchWorkflow:
                 language=self.language,
                 extra_variables={
                     "module_name": state.module_name,
-                    "question_count": state.target_question_count
-                    - len(state.generated_questions),
+                    "question_count": remaining_questions,
                 },
             )
 
@@ -255,7 +264,7 @@ class ModuleBatchWorkflow:
         return state
 
     async def validate_batch(self, state: ModuleBatchState) -> ModuleBatchState:
-        """Validate and parse the generated questions."""
+        """Validate and parse the generated questions with smart retry support."""
         if not state.raw_response or state.error_message:
             return state
 
@@ -263,9 +272,10 @@ class ModuleBatchWorkflow:
             # Parse the response to extract individual questions
             questions_data = self._parse_batch_response(state.raw_response)
 
-            # Track validation errors for correction
-            validation_errors = []
+            # Track validation state for smart retry
             questions_before_validation = len(state.generated_questions)
+            failed_questions = []
+            failed_errors = []
 
             # Validate and create question objects
             for q_data in questions_data:
@@ -303,11 +313,10 @@ class ModuleBatchWorkflow:
                     state.generated_questions.append(question)
 
                 except Exception as e:
-                    # Collect validation error details for correction
+                    # Smart retry: Store failed question data and error for targeted retry
                     error_detail = f"Question validation failed: {str(e)}"
-                    if q_data:
-                        error_detail += f" | Question data: {q_data}"
-                    validation_errors.append(error_detail)
+                    failed_questions.append(q_data)
+                    failed_errors.append(error_detail)
 
                     logger.warning(
                         "module_batch_question_validation_failed",
@@ -317,19 +326,30 @@ class ModuleBatchWorkflow:
                     )
                     continue
 
-            # Check if we have validation errors that need correction
-            questions_after_validation = len(state.generated_questions)
-            if (
-                validation_errors
-                and questions_after_validation == questions_before_validation
-            ):
-                # No questions were successfully validated - set validation error state
+            # Smart retry logic: Handle mixed success/failure scenarios
+            if failed_questions:
+                # Store failed question data for targeted retry
+                state.failed_questions_data = failed_questions
+                state.failed_questions_errors = failed_errors
                 state.validation_error = True
-                state.validation_error_details = validation_errors
+
+                # Preserve newly successful questions for combination later
+                newly_successful = state.generated_questions[
+                    questions_before_validation:
+                ]
+                state.successful_questions_preserved.extend(newly_successful)
+
+                # Remove newly successful questions from generated_questions
+                # This ensures retry logic counts correctly
+                state.generated_questions = state.generated_questions[
+                    :questions_before_validation
+                ]
+
                 logger.warning(
-                    "module_batch_validation_errors_detected",
+                    "module_batch_validation_errors_detected_smart_retry",
                     module_id=state.module_id,
-                    validation_errors=len(validation_errors),
+                    failed_questions=len(failed_questions),
+                    successful_questions=len(newly_successful),
                     total_questions_attempted=len(questions_data),
                 )
 
@@ -338,6 +358,7 @@ class ModuleBatchWorkflow:
                 module_id=state.module_id,
                 questions_validated=len(state.generated_questions),
                 questions_parsed=len(questions_data),
+                questions_preserved=len(state.successful_questions_preserved),
             )
 
         except ValueError as e:
@@ -442,33 +463,45 @@ class ModuleBatchWorkflow:
     async def prepare_validation_correction(
         self, state: ModuleBatchState
     ) -> ModuleBatchState:
-        """Prepare a corrective prompt for validation errors."""
-        if not state.validation_error or not state.validation_error_details:
+        """Prepare a corrective prompt to fix specific failed questions."""
+        if not state.validation_error or not state.failed_questions_data:
             return state
 
         try:
-            # Create a focused validation correction prompt
-            error_summary = "\n".join(
-                f"- {error}" for error in state.validation_error_details
-            )
+            # Build detailed context for each failed question
+            failed_questions_context = []
+            for i, (q_data, error) in enumerate(
+                zip(
+                    state.failed_questions_data,
+                    state.failed_questions_errors,
+                    strict=False,
+                )
+            ):
+                context = f"FAILED QUESTION {i+1}:"
+                context += f"\nOriginal Data: {json.dumps(q_data, indent=2)}"
+                context += f"\nValidation Error: {error}"
+                failed_questions_context.append(context)
 
-            # Get question type specific examples
-            question_type_examples = self._get_question_type_examples()
+            questions_context = "\n\n".join(failed_questions_context)
 
+            # Create targeted correction prompt
             correction_prompt = (
-                "Your previous questions failed validation. Please fix the validation errors and generate valid questions.\n\n"
-                f"Validation Errors:\n{error_summary}\n\n"
-                f"Required format for {self.question_type.value} questions:\n{question_type_examples}\n\n"
-                "Requirements:\n"
-                "1. Return ONLY a valid JSON array of questions\n"
-                "2. Each question must follow the exact format shown above\n"
-                "3. Ensure all required fields are present and correctly formatted\n"
-                "4. No markdown code blocks or explanatory text\n"
-                f"5. Generate exactly {state.target_question_count - len(state.generated_questions)} questions\n\n"
-                "Please provide the corrected questions in valid JSON format:"
+                f"The following {len(state.failed_questions_data)} questions failed validation. "
+                f"Please fix ONLY these specific questions and return them in the same JSON array format.\n\n"
+                f"{questions_context}\n\n"
+                f"Requirements:\n"
+                f"1. Return ONLY a JSON array containing the {len(state.failed_questions_data)} corrected questions\n"
+                f"2. Fix the validation errors mentioned above\n"
+                f"3. Preserve the original question intent and content where possible\n"
+                f"4. Each question must follow the correct format for {self.question_type.value} questions\n"
+                f"5. No markdown code blocks or explanatory text\n"
+                f"6. Do not generate new questions - fix the existing ones provided\n\n"
+                f"Please provide the corrected questions as a JSON array:"
             )
 
             state.user_prompt = correction_prompt
+            # Clear system prompt to avoid conflicting instructions
+            state.system_prompt = ""
 
             # Increment validation correction attempts
             state.validation_correction_attempts += 1
@@ -480,8 +513,12 @@ class ModuleBatchWorkflow:
             state.raw_response = ""
 
             logger.info(
-                "module_batch_validation_correction_prepared",
+                "module_batch_validation_correction_prepared_smart_retry",
                 module_id=state.module_id,
+                failed_questions_count=len(state.failed_questions_data),
+                successful_questions_preserved=len(
+                    state.successful_questions_preserved
+                ),
                 correction_attempt=state.validation_correction_attempts,
                 max_corrections=state.max_validation_corrections,
             )
@@ -497,42 +534,16 @@ class ModuleBatchWorkflow:
 
         return state
 
-    def _get_question_type_examples(self) -> str:
-        """Get format examples for the current question type."""
-        if self.question_type == QuestionType.MULTIPLE_CHOICE:
-            return """Example:
-{
-  "question_text": "What is the capital of France?",
-  "option_a": "London",
-  "option_b": "Berlin",
-  "option_c": "Paris",
-  "option_d": "Madrid",
-  "correct_answer": "C",
-  "explanation": "Paris is the capital and largest city of France."
-}"""
-        elif self.question_type == QuestionType.FILL_IN_BLANK:
-            return """Example:
-{
-  "question_text": "The capital of France is ___.",
-  "blanks": [
-    {
-      "position": 1,
-      "correct_answer": "Paris",
-      "answer_variations": ["paris", "PARIS"],
-      "case_sensitive": false
-    }
-  ],
-  "explanation": "Paris is the capital and largest city of France."
-}"""
-        else:
-            return "Please follow the correct format for this question type."
-
     def should_retry(self, state: ModuleBatchState) -> str:
-        """Determine if we should retry generation."""
+        """Determine if we should retry generation with smart question counting."""
         if state.error_message:
             return "failed"
 
-        questions_needed = state.target_question_count - len(state.generated_questions)
+        # Calculate total questions: generated + preserved successful questions
+        total_questions = len(state.generated_questions) + len(
+            state.successful_questions_preserved
+        )
+        questions_needed = state.target_question_count - total_questions
 
         if questions_needed <= 0:
             return "complete"
@@ -542,6 +553,10 @@ class ModuleBatchWorkflow:
                 "module_batch_retry_needed",
                 module_id=state.module_id,
                 questions_needed=questions_needed,
+                questions_generated=len(state.generated_questions),
+                questions_preserved=len(state.successful_questions_preserved),
+                total_questions=total_questions,
+                target_questions=state.target_question_count,
                 retry_count=state.retry_count + 1,
                 max_retries=state.max_retries,
             )
@@ -550,31 +565,54 @@ class ModuleBatchWorkflow:
         logger.warning(
             "module_batch_max_retries_reached",
             module_id=state.module_id,
-            questions_generated=len(state.generated_questions),
+            questions_generated=total_questions,
             target_questions=state.target_question_count,
+            final_preserved_count=len(state.successful_questions_preserved),
+            final_generated_count=len(state.generated_questions),
         )
         return "complete"
 
     async def retry_generation(self, state: ModuleBatchState) -> ModuleBatchState:
-        """Prepare for retry with adjusted parameters."""
+        """Prepare for retry with smart state management."""
         state.retry_count += 1
         state.error_message = None
         state.raw_response = ""
 
+        # Clear failed question data for fresh retry
+        # Note: We keep successful_questions_preserved across retries
+        state.failed_questions_data = []
+        state.failed_questions_errors = []
+
         # Add exponential backoff
         await asyncio.sleep(1 * state.retry_count)
+
+        logger.info(
+            "module_batch_retry_generation_prepared",
+            module_id=state.module_id,
+            retry_count=state.retry_count,
+            preserved_questions=len(state.successful_questions_preserved),
+        )
 
         return state
 
     async def save_questions(self, state: ModuleBatchState) -> ModuleBatchState:
-        """Save all generated questions to the database."""
-        if not state.generated_questions:
+        """Save all questions (preserved + newly generated) to the database."""
+        # Combine preserved successful questions with newly generated ones
+        all_questions = state.successful_questions_preserved + state.generated_questions
+
+        if not all_questions:
+            logger.warning(
+                "module_batch_no_questions_to_save",
+                module_id=state.module_id,
+                preserved_count=len(state.successful_questions_preserved),
+                generated_count=len(state.generated_questions),
+            )
             return state
 
         try:
             async with get_async_session() as session:
-                # Add questions to session
-                for question in state.generated_questions:
+                # Add all questions to session
+                for question in all_questions:
                     session.add(question)
 
                 # Commit all questions
@@ -583,7 +621,10 @@ class ModuleBatchWorkflow:
                 logger.info(
                     "module_batch_questions_saved",
                     module_id=state.module_id,
-                    questions_saved=len(state.generated_questions),
+                    questions_saved=len(all_questions),
+                    preserved_questions=len(state.successful_questions_preserved),
+                    newly_generated=len(state.generated_questions),
+                    target_questions=state.target_question_count,
                 )
 
         except Exception as e:

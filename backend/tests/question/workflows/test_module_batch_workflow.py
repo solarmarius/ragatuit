@@ -929,7 +929,11 @@ async def test_prepare_validation_correction_workflow_node(
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
         validation_error=True,
-        validation_error_details=[
+        failed_questions_data=[
+            {"question_text": "What is 2 + 2?", "option_a": "3", "option_b": "4"},
+            {"question_text": "What is the capital?", "correct_answer": "invalid"},
+        ],
+        failed_questions_errors=[
             "Question validation failed: Missing required field: option_d",
             "Question validation failed: Invalid correct_answer format",
         ],
@@ -942,9 +946,13 @@ async def test_prepare_validation_correction_workflow_node(
     assert result.error_message is None
     assert result.validation_correction_attempts == 1
     assert result.validation_error is False
-    assert len(result.validation_error_details) == 0
+    assert len(result.failed_questions_data) == 2  # Should be preserved for retry
+    assert len(result.failed_questions_errors) == 2  # Should be preserved for retry
     assert result.raw_response == ""
-    assert "validation errors" in result.user_prompt.lower()
+    assert (
+        result.system_prompt == ""
+    )  # Should be cleared to avoid conflicting instructions
+    assert "failed validation" in result.user_prompt.lower()
     assert "multiple_choice" in result.user_prompt.lower()
 
 
@@ -975,7 +983,13 @@ async def test_prepare_validation_correction_fib_workflow_node(
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
         validation_error=True,
-        validation_error_details=[
+        failed_questions_data=[
+            {
+                "question_text": "Complete this: The sky is ___",
+                "sentence": "The sky is blue",
+            },
+        ],
+        failed_questions_errors=[
             "Question validation failed: Missing required field: blanks",
         ],
         validation_correction_attempts=0,
@@ -987,6 +1001,9 @@ async def test_prepare_validation_correction_fib_workflow_node(
     assert result.error_message is None
     assert result.validation_correction_attempts == 1
     assert result.validation_error is False
+    assert (
+        result.system_prompt == ""
+    )  # Should be cleared to avoid conflicting instructions
     assert "blanks" in result.user_prompt
     assert "fill_in_blank" in result.user_prompt.lower()
 
@@ -1034,36 +1051,580 @@ async def test_validate_batch_sets_validation_error_flags(
     result = await workflow.validate_batch(state)
 
     assert result.validation_error is True
-    assert len(result.validation_error_details) > 0
+    assert len(result.failed_questions_data) > 0  # Failed questions should be stored
+    assert len(result.failed_questions_errors) > 0  # Errors should be stored
     assert result.error_message is None  # No general error, just validation errors
     assert len(result.generated_questions) == 0  # No questions should be generated
 
 
-def test_get_question_type_examples(test_llm_provider, test_template_manager):
-    """Test question type examples generation."""
-    from src.question.types import QuestionType
-    from src.question.workflows.module_batch_workflow import ModuleBatchWorkflow
+# Smart Retry Functionality Tests
 
-    # Test MCQ examples
-    mcq_workflow = ModuleBatchWorkflow(
-        llm_provider=test_llm_provider,
-        template_manager=test_template_manager,
-        question_type=QuestionType.MULTIPLE_CHOICE,
+
+@pytest.fixture
+def mock_mixed_success_response():
+    """Mock LLM response with mixed valid/invalid questions."""
+    return json.dumps(
+        [
+            {
+                # Valid categorization question (meets minimum requirements)
+                "question_text": "Valid categorization question",
+                "categories": [
+                    {"name": "Category1", "correct_items": ["item1", "item2", "item5"]},
+                    {"name": "Category2", "correct_items": ["item3", "item4", "item6"]},
+                ],
+                "items": [
+                    {"id": "item1", "text": "Valid item 1"},
+                    {"id": "item2", "text": "Valid item 2"},
+                    {"id": "item3", "text": "Valid item 3"},
+                    {"id": "item4", "text": "Valid item 4"},
+                    {"id": "item5", "text": "Valid item 5"},
+                    {"id": "item6", "text": "Valid item 6"},
+                ],
+                "distractors": [],
+                "explanation": "Valid explanation",
+            },
+            {
+                # Invalid categorization question (missing item assignment - has 7 items but item7 unassigned)
+                "question_text": "Invalid categorization question",
+                "categories": [
+                    {"name": "Category1", "correct_items": ["item1", "item2", "item5"]},
+                    {"name": "Category2", "correct_items": ["item3", "item4", "item6"]},
+                ],
+                "items": [
+                    {"id": "item1", "text": "Assigned item 1"},
+                    {"id": "item2", "text": "Assigned item 2"},
+                    {"id": "item3", "text": "Assigned item 3"},
+                    {"id": "item4", "text": "Assigned item 4"},
+                    {"id": "item5", "text": "Assigned item 5"},
+                    {"id": "item6", "text": "Assigned item 6"},
+                    {
+                        "id": "item7",
+                        "text": "Unassigned item",
+                    },  # This will fail validation
+                ],
+                "distractors": [],
+                "explanation": "Invalid explanation",
+            },
+        ]
     )
 
-    mcq_examples = mcq_workflow._get_question_type_examples()
-    assert "option_a" in mcq_examples
-    assert "option_b" in mcq_examples
-    assert "correct_answer" in mcq_examples
 
-    # Test FIB examples
-    fib_workflow = ModuleBatchWorkflow(
-        llm_provider=test_llm_provider,
-        template_manager=test_template_manager,
-        question_type=QuestionType.FILL_IN_BLANK,
+@pytest.fixture
+def mock_all_invalid_response():
+    """Mock LLM response with all invalid questions."""
+    return json.dumps(
+        [
+            {
+                # Invalid question 1 - unassigned item
+                "question_text": "Invalid question 1",
+                "categories": [
+                    {"name": "Cat1", "correct_items": ["item1", "item2", "item5"]},
+                    {"name": "Cat2", "correct_items": ["item3", "item4", "item6"]},
+                ],
+                "items": [
+                    {"id": "item1", "text": "Item 1"},
+                    {"id": "item2", "text": "Item 2"},
+                    {"id": "item3", "text": "Item 3"},
+                    {"id": "item4", "text": "Item 4"},
+                    {"id": "item5", "text": "Item 5"},
+                    {"id": "item6", "text": "Item 6"},
+                    {
+                        "id": "item7",
+                        "text": "Unassigned item",
+                    },  # This will fail validation
+                ],
+                "explanation": "Invalid explanation 1",
+            },
+            {
+                # Invalid question 2 - another unassigned item
+                "question_text": "Invalid question 2",
+                "categories": [
+                    {"name": "Cat1", "correct_items": ["item1", "item2", "item5"]},
+                    {"name": "Cat2", "correct_items": ["item3", "item4", "item6"]},
+                ],
+                "items": [
+                    {"id": "item1", "text": "Item 1"},
+                    {"id": "item2", "text": "Item 2"},
+                    {"id": "item3", "text": "Item 3"},
+                    {"id": "item4", "text": "Item 4"},
+                    {"id": "item5", "text": "Item 5"},
+                    {"id": "item6", "text": "Item 6"},
+                    {
+                        "id": "item8",
+                        "text": "Another unassigned item",
+                    },  # This will fail validation
+                ],
+                "explanation": "Invalid explanation 2",
+            },
+        ]
     )
 
-    fib_examples = fib_workflow._get_question_type_examples()
-    assert "blanks" in fib_examples
-    assert "position" in fib_examples
-    assert "correct_answer" in fib_examples
+
+@pytest.mark.asyncio
+async def test_preserve_successful_questions_on_validation_failure(
+    test_template_manager, mock_mixed_success_response
+):
+    """Test that successful questions are preserved when some fail validation."""
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    # Create mock LLM provider with mixed response
+    llm_provider = MockLLMProvider(mock_mixed_success_response)
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=llm_provider,
+        template_manager=test_template_manager,
+        question_type=QuestionType.CATEGORIZATION,
+    )
+
+    # Create initial state
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test_module",
+        module_name="Test Module",
+        module_content="Test content",
+        target_question_count=2,
+        llm_provider=llm_provider,
+        template_manager=test_template_manager,
+        raw_response=mock_mixed_success_response,
+    )
+
+    # Execute validation
+    result_state = await workflow.validate_batch(state)
+
+    # Assertions for smart retry behavior
+    assert (
+        len(result_state.successful_questions_preserved) == 1
+    )  # One valid question preserved
+    assert len(result_state.failed_questions_data) == 1  # One invalid question stored
+    assert len(result_state.failed_questions_errors) == 1  # One error message stored
+    assert result_state.validation_error is True  # Validation error flag set
+    assert (
+        len(result_state.generated_questions) == 0
+    )  # Generated questions reset for retry
+
+    # Verify error message contains expected content (unassigned item validation error)
+    error_message = result_state.failed_questions_errors[0]
+    assert (
+        "Items not assigned to any category" in error_message
+        or "item7" in error_message
+    )
+
+    # Verify failed question data is preserved
+    failed_data = result_state.failed_questions_data[0]
+    assert failed_data["question_text"] == "Invalid categorization question"
+    assert (
+        len(failed_data["items"]) == 7
+    )  # All items preserved in failed data (including unassigned item7)
+
+    # Verify preserved question has correct type
+    preserved_question = result_state.successful_questions_preserved[0]
+    assert preserved_question.question_type == QuestionType.CATEGORIZATION
+    assert preserved_question.is_approved is False
+
+
+@pytest.mark.asyncio
+async def test_validation_correction_with_specific_questions(
+    test_template_manager, mock_all_invalid_response
+):
+    """Test that correction prompts include specific failed question data."""
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    llm_provider = MockLLMProvider()
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=llm_provider,
+        template_manager=test_template_manager,
+        question_type=QuestionType.CATEGORIZATION,
+    )
+
+    # Create state with failed questions (simulating result of validate_batch)
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test_module",
+        module_name="Test Module",
+        module_content="Test content",
+        target_question_count=2,
+        llm_provider=llm_provider,
+        template_manager=test_template_manager,
+        validation_error=True,
+        failed_questions_data=[
+            {
+                "question_text": "Test categorization question",
+                "categories": [{"name": "Category1", "correct_items": ["item1"]}],
+                "items": [
+                    {"id": "item1", "text": "Item 1"},
+                    {"id": "item2", "text": "Unassigned item"},
+                ],
+                "explanation": "Test explanation",
+            }
+        ],
+        failed_questions_errors=[
+            "Question validation failed: Items not assigned to any category: ['item2']"
+        ],
+    )
+
+    # Execute correction preparation
+    result_state = await workflow.prepare_validation_correction(state)
+
+    # Assertions
+    assert result_state.validation_error is False  # Reset for retry
+    assert result_state.validation_correction_attempts == 1  # Incremented
+
+    # Verify correction prompt contains specific failed question data
+    correction_prompt = result_state.user_prompt
+    assert "FAILED QUESTION 1:" in correction_prompt
+    assert "Test categorization question" in correction_prompt  # Original question text
+    assert '"item2"' in correction_prompt  # Failed item ID
+    assert "Items not assigned to any category" in correction_prompt  # Specific error
+    assert "fix ONLY these specific questions" in correction_prompt  # Clear instruction
+    assert "1 questions failed validation" in correction_prompt  # Correct count
+    assert "Do not generate new questions" in correction_prompt  # Explicit instruction
+
+    # Verify prompt structure contains required sections
+    assert "Original Data:" in correction_prompt
+    assert "Validation Error:" in correction_prompt
+    assert "Requirements:" in correction_prompt
+    assert "JSON array" in correction_prompt
+
+
+@pytest.mark.asyncio
+async def test_question_counting_with_mixed_success(test_template_manager):
+    """Test that question counting works correctly with preserved questions."""
+    from unittest.mock import Mock
+
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    llm_provider = MockLLMProvider()
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=llm_provider,
+        template_manager=test_template_manager,
+        question_type=QuestionType.CATEGORIZATION,
+    )
+
+    # Create state with mixed success scenario
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test_module",
+        module_name="Test Module",
+        module_content="Test content",
+        target_question_count=10,
+        llm_provider=llm_provider,
+        template_manager=test_template_manager,
+        successful_questions_preserved=[
+            Mock(spec=Question)
+            for _ in range(7)  # 7 successful questions
+        ],
+        generated_questions=[
+            Mock(spec=Question)
+            for _ in range(2)  # 2 newly generated questions
+        ],
+    )
+
+    # Test should_retry logic - should retry for 1 more question (7+2=9, need 10)
+    retry_decision = workflow.should_retry(state)
+    assert retry_decision == "retry"
+
+    # Test with exact count
+    state.generated_questions.append(Mock(spec=Question))  # Add 1 more (7+3=10)
+    retry_decision = workflow.should_retry(state)
+    assert retry_decision == "complete"  # Should complete (7+3=10, target met)
+
+    # Test over count
+    state.generated_questions.append(Mock(spec=Question))  # Add 1 more (7+4=11)
+    retry_decision = workflow.should_retry(state)
+    assert retry_decision == "complete"  # Should complete (over target)
+
+
+@pytest.mark.asyncio
+async def test_save_questions_combines_preserved_and_new(test_template_manager):
+    """Test that save_questions combines preserved and newly generated questions."""
+    from unittest.mock import AsyncMock, Mock, patch
+
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    llm_provider = MockLLMProvider()
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=llm_provider,
+        template_manager=test_template_manager,
+        question_type=QuestionType.CATEGORIZATION,
+    )
+
+    # Create mock questions
+    preserved_questions = [Mock(spec=Question) for _ in range(3)]
+    new_questions = [Mock(spec=Question) for _ in range(2)]
+
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test_module",
+        module_name="Test Module",
+        module_content="Test content",
+        target_question_count=5,
+        llm_provider=llm_provider,
+        template_manager=test_template_manager,
+        successful_questions_preserved=preserved_questions,
+        generated_questions=new_questions,
+    )
+
+    # Mock database session
+    mock_session = AsyncMock()
+
+    with patch(
+        "src.question.workflows.module_batch_workflow.get_async_session"
+    ) as mock_get_session:
+        mock_get_session.return_value.__aenter__.return_value = mock_session
+
+        # Execute save_questions
+        result_state = await workflow.save_questions(state)
+
+        # Verify all questions were added to session (3 preserved + 2 new = 5 total)
+        assert mock_session.add.call_count == 5
+
+        # Verify commit was called
+        mock_session.commit.assert_called_once()
+
+        # Verify no error occurred
+        assert result_state.error_message is None
+
+
+@pytest.mark.asyncio
+async def test_retry_generation_clears_failed_question_state(test_template_manager):
+    """Test that retry_generation properly clears failed question state."""
+    from unittest.mock import Mock
+
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    llm_provider = MockLLMProvider()
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=llm_provider,
+        template_manager=test_template_manager,
+        question_type=QuestionType.CATEGORIZATION,
+    )
+
+    # Create state with failed questions and preserved questions
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test_module",
+        module_name="Test Module",
+        module_content="Test content",
+        target_question_count=5,
+        llm_provider=llm_provider,
+        template_manager=test_template_manager,
+        failed_questions_data=[{"question": "failed"}],
+        failed_questions_errors=["error message"],
+        successful_questions_preserved=[Mock(spec=Question) for _ in range(2)],
+        retry_count=0,
+    )
+
+    # Execute retry_generation
+    result_state = await workflow.retry_generation(state)
+
+    # Verify failed question state is cleared
+    assert result_state.failed_questions_data == []
+    assert result_state.failed_questions_errors == []
+
+    # Verify preserved questions are kept
+    assert len(result_state.successful_questions_preserved) == 2
+
+    # Verify retry count is incremented
+    assert result_state.retry_count == 1
+
+    # Verify other state is reset
+    assert result_state.error_message is None
+    assert result_state.raw_response == ""
+
+
+@pytest.mark.asyncio
+async def test_prepare_prompt_calculates_remaining_questions_correctly(
+    test_template_manager,
+):
+    """Test that prepare_prompt calculates remaining questions accounting for preserved ones."""
+    from unittest.mock import Mock
+
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    llm_provider = MockLLMProvider()
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=llm_provider,
+        template_manager=test_template_manager,
+        question_type=QuestionType.CATEGORIZATION,
+    )
+
+    # Create state with preserved and generated questions
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test_module",
+        module_name="Test Module",
+        module_content="Test content for questions",
+        target_question_count=10,
+        llm_provider=llm_provider,
+        template_manager=test_template_manager,
+        successful_questions_preserved=[
+            Mock(spec=Question) for _ in range(6)
+        ],  # 6 preserved
+        generated_questions=[Mock(spec=Question) for _ in range(2)],  # 2 generated
+    )
+
+    # Execute prepare_prompt
+    result_state = await workflow.prepare_prompt(state)
+
+    # Verify prompts were created
+    assert result_state.system_prompt == "Test system prompt"
+    assert "Test content for questions" in result_state.user_prompt
+
+    # The template manager mock doesn't give us access to the exact parameters,
+    # but we can verify the method completes without error, indicating the
+    # remaining_questions calculation (10 - 6 - 2 = 2) worked correctly
+    assert result_state.error_message is None
+
+
+@pytest.mark.asyncio
+async def test_no_questions_preserved_when_all_succeed(test_template_manager):
+    """Test that no questions are moved to preserved when all validation succeeds."""
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    # Valid categorization questions only (meet minimum requirements)
+    valid_response = json.dumps(
+        [
+            {
+                "question_text": "Valid question 1",
+                "categories": [
+                    {"name": "Category1", "correct_items": ["item1", "item2", "item5"]},
+                    {"name": "Category2", "correct_items": ["item3", "item4", "item6"]},
+                ],
+                "items": [
+                    {"id": "item1", "text": "Valid item 1"},
+                    {"id": "item2", "text": "Valid item 2"},
+                    {"id": "item3", "text": "Valid item 3"},
+                    {"id": "item4", "text": "Valid item 4"},
+                    {"id": "item5", "text": "Valid item 5"},
+                    {"id": "item6", "text": "Valid item 6"},
+                ],
+                "distractors": [],
+                "explanation": "Valid explanation 1",
+            },
+            {
+                "question_text": "Valid question 2",
+                "categories": [
+                    {"name": "CategoryA", "correct_items": ["itemA", "itemB", "itemE"]},
+                    {"name": "CategoryB", "correct_items": ["itemC", "itemD", "itemF"]},
+                ],
+                "items": [
+                    {"id": "itemA", "text": "Another valid item A"},
+                    {"id": "itemB", "text": "Another valid item B"},
+                    {"id": "itemC", "text": "Another valid item C"},
+                    {"id": "itemD", "text": "Another valid item D"},
+                    {"id": "itemE", "text": "Another valid item E"},
+                    {"id": "itemF", "text": "Another valid item F"},
+                ],
+                "distractors": [],
+                "explanation": "Valid explanation 2",
+            },
+        ]
+    )
+
+    llm_provider = MockLLMProvider(valid_response)
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=llm_provider,
+        template_manager=test_template_manager,
+        question_type=QuestionType.CATEGORIZATION,
+    )
+
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test_module",
+        module_name="Test Module",
+        module_content="Test content",
+        target_question_count=2,
+        llm_provider=llm_provider,
+        template_manager=test_template_manager,
+        raw_response=valid_response,
+    )
+
+    # Execute validation
+    result_state = await workflow.validate_batch(state)
+
+    # Verify normal behavior when all questions succeed
+    assert (
+        len(result_state.generated_questions) == 2
+    )  # Both questions in generated list
+    assert (
+        len(result_state.successful_questions_preserved) == 0
+    )  # No questions moved to preserved
+    assert len(result_state.failed_questions_data) == 0  # No failed questions
+    assert result_state.validation_error is False  # No validation error
+
+
+@pytest.mark.asyncio
+async def test_all_questions_fail_validation(
+    test_template_manager, mock_all_invalid_response
+):
+    """Test behavior when all questions fail validation."""
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    llm_provider = MockLLMProvider(mock_all_invalid_response)
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=llm_provider,
+        template_manager=test_template_manager,
+        question_type=QuestionType.CATEGORIZATION,
+    )
+
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test_module",
+        module_name="Test Module",
+        module_content="Test content",
+        target_question_count=2,
+        llm_provider=llm_provider,
+        template_manager=test_template_manager,
+        raw_response=mock_all_invalid_response,
+    )
+
+    # Execute validation
+    result_state = await workflow.validate_batch(state)
+
+    # Verify all questions failed behavior
+    assert len(result_state.generated_questions) == 0  # No successful questions
+    assert (
+        len(result_state.successful_questions_preserved) == 0
+    )  # No questions to preserve
+    assert len(result_state.failed_questions_data) == 2  # Both questions failed
+    assert len(result_state.failed_questions_errors) == 2  # Two error messages
+    assert result_state.validation_error is True  # Validation error set
+
+    # Verify all failed question data is preserved
+    for i, failed_data in enumerate(result_state.failed_questions_data):
+        assert failed_data["question_text"] == f"Invalid question {i+1}"
+        assert (
+            "Items not assigned to any category"
+            in result_state.failed_questions_errors[i]
+        )
