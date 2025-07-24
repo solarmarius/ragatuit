@@ -222,7 +222,7 @@ export function isCategorizationData(data: unknown): data is CategorizationData 
   }
 
   // Validate items array
-  if (!Array.isArray(obj.items) || obj.items.length < 6 || obj.items.length > 20) {
+  if (!Array.isArray(obj.items) || obj.items.length < 4 || obj.items.length > 20) {
     return false;
   }
 
