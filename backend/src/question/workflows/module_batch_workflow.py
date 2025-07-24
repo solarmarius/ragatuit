@@ -596,9 +596,32 @@ class ModuleBatchWorkflow:
         return state
 
     async def save_questions(self, state: ModuleBatchState) -> ModuleBatchState:
-        """Save all questions (preserved + newly generated) to the database."""
+        """Save questions only if batch achieved 100% validation success."""
         # Combine preserved successful questions with newly generated ones
         all_questions = state.successful_questions_preserved + state.generated_questions
+
+        # Calculate success rate for this batch
+        total_questions = len(all_questions)
+        success_rate = (
+            total_questions / state.target_question_count
+            if state.target_question_count > 0
+            else 0
+        )
+
+        # Only save if we achieved 100% success (or very close due to rounding)
+        if success_rate < 0.99:  # Allow for tiny floating point errors
+            logger.warning(
+                "module_batch_not_saving_partial_success",
+                module_id=state.module_id,
+                questions_generated=total_questions,
+                target_questions=state.target_question_count,
+                success_rate=f"{success_rate*100:.1f}%",
+                reason="Batch did not achieve 100% success rate",
+            )
+
+            # Don't save questions, but track this as a failed batch
+            state.error_message = f"Batch incomplete: {total_questions}/{state.target_question_count} questions generated"
+            return state
 
         if not all_questions:
             logger.warning(
