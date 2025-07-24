@@ -259,6 +259,7 @@ export type QuizStatus =
   | "extracting_content"
   | "generating_questions"
   | "ready_for_review"
+  | "ready_for_review_partial"
   | "exporting_to_canvas"
   | "published"
   | "failed"
