@@ -61,9 +61,9 @@ class CategorizationData(BaseQuestionData):
         min_length=2, max_length=8, description="List of categories (2-8 categories)"
     )
     items: list[CategoryItem] = Field(
-        min_length=6,
+        min_length=4,
         max_length=20,
-        description="List of items to be categorized (6-20 items)",
+        description="List of items to be categorized (4-20 items)",
     )
     distractors: list[CategoryItem] | None = Field(
         default=None,
@@ -96,8 +96,8 @@ class CategorizationData(BaseQuestionData):
     @classmethod
     def validate_items(cls, v: list[CategoryItem]) -> list[CategoryItem]:
         """Validate items have unique texts and IDs."""
-        if len(v) < 6:
-            raise ValueError("At least 6 items are required")
+        if len(v) < 4:
+            raise ValueError("At least 4 items are required")
         if len(v) > 20:
             raise ValueError("Maximum 20 items allowed")
 
@@ -136,6 +136,22 @@ class CategorizationData(BaseQuestionData):
             raise ValueError("Duplicate distractor IDs are not allowed")
 
         return v
+
+    def clean_distractor_duplicates(self) -> None:
+        """Remove any items from the items list that also appear in distractors.
+
+        This handles cases where the LLM incorrectly places distractor items
+        in both the items and distractors arrays. Items should only appear
+        in one array - distractors belong only in the distractors array.
+        """
+        if not self.distractors:
+            return
+
+        # Get set of distractor IDs for fast lookup
+        distractor_ids = {distractor.id for distractor in self.distractors}
+
+        # Remove any items that are also distractors
+        self.items = [item for item in self.items if item.id not in distractor_ids]
 
     def validate_item_assignments(self) -> None:
         """Validate that all referenced items exist and assignments are valid."""
@@ -220,6 +236,8 @@ class CategorizationQuestionType(BaseQuestionType):
             ValidationError: If data is invalid
         """
         categorization_data = CategorizationData(**data)
+        # Clean up LLM data inconsistencies (distractors in items array)
+        categorization_data.clean_distractor_duplicates()
         # Additional validation for business logic
         categorization_data.validate_item_assignments()
         return categorization_data

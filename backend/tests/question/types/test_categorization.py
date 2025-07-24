@@ -225,7 +225,7 @@ def test_categorization_data_maximum_categories_validation():
 
 
 def test_categorization_data_minimum_items_validation():
-    """Test that at least 6 items are required."""
+    """Test that at least 4 items are required."""
     from pydantic import ValidationError
 
     from src.question.types.categorization import (
@@ -238,11 +238,11 @@ def test_categorization_data_minimum_items_validation():
         Category(name="Category1", correct_items=["item1"]),
         Category(name="Category2", correct_items=["item2"]),
     ]
-    few_items = [CategoryItem(id=f"item{i}", text=f"Item{i}") for i in range(5)]
+    few_items = [CategoryItem(id=f"item{i}", text=f"Item{i}") for i in range(3)]
 
     with pytest.raises(ValidationError) as exc_info:
         CategorizationData(question_text="Test", categories=categories, items=few_items)
-    assert "List should have at least 6 items" in str(exc_info.value)
+    assert "List should have at least 4 items" in str(exc_info.value)
 
 
 def test_categorization_data_maximum_items_validation():
@@ -615,6 +615,86 @@ def test_categorization_data_get_item_by_id_not_found():
     assert item is None
 
 
+def test_categorization_data_clean_distractor_duplicates():
+    """Test cleaning distractors that appear in both items and distractors arrays."""
+    from src.question.types.categorization import (
+        CategorizationData,
+        Category,
+        CategoryItem,
+    )
+
+    # Create test data where distractors appear in both items and distractors arrays
+    # (simulating LLM error from logs)
+    categories = [
+        Category(name="Mammals", correct_items=["item1", "item2"]),
+        Category(name="Birds", correct_items=["item3", "item4"]),
+    ]
+    items = [
+        CategoryItem(id="item1", text="Dolphin"),
+        CategoryItem(id="item2", text="Elephant"),
+        CategoryItem(id="item3", text="Eagle"),
+        CategoryItem(id="item4", text="Penguin"),
+        CategoryItem(id="dist1", text="Jellyfish"),  # This is a distractor!
+        CategoryItem(id="dist2", text="Coral"),  # This is also a distractor!
+    ]
+    distractors = [
+        CategoryItem(id="dist1", text="Jellyfish"),
+        CategoryItem(id="dist2", text="Coral"),
+    ]
+
+    data = CategorizationData(
+        question_text="Test",
+        categories=categories,
+        items=items,
+        distractors=distractors,
+    )
+
+    # Before cleaning, items array should have 6 items
+    assert len(data.items) == 6
+
+    # Clean distractor duplicates
+    data.clean_distractor_duplicates()
+
+    # After cleaning, items array should have 4 items (distractors removed)
+    assert len(data.items) == 4
+    assert len(data.distractors) == 2
+
+    # Verify the correct items remain
+    item_ids = {item.id for item in data.items}
+    assert item_ids == {"item1", "item2", "item3", "item4"}
+
+    # Verify distractors are still there
+    distractor_ids = {item.id for item in data.distractors}
+    assert distractor_ids == {"dist1", "dist2"}
+
+
+def test_categorization_data_clean_distractor_duplicates_no_distractors():
+    """Test cleaning when there are no distractors."""
+    from src.question.types.categorization import (
+        CategorizationData,
+        Category,
+        CategoryItem,
+    )
+
+    categories = [
+        Category(name="Mammals", correct_items=["item1", "item2"]),
+        Category(name="Birds", correct_items=["item3", "item4"]),
+    ]
+    items = [CategoryItem(id=f"item{i}", text=f"Item{i}") for i in range(1, 5)]
+
+    data = CategorizationData(question_text="Test", categories=categories, items=items)
+
+    # Before cleaning
+    original_item_count = len(data.items)
+
+    # Clean distractor duplicates (should do nothing)
+    data.clean_distractor_duplicates()
+
+    # After cleaning, nothing should change
+    assert len(data.items) == original_item_count
+    assert data.distractors is None
+
+
 def test_categorization_question_type_properties():
     """Test CategorizationQuestionType properties."""
     from src.question.types import QuestionType
@@ -694,6 +774,50 @@ def test_categorization_question_type_validate_data_wrong_structure():
 
     with pytest.raises(ValidationError):
         question_type.validate_data({"invalid": "data"})
+
+
+def test_categorization_question_type_validate_data_with_distractor_cleaning():
+    """Test that validate_data automatically cleans distractor duplicates."""
+    from src.question.types.categorization import CategorizationQuestionType
+
+    question_type = CategorizationQuestionType()
+
+    # Data that mimics the LLM error from logs - distractors in both arrays
+    raw_data = {
+        "question_text": "Test categorization with distractor cleaning",
+        "categories": [
+            {"name": "Category1", "correct_items": ["item1", "item2"]},
+            {"name": "Category2", "correct_items": ["item3", "item4"]},
+        ],
+        "items": [
+            {"id": "item1", "text": "Item 1"},
+            {"id": "item2", "text": "Item 2"},
+            {"id": "item3", "text": "Item 3"},
+            {"id": "item4", "text": "Item 4"},
+            {"id": "dist1", "text": "Distractor 1"},  # This should be removed
+            {"id": "dist2", "text": "Distractor 2"},  # This should be removed
+        ],
+        "distractors": [
+            {"id": "dist1", "text": "Distractor 1"},
+            {"id": "dist2", "text": "Distractor 2"},
+        ],
+        "explanation": "Test explanation",
+    }
+
+    # This should succeed because cleaning happens before validation
+    validated_data = question_type.validate_data(raw_data)
+
+    # Verify the cleaning worked
+    assert len(validated_data.items) == 4  # Only the real items remain
+    assert len(validated_data.distractors) == 2  # Distractors are preserved
+
+    # Verify correct items remain
+    item_ids = {item.id for item in validated_data.items}
+    assert item_ids == {"item1", "item2", "item3", "item4"}
+
+    # Verify distractors are correct
+    distractor_ids = {item.id for item in validated_data.distractors}
+    assert distractor_ids == {"dist1", "dist2"}
 
 
 def test_categorization_question_type_format_for_display():
