@@ -191,6 +191,68 @@ def validate_question_generation_ready(quiz: Quiz) -> None:
             )
 
 
+def validate_question_generation_ready_with_partial_support(quiz: Quiz) -> str:
+    """
+    Validate that question generation can be triggered with support for partial retries.
+
+    Args:
+        quiz: Quiz to validate
+
+    Returns:
+        str: Type of generation - "initial" or "retry"
+
+    Raises:
+        HTTPException: 400 if content extraction not completed
+        HTTPException: 409 if generation already in progress
+    """
+    if not is_quiz_ready_for_generation(quiz):
+        if quiz.status == QuizStatus.GENERATING_QUESTIONS:
+            logger.warning(
+                "question_generation_already_in_progress",
+                quiz_id=str(quiz.id),
+                current_status=quiz.status,
+            )
+            raise HTTPException(
+                status_code=409, detail="Question generation is already in progress"
+            )
+        elif quiz.status in [QuizStatus.CREATED, QuizStatus.FAILED]:
+            logger.warning(
+                "question_generation_content_not_ready",
+                quiz_id=str(quiz.id),
+                current_status=quiz.status,
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="Content extraction must be completed before generating questions",
+            )
+        else:
+            logger.warning(
+                "question_generation_not_ready",
+                quiz_id=str(quiz.id),
+                current_status=quiz.status,
+            )
+            raise HTTPException(
+                status_code=409,
+                detail="Question generation is not available in current state",
+            )
+
+    # Determine generation type
+    if quiz.status == QuizStatus.READY_FOR_REVIEW_PARTIAL:
+        logger.info(
+            "question_generation_retry_from_partial",
+            quiz_id=str(quiz.id),
+            current_status=quiz.status.value,
+        )
+        return "retry"
+    else:
+        logger.info(
+            "question_generation_initial_attempt",
+            quiz_id=str(quiz.id),
+            current_status=quiz.status.value,
+        )
+        return "initial"
+
+
 def validate_export_ready(quiz: Quiz) -> None:
     """
     Validate that quiz export can be triggered.

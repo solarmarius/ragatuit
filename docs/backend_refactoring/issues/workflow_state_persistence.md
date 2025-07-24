@@ -648,40 +648,6 @@ async def generate_questions_endpoint(
             "workflow_id": workflow_id
         }
 
-@router.get("/{quiz_id}/generation-status")
-async def get_generation_status(
-    quiz_id: UUID,
-    workflow_id: Optional[str] = Query(None),
-    current_user: CurrentUser,
-    session: SessionDep,
-) -> dict[str, Any]:
-    """Get status of question generation workflow."""
-
-    # Verify quiz ownership
-    quiz = get_quiz_by_id(session, quiz_id)
-    if not quiz or quiz.owner_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Quiz not found")
-
-    if workflow_id:
-        # Get specific workflow status
-        status = await mcq_service.get_workflow_status(workflow_id)
-    else:
-        # Get all workflows for quiz
-        workflows = await list_resumable_workflows(session, quiz_id)
-        status = {
-            "workflows": [
-                {
-                    "workflow_id": w.workflow_id,
-                    "status": w.status,
-                    "progress": f"{w.completed_steps}/{w.total_steps}",
-                    "created_at": w.created_at,
-                    "can_resume": w.status in ["running", "paused", "failed"]
-                }
-                for w in workflows
-            ]
-        }
-
-    return status
 
 @router.post("/{quiz_id}/resume-generation")
 async def resume_generation(
@@ -1026,16 +992,19 @@ active_workflows = Gauge(
 ## Migration Strategy
 
 ### Phase 1: Add Infrastructure
+
 1. Create database tables
 2. Implement persistence managers
 3. Add monitoring
 
 ### Phase 2: Update Service
+
 1. Wrap existing workflow with persistence
 2. Add recovery logic
 3. Test with feature flag
 
 ### Phase 3: Update API
+
 1. Add new endpoints
 2. Update UI to show progress
 3. Enable resume functionality

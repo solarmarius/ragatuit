@@ -1341,8 +1341,12 @@ async def get_courses(authorization: str = Header(None)):
     return mock_courses
 
 
-@app.get("/api/v1/courses/{course_id}/modules")
-async def get_course_modules(course_id: int, authorization: str = Header(None)):
+@app.get("/api/v1/courses/{course_id}/modules/")
+async def get_course_modules(
+    course_id: int,
+    authorization: str = Header(None),
+    per_page: Optional[int] = Query(None),
+):
     """Mock Canvas course modules endpoint"""
     if not authorization:
         raise HTTPException(status_code=401, detail="Authorization header required")

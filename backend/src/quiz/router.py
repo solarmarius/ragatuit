@@ -14,7 +14,7 @@ from .dependencies import (
     QuizOwnershipWithLock,
     validate_content_extraction_ready,
     validate_export_ready,
-    validate_question_generation_ready,
+    validate_question_generation_ready_with_partial_support,
     validate_quiz_has_approved_questions,
 )
 from .models import Quiz
@@ -463,8 +463,8 @@ async def trigger_question_generation(
     )
 
     try:
-        # Validate quiz status
-        validate_question_generation_ready(quiz)
+        # Validate quiz status and determine generation type
+        generation_type = validate_question_generation_ready_with_partial_support(quiz)
 
         # Prepare generation using service layer
         generation_params = prepare_question_generation(
@@ -490,9 +490,14 @@ async def trigger_question_generation(
             quiz_id=str(quiz.id),
             question_count=generation_params["question_count"],
             llm_model=generation_params["llm_model"],
+            generation_type=generation_type,
         )
 
-        return {"message": SUCCESS_MESSAGES["question_generation_started"]}
+        # Return appropriate success message based on generation type
+        if generation_type == "retry":
+            return {"message": SUCCESS_MESSAGES["question_generation_retry_started"]}
+        else:
+            return {"message": SUCCESS_MESSAGES["question_generation_started"]}
 
     except ValueError as e:
         logger.warning(

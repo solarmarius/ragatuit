@@ -44,6 +44,7 @@ def mock_quiz():
         "module_2": {"name": "Advanced Topics", "question_count": 10},
     }
     quiz.question_count = 0
+    quiz.generation_metadata = None  # No existing metadata by default
     return quiz
 
 
@@ -92,10 +93,10 @@ def mock_questions():
 
 
 @pytest.mark.asyncio
-async def test_generate_questions_for_quiz_success(
+async def test_generate_questions_for_quiz_with_batch_tracking_success(
     generation_service, mock_quiz, extracted_content, mock_questions
 ):
-    """Test successful module-based question generation."""
+    """Test successful module-based question generation with batch tracking."""
     quiz_id = mock_quiz.id
 
     with (
@@ -125,8 +126,10 @@ async def test_generate_questions_for_quiz_success(
         )
         mock_processor_class.return_value = mock_processor
 
-        result = await generation_service.generate_questions_for_quiz(
-            quiz_id, extracted_content
+        result = (
+            await generation_service.generate_questions_for_quiz_with_batch_tracking(
+                quiz_id, extracted_content
+            )
         )
 
     assert len(result) == 2
@@ -151,7 +154,9 @@ async def test_generate_questions_for_quiz_success(
 
 
 @pytest.mark.asyncio
-async def test_generate_questions_for_quiz_quiz_not_found(generation_service):
+async def test_generate_questions_for_quiz_with_batch_tracking_quiz_not_found(
+    generation_service,
+):
     """Test generation when quiz is not found."""
     quiz_id = UUID("00000000-0000-0000-0000-000000000000")
     extracted_content = {"module_1": "content"}
@@ -164,13 +169,15 @@ async def test_generate_questions_for_quiz_quiz_not_found(generation_service):
         mock_session_ctx.return_value.__aenter__.return_value = mock_session
 
         with pytest.raises(ValueError, match="Quiz .* not found"):
-            await generation_service.generate_questions_for_quiz(
+            await generation_service.generate_questions_for_quiz_with_batch_tracking(
                 quiz_id, extracted_content
             )
 
 
 @pytest.mark.asyncio
-async def test_generate_questions_for_quiz_no_content(generation_service, mock_quiz):
+async def test_generate_questions_for_quiz_with_batch_tracking_no_content(
+    generation_service, mock_quiz
+):
     """Test generation when no module content is available."""
     quiz_id = mock_quiz.id
     extracted_content = {}  # No content
@@ -182,14 +189,17 @@ async def test_generate_questions_for_quiz_no_content(generation_service, mock_q
         mock_session.get.return_value = mock_quiz
         mock_session_ctx.return_value.__aenter__.return_value = mock_session
 
-        with pytest.raises(ValueError, match="No module content available"):
-            await generation_service.generate_questions_for_quiz(
+        # With batch tracking, empty content should return empty results rather than raise
+        result = (
+            await generation_service.generate_questions_for_quiz_with_batch_tracking(
                 quiz_id, extracted_content
             )
+        )
+        assert result == {}
 
 
 @pytest.mark.asyncio
-async def test_generate_questions_for_quiz_missing_module_content(
+async def test_generate_questions_for_quiz_with_batch_tracking_missing_module_content(
     generation_service, mock_quiz, extracted_content
 ):
     """Test generation when some module content is missing."""
@@ -216,7 +226,9 @@ async def test_generate_questions_for_quiz_missing_module_content(
         mock_processor.process_all_modules = AsyncMock(return_value={"module_1": []})
         mock_processor_class.return_value = mock_processor
 
-        await generation_service.generate_questions_for_quiz(quiz_id, partial_content)
+        await generation_service.generate_questions_for_quiz_with_batch_tracking(
+            quiz_id, partial_content
+        )
 
         # Should only process the one module with content
         call_args = mock_processor.process_all_modules.call_args[0][1]
@@ -226,7 +238,7 @@ async def test_generate_questions_for_quiz_missing_module_content(
 
 
 @pytest.mark.asyncio
-async def test_generate_questions_for_quiz_norwegian_language(
+async def test_generate_questions_for_quiz_with_batch_tracking_norwegian_language(
     generation_service, mock_quiz, extracted_content
 ):
     """Test generation with Norwegian language."""
@@ -252,7 +264,9 @@ async def test_generate_questions_for_quiz_norwegian_language(
         mock_processor.process_all_modules = AsyncMock(return_value={})
         mock_processor_class.return_value = mock_processor
 
-        await generation_service.generate_questions_for_quiz(quiz_id, extracted_content)
+        await generation_service.generate_questions_for_quiz_with_batch_tracking(
+            quiz_id, extracted_content
+        )
 
         # Verify processor was created with Norwegian language
         from src.question.types import QuizLanguage
@@ -266,10 +280,10 @@ async def test_generate_questions_for_quiz_norwegian_language(
 
 
 @pytest.mark.asyncio
-async def test_generate_questions_for_quiz_updates_question_count(
+async def test_generate_questions_for_quiz_with_batch_tracking_preserves_question_count(
     generation_service, mock_quiz, extracted_content, mock_questions
 ):
-    """Test that quiz question count is updated after generation."""
+    """Test that quiz question count is preserved after generation."""
     quiz_id = mock_quiz.id
 
     with (
@@ -296,7 +310,9 @@ async def test_generate_questions_for_quiz_updates_question_count(
         )
         mock_processor_class.return_value = mock_processor
 
-        await generation_service.generate_questions_for_quiz(quiz_id, extracted_content)
+        await generation_service.generate_questions_for_quiz_with_batch_tracking(
+            quiz_id, extracted_content
+        )
 
         # Verify quiz question count preserves original target (should NOT be updated)
         assert mock_quiz.question_count == 0  # Original value preserved
@@ -304,50 +320,7 @@ async def test_generate_questions_for_quiz_updates_question_count(
 
 
 @pytest.mark.asyncio
-async def test_get_generation_status_success(generation_service, mock_quiz):
-    """Test getting generation status for a quiz."""
-    quiz_id = mock_quiz.id
-
-    with (
-        patch(
-            "src.question.services.generation_service.get_async_session"
-        ) as mock_session_ctx,
-        patch("src.question.service.get_questions_by_quiz") as mock_get_questions,
-    ):
-        mock_session = AsyncMock()
-        mock_session.get.return_value = mock_quiz
-        mock_session_ctx.return_value.__aenter__.return_value = mock_session
-
-        # Mock service call
-        mock_questions = [MagicMock(), MagicMock()]
-        mock_get_questions.return_value = mock_questions
-
-        status = await generation_service.get_generation_status(quiz_id)
-
-        assert status["quiz_id"] == str(quiz_id)
-        assert status["status"] == mock_quiz.status.value
-        assert status["total_questions"] == 2
-        assert status["target_questions"] == 15  # 5 + 10 from mock_quiz
-
-
-@pytest.mark.asyncio
-async def test_get_generation_status_quiz_not_found(generation_service):
-    """Test getting status when quiz is not found."""
-    quiz_id = UUID("00000000-0000-0000-0000-000000000000")
-
-    with patch(
-        "src.question.services.generation_service.get_async_session"
-    ) as mock_session_ctx:
-        mock_session = AsyncMock()
-        mock_session.get.return_value = None
-        mock_session_ctx.return_value.__aenter__.return_value = mock_session
-
-        with pytest.raises(ValueError, match="Quiz .* not found"):
-            await generation_service.get_generation_status(quiz_id)
-
-
-@pytest.mark.asyncio
-async def test_generate_questions_for_quiz_provider_exception(
+async def test_generate_questions_for_quiz_with_batch_tracking_provider_exception(
     generation_service, mock_quiz, extracted_content
 ):
     """Test handling of provider exceptions."""
@@ -368,13 +341,13 @@ async def test_generate_questions_for_quiz_provider_exception(
         )
 
         with pytest.raises(Exception, match="Provider error"):
-            await generation_service.generate_questions_for_quiz(
+            await generation_service.generate_questions_for_quiz_with_batch_tracking(
                 quiz_id, extracted_content
             )
 
 
 @pytest.mark.asyncio
-async def test_generate_questions_for_quiz_custom_provider(
+async def test_generate_questions_for_quiz_with_batch_tracking_custom_provider(
     generation_service, mock_quiz, extracted_content
 ):
     """Test generation with custom provider."""
@@ -399,7 +372,7 @@ async def test_generate_questions_for_quiz_custom_provider(
         mock_processor.process_all_modules = AsyncMock(return_value={})
         mock_processor_class.return_value = mock_processor
 
-        await generation_service.generate_questions_for_quiz(
+        await generation_service.generate_questions_for_quiz_with_batch_tracking(
             quiz_id, extracted_content, provider_name="anthropic"
         )
 
@@ -449,7 +422,7 @@ async def test_generate_uses_quiz_question_type(generation_service, mock_quiz):
             MockProcessor.return_value = mock_processor_instance
 
             # Call the method
-            await generation_service.generate_questions_for_quiz(
+            await generation_service.generate_questions_for_quiz_with_batch_tracking(
                 quiz_id=mock_quiz.id, extracted_content=extracted_content
             )
 

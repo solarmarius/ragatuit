@@ -10,10 +10,6 @@ from .config import get_configuration_service
 # Core components
 from .models import Question, QuestionDifficulty, QuestionType
 from .schemas import (
-    BatchGenerationRequest,
-    BatchGenerationResponse,
-    GenerationRequest,
-    GenerationResponse,
     QuestionCreateRequest,
     QuestionResponse,
     QuestionUpdateRequest,
@@ -43,10 +39,6 @@ __all__ = [
     "QuestionCreateRequest",
     "QuestionResponse",
     "QuestionUpdateRequest",
-    "GenerationRequest",
-    "GenerationResponse",
-    "BatchGenerationRequest",
-    "BatchGenerationResponse",
     # Content processing functions
     "get_content_from_quiz",
     "prepare_content_for_generation",

@@ -33,6 +33,7 @@ ERROR_MESSAGES = {
 SUCCESS_MESSAGES = {
     "content_extraction_started": "Content extraction started",
     "question_generation_started": "Question generation started",
+    "question_generation_retry_started": "Failed batch retry started",
     "export_started": "Quiz export started",
     "quiz_deleted": "Quiz deleted successfully",
 }
