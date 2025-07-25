@@ -8,7 +8,7 @@ from src.database import get_async_session
 
 from ..providers import get_llm_provider_registry
 from ..templates import get_template_manager
-from ..types import QuizLanguage
+from ..types import QuestionType, QuizLanguage
 from ..workflows.module_batch_workflow import ParallelModuleProcessor
 
 logger = get_logger("generation_service")
@@ -79,60 +79,76 @@ class QuestionGenerationService:
                 provider_enum = LLMProvider(provider_name.lower())
                 provider = self.provider_registry.get_provider(provider_enum)
 
-                # Filter modules to only process those that need generation
+                # Build modules to process with their batches
                 modules_to_process = {}
-                skipped_modules = []
+                skipped_batches = []
+                total_batches_to_process = 0
 
                 for module_id, module_info in quiz.selected_modules.items():
-                    # Create batch key for this module
-                    batch_key = f"{module_id}_{quiz.question_type.value}_{module_info['question_count']}"
+                    module_name = module_info.get("name", "Unknown")
 
-                    if batch_key in successful_batch_keys:
-                        # Skip this module - it already has successful batch
-                        skipped_modules.append(
-                            {
-                                "module_id": module_id,
-                                "module_name": module_info.get("name", "Unknown"),
-                                "batch_key": batch_key,
-                                "reason": "already_successful",
-                            }
-                        )
-                        logger.debug(
-                            "batch_tracking_skipping_successful_module",
-                            quiz_id=str(quiz_id),
-                            module_id=module_id,
-                            batch_key=batch_key,
-                        )
-                        continue
-
-                    # Check if we have content for this module
-                    if module_id in extracted_content:
-                        modules_to_process[module_id] = {
-                            "name": module_info["name"],
-                            "content": extracted_content[module_id],
-                            "question_count": module_info["question_count"],
-                        }
-                        logger.debug(
-                            "batch_tracking_module_needs_processing",
-                            quiz_id=str(quiz_id),
-                            module_id=module_id,
-                            batch_key=batch_key,
-                            question_count=module_info["question_count"],
-                        )
-                    else:
+                    # Skip if no content extracted for this module
+                    if module_id not in extracted_content:
                         logger.warning(
                             "batch_tracking_module_content_missing",
                             quiz_id=str(quiz_id),
                             module_id=module_id,
-                            module_name=module_info.get("name", "unknown"),
+                            module_name=module_name,
                         )
+                        continue
+
+                    # Process each batch in the module
+                    batches_to_process = []
+                    for batch in module_info.get("question_batches", []):
+                        question_type = batch["question_type"]
+                        count = batch["count"]
+
+                        # Create batch key
+                        batch_key = f"{module_id}_{question_type}_{count}"
+
+                        if batch_key in successful_batch_keys:
+                            # Skip this batch - already successful
+                            skipped_batches.append(
+                                {
+                                    "module_id": module_id,
+                                    "module_name": module_name,
+                                    "batch_key": batch_key,
+                                    "question_type": question_type,
+                                    "count": count,
+                                    "reason": "already_successful",
+                                }
+                            )
+                            logger.debug(
+                                "batch_tracking_skipping_successful_batch",
+                                quiz_id=str(quiz_id),
+                                batch_key=batch_key,
+                            )
+                        else:
+                            # Add to processing list
+                            batches_to_process.append(
+                                {
+                                    "question_type": QuestionType(question_type),
+                                    "count": count,
+                                    "batch_key": batch_key,
+                                }
+                            )
+                            total_batches_to_process += 1
+
+                    # Only add module if it has batches to process
+                    if batches_to_process:
+                        modules_to_process[module_id] = {
+                            "name": module_name,
+                            "content": extracted_content[module_id],
+                            "batches": batches_to_process,
+                        }
 
                 logger.info(
                     "batch_tracking_modules_filtered",
                     quiz_id=str(quiz_id),
                     modules_to_process=len(modules_to_process),
-                    modules_skipped=len(skipped_modules),
-                    skipped_details=skipped_modules,
+                    total_batches_to_process=total_batches_to_process,
+                    batches_skipped=len(skipped_batches),
+                    skipped_details=skipped_batches,
                 )
 
                 # If no modules need processing, return empty results
@@ -151,28 +167,26 @@ class QuestionGenerationService:
                     else QuizLanguage.ENGLISH
                 )
 
-                # Process only the modules that need generation
+                # Process modules with their batches
                 processor = ParallelModuleProcessor(
                     llm_provider=provider,
                     template_manager=self.template_manager,
                     language=language,
-                    question_type=quiz.question_type,
                 )
 
-                results = await processor.process_all_modules(
+                results = await processor.process_all_modules_with_batches(
                     quiz_id, modules_to_process
                 )
 
-                # Calculate total generated questions for logging
-                total_generated = sum(len(questions) for questions in results.values())
+                # Logging moved to the logger.info call below
 
                 logger.info(
                     "batch_tracking_generation_completed",
                     quiz_id=str(quiz_id),
-                    total_questions=total_generated,
                     modules_processed=len(results),
-                    modules_skipped=len(skipped_modules),
-                    successful_modules=sum(1 for q in results.values() if q),
+                    total_questions_generated=sum(
+                        len(questions) for questions in results.values()
+                    ),
                 )
 
                 return results

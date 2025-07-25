@@ -69,12 +69,17 @@ class QuizFactory(BaseFactory):
     canvas_course_name = Faker("catch_phrase")
     selected_modules = factory.LazyFunction(
         lambda: {
-            "module_1": {"name": "Introduction", "question_count": 10},
-            "module_2": {"name": "Advanced Topics", "question_count": 15},
+            "module_1": {
+                "name": "Introduction",
+                "question_batches": [{"question_type": "multiple_choice", "count": 10}],
+            },
+            "module_2": {
+                "name": "Advanced Topics",
+                "question_batches": [{"question_type": "multiple_choice", "count": 15}],
+            },
         }
     )
     title = Faker("sentence", nb_words=4)
-    question_count = 25  # 10 + 15 from default modules
     llm_model = "o3"
     llm_temperature = 1.0
     status = "created"

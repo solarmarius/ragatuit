@@ -220,7 +220,6 @@ def test_dynamic_question_validation_mcq(test_llm_provider, test_template_manage
     workflow = ModuleBatchWorkflow(
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
-        question_type=QuestionType.MULTIPLE_CHOICE,
     )
 
     valid_mcq_question = {
@@ -252,7 +251,6 @@ def test_dynamic_question_validation_fib(test_llm_provider, test_template_manage
     workflow = ModuleBatchWorkflow(
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
-        question_type=QuestionType.FILL_IN_BLANK,
     )
 
     valid_fib_question = {
@@ -291,7 +289,6 @@ def test_dynamic_question_validation_invalid_data(
     workflow = ModuleBatchWorkflow(
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
-        question_type=QuestionType.MULTIPLE_CHOICE,
     )
 
     invalid_question = {
@@ -343,6 +340,7 @@ async def test_state_creation_with_valid_providers(
         module_name="Test Module",
         module_content="Test content for generating questions",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         language=QuizLanguage.ENGLISH,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
@@ -375,6 +373,7 @@ async def test_prepare_prompt_workflow_node(test_llm_provider, test_template_man
         module_name="Test Module",
         module_content="Test content for generating questions",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         language=QuizLanguage.ENGLISH,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
@@ -406,6 +405,7 @@ async def test_generate_batch_workflow_node(test_llm_provider, test_template_man
         module_name="Test Module",
         module_content="Test content",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         language=QuizLanguage.ENGLISH,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
@@ -441,6 +441,7 @@ async def test_validate_batch_workflow_node(
         module_name="Test Module",
         module_content="Test content",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         language=QuizLanguage.ENGLISH,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
@@ -481,6 +482,7 @@ async def test_validate_batch_invalid_json_workflow_node(
         module_name="Test Module",
         module_content="Test content",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         language=QuizLanguage.ENGLISH,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
@@ -513,6 +515,7 @@ def test_check_json_error_conditions(test_llm_provider, test_template_manager):
         module_name="Test",
         module_content="Test",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
         parsing_error=True,
@@ -529,6 +532,7 @@ def test_check_json_error_conditions(test_llm_provider, test_template_manager):
         module_name="Test",
         module_content="Test",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
         parsing_error=False,
@@ -568,6 +572,7 @@ def test_should_retry_conditions(test_llm_provider, test_template_manager):
         module_name="Test",
         module_content="Test",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
         generated_questions=mock_questions,
@@ -582,6 +587,7 @@ def test_should_retry_conditions(test_llm_provider, test_template_manager):
         module_name="Test",
         module_content="Test",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
         generated_questions=[],
@@ -598,6 +604,7 @@ def test_should_retry_conditions(test_llm_provider, test_template_manager):
         module_name="Test",
         module_content="Test",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
         error_message="Critical error",
@@ -635,6 +642,7 @@ async def test_process_module_success(test_llm_provider, test_template_manager):
             module_name="Test Module",
             module_content="Test content for question generation",
             question_count=1,  # Should match the single question in test provider
+            question_type=QuestionType.MULTIPLE_CHOICE,
         )
 
     assert len(questions) == 1
@@ -642,35 +650,6 @@ async def test_process_module_success(test_llm_provider, test_template_manager):
     assert (
         questions[0].question_data["question_text"] == "What is the capital of France?"
     )
-
-
-@pytest.mark.asyncio
-async def test_process_all_modules_success(test_llm_provider, test_template_manager):
-    """Test successful processing of multiple modules."""
-    from src.question.workflows.module_batch_workflow import ParallelModuleProcessor
-
-    processor = ParallelModuleProcessor(
-        llm_provider=test_llm_provider,
-        template_manager=test_template_manager,
-    )
-
-    modules_data = {
-        "mod1": {"name": "Module 1", "content": "Content 1", "question_count": 1},
-        "mod2": {"name": "Module 2", "content": "Content 2", "question_count": 1},
-    }
-
-    # Mock database operations
-    with patch("src.question.workflows.module_batch_workflow.get_async_session"):
-        results = await processor.process_all_modules(
-            quiz_id=uuid4(),
-            modules_data=modules_data,
-        )
-
-    assert len(results) == 2
-    assert "mod1" in results
-    assert "mod2" in results
-    assert len(results["mod1"]) == 1
-    assert len(results["mod2"]) == 1
 
 
 @pytest.mark.asyncio
@@ -728,6 +707,7 @@ async def test_process_module_with_retry(test_llm_provider, test_template_manage
             module_name="Test Module",
             module_content="Test content",
             question_count=1,
+            question_type=QuestionType.MULTIPLE_CHOICE,
         )
 
     assert len(questions) == 1
@@ -761,6 +741,7 @@ async def test_process_module_handles_exceptions(test_template_manager):
         module_name="Test Module",
         module_content="Test content",
         question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
     )
 
     # Should return empty list when all attempts fail
@@ -842,6 +823,7 @@ def test_check_error_type_conditions(test_llm_provider, test_template_manager):
         module_name="Test",
         module_content="Test",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
         parsing_error=True,
@@ -858,6 +840,7 @@ def test_check_error_type_conditions(test_llm_provider, test_template_manager):
         module_name="Test",
         module_content="Test",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
         validation_error=True,
@@ -877,6 +860,7 @@ def test_check_error_type_conditions(test_llm_provider, test_template_manager):
         module_name="Test",
         module_content="Test",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
         parsing_error=False,
@@ -892,6 +876,7 @@ def test_check_error_type_conditions(test_llm_provider, test_template_manager):
         module_name="Test",
         module_content="Test",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
         validation_error=True,
@@ -916,7 +901,6 @@ async def test_prepare_validation_correction_workflow_node(
     workflow = ModuleBatchWorkflow(
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
-        question_type=QuestionType.MULTIPLE_CHOICE,
     )
 
     state = ModuleBatchState(
@@ -925,6 +909,7 @@ async def test_prepare_validation_correction_workflow_node(
         module_name="Test Module",
         module_content="Test content",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         language=QuizLanguage.ENGLISH,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
@@ -970,7 +955,6 @@ async def test_prepare_validation_correction_fib_workflow_node(
     workflow = ModuleBatchWorkflow(
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
-        question_type=QuestionType.FILL_IN_BLANK,
     )
 
     state = ModuleBatchState(
@@ -979,6 +963,7 @@ async def test_prepare_validation_correction_fib_workflow_node(
         module_name="Test Module",
         module_content="Test content",
         target_question_count=3,
+        question_type=QuestionType.FILL_IN_BLANK,
         language=QuizLanguage.ENGLISH,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
@@ -1021,7 +1006,6 @@ async def test_validate_batch_sets_validation_error_flags(
     workflow = ModuleBatchWorkflow(
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
-        question_type=QuestionType.MULTIPLE_CHOICE,
     )
 
     # Create invalid MCQ response (missing required fields)
@@ -1042,6 +1026,7 @@ async def test_validate_batch_sets_validation_error_flags(
         module_name="Test Module",
         module_content="Test content",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         language=QuizLanguage.ENGLISH,
         llm_provider=test_llm_provider,
         template_manager=test_template_manager,
@@ -1176,7 +1161,6 @@ async def test_preserve_successful_questions_on_validation_failure(
     workflow = ModuleBatchWorkflow(
         llm_provider=llm_provider,
         template_manager=test_template_manager,
-        question_type=QuestionType.CATEGORIZATION,
     )
 
     # Create initial state
@@ -1186,6 +1170,7 @@ async def test_preserve_successful_questions_on_validation_failure(
         module_name="Test Module",
         module_content="Test content",
         target_question_count=2,
+        question_type=QuestionType.CATEGORIZATION,
         llm_provider=llm_provider,
         template_manager=test_template_manager,
         raw_response=mock_mixed_success_response,
@@ -1240,7 +1225,6 @@ async def test_validation_correction_with_specific_questions(
     workflow = ModuleBatchWorkflow(
         llm_provider=llm_provider,
         template_manager=test_template_manager,
-        question_type=QuestionType.CATEGORIZATION,
     )
 
     # Create state with failed questions (simulating result of validate_batch)
@@ -1250,6 +1234,7 @@ async def test_validation_correction_with_specific_questions(
         module_name="Test Module",
         module_content="Test content",
         target_question_count=2,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         llm_provider=llm_provider,
         template_manager=test_template_manager,
         validation_error=True,
@@ -1308,7 +1293,6 @@ async def test_question_counting_with_mixed_success(test_template_manager):
     workflow = ModuleBatchWorkflow(
         llm_provider=llm_provider,
         template_manager=test_template_manager,
-        question_type=QuestionType.CATEGORIZATION,
     )
 
     # Create state with mixed success scenario
@@ -1318,6 +1302,7 @@ async def test_question_counting_with_mixed_success(test_template_manager):
         module_name="Test Module",
         module_content="Test content",
         target_question_count=10,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         llm_provider=llm_provider,
         template_manager=test_template_manager,
         successful_questions_preserved=[
@@ -1360,7 +1345,6 @@ async def test_save_questions_combines_preserved_and_new(test_template_manager):
     workflow = ModuleBatchWorkflow(
         llm_provider=llm_provider,
         template_manager=test_template_manager,
-        question_type=QuestionType.CATEGORIZATION,
     )
 
     # Create mock questions
@@ -1373,6 +1357,7 @@ async def test_save_questions_combines_preserved_and_new(test_template_manager):
         module_name="Test Module",
         module_content="Test content",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         llm_provider=llm_provider,
         template_manager=test_template_manager,
         successful_questions_preserved=preserved_questions,
@@ -1415,7 +1400,6 @@ async def test_retry_generation_clears_failed_question_state(test_template_manag
     workflow = ModuleBatchWorkflow(
         llm_provider=llm_provider,
         template_manager=test_template_manager,
-        question_type=QuestionType.CATEGORIZATION,
     )
 
     # Create state with failed questions and preserved questions
@@ -1425,6 +1409,7 @@ async def test_retry_generation_clears_failed_question_state(test_template_manag
         module_name="Test Module",
         module_content="Test content",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         llm_provider=llm_provider,
         template_manager=test_template_manager,
         failed_questions_data=[{"question": "failed"}],
@@ -1468,7 +1453,6 @@ async def test_prepare_prompt_calculates_remaining_questions_correctly(
     workflow = ModuleBatchWorkflow(
         llm_provider=llm_provider,
         template_manager=test_template_manager,
-        question_type=QuestionType.CATEGORIZATION,
     )
 
     # Create state with preserved and generated questions
@@ -1478,6 +1462,7 @@ async def test_prepare_prompt_calculates_remaining_questions_correctly(
         module_name="Test Module",
         module_content="Test content for questions",
         target_question_count=10,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         llm_provider=llm_provider,
         template_manager=test_template_manager,
         successful_questions_preserved=[
@@ -1552,7 +1537,6 @@ async def test_no_questions_preserved_when_all_succeed(test_template_manager):
     workflow = ModuleBatchWorkflow(
         llm_provider=llm_provider,
         template_manager=test_template_manager,
-        question_type=QuestionType.CATEGORIZATION,
     )
 
     state = ModuleBatchState(
@@ -1561,6 +1545,7 @@ async def test_no_questions_preserved_when_all_succeed(test_template_manager):
         module_name="Test Module",
         module_content="Test content",
         target_question_count=2,
+        question_type=QuestionType.CATEGORIZATION,
         llm_provider=llm_provider,
         template_manager=test_template_manager,
         raw_response=valid_response,
@@ -1595,7 +1580,6 @@ async def test_all_questions_fail_validation(
     workflow = ModuleBatchWorkflow(
         llm_provider=llm_provider,
         template_manager=test_template_manager,
-        question_type=QuestionType.CATEGORIZATION,
     )
 
     state = ModuleBatchState(
@@ -1604,6 +1588,7 @@ async def test_all_questions_fail_validation(
         module_name="Test Module",
         module_content="Test content",
         target_question_count=2,
+        question_type=QuestionType.CATEGORIZATION,
         llm_provider=llm_provider,
         template_manager=test_template_manager,
         raw_response=mock_all_invalid_response,

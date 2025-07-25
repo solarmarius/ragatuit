@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from src.auth.models import User
     from src.question.models import Question
 
-from src.question.types import QuestionType, QuizLanguage
+from src.question.types import QuizLanguage
 
 from .schemas import FailureReason, QuizStatus
 
@@ -30,17 +30,16 @@ class Quiz(SQLModel, table=True):
         default_factory=dict, sa_column=Column(JSONB, nullable=False, default={})
     )
     title: str = Field(min_length=1)
-    question_count: int = Field(default=100, ge=1)
+    question_count: int = Field(
+        default=0, description="Total number of questions in the quiz"
+    )
     llm_model: str = Field(default="o3")
     llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
     language: QuizLanguage = Field(
         default=QuizLanguage.ENGLISH,
         description="Language for question generation",
     )
-    question_type: QuestionType = Field(
-        default=QuestionType.MULTIPLE_CHOICE,
-        description="Type of questions to generate",
-    )
+    # Removed: question_type field (now per batch)
     status: QuizStatus = Field(
         default=QuizStatus.CREATED,
         description="Consolidated quiz status",
@@ -109,20 +108,13 @@ class Quiz(SQLModel, table=True):
     )
 
     @property
-    def module_question_distribution(self) -> dict[str, int]:
-        """Get question count per module."""
-        return {
-            module_id: module_data.get("question_count", 0)
-            for module_id, module_data in self.selected_modules.items()
-        }
-
-    @property
-    def total_questions_from_modules(self) -> int:
-        """Calculate total questions from module distribution."""
-        return sum(
-            module_data.get("question_count", 0)
-            for module_data in self.selected_modules.values()
-        )
+    def module_batch_distribution(self) -> dict[str, list[dict[str, Any]]]:
+        """Get question batch distribution per module."""
+        distribution = {}
+        for module_id, module_data in self.selected_modules.items():
+            if "question_batches" in module_data:
+                distribution[module_id] = module_data["question_batches"]
+        return distribution
 
     # Pydantic validators for structure
     @field_validator("selected_modules")
@@ -140,23 +132,50 @@ class Quiz(SQLModel, table=True):
             if "name" not in module_data:
                 raise ValueError(f"Module {module_id} missing required 'name' field")
 
-            if "question_count" not in module_data:
+            if "question_batches" not in module_data:
                 raise ValueError(
-                    f"Module {module_id} missing required 'question_count' field"
+                    f"Module {module_id} missing required 'question_batches' field"
                 )
 
             # Validate types
             if not isinstance(module_data["name"], str):
                 raise ValueError(f"Module {module_id} name must be string")
 
-            if not isinstance(module_data["question_count"], int):
-                raise ValueError(f"Module {module_id} question_count must be integer")
+            if not isinstance(module_data["question_batches"], list):
+                raise ValueError(f"Module {module_id} question_batches must be a list")
 
-            # Validate question count range
-            if not (1 <= module_data["question_count"] <= 20):
+            # Validate batch structure
+            if not module_data["question_batches"]:
                 raise ValueError(
-                    f"Module {module_id} question_count must be between 1 and 20"
+                    f"Module {module_id} must have at least one question batch"
                 )
+
+            if len(module_data["question_batches"]) > 4:
+                raise ValueError(
+                    f"Module {module_id} cannot have more than 4 question batches"
+                )
+
+            # Validate each batch
+            for i, batch in enumerate(module_data["question_batches"]):
+                if not isinstance(batch, dict):
+                    raise ValueError(
+                        f"Module {module_id} batch {i} must be a dictionary"
+                    )
+
+                if "question_type" not in batch or "count" not in batch:
+                    raise ValueError(
+                        f"Module {module_id} batch {i} missing required fields"
+                    )
+
+                if not isinstance(batch["count"], int):
+                    raise ValueError(
+                        f"Module {module_id} batch {i} count must be integer"
+                    )
+
+                if not (1 <= batch["count"] <= 20):
+                    raise ValueError(
+                        f"Module {module_id} batch {i} count must be between 1 and 20"
+                    )
 
         return v
 

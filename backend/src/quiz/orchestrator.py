@@ -8,7 +8,6 @@ composition and dependency injection to maintain clean domain boundaries.
 import asyncio
 import uuid
 from collections.abc import Callable
-from datetime import datetime
 from functools import wraps
 from typing import Any, TypeVar
 from uuid import UUID
@@ -17,7 +16,7 @@ from src.config import get_logger
 from src.database import execute_in_transaction
 
 # Removed DI container import - GenerationOrchestrationService imported locally
-from src.question.types import QuestionType, QuizLanguage
+from src.question.types import QuizLanguage
 
 from .constants import OPERATION_TIMEOUTS
 from .exceptions import OrchestrationTimeoutError
@@ -282,11 +281,12 @@ async def _execute_generation_workflow(
     _llm_model: str,
     _llm_temperature: float,
     language: QuizLanguage,
-    question_type: Any,
     generation_service: Any = None,
 ) -> tuple[str, str | None, Exception | None]:
     """
     Execute the module-based question generation workflow with batch-level tracking.
+
+    Now processes multiple question types per module based on quiz configuration.
 
     Returns:
         Tuple of (final_status, error_message, failure_exception)
@@ -305,7 +305,6 @@ async def _execute_generation_workflow(
             "generation_workflow_content_preparation_started",
             quiz_id=str(quiz_id),
             language=language.value,
-            question_type=question_type.value,
         )
 
         extracted_content = await prepare_and_validate_content(quiz_id)
@@ -336,13 +335,19 @@ async def _execute_generation_workflow(
             )
         )
 
-        # Analyze batch-level results
-        successful_batches = []
-        failed_batches = []
-        total_generated = 0
-        total_target = 0
+        # Analyze batch-level results using the new batch structure
+        # The generation service now handles batch tracking automatically
+        # We get the results and let the generation service update metadata
+        total_generated = sum(len(questions) for questions in batch_results.values())
 
-        # Get expected counts from quiz module selection
+        logger.info(
+            "generation_workflow_batch_results_analyzed",
+            quiz_id=str(quiz_id),
+            modules_processed=len(batch_results),
+            total_questions_generated=total_generated,
+        )
+
+        # Get quiz to check batch status via generation metadata
         from src.database import get_async_session
         from src.quiz.models import Quiz
 
@@ -351,70 +356,29 @@ async def _execute_generation_workflow(
             if not quiz:
                 raise ValueError(f"Quiz {quiz_id} not found")
 
-            # Build batch analysis
-            for module_id, module_info in quiz.selected_modules.items():
-                expected_count = module_info.get("question_count", 0)
-                total_target += expected_count
-
-                batch_key = f"{module_id}_{question_type.value}_{expected_count}"
-                actual_count = len(batch_results.get(module_id, []))
-                total_generated += actual_count
-
-                if actual_count == expected_count:
-                    # 100% success - batch completed fully
-                    successful_batches.append(
-                        {
-                            "batch_key": batch_key,
-                            "module_id": module_id,
-                            "module_name": module_info.get("name", "Unknown"),
-                            "question_type": question_type.value,
-                            "target_count": expected_count,
-                            "generated_count": actual_count,
-                            "status": "success",
-                            "questions_saved": True,
-                        }
-                    )
-                else:
-                    # Failed batch - didn't meet target
-                    failed_batches.append(
-                        {
-                            "batch_key": batch_key,
-                            "module_id": module_id,
-                            "module_name": module_info.get("name", "Unknown"),
-                            "question_type": question_type.value,
-                            "target_count": expected_count,
-                            "generated_count": actual_count,
-                            "status": "failed",
-                            "questions_saved": False,
-                            "error": f"Generated {actual_count}/{expected_count} questions",
-                        }
-                    )
-
-        # Store batch results in quiz metadata
-        await _store_generation_metadata(
-            quiz_id, successful_batches, failed_batches, total_generated, total_target
-        )
+            # Get successful and failed batches from metadata (updated by generation service)
+            generation_metadata = quiz.generation_metadata or {}
+            successful_batch_keys = generation_metadata.get("successful_batches", [])
+            failed_batch_keys = generation_metadata.get("failed_batches", [])
 
         # Determine overall status based on batch results
-        if len(successful_batches) == 0:
+        if len(successful_batch_keys) == 0:
             # Complete failure - no batches succeeded
             logger.error(
                 "generation_workflow_complete_failure",
                 quiz_id=str(quiz_id),
                 total_generated=total_generated,
-                total_target=total_target,
-                failed_batches=len(failed_batches),
+                failed_batches=len(failed_batch_keys),
             )
             return "failed", "No questions were generated from any module", None
 
-        elif len(failed_batches) == 0:
+        elif len(failed_batch_keys) == 0:
             # Complete success - all batches succeeded
             logger.info(
                 "generation_workflow_complete_success",
                 quiz_id=str(quiz_id),
                 total_generated=total_generated,
-                total_target=total_target,
-                successful_batches=len(successful_batches),
+                successful_batches=len(successful_batch_keys),
             )
             return "completed", None, None
 
@@ -424,10 +388,8 @@ async def _execute_generation_workflow(
                 "generation_workflow_partial_success",
                 quiz_id=str(quiz_id),
                 total_generated=total_generated,
-                total_target=total_target,
-                successful_batches=len(successful_batches),
-                failed_batches=len(failed_batches),
-                success_rate=f"{(total_generated/total_target)*100:.1f}%",
+                successful_batches=len(successful_batch_keys),
+                failed_batches=len(failed_batch_keys),
             )
             return "partial_success", None, None
 
@@ -437,82 +399,9 @@ async def _execute_generation_workflow(
             quiz_id=str(quiz_id),
             error=str(e),
             error_type=type(e).__name__,
-            question_type=question_type.value,
             exc_info=True,
         )
         return "failed", str(e), e
-
-
-async def _store_generation_metadata(
-    quiz_id: UUID,
-    successful_batches: list[dict[str, Any]],
-    failed_batches: list[dict[str, Any]],
-    total_generated: int,
-    total_target: int,
-) -> None:
-    """Store batch-level generation results in quiz metadata."""
-    from src.database import get_async_session
-    from src.quiz.models import Quiz
-
-    async with get_async_session() as session:
-        quiz = await session.get(Quiz, quiz_id)
-        if not quiz:
-            return
-
-        # Create generation attempt record
-        batch_results_dict: dict[str, Any] = {}
-
-        # Add successful batches to record
-        for batch in successful_batches:
-            batch_results_dict[batch["batch_key"]] = batch
-
-        # Add failed batches to record
-        for batch in failed_batches:
-            batch_results_dict[batch["batch_key"]] = batch
-
-        attempt_record = {
-            "attempt_number": len(
-                quiz.generation_metadata.get("generation_attempts", [])
-            )
-            + 1,
-            "timestamp": datetime.utcnow().isoformat(),
-            "overall_status": "partial_success"
-            if failed_batches
-            else "complete_success",
-            "batch_results": batch_results_dict,
-        }
-
-        # Update quiz metadata
-        if not quiz.generation_metadata:
-            quiz.generation_metadata = {}
-
-        if "generation_attempts" not in quiz.generation_metadata:
-            quiz.generation_metadata["generation_attempts"] = []
-
-        quiz.generation_metadata["generation_attempts"].append(attempt_record)
-
-        # Update summary information
-        quiz.generation_metadata.update(
-            {
-                "failed_batches": [batch["batch_key"] for batch in failed_batches],
-                "successful_batches": [
-                    batch["batch_key"] for batch in successful_batches
-                ],
-                "total_questions_saved": total_generated,
-                "total_questions_target": total_target,
-                "last_updated": datetime.utcnow().isoformat(),
-            }
-        )
-
-        await session.commit()
-
-        logger.info(
-            "generation_metadata_stored",
-            quiz_id=str(quiz_id),
-            successful_batches=len(successful_batches),
-            failed_batches=len(failed_batches),
-            attempt_number=attempt_record["attempt_number"],
-        )
 
 
 async def _execute_export_workflow(
@@ -762,22 +651,20 @@ async def orchestrate_quiz_question_generation(
     llm_model: str,
     llm_temperature: float,
     language: QuizLanguage,
-    question_type: QuestionType = QuestionType.MULTIPLE_CHOICE,
     generation_service: Any = None,
 ) -> None:
     """
     Orchestrate the complete question generation workflow for a quiz.
 
-    This function owns the question generation orchestration while using
-    the existing modular question generation system.
+    This function now processes multiple question types per module based on
+    the quiz's selected_modules configuration with question_batches.
 
     Args:
         quiz_id: UUID of the quiz to generate questions for
-        target_question_count: Number of questions to generate
+        target_question_count: Number of questions to generate (informational)
         llm_model: LLM model to use for generation
         llm_temperature: Temperature setting for LLM
         language: Language for question generation
-        question_type: Type of questions to generate
         generation_service: Optional injected generation service (creates default if None)
     """
     logger.info(
@@ -786,7 +673,7 @@ async def orchestrate_quiz_question_generation(
         target_questions=target_question_count,
         llm_model=llm_model,
         llm_temperature=llm_temperature,
-        question_type=question_type.value,
+        language=language.value,
     )
 
     # === Transaction 1: Reserve the Job ===
@@ -816,7 +703,6 @@ async def orchestrate_quiz_question_generation(
         llm_model,
         llm_temperature,
         language,
-        question_type,
         generation_service,
     )
 
