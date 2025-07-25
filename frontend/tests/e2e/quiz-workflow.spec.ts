@@ -115,7 +115,6 @@ test.describe("Quiz Workflow End-to-End", () => {
       page.getByText("Introduction to Neural Networks")
     ).toBeVisible();
     await page.getByText("Introduction to Neural Networks").click();
-    await page.getByText("Deep Learning Concepts").click();
 
     // Wait for module selection to be processed and next button to be enabled
     await page.waitForTimeout(500);
@@ -123,18 +122,19 @@ test.describe("Quiz Workflow End-to-End", () => {
     // next to next step (Questions per Module)
     await page.getByRole("button", { name: "next" }).click();
 
-    // Step 3: Questions per Module - wait for page to load
+    // Step 3: Configure Question Types per Module - wait for page to load
     await page.waitForLoadState("networkidle");
     await expect(
-      page.getByRole("heading", { name: "Set Questions per Module" })
+      page.getByRole("heading", { name: "Configure Question Types per Module" })
     ).toBeVisible();
 
-    // Verify module question inputs are visible (default 10 per module)
-    const moduleInputs = page.getByRole("spinbutton");
-    await expect(moduleInputs.first()).toHaveValue("10");
+    // Add question batch for first module
+    await page.getByText("Add Batch").first().click();
 
-    // Adjust question count for first module
-    await moduleInputs.first().fill("15");
+    // Verify default question type is selected and adjust count
+    const questionInputs = page.getByRole("spinbutton");
+    await expect(questionInputs.first()).toHaveValue("10");
+    await questionInputs.first().fill("15");
 
     // next to next step (quiz settings)
     await page.getByRole("button", { name: "next" }).click();
@@ -158,11 +158,12 @@ test.describe("Quiz Workflow End-to-End", () => {
             selected_modules: {
               "173467": {
                 name: "Introduction to Neural Networks",
-                question_count: 25,
+                question_batches: [
+                  { question_type: "multiple_choice", count: 15 }
+                ],
               },
-              "173468": { name: "Deep Learning Concepts", question_count: 10 },
             },
-            question_count: 35,
+            question_count: 15,
             llm_model: "o3",
             llm_temperature: 1.0,
             created_at: "2024-01-15T10:30:00Z",
@@ -192,11 +193,12 @@ test.describe("Quiz Workflow End-to-End", () => {
           selected_modules: {
             "173467": {
               name: "Introduction to Neural Networks",
-              question_count: 25,
+              question_batches: [
+                { question_type: "multiple_choice", count: 15 }
+              ],
             },
-            "173468": { name: "Deep Learning Concepts", question_count: 25 },
           },
-          question_count: 50,
+          question_count: 15,
           llm_model: "o3",
           llm_temperature: 1.0,
           created_at: "2024-01-15T10:30:00Z",
@@ -210,10 +212,9 @@ test.describe("Quiz Workflow End-to-End", () => {
     await expect(page.getByText("My ML Quiz")).toBeVisible();
     await expect(page.getByText("Machine Learning Fundamentals")).toBeVisible();
     await expect(
-      page.getByText("Introduction to Neural Networks")
+      page.getByText("Introduction to Neural Networks").first()
     ).toBeVisible();
-    await expect(page.getByText("Deep Learning Concepts")).toBeVisible();
-    await expect(page.locator("span").getByText("50").first()).toBeVisible();
+    await expect(page.locator("span").getByText("15").first()).toBeVisible();
   });
 
   test("navigate from quiz list to quiz detail", async ({ page }) => {
@@ -231,8 +232,18 @@ test.describe("Quiz Workflow End-to-End", () => {
             canvas_course_id: 12345,
             canvas_course_name: "Test Course",
             selected_modules: {
-              "173467": { name: "Module 1", question_count: 25 },
-              "173468": { name: "Module 2", question_count: 25 },
+              "173467": {
+                name: "Module 1",
+                question_batches: [
+                  { question_type: "multiple_choice", count: 25 }
+                ]
+              },
+              "173468": {
+                name: "Module 2",
+                question_batches: [
+                  { question_type: "multiple_choice", count: 25 }
+                ]
+              },
             },
             question_count: 50,
             llm_model: "o3",
@@ -256,10 +267,20 @@ test.describe("Quiz Workflow End-to-End", () => {
           canvas_course_id: 12345,
           canvas_course_name: "Test Course",
           selected_modules: {
-            "173467": { name: "Module 1", question_count: 25 },
-            "173468": { name: "Module 2", question_count: 25 },
+            "173467": {
+              name: "Module 1",
+              question_batches: [
+                { question_type: "multiple_choice", count: 25 }
+              ]
+            },
+            "173468": {
+              name: "Module 2",
+              question_batches: [
+                { question_type: "multiple_choice", count: 25 }
+              ]
+            },
           },
-          question_count: 75,
+          question_count: 50,
           llm_model: "o3",
           llm_temperature: 0.3,
           created_at: "2024-01-15T10:30:00Z",
@@ -284,9 +305,9 @@ test.describe("Quiz Workflow End-to-End", () => {
 
     // Verify quiz details
     await expect(page.getByText("Existing Quiz")).toBeVisible();
-    await expect(page.getByText("Module 1")).toBeVisible();
-    await expect(page.getByText("Module 2")).toBeVisible();
-    await expect(page.locator("span").getByText("75").first()).toBeVisible();
+    await expect(page.getByText("Module 1").first()).toBeVisible();
+    await expect(page.getByText("Module 2").first()).toBeVisible();
+    await expect(page.locator("span").getByText("50").first()).toBeVisible();
   });
 
   test("quiz list pagination and sorting", async ({ page }) => {
@@ -296,8 +317,15 @@ test.describe("Quiz Workflow End-to-End", () => {
       title: `Quiz ${i + 1}`,
       canvas_course_id: 12345 + i,
       canvas_course_name: `Course ${i + 1}`,
-      selected_modules: `{"${173467 + i}": {"name": "Module ${i + 1}", "question_count": 25}}`,
-      question_count: 50 + i,
+      selected_modules: {
+        [`${173467 + i}`]: {
+          name: `Module ${i + 1}`,
+          question_batches: [
+            { question_type: "multiple_choice", count: 25 }
+          ]
+        }
+      },
+      question_count: 25,
       llm_model: i % 2 === 0 ? "gpt-4o" : "o3",
       llm_temperature: 0.3 + i * 0.1,
       created_at: new Date(2024, 0, i + 1, 10, 30).toISOString(),
@@ -338,9 +366,14 @@ test.describe("Quiz Workflow End-to-End", () => {
             canvas_course_id: 12345,
             canvas_course_name: "Mobile Test Course",
             selected_modules: {
-              "173467": { name: "Mobile Module", question_count: 25 },
+              "173467": {
+                name: "Mobile Module",
+                question_batches: [
+                  { question_type: "multiple_choice", count: 25 }
+                ]
+              },
             },
-            question_count: 50,
+            question_count: 25,
             llm_model: "gpt-4o",
             llm_temperature: 0.5,
             created_at: "2024-01-15T10:30:00Z",
@@ -379,9 +412,14 @@ test.describe("Quiz Workflow End-to-End", () => {
             canvas_course_id: 12345,
             canvas_course_name: "Test Course",
             selected_modules: {
-              "173467": { name: "Module 1", question_count: 25 },
+              "173467": {
+                name: "Module 1",
+                question_batches: [
+                  { question_type: "multiple_choice", count: 25 }
+                ]
+              },
             },
-            question_count: 50,
+            question_count: 25,
             llm_model: "gpt-4o",
             llm_temperature: 0.5,
             created_at: "2024-01-15T10:30:00Z",
@@ -440,21 +478,20 @@ test.describe("Quiz Workflow End-to-End", () => {
     // Step 2: Select modules
     await page.waitForLoadState("networkidle");
     await page.getByText("Introduction to Neural Networks").click();
-    await page.getByText("Deep Learning Concepts").click();
 
     // Go to step 3 (questions per module)
     await page.getByRole("button", { name: "next" }).click();
 
-    // Step 3: Questions per Module
+    // Step 3: Configure Question Types per Module
     await page.waitForLoadState("networkidle");
     await expect(
-      page.getByRole("heading", { name: "Set Questions per Module" })
+      page.getByRole("heading", { name: "Configure Question Types per Module" })
     ).toBeVisible();
 
-    // Set question counts for modules
-    const moduleInputs = page.getByRole("spinbutton");
-    await moduleInputs.first().fill("15");
-    await moduleInputs.last().fill("15");
+    // Add question batch for the single module
+    await page.getByText("Add Batch").first().click();
+    const questionInputs = page.getByRole("spinbutton");
+    await questionInputs.first().fill("15");
 
     // Go to step 4 (quiz settings)
     await page.getByRole("button", { name: "next" }).click();
@@ -494,11 +531,12 @@ test.describe("Quiz Workflow End-to-End", () => {
             selected_modules: {
               "173467": {
                 name: "Introduction to Neural Networks",
-                question_count: 15,
+                question_batches: [
+                  { question_type: "multiple_choice", count: 15 }
+                ],
               },
-              "173468": { name: "Deep Learning Concepts", question_count: 15 },
             },
-            question_count: 30,
+            question_count: 15,
             language: "no",
             llm_model: "o3",
             llm_temperature: 1.0,
@@ -544,8 +582,12 @@ test.describe("Quiz Workflow End-to-End", () => {
     // Step 3: Questions per Module
     await page.waitForLoadState("networkidle");
     await expect(
-      page.getByRole("heading", { name: "Set Questions per Module" })
+      page.getByRole("heading", { name: "Configure Question Types per Module" })
     ).toBeVisible();
+
+    // Add question batch to enable next button
+    await page.getByText("Add Batch").first().click();
+
     await page.getByRole("button", { name: "next" }).click();
 
     // Step 4: Quiz Configuration - verify English is selected by default
@@ -593,8 +635,12 @@ test.describe("Quiz Workflow End-to-End", () => {
     // Step 3: Questions per Module
     await page.waitForLoadState("networkidle");
     await expect(
-      page.getByRole("heading", { name: "Set Questions per Module" })
+      page.getByRole("heading", { name: "Configure Question Types per Module" })
     ).toBeVisible();
+
+    // Add question batch to enable next button
+    await page.getByText("Add Batch").first().click();
+
     await page.getByRole("button", { name: "next" }).click();
 
     // Step 4: Quiz Configuration
@@ -665,8 +711,12 @@ test.describe("Quiz Workflow End-to-End", () => {
     // Step 3: Questions per Module
     await page.waitForLoadState("networkidle");
     await expect(
-      page.getByRole("heading", { name: "Set Questions per Module" })
+      page.getByRole("heading", { name: "Configure Question Types per Module" })
     ).toBeVisible();
+
+    // Add question batch to enable next button
+    await page.getByText("Add Batch").first().click();
+
     await page.getByRole("button", { name: "next" }).click();
 
     // Step 4: Quiz Configuration
@@ -683,7 +733,7 @@ test.describe("Quiz Workflow End-to-End", () => {
     // Go back to step 3
     await page.getByRole("button", { name: "Previous" }).click();
     await expect(
-      page.getByText("Step 3 of 4: Questions per Module")
+      page.getByText("Step 3 of 4: Configure Question Types")
     ).toBeVisible();
 
     // Go back to step 4
@@ -718,10 +768,12 @@ test.describe("Quiz Workflow End-to-End", () => {
             selected_modules: {
               "173467": {
                 name: "Introduction to Neural Networks",
-                question_count: 10,
+                question_batches: [
+                  { question_type: "multiple_choice", count: 20 }
+                ],
               },
             },
-            question_count: 10,
+            question_count: 20,
             language: "no",
             llm_model: "o3",
             llm_temperature: 1.0,
@@ -752,13 +804,18 @@ test.describe("Quiz Workflow End-to-End", () => {
     // Step 3: Questions per Module - set question count
     await page.waitForLoadState("networkidle");
     await expect(
-      page.getByRole("heading", { name: "Set Questions per Module" })
+      page.getByRole("heading", { name: "Configure Question Types per Module" })
     ).toBeVisible();
-    const moduleInputs = page.getByRole("spinbutton");
 
-    // Try to change the input value
-    await moduleInputs.first().clear();
-    await moduleInputs.first().type("25");
+    // Add question batch for the module
+    await page.getByText("Add Batch").first().click();
+    const questionInputs = page.getByRole("spinbutton");
+
+    // Update the question count (max allowed is 20)
+    await questionInputs.first().fill("20");
+
+    // Verify the value was set correctly
+    await expect(questionInputs.first()).toHaveValue("20");
 
     // Wait for the form to update
     await page.waitForTimeout(200);
@@ -779,7 +836,12 @@ test.describe("Quiz Workflow End-to-End", () => {
     expect(capturedRequestBody.language).toBe("no");
     expect(capturedRequestBody.title).toBe("Norsk Test Quiz");
     expect(capturedRequestBody.selected_modules).toEqual({
-      "173467": { name: "Introduction to Neural Networks", question_count: 10 },
+      "173467": {
+        name: "Introduction to Neural Networks",
+        question_batches: [
+          { question_type: "multiple_choice", count: 20 }
+        ]
+      },
     });
   });
 });

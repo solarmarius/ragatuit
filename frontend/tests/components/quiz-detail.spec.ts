@@ -28,11 +28,26 @@ test.describe("Quiz Detail Component", () => {
       canvas_course_id: 12345,
       canvas_course_name: "CS 589 - Machine Learning",
       selected_modules: {
-        "173467": { name: "Neural Networks", question_count: 20 },
-        "173468": { name: "Deep Learning", question_count: 20 },
-        "173469": { name: "Reinforcement Learning", question_count: 20 },
+        "173467": {
+          name: "Neural Networks",
+          question_batches: [
+            { question_type: "multiple_choice", count: 20 }
+          ]
+        },
+        "173468": {
+          name: "Deep Learning",
+          question_batches: [
+            { question_type: "multiple_choice", count: 20 }
+          ]
+        },
+        "173469": {
+          name: "Reinforcement Learning",
+          question_batches: [
+            { question_type: "multiple_choice", count: 20 }
+          ]
+        },
       },
-      question_count: 75,
+      question_count: 60,
       llm_model: "gpt-4o",
       llm_temperature: 0.7,
       created_at: "2024-01-15T10:30:00Z",
@@ -62,14 +77,14 @@ test.describe("Quiz Detail Component", () => {
     await expect(page.getByText("Course ID: 12345")).toBeVisible();
 
     // Check selected modules section - use more specific locator
-    await expect(page.getByText("Neural Networks")).toBeVisible();
-    await expect(page.getByText("Deep Learning")).toBeVisible();
-    await expect(page.getByText("Reinforcement Learning")).toBeVisible();
+    await expect(page.getByText("Neural Networks").first()).toBeVisible();
+    await expect(page.getByText("Deep Learning").first()).toBeVisible();
+    await expect(page.getByText("Reinforcement Learning").first()).toBeVisible();
 
     // Check quiz settings section
     await expect(page.getByText("Quiz Settings")).toBeVisible();
     await expect(page.getByText("Question Count")).toBeVisible();
-    await expect(page.locator('text="75"').first()).toBeVisible();
+    await expect(page.locator('text="60"').first()).toBeVisible();
 
     // Check metadata section
     await expect(page.getByText("Quiz Metadata")).toBeVisible();
@@ -145,7 +160,14 @@ test.describe("Quiz Detail Component", () => {
       title: "No Timestamps Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
-      selected_modules: { "173467": { name: "Module 1", question_count: 25 } },
+      selected_modules: {
+        "173467": {
+          name: "Module 1",
+          question_batches: [
+            { question_type: "multiple_choice", count: 25 }
+          ]
+        }
+      },
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.5,
@@ -177,7 +199,14 @@ test.describe("Quiz Detail Component", () => {
       title: "Only Created Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
-      selected_modules: { "173467": { name: "Module 1", question_count: 25 } },
+      selected_modules: {
+        "173467": {
+          name: "Module 1",
+          question_batches: [
+            { question_type: "multiple_choice", count: 25 }
+          ]
+        }
+      },
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.5,
@@ -244,7 +273,14 @@ test.describe("Quiz Detail Component", () => {
       title: "Style Test Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
-      selected_modules: { "173467": { name: "Module 1", question_count: 25 } },
+      selected_modules: {
+        "173467": {
+          name: "Module 1",
+          question_batches: [
+            { question_type: "multiple_choice", count: 25 }
+          ]
+        }
+      },
       question_count: 100,
       llm_model: "gpt-4.1-mini",
       llm_temperature: 1.5,
@@ -316,14 +352,36 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "1": {
           name: "Module with Very Long Name That Tests Text Wrapping in Badges",
-          question_count: 10,
+          question_batches: [
+            { question_type: "multiple_choice", count: 10 }
+          ],
         },
-        "2": { name: "Another Module", question_count: 10 },
-        "3": { name: "Third Module", question_count: 10 },
-        "4": { name: "Fourth Module", question_count: 10 },
-        "5": { name: "Fifth Module", question_count: 10 },
+        "2": {
+          name: "Another Module",
+          question_batches: [
+            { question_type: "multiple_choice", count: 10 }
+          ]
+        },
+        "3": {
+          name: "Third Module",
+          question_batches: [
+            { question_type: "multiple_choice", count: 10 }
+          ]
+        },
+        "4": {
+          name: "Fourth Module",
+          question_batches: [
+            { question_type: "multiple_choice", count: 10 }
+          ]
+        },
+        "5": {
+          name: "Fifth Module",
+          question_batches: [
+            { question_type: "multiple_choice", count: 10 }
+          ]
+        },
       },
-      question_count: 200, // Maximum
+      question_count: 50, // Total of all batches
       llm_model: "model-with-very-long-name",
       llm_temperature: 2.0, // Maximum
       created_at: "2024-01-15T10:30:00Z",
@@ -342,15 +400,15 @@ test.describe("Quiz Detail Component", () => {
     await page.reload();
 
     // Check extreme values are displayed correctly
-    await expect(page.locator('text="200"').first()).toBeVisible();
+    await expect(page.locator('text="50"').first()).toBeVisible();
     await expect(page.getByText("Course with Long Name")).toBeVisible();
 
     // Check all modules are displayed
-    await expect(page.getByText("Module with Very Long Name")).toBeVisible();
-    await expect(page.getByText("Another Module")).toBeVisible();
-    await expect(page.getByText("Third Module")).toBeVisible();
-    await expect(page.getByText("Fourth Module")).toBeVisible();
-    await expect(page.getByText("Fifth Module")).toBeVisible();
+    await expect(page.getByText("Module with Very Long Name").first()).toBeVisible();
+    await expect(page.getByText("Another Module").first()).toBeVisible();
+    await expect(page.getByText("Third Module").first()).toBeVisible();
+    await expect(page.getByText("Fourth Module").first()).toBeVisible();
+    await expect(page.getByText("Fifth Module").first()).toBeVisible();
   });
 
   test("should display quiz ID in monospace font", async ({ page }) => {
@@ -359,7 +417,14 @@ test.describe("Quiz Detail Component", () => {
       title: "Font Test Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
-      selected_modules: { "173467": { name: "Module 1", question_count: 25 } },
+      selected_modules: {
+        "173467": {
+          name: "Module 1",
+          question_batches: [
+            { question_type: "multiple_choice", count: 25 }
+          ]
+        }
+      },
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.5,
@@ -390,7 +455,14 @@ test.describe("Quiz Detail Component", () => {
       title: "Tab Test Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
-      selected_modules: { "173467": { name: "Module 1", question_count: 25 } },
+      selected_modules: {
+        "173467": {
+          name: "Module 1",
+          question_batches: [
+            { question_type: "multiple_choice", count: 25 }
+          ]
+        }
+      },
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.5,
@@ -434,7 +506,14 @@ test.describe("Quiz Detail Component", () => {
       title: "Tab Navigation Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
-      selected_modules: { "173467": { name: "Module 1", question_count: 25 } },
+      selected_modules: {
+        "173467": {
+          name: "Module 1",
+          question_batches: [
+            { question_type: "multiple_choice", count: 25 }
+          ]
+        }
+      },
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.5,
@@ -496,7 +575,14 @@ test.describe("Quiz Detail Component", () => {
       title: "Complete Generation Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
-      selected_modules: { "173467": { name: "Module 1", question_count: 25 } },
+      selected_modules: {
+        "173467": {
+          name: "Module 1",
+          question_batches: [
+            { question_type: "multiple_choice", count: 25 }
+          ]
+        }
+      },
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.5,
@@ -540,7 +626,14 @@ test.describe("Quiz Detail Component", () => {
       title: "Incomplete Generation Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
-      selected_modules: { "173467": { name: "Module 1", question_count: 25 } },
+      selected_modules: {
+        "173467": {
+          name: "Module 1",
+          question_batches: [
+            { question_type: "multiple_choice", count: 25 }
+          ]
+        }
+      },
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.5,
@@ -577,7 +670,14 @@ test.describe("Quiz Detail Component", () => {
       title: "Partial Complete Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
-      selected_modules: { "173467": { name: "Module 1", question_count: 25 } },
+      selected_modules: {
+        "173467": {
+          name: "Module 1",
+          question_batches: [
+            { question_type: "multiple_choice", count: 25 }
+          ]
+        }
+      },
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.5,
