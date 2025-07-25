@@ -55,9 +55,8 @@ async def create_new_quiz(
         quiz_data (QuizCreate): Quiz creation data including:
             - canvas_course_id: Canvas course ID
             - canvas_course_name: Canvas course name
-            - selected_modules: Dict mapping module IDs to names
+            - selected_modules: Dict mapping module IDs to ModuleSelection with question_batches
             - title: Quiz title
-            - question_count: Number of questions to generate (1-200, default 100)
             - llm_model: LLM model to use (default "o3")
             - llm_temperature: LLM temperature setting (0.0-2.0, default 1)
 
@@ -76,9 +75,16 @@ async def create_new_quiz(
         {
             "canvas_course_id": 12345,
             "canvas_course_name": "Introduction to AI",
-            "selected_modules": {"173467": "Machine Learning Basics"},
+            "selected_modules": {
+                "173467": {
+                    "name": "Machine Learning Basics",
+                    "question_batches": [
+                        {"question_type": "multiple_choice", "count": 30},
+                        {"question_type": "fill_in_blank", "count": 20}
+                    ]
+                }
+            },
             "title": "AI Fundamentals Quiz",
-            "question_count": 50,
             "llm_model": "gpt-4o",
             "llm_temperature": 1
         }
@@ -163,9 +169,16 @@ def get_quiz(quiz: QuizOwnership) -> Quiz:
             "owner_id": "87654321-4321-8765-cba9-987654321abc",
             "canvas_course_id": 12345,
             "canvas_course_name": "Introduction to AI",
-            "selected_modules": "{\"173467\": \"Machine Learning Basics\"}",
+            "selected_modules": {
+                "173467": {
+                    "name": "Machine Learning Basics",
+                    "question_batches": [
+                        {"question_type": "multiple_choice", "count": 30},
+                        {"question_type": "fill_in_blank", "count": 20}
+                    ]
+                }
+            },
             "title": "AI Fundamentals Quiz",
-            "question_count": 50,
             "llm_model": "gpt-4o",
             "llm_temperature": 1,
             "created_at": "2023-01-01T12:00:00Z",
@@ -204,9 +217,16 @@ def get_user_quizzes_endpoint(
                 "owner_id": "87654321-4321-8765-cba9-987654321abc",
                 "canvas_course_id": 12345,
                 "canvas_course_name": "Introduction to AI",
-                "selected_modules": "{\"173467\": \"Machine Learning Basics\"}",
+                "selected_modules": {
+                    "173467": {
+                        "name": "Machine Learning Basics",
+                        "question_batches": [
+                            {"question_type": "multiple_choice", "count": 30},
+                            {"question_type": "fill_in_blank", "count": 20}
+                        ]
+                    }
+                },
                 "title": "AI Fundamentals Quiz",
-                "question_count": 50,
                 "llm_model": "gpt-4o",
                 "llm_temperature": 1,
                 "created_at": "2023-01-01T12:00:00Z",
