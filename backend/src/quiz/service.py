@@ -318,7 +318,7 @@ def prepare_question_generation(
     session.commit()
 
     return {
-        "question_count": quiz.question_count,
+        "question_count": quiz.total_question_count,
         "llm_model": quiz.llm_model,
         "llm_temperature": quiz.llm_temperature,
         "language": quiz.language,
@@ -380,7 +380,7 @@ async def reserve_quiz_job(
         quiz.failure_reason = None
         quiz.last_status_update = datetime.now(timezone.utc)
         settings = {
-            "target_questions": quiz.question_count,
+            "target_questions": quiz.total_question_count,
             "llm_model": quiz.llm_model,
             "llm_temperature": quiz.llm_temperature,
             "language": quiz.language,
