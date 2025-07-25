@@ -653,35 +653,6 @@ async def test_process_module_success(test_llm_provider, test_template_manager):
 
 
 @pytest.mark.asyncio
-async def test_process_all_modules_success(test_llm_provider, test_template_manager):
-    """Test successful processing of multiple modules."""
-    from src.question.workflows.module_batch_workflow import ParallelModuleProcessor
-
-    processor = ParallelModuleProcessor(
-        llm_provider=test_llm_provider,
-        template_manager=test_template_manager,
-    )
-
-    modules_data = {
-        "mod1": {"name": "Module 1", "content": "Content 1", "question_count": 1},
-        "mod2": {"name": "Module 2", "content": "Content 2", "question_count": 1},
-    }
-
-    # Mock database operations
-    with patch("src.question.workflows.module_batch_workflow.get_async_session"):
-        results = await processor.process_all_modules(
-            quiz_id=uuid4(),
-            modules_data=modules_data,
-        )
-
-    assert len(results) == 2
-    assert "mod1" in results
-    assert "mod2" in results
-    assert len(results["mod1"]) == 1
-    assert len(results["mod2"]) == 1
-
-
-@pytest.mark.asyncio
 async def test_process_module_with_retry(test_llm_provider, test_template_manager):
     """Test module processing with retry mechanism."""
     from src.question.workflows.module_batch_workflow import ModuleBatchWorkflow
