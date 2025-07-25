@@ -14,7 +14,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
 
 import { QuizService } from "@/client"
-import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common"
+import { EmptyState, ErrorState, LoadingSkeleton, QuestionTypeBreakdown } from "@/components/Common"
 import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenerationTrigger"
 import { QuestionReview } from "@/components/Questions/QuestionReview"
 import { QuestionStats } from "@/components/Questions/QuestionStats"
@@ -22,7 +22,7 @@ import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirma
 import { QuizPhaseProgress } from "@/components/ui/quiz-phase-progress"
 import { StatusLight } from "@/components/ui/status-light"
 import { useFormattedDate, useQuizStatusPolling } from "@/hooks/common"
-import { FAILURE_REASON, QUESTION_TYPE_LABELS, QUIZ_LANGUAGE_LABELS, QUIZ_STATUS, UI_SIZES, UI_TEXT } from "@/lib/constants"
+import { FAILURE_REASON, QUIZ_LANGUAGE_LABELS, QUIZ_STATUS, UI_SIZES, UI_TEXT } from "@/lib/constants"
 
 export const Route = createFileRoute("/_layout/quiz/$id")({
   component: QuizDetail,
@@ -239,14 +239,14 @@ function QuizDetail() {
                         {quiz.question_count}
                       </Badge>
                     </HStack>
-                    <HStack justify="space-between">
+                    <VStack align="stretch" gap={2}>
                       <Text fontWeight="medium" color="gray.700">
-                        Question Type
+                        Question Types per Module
                       </Text>
-                      <Badge variant="outline" colorScheme="blue">
-                        {QUESTION_TYPE_LABELS[quiz.question_type!]}
-                      </Badge>
-                    </HStack>
+                      <Box pl={2}>
+                        <QuestionTypeBreakdown quiz={quiz} variant="detailed" />
+                      </Box>
+                    </VStack>
                     <HStack justify="space-between">
                       <Text fontWeight="medium" color="gray.700">
                         Language
