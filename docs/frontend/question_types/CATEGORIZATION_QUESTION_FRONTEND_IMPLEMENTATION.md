@@ -1,6 +1,6 @@
 # Frontend Implementation Guide: Categorization Question Type Support
 
-**Document Date**: January 23, 2025
+**Document Date**: July 23, 2025
 **Feature**: Frontend Categorization Question Type Support
 **Target System**: Rag@UiT Canvas LMS Quiz Generator Frontend
 **Author**: Implementation Guide
@@ -243,12 +243,12 @@ export interface TypedQuestionResponse<T extends QuestionType = QuestionType> {
   question_data: T extends "multiple_choice"
     ? MCQData
     : T extends "fill_in_blank"
-      ? FillInBlankData
-      : T extends "matching"
-        ? MatchingData
-        : T extends "categorization" // ← ADD THIS LINE
-          ? CategorizationData // ← ADD THIS LINE
-          : never;
+    ? FillInBlankData
+    : T extends "matching"
+    ? MatchingData
+    : T extends "categorization" // ← ADD THIS LINE
+    ? CategorizationData // ← ADD THIS LINE
+    : never;
   difficulty?: QuestionDifficulty | null;
   tags?: string[] | null;
   is_approved: boolean;
@@ -259,7 +259,9 @@ export interface TypedQuestionResponse<T extends QuestionType = QuestionType> {
 }
 
 // Add type guard for runtime validation
-export function isCategorizationData(data: unknown): data is CategorizationData {
+export function isCategorizationData(
+  data: unknown
+): data is CategorizationData {
   if (typeof data !== "object" || data === null) {
     return false;
   }
@@ -272,7 +274,11 @@ export function isCategorizationData(data: unknown): data is CategorizationData 
   }
 
   // Validate categories array
-  if (!Array.isArray(obj.categories) || obj.categories.length < 2 || obj.categories.length > 8) {
+  if (
+    !Array.isArray(obj.categories) ||
+    obj.categories.length < 2 ||
+    obj.categories.length > 8
+  ) {
     return false;
   }
 
@@ -290,7 +296,11 @@ export function isCategorizationData(data: unknown): data is CategorizationData 
   }
 
   // Validate items array
-  if (!Array.isArray(obj.items) || obj.items.length < 6 || obj.items.length > 20) {
+  if (
+    !Array.isArray(obj.items) ||
+    obj.items.length < 6 ||
+    obj.items.length > 20
+  ) {
     return false;
   }
 
@@ -374,12 +384,14 @@ export function extractQuestionData<T extends QuestionType>(
 }
 
 // Add specific typed question response type
-export type CategorizationQuestionResponse = TypedQuestionResponse<"categorization">;
+export type CategorizationQuestionResponse =
+  TypedQuestionResponse<"categorization">;
 ```
 
 **Purpose**: These type definitions provide compile-time safety and runtime validation for categorization question data.
 
 **Key Points**:
+
 - `CategorizationData` interface matches the backend data structure
 - Type guard validates data at runtime to prevent errors
 - Discriminated union enables exhaustive type checking
@@ -491,7 +503,9 @@ export const categorizationSchema = z
       // Ensure distractors don't match any item texts
       if (!data.distractors) return true;
 
-      const itemTexts = new Set(data.items.map((i) => i.text.toLowerCase().trim()));
+      const itemTexts = new Set(
+        data.items.map((i) => i.text.toLowerCase().trim())
+      );
 
       for (const distractor of data.distractors) {
         if (itemTexts.has(distractor.text.toLowerCase().trim())) {
@@ -528,17 +542,18 @@ export type FormDataByType<T extends QuestionType> =
   T extends typeof QUESTION_TYPES.MULTIPLE_CHOICE
     ? MCQFormData
     : T extends typeof QUESTION_TYPES.FILL_IN_BLANK
-      ? FillInBlankFormData
-      : T extends typeof QUESTION_TYPES.MATCHING
-        ? MatchingFormData
-        : T extends typeof QUESTION_TYPES.CATEGORIZATION // ← ADD THIS LINE
-          ? CategorizationFormData // ← ADD THIS LINE
-          : never;
+    ? FillInBlankFormData
+    : T extends typeof QUESTION_TYPES.MATCHING
+    ? MatchingFormData
+    : T extends typeof QUESTION_TYPES.CATEGORIZATION // ← ADD THIS LINE
+    ? CategorizationFormData // ← ADD THIS LINE
+    : never;
 ```
 
 **Purpose**: Provides comprehensive form validation with business rules and user-friendly error messages.
 
 **Validation Rules**:
+
 - 2-8 categories required
 - 6-20 items required
 - Each category must have at least 1 item
@@ -609,7 +624,9 @@ function CategorizationDisplayComponent({
                 <Card.Body>
                   <VStack gap={2} align="stretch">
                     {category.correct_items.map((itemId) => {
-                      const item = categorizationData.items.find((i) => i.id === itemId);
+                      const item = categorizationData.items.find(
+                        (i) => i.id === itemId
+                      );
                       return item ? (
                         <Box
                           key={itemId}
@@ -631,39 +648,40 @@ function CategorizationDisplayComponent({
         </Box>
 
         {/* Distractors */}
-        {categorizationData.distractors && categorizationData.distractors.length > 0 && (
-          <Box>
-            <Text fontSize="sm" fontWeight="semibold" color="gray.600" mb={3}>
-              Distractors:
-            </Text>
-            <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} gap={3}>
-              {categorizationData.distractors.map((distractor) => (
-                <Box
-                  key={distractor.id}
-                  p={3}
-                  borderWidth={1}
-                  borderRadius="md"
-                  borderColor="red.200"
-                  bg="red.50"
-                  position="relative"
-                >
-                  <Text fontSize="sm" textAlign="center">
-                    {distractor.text}
-                  </Text>
-                  <Badge
-                    position="absolute"
-                    top={1}
-                    right={1}
-                    size="sm"
-                    colorScheme="red"
+        {categorizationData.distractors &&
+          categorizationData.distractors.length > 0 && (
+            <Box>
+              <Text fontSize="sm" fontWeight="semibold" color="gray.600" mb={3}>
+                Distractors:
+              </Text>
+              <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} gap={3}>
+                {categorizationData.distractors.map((distractor) => (
+                  <Box
+                    key={distractor.id}
+                    p={3}
+                    borderWidth={1}
+                    borderRadius="md"
+                    borderColor="red.200"
+                    bg="red.50"
+                    position="relative"
                   >
-                    Distractor
-                  </Badge>
-                </Box>
-              ))}
-            </SimpleGrid>
-          </Box>
-        )}
+                    <Text fontSize="sm" textAlign="center">
+                      {distractor.text}
+                    </Text>
+                    <Badge
+                      position="absolute"
+                      top={1}
+                      right={1}
+                      size="sm"
+                      colorScheme="red"
+                    >
+                      Distractor
+                    </Badge>
+                  </Box>
+                ))}
+              </SimpleGrid>
+            </Box>
+          )}
 
         {/* Explanation */}
         {showExplanation && categorizationData.explanation && (
@@ -687,6 +705,7 @@ CategorizationDisplay.displayName = "CategorizationDisplay";
 **Purpose**: Renders categorization questions optimized for teacher review and verification.
 
 **Key Features**:
+
 - **Category cards**: Always display correct items organized by category with green highlighting
 - **Distractors section**: Only shows incorrect items that don't belong to any category (conditional rendering)
 - **Teacher-focused design**: Eliminates redundant information for cleaner instructor workflow
@@ -695,6 +714,7 @@ CategorizationDisplay.displayName = "CategorizationDisplay";
 - **Error boundary**: Fallback component handles malformed question data gracefully
 
 **UI Improvements Made**:
+
 - **Removed redundant "Correct Categorization" summary** that duplicated category card information
 - **Simplified distractors display** to show only when distractors exist in the question
 - **Eliminated mixed item pool** that confused correct items with distractors
@@ -765,9 +785,10 @@ function CategorizationEditorComponent({
       items: categorizationData.items.map((item) => ({
         text: item.text,
       })),
-      distractors: categorizationData.distractors?.map((dist) => ({
-        text: dist.text,
-      })) || [],
+      distractors:
+        categorizationData.distractors?.map((dist) => ({
+          text: dist.text,
+        })) || [],
       explanation: categorizationData.explanation || "",
     };
 
@@ -954,7 +975,9 @@ function CategorizationEditorComponent({
                       <FormField
                         label="Assigned Items"
                         invalid={!!errors.categories?.[index]?.correctItems}
-                        errorText={errors.categories?.[index]?.correctItems?.message}
+                        errorText={
+                          errors.categories?.[index]?.correctItems?.message
+                        }
                       >
                         <Controller
                           name={`categories.${index}.correctItems`}
@@ -1128,7 +1151,8 @@ function CategorizationEditorComponent({
             </SimpleGrid>
 
             <Text fontSize="sm" color="gray.600" mt={2}>
-              Optional incorrect items that don't belong to any category. Maximum 5 allowed.
+              Optional incorrect items that don't belong to any category.
+              Maximum 5 allowed.
             </Text>
           </FormGroup>
 
@@ -1189,6 +1213,7 @@ CategorizationEditor.displayName = "CategorizationEditor";
 **Purpose**: Provides intuitive editing interface for categorization questions that mirrors the display layout, with category-based item management and seamless data transformation.
 
 **Key Features (Updated Implementation)**:
+
 - **Category-Based Item Management**: Items are managed directly within each category card with dedicated "+ Add Item" buttons
 - **Display-Mirroring Layout**: Uses identical responsive grid layout as CategorizationDisplay for consistency
 - **Nested Form Structure**: Categories contain their own items arrays, eliminating confusing global item assignment
@@ -1200,6 +1225,7 @@ CategorizationEditor.displayName = "CategorizationEditor";
 - **Optimized Performance**: React Hook Form with nested field arrays and memoized components
 
 **Editor UI Improvements Made**:
+
 - **Redesigned Data Model**: Changed from global items with assignment IDs to items nested directly within categories
 - **Eliminated Confusing Assignment System**: Removed the "Category assignment will be implemented in a future version" placeholder text
 - **Added Intuitive Item Management**: Each category card has its own "+ Add Item" button for direct item creation within that category
@@ -1384,10 +1410,12 @@ const questionTypeOptions = [
     label: "Matching Questions",
     description: "Generate matching questions with pairs and distractors",
   },
-  { // ← ADD THIS OBJECT
+  {
+    // ← ADD THIS OBJECT
     value: QUESTION_TYPES.CATEGORIZATION,
     label: "Categorization Questions",
-    description: "Generate questions where students categorize items into groups",
+    description:
+      "Generate questions where students categorize items into groups",
   },
 ];
 ```
@@ -1429,7 +1457,8 @@ interface CategorizationFormData {
   questionText: string;
   categories: Array<{
     name: string;
-    items: Array<{        // ← CHANGED: Items now nested within categories
+    items: Array<{
+      // ← CHANGED: Items now nested within categories
       text: string;
     }>;
   }>;
@@ -1442,6 +1471,7 @@ interface CategorizationFormData {
 ```
 
 **Key Changes**:
+
 - **Nested Items**: Items are now stored directly within each category instead of globally
 - **Eliminated Global Items**: Removed the confusing global `items` array
 - **Simplified Assignment**: No more `correctItems` ID arrays - items belong to their parent category
@@ -1470,16 +1500,16 @@ interface CategorizationFormData {
     }
   ],
   "items": [
-    {"id": "item_0", "text": "Dolphin"},
-    {"id": "item_1", "text": "Elephant"},
-    {"id": "item_2", "text": "Eagle"},
-    {"id": "item_3", "text": "Penguin"},
-    {"id": "item_4", "text": "Snake"},
-    {"id": "item_5", "text": "Lizard"}
+    { "id": "item_0", "text": "Dolphin" },
+    { "id": "item_1", "text": "Elephant" },
+    { "id": "item_2", "text": "Eagle" },
+    { "id": "item_3", "text": "Penguin" },
+    { "id": "item_4", "text": "Snake" },
+    { "id": "item_5", "text": "Lizard" }
   ],
   "distractors": [
-    {"id": "dist_0", "text": "Jellyfish"},
-    {"id": "dist_1", "text": "Coral"}
+    { "id": "dist_0", "text": "Jellyfish" },
+    { "id": "dist_1", "text": "Coral" }
   ],
   "explanation": "These categories represent the main vertebrate animal classes based on biological characteristics."
 }
@@ -1493,30 +1523,18 @@ interface CategorizationFormData {
   "categories": [
     {
       "name": "Mammals",
-      "items": [
-        {"text": "Dolphin"},
-        {"text": "Elephant"}
-      ]
+      "items": [{ "text": "Dolphin" }, { "text": "Elephant" }]
     },
     {
       "name": "Birds",
-      "items": [
-        {"text": "Eagle"},
-        {"text": "Penguin"}
-      ]
+      "items": [{ "text": "Eagle" }, { "text": "Penguin" }]
     },
     {
       "name": "Reptiles",
-      "items": [
-        {"text": "Snake"},
-        {"text": "Lizard"}
-      ]
+      "items": [{ "text": "Snake" }, { "text": "Lizard" }]
     }
   ],
-  "distractors": [
-    {"text": "Jellyfish"},
-    {"text": "Coral"}
-  ],
+  "distractors": [{ "text": "Jellyfish" }, { "text": "Coral" }],
   "explanation": "These categories represent the main vertebrate animal classes based on biological characteristics."
 }
 ```
@@ -1534,6 +1552,7 @@ interface CategorizationFormData {
 - **Explanation**: Optional, can be null or empty string
 
 **Validation Improvements**:
+
 - **Cross-category validation**: Item texts are validated for uniqueness across all categories
 - **Total item counting**: Validation checks total items across all categories (not per-category)
 - **Simplified rules**: No complex assignment validation needed since items belong to their parent category
@@ -1578,26 +1597,24 @@ describe("isCategorizationData", () => {
         {
           id: "cat1",
           name: "Data Structures",
-          correct_items: ["item1", "item2"]
+          correct_items: ["item1", "item2"],
         },
         {
           id: "cat2",
           name: "Algorithms",
-          correct_items: ["item3", "item4"]
-        }
+          correct_items: ["item3", "item4"],
+        },
       ],
       items: [
-        {id: "item1", text: "Array"},
-        {id: "item2", text: "Linked List"},
-        {id: "item3", text: "Binary Search"},
-        {id: "item4", text: "Quick Sort"},
-        {id: "item5", text: "Hash Table"},
-        {id: "item6", text: "Merge Sort"}
+        { id: "item1", text: "Array" },
+        { id: "item2", text: "Linked List" },
+        { id: "item3", text: "Binary Search" },
+        { id: "item4", text: "Quick Sort" },
+        { id: "item5", text: "Hash Table" },
+        { id: "item6", text: "Merge Sort" },
       ],
-      distractors: [
-        {id: "dist1", text: "IDE"}
-      ],
-      explanation: "These represent fundamental computer science concepts."
+      distractors: [{ id: "dist1", text: "IDE" }],
+      explanation: "These represent fundamental computer science concepts.",
     };
 
     expect(isCategorizationData(validData)).toBe(true);
@@ -1607,16 +1624,16 @@ describe("isCategorizationData", () => {
     const invalidData = {
       question_text: "Test",
       categories: [
-        {id: "cat1", name: "Single Category", correct_items: ["item1"]}
+        { id: "cat1", name: "Single Category", correct_items: ["item1"] },
       ], // Only 1 category, need 2 minimum
       items: [
-        {id: "item1", text: "Item 1"},
-        {id: "item2", text: "Item 2"},
-        {id: "item3", text: "Item 3"},
-        {id: "item4", text: "Item 4"},
-        {id: "item5", text: "Item 5"},
-        {id: "item6", text: "Item 6"}
-      ]
+        { id: "item1", text: "Item 1" },
+        { id: "item2", text: "Item 2" },
+        { id: "item3", text: "Item 3" },
+        { id: "item4", text: "Item 4" },
+        { id: "item5", text: "Item 5" },
+        { id: "item6", text: "Item 6" },
+      ],
     };
 
     expect(isCategorizationData(invalidData)).toBe(false);
@@ -1626,14 +1643,14 @@ describe("isCategorizationData", () => {
     const invalidData = {
       question_text: "Test",
       categories: [
-        {id: "cat1", name: "Category 1", correct_items: ["item1", "item2"]},
-        {id: "cat2", name: "Category 2", correct_items: ["item3"]}
+        { id: "cat1", name: "Category 1", correct_items: ["item1", "item2"] },
+        { id: "cat2", name: "Category 2", correct_items: ["item3"] },
       ],
       items: [
-        {id: "item1", text: "Item 1"},
-        {id: "item2", text: "Item 2"},
-        {id: "item3", text: "Item 3"}
-      ] // Only 3 items, need 6 minimum
+        { id: "item1", text: "Item 1" },
+        { id: "item2", text: "Item 2" },
+        { id: "item3", text: "Item 3" },
+      ], // Only 3 items, need 6 minimum
     };
 
     expect(isCategorizationData(invalidData)).toBe(false);
@@ -1658,26 +1675,24 @@ const mockCategorizationQuestion: QuestionResponse = {
       {
         id: "cat1",
         name: "Land Animals",
-        correct_items: ["item1", "item2"]
+        correct_items: ["item1", "item2"],
       },
       {
         id: "cat2",
         name: "Water Animals",
-        correct_items: ["item3", "item4"]
-      }
+        correct_items: ["item3", "item4"],
+      },
     ],
     items: [
-      {id: "item1", text: "Elephant"},
-      {id: "item2", text: "Lion"},
-      {id: "item3", text: "Dolphin"},
-      {id: "item4", text: "Shark"},
-      {id: "item5", text: "Eagle"},
-      {id: "item6", text: "Penguin"}
+      { id: "item1", text: "Elephant" },
+      { id: "item2", text: "Lion" },
+      { id: "item3", text: "Dolphin" },
+      { id: "item4", text: "Shark" },
+      { id: "item5", text: "Eagle" },
+      { id: "item6", text: "Penguin" },
     ],
-    distractors: [
-      {id: "dist1", text: "Bacteria"}
-    ],
-    explanation: "Animals are categorized by their primary habitat."
+    distractors: [{ id: "dist1", text: "Bacteria" }],
+    explanation: "Animals are categorized by their primary habitat.",
   },
   quiz_id: "quiz-id",
   is_approved: false,
@@ -1719,7 +1734,9 @@ describe("CategorizationDisplay", () => {
     expect(screen.getByText("Correct Categorization:")).toBeInTheDocument();
     expect(screen.getByText("Land Animals:")).toBeInTheDocument();
     expect(screen.getByText("Water Animals:")).toBeInTheDocument();
-    expect(screen.getByText("Distractors (don't belong to any category):")).toBeInTheDocument();
+    expect(
+      screen.getByText("Distractors (don't belong to any category):")
+    ).toBeInTheDocument();
   });
 
   it("shows explanation when showExplanation is true", () => {
@@ -1781,7 +1798,9 @@ describe("CategorizationEditor Integration", () => {
     );
 
     // Set duplicate category name
-    const categoryInputs = screen.getAllByPlaceholderText("Enter category name...");
+    const categoryInputs = screen.getAllByPlaceholderText(
+      "Enter category name..."
+    );
     await userEvent.clear(categoryInputs[1]);
     await userEvent.type(categoryInputs[1], "Land Animals"); // Same as first category
 
@@ -1840,6 +1859,7 @@ describe("CategorizationEditor Integration", () => {
 ### Manual Testing Steps
 
 1. **Quiz Creation Flow**
+
    ```
    1. Navigate to quiz creation
    2. Select "Categorization" question type
@@ -1849,6 +1869,7 @@ describe("CategorizationEditor Integration", () => {
    ```
 
 2. **Question Editing Flow**
+
    ```
    1. Open categorization question for editing
    2. Add/remove categories (test 2-8 limit)
@@ -2003,7 +2024,10 @@ console.log("Categorization question validation passed", {
 });
 
 // Successful saves
-console.log("Categorization question saved successfully", { questionId, updateData });
+console.log("Categorization question saved successfully", {
+  questionId,
+  updateData,
+});
 ```
 
 #### Error Indicators
@@ -2031,11 +2055,13 @@ console.error("Invalid categorization question data structure:", dataError);
 
 **Symptoms**: Categorization question type not shown in QuizSettingsStep
 **Causes**:
+
 - Constants not updated correctly
 - TypeScript compilation errors
 - Component not imported properly
 
 **Solutions**:
+
 ```bash
 # Check TypeScript compilation
 npx tsc --noEmit
@@ -2051,11 +2077,13 @@ grep -r "CategorizationDisplay\|CategorizationEditor" src/components/
 
 **Symptoms**: Form won't save, validation messages appear
 **Causes**:
+
 - Duplicate category names or item texts
 - Too few categories (< 2) or items (< 6)
 - Items not properly assigned to categories
 
 **Solutions**:
+
 ```typescript
 // Debug validation in browser console
 const formData = form.getValues();
@@ -2063,39 +2091,49 @@ console.log("Form data:", formData);
 console.log("Validation errors:", form.formState.errors);
 
 // Check for duplicates
-const categoryNames = formData.categories.map(c => c.name.toLowerCase());
-console.log("Duplicate categories:", categoryNames.length !== new Set(categoryNames).size);
+const categoryNames = formData.categories.map((c) => c.name.toLowerCase());
+console.log(
+  "Duplicate categories:",
+  categoryNames.length !== new Set(categoryNames).size
+);
 ```
 
 #### Issue: "Error loading categorization question data"
 
 **Symptoms**: ErrorDisplay component shows instead of CategorizationDisplay
 **Causes**:
+
 - Invalid question data from backend
 - Type guard rejection
 - Missing required fields
 
 **Solutions**:
+
 ```javascript
 // Debug in browser console
 console.log("Question data:", question.question_data);
-console.log("Is valid categorization data:", isCategorizationData(question.question_data));
+console.log(
+  "Is valid categorization data:",
+  isCategorizationData(question.question_data)
+);
 
 // Check backend response format
 fetch("/api/v1/questions/{id}")
-  .then(r => r.json())
-  .then(data => console.log("Backend question data:", data));
+  .then((r) => r.json())
+  .then((data) => console.log("Backend question data:", data));
 ```
 
 #### Issue: "TypeScript compilation errors"
 
 **Symptoms**: Build fails with type errors
 **Causes**:
+
 - Missing type exports
 - Discriminated union not updated
 - Component prop mismatches
 
 **Solutions**:
+
 ```bash
 # Check specific TypeScript errors
 npx tsc --noEmit --pretty
@@ -2244,7 +2282,9 @@ const categorizationSchema = z.object({
 #### Type Guards as Security Layer
 
 ```typescript
-export function isCategorizationData(data: unknown): data is CategorizationData {
+export function isCategorizationData(
+  data: unknown
+): data is CategorizationData {
   // Prevents type confusion attacks
   if (typeof data !== "object" || data === null) return false;
 
@@ -2275,16 +2315,19 @@ if (!result.success) {
 #### Current Implementation Constraints
 
 1. **Simple Categorization Only**
+
    - **Limitation**: Each item can only belong to one category
    - **Impact**: Cannot create multi-category assignments or overlapping classifications
    - **Workaround**: Use multiple categorization questions for complex relationships
 
 2. **Fixed Assignment Model**
+
    - **Limitation**: Items must be assigned to exactly one category
    - **Impact**: Cannot create questions where some items don't belong to any category (except distractors)
    - **Future Enhancement**: Flexible assignment rules
 
 3. **Limited Visual Feedback**
+
    - **Limitation**: Basic card-based display without advanced interactions
    - **Impact**: Less engaging than drag-and-drop interfaces
    - **Future Enhancement**: Interactive categorization interface
@@ -2374,7 +2417,7 @@ interface HierarchicalCategorizationData extends CategorizationData {
 
    function LargeCategorizationDisplay({
      categories,
-     items
+     items,
    }: {
      categories: Category[];
      items: CategoryItem[];
@@ -2396,6 +2439,7 @@ interface HierarchicalCategorizationData extends CategorizationData {
    ```
 
 3. **Optimized Form State**
+
    ```typescript
    // Future: Optimized form performance for large questions
    import { useFormContext } from "react-hook-form";
@@ -2519,7 +2563,9 @@ interface CategorizationDataV2 {
 }
 
 // Migration strategy
-function migrateCategorizationData(data: CategorizationDataV1): CategorizationDataV2 {
+function migrateCategorizationData(
+  data: CategorizationDataV1
+): CategorizationDataV2 {
   // Automatic migration for backward compatibility
 }
 ```
@@ -2581,7 +2627,9 @@ interface AccessibleCategorizationProps {
 3. **Incremental Migration**
    ```typescript
    // Database migration strategy
-   function upgradeCategorizationQuestion(oldData: CategorizationDataV1): CategorizationDataV2 {
+   function upgradeCategorizationQuestion(
+     oldData: CategorizationDataV1
+   ): CategorizationDataV2 {
      return {
        ...oldData,
        // Add new fields with sensible defaults
