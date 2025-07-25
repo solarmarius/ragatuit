@@ -1,3 +1,4 @@
+import { Field } from "@/components/ui/field";
 import {
   Alert,
   Box,
@@ -6,32 +7,31 @@ import {
   HStack,
   Heading,
   Input,
+  Select,
   Text,
   VStack,
-  Select,
   createListCollection,
-} from "@chakra-ui/react"
-import { Field } from "@/components/ui/field"
-// Using chakra-ui icons instead of lucide-react
-import type React from "react"
-import { useMemo, useState } from "react"
+} from "@chakra-ui/react";
+import type React from "react";
+import { useMemo, useState } from "react";
+import { IoAdd, IoClose } from "react-icons/io5";
 
-import type { QuestionBatch, QuestionType } from "@/client"
+import type { QuestionBatch, QuestionType } from "@/client";
 import {
-  VALIDATION_RULES,
-  VALIDATION_MESSAGES,
   QUESTION_BATCH_DEFAULTS,
-} from "@/lib/constants"
+  VALIDATION_MESSAGES,
+  VALIDATION_RULES,
+} from "@/lib/constants";
 import {
-  calculateTotalQuestionsFromBatches,
   calculateModuleQuestions,
+  calculateTotalQuestionsFromBatches,
   validateModuleBatches,
-} from "@/lib/utils"
+} from "@/lib/utils";
 
 interface ModuleQuestionSelectionStepProps {
-  selectedModules: Record<string, string>
-  moduleQuestions: Record<string, QuestionBatch[]>
-  onModuleQuestionChange: (moduleId: string, batches: QuestionBatch[]) => void
+  selectedModules: Record<string, string>;
+  moduleQuestions: Record<string, QuestionBatch[]>;
+  onModuleQuestionChange: (moduleId: string, batches: QuestionBatch[]) => void;
 }
 
 // Question type options collection for Chakra UI Select
@@ -54,100 +54,104 @@ const questionTypeCollection = createListCollection({
       label: "Categorization",
     },
   ],
-})
+});
 
 export const ModuleQuestionSelectionStep: React.FC<
   ModuleQuestionSelectionStepProps
 > = ({ selectedModules, moduleQuestions, onModuleQuestionChange }) => {
-  const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({})
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string[]>
+  >({});
 
   const totalQuestions = useMemo(() => {
-    return calculateTotalQuestionsFromBatches(moduleQuestions)
-  }, [moduleQuestions])
+    return calculateTotalQuestionsFromBatches(moduleQuestions);
+  }, [moduleQuestions]);
 
-  const moduleIds = Object.keys(selectedModules)
+  const moduleIds = Object.keys(selectedModules);
 
   const addBatch = (moduleId: string) => {
-    const currentBatches = moduleQuestions[moduleId] || []
+    const currentBatches = moduleQuestions[moduleId] || [];
 
     if (currentBatches.length >= VALIDATION_RULES.MAX_BATCHES_PER_MODULE) {
-      setValidationErrors(prev => ({
+      setValidationErrors((prev) => ({
         ...prev,
-        [moduleId]: [VALIDATION_MESSAGES.MAX_BATCHES]
-      }))
-      return
+        [moduleId]: [VALIDATION_MESSAGES.MAX_BATCHES],
+      }));
+      return;
     }
 
     const newBatch: QuestionBatch = {
       question_type: QUESTION_BATCH_DEFAULTS.DEFAULT_QUESTION_TYPE,
       count: QUESTION_BATCH_DEFAULTS.DEFAULT_QUESTION_COUNT,
-    }
+    };
 
-    const updatedBatches = [...currentBatches, newBatch]
-    onModuleQuestionChange(moduleId, updatedBatches)
+    const updatedBatches = [...currentBatches, newBatch];
+    onModuleQuestionChange(moduleId, updatedBatches);
 
     // Clear validation errors
-    setValidationErrors(prev => {
-      const newErrors = { ...prev }
-      delete newErrors[moduleId]
-      return newErrors
-    })
-  }
+    setValidationErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[moduleId];
+      return newErrors;
+    });
+  };
 
   const removeBatch = (moduleId: string, batchIndex: number) => {
-    const currentBatches = moduleQuestions[moduleId] || []
-    const updatedBatches = currentBatches.filter((_, index) => index !== batchIndex)
-    onModuleQuestionChange(moduleId, updatedBatches)
+    const currentBatches = moduleQuestions[moduleId] || [];
+    const updatedBatches = currentBatches.filter(
+      (_, index) => index !== batchIndex
+    );
+    onModuleQuestionChange(moduleId, updatedBatches);
 
     // Clear validation errors if removing resolved the issue
     if (updatedBatches.length <= VALIDATION_RULES.MAX_BATCHES_PER_MODULE) {
-      setValidationErrors(prev => {
-        const newErrors = { ...prev }
-        delete newErrors[moduleId]
-        return newErrors
-      })
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[moduleId];
+        return newErrors;
+      });
     }
-  }
+  };
 
   const updateBatch = (
     moduleId: string,
     batchIndex: number,
     updates: Partial<QuestionBatch>
   ) => {
-    const currentBatches = moduleQuestions[moduleId] || []
+    const currentBatches = moduleQuestions[moduleId] || [];
     const updatedBatches = currentBatches.map((batch, index) =>
       index === batchIndex ? { ...batch, ...updates } : batch
-    )
+    );
 
     // Validate the updated batches
-    const errors = validateModuleBatches(updatedBatches)
+    const errors = validateModuleBatches(updatedBatches);
 
     if (errors.length > 0) {
-      setValidationErrors(prev => ({
+      setValidationErrors((prev) => ({
         ...prev,
-        [moduleId]: errors
-      }))
+        [moduleId]: errors,
+      }));
     } else {
-      setValidationErrors(prev => {
-        const newErrors = { ...prev }
-        delete newErrors[moduleId]
-        return newErrors
-      })
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[moduleId];
+        return newErrors;
+      });
     }
 
-    onModuleQuestionChange(moduleId, updatedBatches)
-  }
+    onModuleQuestionChange(moduleId, updatedBatches);
+  };
 
   const handleQuestionCountChange = (
     moduleId: string,
     batchIndex: number,
     value: string
   ) => {
-    const numValue = Number.parseInt(value, 10)
+    const numValue = Number.parseInt(value, 10);
     if (!Number.isNaN(numValue) && numValue >= 1 && numValue <= 20) {
-      updateBatch(moduleId, batchIndex, { count: numValue })
+      updateBatch(moduleId, batchIndex, { count: numValue });
     }
-  }
+  };
 
   return (
     <Box>
@@ -157,8 +161,9 @@ export const ModuleQuestionSelectionStep: React.FC<
             Configure Question Types per Module
           </Heading>
           <Text color="gray.600">
-            Add question batches for each module. Each batch can have a different
-            question type and count (1-20 questions per batch, max 4 batches per module).
+            Add question batches for each module. Each batch can have a
+            different question type and count (1-20 questions per batch, max 4
+            batches per module).
           </Text>
         </Box>
 
@@ -198,9 +203,9 @@ export const ModuleQuestionSelectionStep: React.FC<
         {/* Module Configuration */}
         <VStack gap={4} align="stretch">
           {moduleIds.map((moduleId) => {
-            const moduleBatches = moduleQuestions[moduleId] || []
-            const moduleErrors = validationErrors[moduleId] || []
-            const moduleTotal = calculateModuleQuestions(moduleBatches)
+            const moduleBatches = moduleQuestions[moduleId] || [];
+            const moduleErrors = validationErrors[moduleId] || [];
+            const moduleTotal = calculateModuleQuestions(moduleBatches);
 
             return (
               <Card.Root
@@ -218,16 +223,21 @@ export const ModuleQuestionSelectionStep: React.FC<
                           {selectedModules[moduleId]}
                         </Text>
                         <Text fontSize="sm" color="gray.600">
-                          {moduleTotal} questions total • {moduleBatches.length} batches
+                          {moduleTotal} questions total • {moduleBatches.length}{" "}
+                          batches
                         </Text>
                       </Box>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={() => addBatch(moduleId)}
-                        disabled={moduleBatches.length >= VALIDATION_RULES.MAX_BATCHES_PER_MODULE}
+                        disabled={
+                          moduleBatches.length >=
+                          VALIDATION_RULES.MAX_BATCHES_PER_MODULE
+                        }
                       >
-                        + Add Batch
+                        <IoAdd />
+                        Add Batch
                       </Button>
                     </HStack>
 
@@ -265,7 +275,8 @@ export const ModuleQuestionSelectionStep: React.FC<
                                     value={[batch.question_type]}
                                     onValueChange={(details) =>
                                       updateBatch(moduleId, batchIndex, {
-                                        question_type: details.value[0] as QuestionType,
+                                        question_type: details
+                                          .value[0] as QuestionType,
                                       })
                                     }
                                     size="sm"
@@ -280,12 +291,17 @@ export const ModuleQuestionSelectionStep: React.FC<
                                     </Select.Control>
                                     <Select.Positioner>
                                       <Select.Content>
-                                        {questionTypeCollection.items.map((option) => (
-                                          <Select.Item item={option} key={option.value}>
-                                            {option.label}
-                                            <Select.ItemIndicator />
-                                          </Select.Item>
-                                        ))}
+                                        {questionTypeCollection.items.map(
+                                          (option) => (
+                                            <Select.Item
+                                              item={option}
+                                              key={option.value}
+                                            >
+                                              {option.label}
+                                              <Select.ItemIndicator />
+                                            </Select.Item>
+                                          )
+                                        )}
                                       </Select.Content>
                                     </Select.Positioner>
                                   </Select.Root>
@@ -316,9 +332,11 @@ export const ModuleQuestionSelectionStep: React.FC<
                                 size="sm"
                                 variant="ghost"
                                 colorScheme="red"
-                                onClick={() => removeBatch(moduleId, batchIndex)}
+                                onClick={() =>
+                                  removeBatch(moduleId, batchIndex)
+                                }
                               >
-                                ×
+                                <IoClose />
                               </Button>
                             </HStack>
                           </Box>
@@ -327,13 +345,15 @@ export const ModuleQuestionSelectionStep: React.FC<
                     ) : (
                       <Box textAlign="center" py={6} color="gray.500">
                         <Text>No question batches configured</Text>
-                        <Text fontSize="sm">Click "Add Batch" to get started</Text>
+                        <Text fontSize="sm">
+                          Click "Add Batch" to get started
+                        </Text>
                       </Box>
                     )}
                   </VStack>
                 </Card.Body>
               </Card.Root>
-            )
+            );
           })}
         </VStack>
 
@@ -349,12 +369,12 @@ export const ModuleQuestionSelectionStep: React.FC<
 
         <Box mt={4}>
           <Text fontSize="sm" color="gray.600">
-            <strong>Tip:</strong> Mix different question types to create comprehensive
-            assessments. Each module can have up to 4 different question batches with
-            1-20 questions each.
+            <strong>Tip:</strong> Mix different question types to create
+            comprehensive assessments. Each module can have up to 4 different
+            question batches with 1-20 questions each.
           </Text>
         </Box>
       </VStack>
     </Box>
-  )
-}
+  );
+};
