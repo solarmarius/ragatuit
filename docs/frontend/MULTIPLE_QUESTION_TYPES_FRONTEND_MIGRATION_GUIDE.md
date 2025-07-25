@@ -28,12 +28,12 @@ The backend has been refactored to support **multiple question types per module*
 
 ### 1.2 Key Breaking Changes
 
-| **Change** | **Before** | **After** |
-|------------|------------|-----------|
-| **Quiz Question Type** | Single `question_type` field per quiz | Multiple `question_type` values per module batch |
-| **Module Selection** | `ModuleSelection { name, question_count }` | `ModuleSelection { name, question_batches[] }` |
-| **Question Count** | Single `question_count` per module | Multiple counts per batch, aggregated total |
-| **Batch Structure** | Not applicable | `QuestionBatch { question_type, count }` array |
+| **Change**             | **Before**                                 | **After**                                        |
+| ---------------------- | ------------------------------------------ | ------------------------------------------------ |
+| **Quiz Question Type** | Single `question_type` field per quiz      | Multiple `question_type` values per module batch |
+| **Module Selection**   | `ModuleSelection { name, question_count }` | `ModuleSelection { name, question_batches[] }`   |
+| **Question Count**     | Single `question_count` per module         | Multiple counts per batch, aggregated total      |
+| **Batch Structure**    | Not applicable                             | `QuestionBatch { question_type, count }` array   |
 
 ### 1.3 Business Impact
 
@@ -54,30 +54,30 @@ The backend has been refactored to support **multiple question types per module*
 ```typescript
 // CURRENT - Will break after backend update
 export type ModuleSelection = {
-  name: string
-  question_count: number  // ❌ Removed
-}
+  name: string;
+  question_count: number; // ❌ Removed
+};
 
 export type QuizCreate = {
-  canvas_course_id: number
-  canvas_course_name: string
+  canvas_course_id: number;
+  canvas_course_name: string;
   selected_modules: {
-    [key: string]: ModuleSelection
-  }
-  title: string
-  llm_model?: string
-  llm_temperature?: number
-  language?: QuizLanguage
-  question_type?: QuestionType  // ❌ Removed
-}
+    [key: string]: ModuleSelection;
+  };
+  title: string;
+  llm_model?: string;
+  llm_temperature?: number;
+  language?: QuizLanguage;
+  question_type?: QuestionType; // ❌ Removed
+};
 
 export type Quiz = {
-  id?: string
+  id?: string;
   // ... other fields
-  question_count?: number      // ❌ Replaced with calculated total
-  question_type?: QuestionType // ❌ Removed
+  question_count?: number; // ❌ Replaced with calculated total
+  question_type?: QuestionType; // ❌ Removed
   // ... other fields
-}
+};
 ```
 
 ### 2.2 Required New Types
@@ -85,44 +85,44 @@ export type Quiz = {
 ```typescript
 // NEW - Required for backend compatibility
 export type QuestionBatch = {
-  question_type: QuestionType
-  count: number  // 1-20 questions per batch
-}
+  question_type: QuestionType;
+  count: number; // 1-20 questions per batch
+};
 
 export type ModuleSelection = {
-  name: string
-  question_batches: QuestionBatch[]  // 1-4 batches per module
-}
+  name: string;
+  question_batches: QuestionBatch[]; // 1-4 batches per module
+};
 
 export type QuizCreate = {
-  canvas_course_id: number
-  canvas_course_name: string
+  canvas_course_id: number;
+  canvas_course_name: string;
   selected_modules: {
-    [key: string]: ModuleSelection
-  }
-  title: string
-  llm_model?: string
-  llm_temperature?: number
-  language?: QuizLanguage
+    [key: string]: ModuleSelection;
+  };
+  title: string;
+  llm_model?: string;
+  llm_temperature?: number;
+  language?: QuizLanguage;
   // question_type removed - now per batch
-}
+};
 
 export type Quiz = {
-  id?: string
+  id?: string;
   // ... other fields
-  question_count?: number      // ✅ Total across all batches (read-only)
+  question_count?: number; // ✅ Total across all batches (read-only)
   selected_modules?: {
     [key: string]: {
-      name: string
+      name: string;
       question_batches: Array<{
-        question_type: string
-        count: number
-      }>
-    }
-  }
+        question_type: string;
+        count: number;
+      }>;
+    };
+  };
   // question_type removed
   // ... other fields
-}
+};
 ```
 
 ### 2.3 Schema Validation Rules
@@ -141,32 +141,17 @@ The new schema enforces these validation rules:
 ### 3.1 How Question Count is Calculated
 
 **Before**: Direct `question_count` field from API response
+
 ```typescript
 // OLD approach
-const totalQuestions = quiz.question_count
+const totalQuestions = quiz.question_count;
 ```
 
-**After**: Calculated from all batches across all modules
+**After**: Use the `question_count` field directly from the API response.
+
 ```typescript
-// NEW approach - implement this helper function
-export const calculateTotalQuestions = (quiz: Quiz): number => {
-  let total = 0
-
-  if (quiz.selected_modules) {
-    Object.values(quiz.selected_modules).forEach(module => {
-      if (module.question_batches) {
-        module.question_batches.forEach(batch => {
-          total += batch.count
-        })
-      }
-    })
-  }
-
-  return total
-}
-
-// Usage in components
-const totalQuestions = calculateTotalQuestions(quiz)
+// NEW approach
+const totalQuestions = quiz.question_count;
 ```
 
 ### 3.2 Badge Display Components
@@ -175,22 +160,18 @@ These components likely need updates to use the new calculation:
 
 ```typescript
 // Components that display question counts
-- QuizBadges.tsx
-- QuizListCard.tsx
-- QuizGenerationCard.tsx
-- QuizTable.tsx / QuizTableRow.tsx
+-QuizBadges.tsx -
+  QuizListCard.tsx -
+  QuizGenerationCard.tsx -
+  QuizTable.tsx / QuizTableRow.tsx;
 
 // Example update in QuizBadges.tsx
 const QuizBadges = ({ quiz }: { quiz: Quiz }) => {
   // OLD: const questionCount = quiz.question_count
-  const questionCount = calculateTotalQuestions(quiz)
+  const questionCount = quiz.question_count || 0;
 
-  return (
-    <Badge variant="outline">
-      {questionCount} Questions
-    </Badge>
-  )
-}
+  return <Badge variant="outline">{questionCount} Questions</Badge>;
+};
 ```
 
 ### 3.3 Per-Module Question Count
@@ -199,13 +180,13 @@ You may also want to show question counts per module:
 
 ```typescript
 export const calculateModuleQuestions = (module: ModuleData): number => {
-  if (!module.question_batches) return 0
+  if (!module.question_batches) return 0;
 
-  return module.question_batches.reduce((sum, batch) => sum + batch.count, 0)
-}
+  return module.question_batches.reduce((sum, batch) => sum + batch.count, 0);
+};
 
 // Usage example
-const moduleCount = calculateModuleQuestions(quiz.selected_modules["module_1"])
+const moduleCount = calculateModuleQuestions(quiz.selected_modules["module_1"]);
 ```
 
 ---
@@ -223,38 +204,40 @@ const moduleCount = calculateModuleQuestions(quiz.selected_modules["module_1"])
 ### 4.2 Displaying Multiple Question Types
 
 **Pattern 1: Show All Types for a Quiz**
+
 ```typescript
 export const getQuizQuestionTypes = (quiz: Quiz): QuestionType[] => {
-  const types = new Set<QuestionType>()
+  const types = new Set<QuestionType>();
 
   if (quiz.selected_modules) {
-    Object.values(quiz.selected_modules).forEach(module => {
-      module.question_batches?.forEach(batch => {
-        types.add(batch.question_type)
-      })
-    })
+    Object.values(quiz.selected_modules).forEach((module) => {
+      module.question_batches?.forEach((batch) => {
+        types.add(batch.question_type);
+      });
+    });
   }
 
-  return Array.from(types)
-}
+  return Array.from(types);
+};
 
 // Usage in component
 const QuizTypesBadge = ({ quiz }: { quiz: Quiz }) => {
-  const types = getQuizQuestionTypes(quiz)
+  const types = getQuizQuestionTypes(quiz);
 
   return (
     <div className="flex gap-1">
-      {types.map(type => (
+      {types.map((type) => (
         <Badge key={type} variant="secondary">
           {formatQuestionType(type)}
         </Badge>
       ))}
     </div>
-  )
-}
+  );
+};
 ```
 
 **Pattern 2: Show Types per Module**
+
 ```typescript
 const ModuleQuestionTypes = ({ module }: { module: ModuleData }) => {
   return (
@@ -266,35 +249,38 @@ const ModuleQuestionTypes = ({ module }: { module: ModuleData }) => {
         </div>
       ))}
     </div>
-  )
-}
+  );
+};
 ```
 
 **Pattern 3: Compact Multi-Type Display**
+
 ```typescript
 const QuizTypesSummary = ({ quiz }: { quiz: Quiz }) => {
-  const typeCounts = new Map<QuestionType, number>()
+  const typeCounts = new Map<QuestionType, number>();
 
   // Aggregate counts by type across all modules
   if (quiz.selected_modules) {
-    Object.values(quiz.selected_modules).forEach(module => {
-      module.question_batches?.forEach(batch => {
-        const current = typeCounts.get(batch.question_type) || 0
-        typeCounts.set(batch.question_type, current + batch.count)
-      })
-    })
+    Object.values(quiz.selected_modules).forEach((module) => {
+      module.question_batches?.forEach((batch) => {
+        const current = typeCounts.get(batch.question_type) || 0;
+        typeCounts.set(batch.question_type, current + batch.count);
+      });
+    });
   }
 
   return (
     <div className="text-sm text-gray-600">
-      {Array.from(typeCounts.entries()).map(([type, count]) => (
-        <span key={type}>
-          {count} {formatQuestionType(type)}
-        </span>
-      )).join(' • ')}
+      {Array.from(typeCounts.entries())
+        .map(([type, count]) => (
+          <span key={type}>
+            {count} {formatQuestionType(type)}
+          </span>
+        ))
+        .join(" • ")}
     </div>
-  )
-}
+  );
+};
 ```
 
 ---
@@ -310,18 +296,18 @@ const oldQuizRequest = {
   canvas_course_name: "Biology 101",
   title: "Chapter 3 Quiz",
   selected_modules: {
-    "module_001": {
+    module_001: {
       name: "Cell Structure",
-      question_count: 15  // ❌ Invalid
+      question_count: 15, // ❌ Invalid
     },
-    "module_002": {
+    module_002: {
       name: "Photosynthesis",
-      question_count: 10  // ❌ Invalid
-    }
+      question_count: 10, // ❌ Invalid
+    },
   },
-  question_type: "multiple_choice",  // ❌ Invalid
-  language: "en"
-}
+  question_type: "multiple_choice", // ❌ Invalid
+  language: "en",
+};
 ```
 
 ### 5.2 New Request Format (REQUIRED)
@@ -333,24 +319,24 @@ const newQuizRequest = {
   canvas_course_name: "Biology 101",
   title: "Chapter 3 Quiz",
   selected_modules: {
-    "module_001": {
+    module_001: {
       name: "Cell Structure",
       question_batches: [
         { question_type: "multiple_choice", count: 10 },
-        { question_type: "fill_in_blank", count: 5 }
-      ]
+        { question_type: "fill_in_blank", count: 5 },
+      ],
     },
-    "module_002": {
+    module_002: {
       name: "Photosynthesis",
       question_batches: [
         { question_type: "multiple_choice", count: 8 },
-        { question_type: "matching", count: 2 }
-      ]
-    }
+        { question_type: "matching", count: 2 },
+      ],
+    },
   },
   // question_type removed
-  language: "en"
-}
+  language: "en",
+};
 ```
 
 ### 5.3 Request Builder Helper
@@ -364,9 +350,9 @@ export const buildQuizCreateRequest = (
   title: string,
   moduleSelections: Record<string, ModuleSelection>,
   options: {
-    language?: QuizLanguage
-    llmModel?: string
-    llmTemperature?: number
+    language?: QuizLanguage;
+    llmModel?: string;
+    llmTemperature?: number;
   } = {}
 ): QuizCreate => {
   return {
@@ -376,24 +362,17 @@ export const buildQuizCreateRequest = (
     selected_modules: moduleSelections,
     language: options.language || "en",
     llm_model: options.llmModel || "o3",
-    llm_temperature: options.llmTemperature || 1.0
-  }
-}
+    llm_temperature: options.llmTemperature || 1.0,
+  };
+};
 
 // Usage
-const request = buildQuizCreateRequest(
-  12345,
-  "Biology 101",
-  "Quiz Title",
-  {
-    "mod1": {
-      name: "Module 1",
-      question_batches: [
-        { question_type: "multiple_choice", count: 10 }
-      ]
-    }
-  }
-)
+const request = buildQuizCreateRequest(12345, "Biology 101", "Quiz Title", {
+  mod1: {
+    name: "Module 1",
+    question_batches: [{ question_type: "multiple_choice", count: 10 }],
+  },
+});
 ```
 
 ---
@@ -409,18 +388,23 @@ This component likely handles the UI for selecting question types and counts per
 ```typescript
 // OLD approach (single type/count per module)
 interface ModuleQuestionSelectionProps {
-  modules: CanvasModule[]
-  questionType: QuestionType      // ❌ Remove
-  onSelectionChange: (selections: Record<string, {
-    name: string
-    question_count: number        // ❌ Change to question_batches
-  }>) => void
+  modules: CanvasModule[];
+  questionType: QuestionType; // ❌ Remove
+  onSelectionChange: (
+    selections: Record<
+      string,
+      {
+        name: string;
+        question_count: number; // ❌ Change to question_batches
+      }
+    >
+  ) => void;
 }
 
 // NEW approach (multiple batches per module)
 interface ModuleQuestionSelectionProps {
-  modules: CanvasModule[]
-  onSelectionChange: (selections: Record<string, ModuleSelection>) => void
+  modules: CanvasModule[];
+  onSelectionChange: (selections: Record<string, ModuleSelection>) => void;
 }
 
 // Component needs to support:
@@ -438,7 +422,9 @@ Remove global question type selection:
 // OLD - Remove question type selector from quiz settings
 <FormField>
   <FormLabel>Question Type</FormLabel>
-  <Select>  {/* ❌ Remove this */}
+  <Select>
+    {" "}
+    {/* ❌ Remove this */}
     <option value="multiple_choice">Multiple Choice</option>
     <option value="fill_in_blank">Fill in Blank</option>
   </Select>
@@ -451,11 +437,12 @@ Remove global question type selection:
 ### 6.2 Quiz Display Components
 
 **QuizListCard.tsx**
+
 ```typescript
 // Update to show multiple question types
 const QuizListCard = ({ quiz }: { quiz: Quiz }) => {
-  const totalQuestions = calculateTotalQuestions(quiz)
-  const questionTypes = getQuizQuestionTypes(quiz)
+  const totalQuestions = quiz.question_count || 0;
+  const questionTypes = getQuizQuestionTypes(quiz);
 
   return (
     <Card>
@@ -468,27 +455,26 @@ const QuizListCard = ({ quiz }: { quiz: Quiz }) => {
         <QuizTypesSummary quiz={quiz} />
       </CardBody>
     </Card>
-  )
-}
+  );
+};
 ```
 
 **QuizTable.tsx / QuizTableRow.tsx**
+
 ```typescript
 // Update table columns
 const columns = [
   { header: "Title", accessorKey: "title" },
   {
     header: "Questions",
-    cell: ({ row }) => calculateTotalQuestions(row.original)
+    accessorKey: "question_count",
   },
   {
     header: "Types",
-    cell: ({ row }) => (
-      <QuizTypesBadge quiz={row.original} />
-    )
+    cell: ({ row }) => <QuizTypesBadge quiz={row.original} />,
   },
   // ... other columns
-]
+];
 ```
 
 ### 6.3 Question Review Components
@@ -498,15 +484,15 @@ const columns = [
 ```typescript
 // If component has question type filtering
 const QuestionReview = ({ quiz }: { quiz: Quiz }) => {
-  const [selectedType, setSelectedType] = useState<QuestionType | 'all'>('all')
-  const availableTypes = getQuizQuestionTypes(quiz)
+  const [selectedType, setSelectedType] = useState<QuestionType | "all">("all");
+  const availableTypes = getQuizQuestionTypes(quiz);
 
   return (
     <div>
       {/* Type filter dropdown */}
       <Select value={selectedType} onValueChange={setSelectedType}>
         <option value="all">All Types</option>
-        {availableTypes.map(type => (
+        {availableTypes.map((type) => (
           <option key={type} value={type}>
             {formatQuestionType(type)}
           </option>
@@ -515,13 +501,13 @@ const QuestionReview = ({ quiz }: { quiz: Quiz }) => {
 
       {/* Question list with type filtering */}
       <QuestionList
-        questions={questions.filter(q =>
-          selectedType === 'all' || q.question_type === selectedType
+        questions={questions.filter(
+          (q) => selectedType === "all" || q.question_type === selectedType
         )}
       />
     </div>
-  )
-}
+  );
+};
 ```
 
 ---
@@ -550,18 +536,19 @@ npm run generate-client
 After regeneration, TypeScript will show errors in existing code. This is expected and helps identify all places that need updates.
 
 **Common Type Errors After Migration:**
+
 ```typescript
 // Error: Property 'question_type' does not exist on type 'QuizCreate'
 const quiz: QuizCreate = {
   // ...
-  question_type: "multiple_choice"  // ❌ Remove
-}
+  question_type: "multiple_choice", // ❌ Remove
+};
 
 // Error: Property 'question_count' does not exist on type 'ModuleSelection'
 const module: ModuleSelection = {
   name: "Module 1",
-  question_count: 10  // ❌ Replace with question_batches
-}
+  question_count: 10, // ❌ Replace with question_batches
+};
 ```
 
 ### 7.3 Error Handling for New Validation
@@ -572,32 +559,33 @@ The backend now validates batch limits. Update error handling:
 // New validation errors to handle
 const handleQuizCreation = async (data: QuizCreate) => {
   try {
-    await api.quiz.quizCreateNewQuiz({ requestBody: data })
+    await api.quiz.quizCreateNewQuiz({ requestBody: data });
   } catch (error) {
     if (error.status === 422) {
       // Validation errors
-      const details = error.body?.detail || []
+      const details = error.body?.detail || [];
 
       // Handle specific validation messages:
       // - "Module {id} cannot have more than 4 question batches"
       // - "Module {id} has duplicate question types"
       // - "Module {id} batch {i} count must be between 1 and 20"
 
-      const batchErrors = details.filter(d =>
-        d.msg.includes('question batches') ||
-        d.msg.includes('duplicate question types')
-      )
+      const batchErrors = details.filter(
+        (d) =>
+          d.msg.includes("question batches") ||
+          d.msg.includes("duplicate question types")
+      );
 
       if (batchErrors.length > 0) {
         // Show batch-specific error messages
-        setBatchValidationErrors(batchErrors)
-        return
+        setBatchValidationErrors(batchErrors);
+        return;
       }
     }
 
     // Handle other errors...
   }
-}
+};
 ```
 
 ---
@@ -607,18 +595,21 @@ const handleQuizCreation = async (data: QuizCreate) => {
 ### 8.1 Phase 1: Backend Integration (Priority: Critical)
 
 **Step 1**: Update API Client
+
 ```bash
 cd frontend
 npm run generate-client
 ```
 
 **Step 2**: Fix Type Definitions
+
 - Create `QuestionBatch` type
 - Update `ModuleSelection` interface
 - Remove `question_type` from `QuizCreate`
 - Add utility functions for question count calculation
 
 **Step 3**: Update Core Quiz Creation
+
 - Fix `QuizSettingsStep.tsx` (remove global question type)
 - Update `ModuleQuestionSelectionStep.tsx` (add batch selection UI)
 - Update request building logic
@@ -626,11 +617,13 @@ npm run generate-client
 ### 8.2 Phase 2: Display Components (Priority: High)
 
 **Step 4**: Update Question Count Display
+
 - Replace direct `quiz.question_count` usage
 - Add `calculateTotalQuestions()` helper
 - Update all badge/counter components
 
 **Step 5**: Update Question Type Display
+
 - Replace single type displays with multi-type displays
 - Add question type aggregation utilities
 - Update quiz cards, tables, and detail views
@@ -638,11 +631,13 @@ npm run generate-client
 ### 8.3 Phase 3: Advanced Features (Priority: Medium)
 
 **Step 6**: Enhanced UX Features
+
 - Add batch management UI (add/remove/reorder batches)
 - Implement question type suggestions
 - Add validation feedback for batch limits
 
 **Step 7**: Question Review Updates
+
 - Add filtering by question type
 - Show batch-level question organization
 - Update question editing workflows
@@ -650,11 +645,13 @@ npm run generate-client
 ### 8.4 Phase 4: Testing & Polish (Priority: Low)
 
 **Step 8**: Comprehensive Testing
+
 - Test all quiz creation flows
 - Verify question count calculations
 - Test error handling for new validation rules
 
 **Step 9**: Documentation & Training
+
 - Update component documentation
 - Add Storybook stories for new batch components
 - Create user-facing help content
@@ -665,149 +662,130 @@ npm run generate-client
 
 ### 9.1 Unit Tests
 
-**Test Question Count Calculation**
-```typescript
-describe('calculateTotalQuestions', () => {
-  it('should calculate total from multiple batches', () => {
-    const quiz: Quiz = {
-      selected_modules: {
-        mod1: {
-          name: "Module 1",
-          question_batches: [
-            { question_type: "multiple_choice", count: 10 },
-            { question_type: "fill_in_blank", count: 5 }
-          ]
-        },
-        mod2: {
-          name: "Module 2",
-          question_batches: [
-            { question_type: "matching", count: 3 }
-          ]
-        }
-      }
-    }
-
-    expect(calculateTotalQuestions(quiz)).toBe(18)
-  })
-
-  it('should handle empty modules', () => {
-    const quiz: Quiz = { selected_modules: {} }
-    expect(calculateTotalQuestions(quiz)).toBe(0)
-  })
-})
-```
-
 **Test Question Type Aggregation**
+
 ```typescript
-describe('getQuizQuestionTypes', () => {
-  it('should return unique question types', () => {
+describe("getQuizQuestionTypes", () => {
+  it("should return unique question types", () => {
     const quiz: Quiz = {
       selected_modules: {
         mod1: {
           name: "Module 1",
           question_batches: [
             { question_type: "multiple_choice", count: 10 },
-            { question_type: "fill_in_blank", count: 5 }
-          ]
+            { question_type: "fill_in_blank", count: 5 },
+          ],
         },
         mod2: {
           name: "Module 2",
           question_batches: [
-            { question_type: "multiple_choice", count: 8 },  // Duplicate type
-            { question_type: "matching", count: 3 }
-          ]
-        }
-      }
-    }
+            { question_type: "multiple_choice", count: 8 }, // Duplicate type
+            { question_type: "matching", count: 3 },
+          ],
+        },
+      },
+    };
 
-    const types = getQuizQuestionTypes(quiz)
-    expect(types).toHaveLength(3)
-    expect(types).toContain("multiple_choice")
-    expect(types).toContain("fill_in_blank")
-    expect(types).toContain("matching")
-  })
-})
+    const types = getQuizQuestionTypes(quiz);
+    expect(types).toHaveLength(3);
+    expect(types).toContain("multiple_choice");
+    expect(types).toContain("fill_in_blank");
+    expect(types).toContain("matching");
+  });
+});
 ```
 
 ### 9.2 Integration Tests
 
 **Test Quiz Creation Flow**
+
 ```typescript
 // Test complete creation flow with new schema
-describe('Quiz Creation Integration', () => {
-  it('should create quiz with multiple question types', async () => {
+describe("Quiz Creation Integration", () => {
+  it("should create quiz with multiple question types", async () => {
     // Setup
-    render(<QuizCreationFlow />)
+    render(<QuizCreationFlow />);
 
     // Navigate through steps
-    await fillCourseSelection()
-    await fillModuleSelection()
+    await fillCourseSelection();
+    await fillModuleSelection();
 
     // Configure question batches
-    await user.click(screen.getByText('Add Question Batch'))
-    await user.selectOptions(screen.getByLabelText('Question Type'), 'multiple_choice')
-    await user.type(screen.getByLabelText('Question Count'), '10')
+    await user.click(screen.getByText("Add Question Batch"));
+    await user.selectOptions(
+      screen.getByLabelText("Question Type"),
+      "multiple_choice"
+    );
+    await user.type(screen.getByLabelText("Question Count"), "10");
 
-    await user.click(screen.getByText('Add Question Batch'))
-    await user.selectOptions(screen.getByLabelText('Question Type'), 'fill_in_blank')
-    await user.type(screen.getByLabelText('Question Count'), '5')
+    await user.click(screen.getByText("Add Question Batch"));
+    await user.selectOptions(
+      screen.getByLabelText("Question Type"),
+      "fill_in_blank"
+    );
+    await user.type(screen.getByLabelText("Question Count"), "5");
 
     // Submit
-    await user.click(screen.getByText('Create Quiz'))
+    await user.click(screen.getByText("Create Quiz"));
 
     // Verify API call
     expect(mockApi.quiz.quizCreateNewQuiz).toHaveBeenCalledWith({
       requestBody: expect.objectContaining({
         selected_modules: expect.objectContaining({
-          'mod1': {
-            name: 'Module 1',
+          mod1: {
+            name: "Module 1",
             question_batches: [
-              { question_type: 'multiple_choice', count: 10 },
-              { question_type: 'fill_in_blank', count: 5 }
-            ]
-          }
-        })
-      })
-    })
-  })
-})
+              { question_type: "multiple_choice", count: 10 },
+              { question_type: "fill_in_blank", count: 5 },
+            ],
+          },
+        }),
+      }),
+    });
+  });
+});
 ```
 
 ### 9.3 E2E Tests
 
 **Test Complete User Journey**
+
 ```typescript
 // playwright/e2e/quiz-creation.spec.ts
-test('user can create quiz with multiple question types per module', async ({ page }) => {
-  await page.goto('/create-quiz')
+test("user can create quiz with multiple question types per module", async ({
+  page,
+}) => {
+  await page.goto("/create-quiz");
 
   // Course selection
-  await page.selectOption('[data-testid="course-select"]', '12345')
-  await page.click('[data-testid="next-step"]')
+  await page.selectOption('[data-testid="course-select"]', "12345");
+  await page.click('[data-testid="next-step"]');
 
   // Module selection
-  await page.check('[data-testid="module-mod1"]')
-  await page.click('[data-testid="next-step"]')
+  await page.check('[data-testid="module-mod1"]');
+  await page.click('[data-testid="next-step"]');
 
   // Question batch configuration
-  await page.click('[data-testid="add-batch-mod1"]')
-  await page.selectOption('[data-testid="batch-type-0"]', 'multiple_choice')
-  await page.fill('[data-testid="batch-count-0"]', '10')
+  await page.click('[data-testid="add-batch-mod1"]');
+  await page.selectOption('[data-testid="batch-type-0"]', "multiple_choice");
+  await page.fill('[data-testid="batch-count-0"]', "10");
 
-  await page.click('[data-testid="add-batch-mod1"]')
-  await page.selectOption('[data-testid="batch-type-1"]', 'fill_in_blank')
-  await page.fill('[data-testid="batch-count-1"]', '5')
+  await page.click('[data-testid="add-batch-mod1"]');
+  await page.selectOption('[data-testid="batch-type-1"]', "fill_in_blank");
+  await page.fill('[data-testid="batch-count-1"]', "5");
 
-  await page.click('[data-testid="next-step"]')
+  await page.click('[data-testid="next-step"]');
 
   // Quiz settings
-  await page.fill('[data-testid="quiz-title"]', 'Test Quiz')
-  await page.click('[data-testid="create-quiz"]')
+  await page.fill('[data-testid="quiz-title"]', "Test Quiz");
+  await page.click('[data-testid="create-quiz"]');
 
   // Verify success
-  await expect(page.locator('[data-testid="quiz-created"]')).toBeVisible()
-  await expect(page.locator('[data-testid="total-questions"]')).toHaveText('15 Questions')
-})
+  await expect(page.locator('[data-testid="quiz-created"]')).toBeVisible();
+  await expect(page.locator('[data-testid="total-questions"]')).toHaveText(
+    "15"
+  );
+});
 ```
 
 ---
@@ -818,146 +796,162 @@ test('user can create quiz with multiple question types per module', async ({ pa
 
 ```typescript
 interface QuestionBatch {
-  question_type: QuestionType
-  count: number
+  question_type: QuestionType;
+  count: number;
 }
 
 interface ModuleSelection {
-  name: string
-  question_batches: QuestionBatch[]
+  name: string;
+  question_batches: QuestionBatch[];
 }
 
 interface ModuleQuestionSelectionStepProps {
-  modules: CanvasModule[]
-  initialSelections?: Record<string, ModuleSelection>
-  onSelectionChange: (selections: Record<string, ModuleSelection>) => void
-  onNext: () => void
-  onBack: () => void
+  modules: CanvasModule[];
+  initialSelections?: Record<string, ModuleSelection>;
+  onSelectionChange: (selections: Record<string, ModuleSelection>) => void;
+  onNext: () => void;
+  onBack: () => void;
 }
 
-const ModuleQuestionSelectionStep: React.FC<ModuleQuestionSelectionStepProps> = ({
+const ModuleQuestionSelectionStep: React.FC<
+  ModuleQuestionSelectionStepProps
+> = ({
   modules,
   initialSelections = {},
   onSelectionChange,
   onNext,
-  onBack
+  onBack,
 }) => {
-  const [selections, setSelections] = useState<Record<string, ModuleSelection>>(initialSelections)
-  const [validationErrors, setValidationErrors] = useState<Record<string, string[]>>({})
+  const [selections, setSelections] =
+    useState<Record<string, ModuleSelection>>(initialSelections);
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string[]>
+  >({});
 
-  const selectedModules = modules.filter(m => selections[m.id])
+  const selectedModules = modules.filter((m) => selections[m.id]);
 
   const addBatch = (moduleId: string) => {
-    const module = selections[moduleId]
-    if (!module) return
+    const module = selections[moduleId];
+    if (!module) return;
 
     if (module.question_batches.length >= 4) {
-      setValidationErrors(prev => ({
+      setValidationErrors((prev) => ({
         ...prev,
-        [moduleId]: ['Maximum 4 question batches per module']
-      }))
-      return
+        [moduleId]: ["Maximum 4 question batches per module"],
+      }));
+      return;
     }
 
     const newBatch: QuestionBatch = {
       question_type: "multiple_choice",
-      count: 5
-    }
+      count: 5,
+    };
 
     const updatedSelections = {
       ...selections,
       [moduleId]: {
         ...module,
-        question_batches: [...module.question_batches, newBatch]
-      }
-    }
+        question_batches: [...module.question_batches, newBatch],
+      },
+    };
 
-    setSelections(updatedSelections)
-    onSelectionChange(updatedSelections)
+    setSelections(updatedSelections);
+    onSelectionChange(updatedSelections);
 
     // Clear validation errors
-    setValidationErrors(prev => {
-      const newErrors = { ...prev }
-      delete newErrors[moduleId]
-      return newErrors
-    })
-  }
+    setValidationErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[moduleId];
+      return newErrors;
+    });
+  };
 
   const removeBatch = (moduleId: string, batchIndex: number) => {
-    const module = selections[moduleId]
-    if (!module) return
+    const module = selections[moduleId];
+    if (!module) return;
 
-    const updatedBatches = module.question_batches.filter((_, index) => index !== batchIndex)
+    const updatedBatches = module.question_batches.filter(
+      (_, index) => index !== batchIndex
+    );
 
     if (updatedBatches.length === 0) {
       // Remove module entirely if no batches
-      const updatedSelections = { ...selections }
-      delete updatedSelections[moduleId]
-      setSelections(updatedSelections)
-      onSelectionChange(updatedSelections)
+      const updatedSelections = { ...selections };
+      delete updatedSelections[moduleId];
+      setSelections(updatedSelections);
+      onSelectionChange(updatedSelections);
     } else {
       const updatedSelections = {
         ...selections,
         [moduleId]: {
           ...module,
-          question_batches: updatedBatches
-        }
-      }
-      setSelections(updatedSelections)
-      onSelectionChange(updatedSelections)
+          question_batches: updatedBatches,
+        },
+      };
+      setSelections(updatedSelections);
+      onSelectionChange(updatedSelections);
     }
-  }
+  };
 
-  const updateBatch = (moduleId: string, batchIndex: number, updates: Partial<QuestionBatch>) => {
-    const module = selections[moduleId]
-    if (!module) return
+  const updateBatch = (
+    moduleId: string,
+    batchIndex: number,
+    updates: Partial<QuestionBatch>
+  ) => {
+    const module = selections[moduleId];
+    if (!module) return;
 
     const updatedBatches = module.question_batches.map((batch, index) =>
       index === batchIndex ? { ...batch, ...updates } : batch
-    )
+    );
 
     // Validate no duplicate question types
-    const types = updatedBatches.map(b => b.question_type)
-    const hasDuplicates = types.length !== new Set(types).size
+    const types = updatedBatches.map((b) => b.question_type);
+    const hasDuplicates = types.length !== new Set(types).size;
 
     if (hasDuplicates) {
-      setValidationErrors(prev => ({
+      setValidationErrors((prev) => ({
         ...prev,
-        [moduleId]: ['Cannot have duplicate question types in the same module']
-      }))
-      return
+        [moduleId]: ["Cannot have duplicate question types in the same module"],
+      }));
+      return;
     }
 
     const updatedSelections = {
       ...selections,
       [moduleId]: {
         ...module,
-        question_batches: updatedBatches
-      }
-    }
+        question_batches: updatedBatches,
+      },
+    };
 
-    setSelections(updatedSelections)
-    onSelectionChange(updatedSelections)
+    setSelections(updatedSelections);
+    onSelectionChange(updatedSelections);
 
     // Clear validation errors
-    setValidationErrors(prev => {
-      const newErrors = { ...prev }
-      delete newErrors[moduleId]
-      return newErrors
-    })
-  }
+    setValidationErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[moduleId];
+      return newErrors;
+    });
+  };
 
   const calculateModuleTotal = (module: ModuleSelection): number => {
-    return module.question_batches.reduce((sum, batch) => sum + batch.count, 0)
-  }
+    return module.question_batches.reduce((sum, batch) => sum + batch.count, 0);
+  };
 
   const calculateGrandTotal = (): number => {
-    return Object.values(selections).reduce((sum, module) => sum + calculateModuleTotal(module), 0)
-  }
+    return Object.values(selections).reduce(
+      (sum, module) => sum + calculateModuleTotal(module),
+      0
+    );
+  };
 
   const isValid = (): boolean => {
-    return Object.keys(validationErrors).length === 0 && selectedModules.length > 0
-  }
+    return (
+      Object.keys(validationErrors).length === 0 && selectedModules.length > 0
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -974,10 +968,12 @@ const ModuleQuestionSelectionStep: React.FC<ModuleQuestionSelectionStepProps> = 
         <CardBody>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <span className="font-medium">Total Questions:</span> {calculateGrandTotal()}
+              <span className="font-medium">Total Questions:</span>{" "}
+              {calculateGrandTotal()}
             </div>
             <div>
-              <span className="font-medium">Modules Selected:</span> {selectedModules.length}
+              <span className="font-medium">Modules Selected:</span>{" "}
+              {selectedModules.length}
             </div>
           </div>
         </CardBody>
@@ -985,12 +981,15 @@ const ModuleQuestionSelectionStep: React.FC<ModuleQuestionSelectionStepProps> = 
 
       {/* Module Configuration */}
       <div className="space-y-4">
-        {selectedModules.map(module => {
-          const moduleSelection = selections[module.id]
-          const moduleErrors = validationErrors[module.id] || []
+        {selectedModules.map((module) => {
+          const moduleSelection = selections[module.id];
+          const moduleErrors = validationErrors[module.id] || [];
 
           return (
-            <Card key={module.id} className={moduleErrors.length > 0 ? 'border-red-200' : ''}>
+            <Card
+              key={module.id}
+              className={moduleErrors.length > 0 ? "border-red-200" : ""}
+            >
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <div>
@@ -1016,14 +1015,19 @@ const ModuleQuestionSelectionStep: React.FC<ModuleQuestionSelectionStepProps> = 
                 {moduleErrors.length > 0 && (
                   <div className="bg-red-50 border border-red-200 rounded p-3">
                     {moduleErrors.map((error, index) => (
-                      <p key={index} className="text-sm text-red-600">{error}</p>
+                      <p key={index} className="text-sm text-red-600">
+                        {error}
+                      </p>
                     ))}
                   </div>
                 )}
 
                 {/* Question Batches */}
                 {moduleSelection.question_batches.map((batch, batchIndex) => (
-                  <div key={batchIndex} className="flex items-center gap-3 p-3 bg-gray-50 rounded">
+                  <div
+                    key={batchIndex}
+                    className="flex items-center gap-3 p-3 bg-gray-50 rounded"
+                  >
                     <div className="flex-1">
                       <label className="block text-sm font-medium mb-1">
                         Question Type
@@ -1031,7 +1035,9 @@ const ModuleQuestionSelectionStep: React.FC<ModuleQuestionSelectionStepProps> = 
                       <Select
                         value={batch.question_type}
                         onValueChange={(value: QuestionType) =>
-                          updateBatch(module.id, batchIndex, { question_type: value })
+                          updateBatch(module.id, batchIndex, {
+                            question_type: value,
+                          })
                         }
                       >
                         <option value="multiple_choice">Multiple Choice</option>
@@ -1052,7 +1058,7 @@ const ModuleQuestionSelectionStep: React.FC<ModuleQuestionSelectionStepProps> = 
                         value={batch.count}
                         onChange={(e) =>
                           updateBatch(module.id, batchIndex, {
-                            count: parseInt(e.target.value) || 1
+                            count: parseInt(e.target.value) || 1,
                           })
                         }
                       />
@@ -1071,12 +1077,13 @@ const ModuleQuestionSelectionStep: React.FC<ModuleQuestionSelectionStepProps> = 
 
                 {moduleSelection.question_batches.length === 0 && (
                   <p className="text-gray-500 text-center py-4">
-                    No question batches configured. Click "Add Batch" to get started.
+                    No question batches configured. Click "Add Batch" to get
+                    started.
                   </p>
                 )}
               </CardBody>
             </Card>
-          )
+          );
         })}
       </div>
 
@@ -1095,18 +1102,15 @@ const ModuleQuestionSelectionStep: React.FC<ModuleQuestionSelectionStepProps> = 
         <Button variant="outline" onClick={onBack}>
           Back
         </Button>
-        <Button
-          onClick={onNext}
-          disabled={!isValid()}
-        >
+        <Button onClick={onNext} disabled={!isValid()}>
           Next: Quiz Settings
         </Button>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ModuleQuestionSelectionStep
+export default ModuleQuestionSelectionStep;
 ```
 
 ### 10.2 Question Count Utilities
@@ -1115,128 +1119,111 @@ export default ModuleQuestionSelectionStep
 // src/lib/utils/quiz.ts
 
 export interface QuestionBatch {
-  question_type: string
-  count: number
+  question_type: string;
+  count: number;
 }
 
 export interface ModuleData {
-  name: string
-  question_batches?: QuestionBatch[]
+  name: string;
+  question_batches?: QuestionBatch[];
 }
 
 export interface Quiz {
-  selected_modules?: Record<string, ModuleData>
+  question_count?: number;
+  selected_modules?: Record<string, ModuleData>;
   // ... other fields
-}
-
-/**
- * Calculate total questions across all modules and batches
- */
-export const calculateTotalQuestions = (quiz: Quiz): number => {
-  if (!quiz.selected_modules) return 0
-
-  return Object.values(quiz.selected_modules).reduce((total, module) => {
-    if (!module.question_batches) return total
-
-    return total + module.question_batches.reduce((moduleTotal, batch) => {
-      return moduleTotal + (batch.count || 0)
-    }, 0)
-  }, 0)
-}
-
-/**
- * Calculate questions for a specific module
- */
-export const calculateModuleQuestions = (module: ModuleData): number => {
-  if (!module.question_batches) return 0
-
-  return module.question_batches.reduce((total, batch) => total + (batch.count || 0), 0)
 }
 
 /**
  * Get all unique question types used in a quiz
  */
 export const getQuizQuestionTypes = (quiz: Quiz): string[] => {
-  if (!quiz.selected_modules) return []
+  if (!quiz.selected_modules) return [];
 
-  const types = new Set<string>()
+  const types = new Set<string>();
 
-  Object.values(quiz.selected_modules).forEach(module => {
-    module.question_batches?.forEach(batch => {
+  Object.values(quiz.selected_modules).forEach((module) => {
+    module.question_batches?.forEach((batch) => {
       if (batch.question_type) {
-        types.add(batch.question_type)
+        types.add(batch.question_type);
       }
-    })
-  })
+    });
+  });
 
-  return Array.from(types)
-}
+  return Array.from(types);
+};
 
 /**
  * Get question type counts aggregated across all modules
  */
-export const getQuizQuestionTypeCounts = (quiz: Quiz): Record<string, number> => {
-  if (!quiz.selected_modules) return {}
+export const getQuizQuestionTypeCounts = (
+  quiz: Quiz
+): Record<string, number> => {
+  if (!quiz.selected_modules) return {};
 
-  const counts: Record<string, number> = {}
+  const counts: Record<string, number> = {};
 
-  Object.values(quiz.selected_modules).forEach(module => {
-    module.question_batches?.forEach(batch => {
+  Object.values(quiz.selected_modules).forEach((module) => {
+    module.question_batches?.forEach((batch) => {
       if (batch.question_type) {
-        counts[batch.question_type] = (counts[batch.question_type] || 0) + batch.count
+        counts[batch.question_type] =
+          (counts[batch.question_type] || 0) + batch.count;
       }
-    })
-  })
+    });
+  });
 
-  return counts
-}
+  return counts;
+};
 
 /**
  * Format question type for display
  */
 export const formatQuestionType = (type: string): string => {
   const typeLabels: Record<string, string> = {
-    'multiple_choice': 'Multiple Choice',
-    'fill_in_blank': 'Fill in Blank',
-    'matching': 'Matching',
-    'categorization': 'Categorization'
-  }
+    multiple_choice: "Multiple Choice",
+    fill_in_blank: "Fill in Blank",
+    matching: "Matching",
+    categorization: "Categorization",
+  };
 
-  return typeLabels[type] || type
-}
+  return typeLabels[type] || type;
+};
 
 /**
  * Validate module question batches
  */
 export const validateModuleBatches = (batches: QuestionBatch[]): string[] => {
-  const errors: string[] = []
+  const errors: string[] = [];
 
   // Check batch count limit
   if (batches.length > 4) {
-    errors.push('Maximum 4 question batches per module')
+    errors.push("Maximum 4 question batches per module");
   }
 
   // Check for duplicate question types
-  const types = batches.map(b => b.question_type)
-  const uniqueTypes = new Set(types)
+  const types = batches.map((b) => b.question_type);
+  const uniqueTypes = new Set(types);
   if (types.length !== uniqueTypes.size) {
-    errors.push('Cannot have duplicate question types in the same module')
+    errors.push("Cannot have duplicate question types in the same module");
   }
 
   // Check individual batch counts
   batches.forEach((batch, index) => {
     if (batch.count < 1 || batch.count > 20) {
-      errors.push(`Batch ${index + 1}: Question count must be between 1 and 20`)
+      errors.push(
+        `Batch ${index + 1}: Question count must be between 1 and 20`
+      );
     }
-  })
+  });
 
-  return errors
-}
+  return errors;
+};
 ```
 
 ### 10.3 Request/Response Examples
 
 **Example Quiz Creation Request:**
+
 ```json
 {
   "canvas_course_id": 12345,
@@ -1290,6 +1277,7 @@ export const validateModuleBatches = (batches: QuestionBatch[]): string[] => {
 ```
 
 **Example Quiz Response:**
+
 ```json
 {
   "id": "quiz-uuid-123",

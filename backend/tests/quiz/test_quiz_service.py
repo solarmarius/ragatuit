@@ -62,7 +62,7 @@ def test_create_quiz_success(session: Session):
         },
     }
     assert quiz.title == "Test Quiz"
-    assert quiz.total_question_count == 25  # 10 + 15 from modules
+    assert quiz.question_count == 25  # 10 + 15 from modules
     assert quiz.llm_model == "gpt-4"
     assert quiz.llm_temperature == 0.7
     assert quiz.updated_at is not None
@@ -94,7 +94,7 @@ def test_create_quiz_with_defaults(session: Session):
     quiz = create_quiz(session, quiz_data, user.id)
 
     # Verify defaults
-    assert quiz.total_question_count == 10  # Sum of module question counts
+    assert quiz.question_count == 10  # Sum of module question counts
     assert quiz.llm_model == "o3"  # Default
     assert quiz.llm_temperature == 1.0  # Default
 
@@ -136,7 +136,7 @@ def test_create_quiz_with_multiple_question_types_per_module(session: Session):
 
     # Verify multiple question types are persisted correctly
     assert quiz.language == QuizLanguage.ENGLISH
-    assert quiz.total_question_count == 20  # 10 + 5 + 3 + 2
+    assert quiz.question_count == 20  # 10 + 5 + 3 + 2
 
     # Verify module structure
     expected_modules = {
@@ -560,6 +560,7 @@ async def test_reserve_quiz_job_extraction_success(async_session):
                 "question_batches": [{"question_type": "multiple_choice", "count": 50}],
             }
         },
+        question_count=50,
         title="Test Quiz",
         llm_model="gpt-4",
         llm_temperature=0.7,
@@ -806,7 +807,7 @@ def test_create_quiz_with_various_parameters(
 
     quiz = create_quiz(session, quiz_data, user.id)
 
-    assert quiz.total_question_count == min(question_count, 20)
+    assert quiz.question_count == min(question_count, 20)
     assert quiz.llm_model == llm_model
     assert quiz.llm_temperature == temperature
 
@@ -975,6 +976,7 @@ async def test_reserve_quiz_job_includes_language_setting(async_session):
                 "question_batches": [{"question_type": "multiple_choice", "count": 50}],
             }
         },
+        question_count=50,
         title="Norsk Test Quiz",
         llm_model="gpt-4",
         llm_temperature=0.7,
@@ -1287,7 +1289,7 @@ def test_soft_delete_preserves_all_quiz_data(session: Session):
 
     original_data = {
         "title": quiz.title,
-        "question_count": quiz.total_question_count,
+        "question_count": quiz.question_count,
         "llm_model": quiz.llm_model,
         "llm_temperature": quiz.llm_temperature,
         "selected_modules": quiz.selected_modules,
@@ -1307,7 +1309,7 @@ def test_soft_delete_preserves_all_quiz_data(session: Session):
 
     # Verify all original data is preserved
     assert soft_deleted_quiz.title == original_data["title"]
-    assert soft_deleted_quiz.total_question_count == original_data["question_count"]
+    assert soft_deleted_quiz.question_count == original_data["question_count"]
     assert soft_deleted_quiz.llm_model == original_data["llm_model"]
     assert soft_deleted_quiz.llm_temperature == original_data["llm_temperature"]
     assert soft_deleted_quiz.selected_modules == original_data["selected_modules"]

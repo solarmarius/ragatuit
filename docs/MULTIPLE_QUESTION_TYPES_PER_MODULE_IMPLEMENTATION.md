@@ -7,26 +7,31 @@
 ## 1. Feature Overview
 
 ### Description
+
 This feature enables instructors to generate multiple types of questions from a single course module in Canvas LMS. Instead of being limited to one question type per quiz, users can now create "batches" of different question types for each module, allowing for more diverse and comprehensive assessments.
 
 ### Business Value
+
 - **Increased Flexibility**: Instructors can create varied assessments that test different cognitive levels
 - **Better Assessment Quality**: Combining multiple question types provides more comprehensive evaluation
 - **Efficiency**: Generate all question types in one workflow instead of creating multiple quizzes
 - **Customization**: Fine-grained control over question distribution per module
 
 ### User Benefits
+
 - Create up to 4 different question type batches per module
 - Specify exact count for each question type (1-20 questions per batch)
 - Parallel generation for faster processing
 - Selective retry for failed batches without regenerating successful ones
 
 ### Context
+
 Previously, the system allowed only one question type per quiz, applied uniformly across all selected modules. This limitation meant instructors had to create multiple quizzes to use different question types for the same content.
 
 ## 2. Technical Architecture
 
 ### High-Level Architecture
+
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌──────────────────┐
 │                 │     │                 │     │                  │
@@ -45,6 +50,7 @@ Previously, the system allowed only one question type per quiz, applied uniforml
 ```
 
 ### System Integration
+
 The feature modifies the quiz creation flow at multiple levels:
 
 1. **API Layer**: Accepts new request structure with question batches per module
@@ -53,6 +59,7 @@ The feature modifies the quiz creation flow at multiple levels:
 4. **Batch Tracking**: Each question type per module is tracked as a separate batch in `generation_metadata`
 
 ### Key Components
+
 - **Quiz Model**: Central entity storing module selections with question batches
 - **Generation Service**: Orchestrates parallel question generation for all batches
 - **Module Batch Workflow**: Handles individual batch generation with retry logic
@@ -61,6 +68,7 @@ The feature modifies the quiz creation flow at multiple levels:
 ## 3. Dependencies & Prerequisites
 
 ### Backend Dependencies
+
 ```toml
 # Already included in pyproject.toml
 fastapi = "^0.115.0"
@@ -71,10 +79,12 @@ asyncio = "*"  # Built-in Python
 ```
 
 ### Database Requirements
+
 - PostgreSQL 13+ with JSONB support
 - Existing tables: `quiz`, `question`, `user`
 
 ### Environment Setup
+
 ```bash
 # Backend development environment
 cd backend
@@ -87,6 +97,7 @@ docker compose up -d db
 ```
 
 ### Configuration Prerequisites
+
 - Canvas OAuth credentials configured
 - LLM provider API keys set
 - Database connection string configured
@@ -118,6 +129,7 @@ backend/src/
 ### 4.2 Step-by-Step Implementation
 
 #### Step 1: Update Quiz Schemas
+
 **File: `backend/src/quiz/schemas.py`**
 
 ```python
@@ -226,7 +238,7 @@ class QuizCreate(SQLModel):
         return v
 
     @property
-    def total_question_count(self) -> int:
+    def question_count(self) -> int:
         """Calculate total questions across all modules and batches."""
         total = 0
         for module in self.selected_modules.values():
@@ -272,12 +284,14 @@ class QuizRead(SQLModel):
 ```
 
 **Key Changes:**
+
 - Added `QuestionBatch` schema for type-count pairs
 - Updated `ModuleSelection` to include `question_batches` list
 - Removed `question_type` from `QuizCreate`
 - Added validation for max 4 batches and no duplicate types per module
 
 #### Step 2: Update Quiz Model
+
 **File: `backend/src/quiz/models.py`**
 
 ```python
@@ -389,7 +403,7 @@ class Quiz(SQLModel, table=True):
     )
 
     @property
-    def total_question_count(self) -> int:
+    def question_count(self) -> int:
         """Calculate total questions from all module batches."""
         total = 0
         for module_data in self.selected_modules.values():
@@ -465,12 +479,14 @@ class Quiz(SQLModel, table=True):
 ```
 
 **Key Changes:**
+
 - Removed `question_type` and `question_count` fields
 - Updated `selected_modules` validator for new structure with `question_batches`
 - Added properties for batch distribution and total count calculation
 - Enhanced validation for batch limits and structure
 
 #### Step 3: Update Generation Service
+
 **File: `backend/src/question/services/generation_service.py`**
 
 ```python
@@ -672,12 +688,14 @@ class QuestionGenerationService:
 ```
 
 **Key Changes:**
+
 - Modified to process multiple batches per module
 - Each batch gets its own batch key with question type
 - Tracks skipped batches with question type information
 - Passes batch information to the processor
 
 #### Step 4: Update Module Batch Workflow
+
 **File: `backend/src/question/workflows/module_batch_workflow.py`**
 
 ```python
@@ -1075,6 +1093,7 @@ class ParallelModuleProcessor:
 ```
 
 **Key Changes:**
+
 - `ModuleBatchWorkflow` now accepts `question_type` as a parameter in `run()` method
 - Removed `question_type` from workflow initialization
 - `ParallelModuleProcessor` processes multiple batches per module
@@ -1082,6 +1101,7 @@ class ParallelModuleProcessor:
 - Batch tracking maintains the same key format
 
 #### Step 5: Update Quiz Orchestrator
+
 **File: `backend/src/quiz/orchestrator.py`**
 
 Locate the question generation orchestration sections and update them to remove the single question_type parameter. The orchestrator should now rely on the generation service to handle multiple question types per module.
@@ -1106,6 +1126,7 @@ processor = ParallelModuleProcessor(
 ```
 
 #### Step 6: Update Quiz Service
+
 **File: `backend/src/quiz/service.py`**
 
 Update the quiz creation logic to handle the new schema structure:
@@ -1169,7 +1190,7 @@ async def create_quiz(
         "quiz_created",
         quiz_id=str(quiz.id),
         total_modules=len(quiz.selected_modules),
-        total_questions=quiz.total_question_count,
+        total_questions=quiz.question_count,
     )
 
     return quiz
@@ -1178,6 +1199,7 @@ async def create_quiz(
 ### 4.3 Data Models & Schemas
 
 #### Request Structure
+
 ```json
 {
   "canvas_course_id": 12345,
@@ -1187,16 +1209,16 @@ async def create_quiz(
     "module_001": {
       "name": "Cell Structure",
       "question_batches": [
-        {"question_type": "multiple_choice", "count": 10},
-        {"question_type": "fill_in_blank", "count": 5}
+        { "question_type": "multiple_choice", "count": 10 },
+        { "question_type": "fill_in_blank", "count": 5 }
       ]
     },
     "module_002": {
       "name": "Photosynthesis",
       "question_batches": [
-        {"question_type": "multiple_choice", "count": 15},
-        {"question_type": "matching", "count": 3},
-        {"question_type": "categorization", "count": 2}
+        { "question_type": "multiple_choice", "count": 15 },
+        { "question_type": "matching", "count": 3 },
+        { "question_type": "categorization", "count": 2 }
       ]
     }
   },
@@ -1207,20 +1229,23 @@ async def create_quiz(
 ```
 
 #### Database Structure
+
 The `selected_modules` JSONB field stores:
+
 ```json
 {
   "module_id": {
     "name": "Module Name",
     "question_batches": [
-      {"question_type": "multiple_choice", "count": 10},
-      {"question_type": "fill_in_blank", "count": 5}
+      { "question_type": "multiple_choice", "count": 10 },
+      { "question_type": "fill_in_blank", "count": 5 }
     ]
   }
 }
 ```
 
 #### Generation Metadata Structure
+
 ```json
 {
   "successful_batches": [
@@ -1228,10 +1253,7 @@ The `selected_modules` JSONB field stores:
     "module_001_fill_in_blank_5",
     "module_002_multiple_choice_15"
   ],
-  "failed_batches": [
-    "module_002_matching_3",
-    "module_002_categorization_2"
-  ],
+  "failed_batches": ["module_002_matching_3", "module_002_categorization_2"],
   "batch_details": {
     "module_001_multiple_choice_10": {
       "generated_count": 10,
@@ -1253,6 +1275,7 @@ MAX_JSON_CORRECTIONS = 3    # JSON fix attempts
 ```
 
 Validation limits are hardcoded:
+
 - Max 4 batches per module
 - Max 20 questions per batch
 - Min 1 question per batch
@@ -1263,6 +1286,7 @@ Validation limits are hardcoded:
 ### Unit Tests
 
 #### Test Quiz Schema Validation
+
 ```python
 # backend/tests/quiz/test_quiz_schemas.py
 
@@ -1325,6 +1349,7 @@ def test_quiz_create_no_duplicate_types():
 ```
 
 #### Test Generation Service
+
 ```python
 # backend/tests/question/test_generation_service.py
 
@@ -1409,16 +1434,19 @@ async def test_full_quiz_creation_with_multiple_types():
 ### Manual Testing Steps
 
 1. **Create Quiz with Multiple Types**:
+
    - POST to `/api/v1/quizzes` with multiple batches per module
    - Verify response structure
    - Check database for correct storage
 
 2. **Test Batch Limits**:
+
    - Try creating quiz with 5 batches (should fail)
    - Try creating quiz with 25 questions per batch (should fail)
    - Try creating quiz with 0 batches (should fail)
 
 3. **Test Generation**:
+
    - Create quiz with 2 modules, 2 batches each
    - Monitor logs for parallel processing
    - Verify batch keys in generation_metadata
@@ -1439,9 +1467,11 @@ async def test_full_quiz_creation_with_multiple_types():
 ## 6. Deployment Instructions
 
 ### Step 1: Database Migration
+
 Since the database is empty (per requirements), no migration needed. The JSONB column supports the new structure.
 
 ### Step 2: Update Backend
+
 ```bash
 # From project root
 cd backend
@@ -1455,6 +1485,7 @@ docker compose restart backend
 ```
 
 ### Step 3: Verify API
+
 ```bash
 # Test new endpoint structure
 curl -X POST http://localhost:8000/api/v1/quizzes \
@@ -1476,7 +1507,9 @@ curl -X POST http://localhost:8000/api/v1/quizzes \
 ```
 
 ### Rollback Procedure
+
 If issues arise:
+
 ```bash
 # Revert to previous version
 git checkout main
@@ -1489,11 +1522,13 @@ docker compose up -d
 ### Key Metrics to Monitor
 
 1. **Batch Processing Metrics**:
+
    - Log pattern: `"parallel_batch_processing_started"`
    - Track: total_batches, modules_count
    - Alert if: batch count > 20 (indicates validation bypass)
 
 2. **Batch Success Rates**:
+
    - Log pattern: `"parallel_batch_processing_completed"`
    - Track: successful_batches vs failed_batches ratio
    - Alert if: failure rate > 30%
@@ -1533,14 +1568,17 @@ docker compose up -d
 ### Common Issues & Troubleshooting
 
 1. **"Module missing required 'question_batches' field"**
+
    - Cause: Frontend sending old format
    - Fix: Ensure frontend updated or add compatibility layer
 
 2. **"Duplicate question types"**
+
    - Cause: Same question type twice in one module
    - Fix: Validate in frontend or merge duplicates
 
 3. **Batch generation timeout**
+
    - Cause: Too many parallel requests to LLM
    - Fix: Consider rate limiting or queue system
 
@@ -1551,20 +1589,24 @@ docker compose up -d
 ## 8. Security Considerations
 
 ### Input Validation
+
 - All batch counts validated (1-20 range)
 - Maximum 4 batches per module enforced
 - Question types validated against enum
 
 ### Data Privacy
+
 - No change to existing privacy model
 - Question batches stored in same JSONB field as before
 - No new PII exposure
 
 ### Authorization
+
 - Existing quiz ownership checks apply
 - No new endpoints or permissions needed
 
 ### Rate Limiting
+
 - Consider implementing rate limits for large batch counts
 - Current parallel processing could overwhelm LLM providers
 
@@ -1573,10 +1615,12 @@ docker compose up -d
 ### Known Limitations
 
 1. **Fixed Batch Limits**:
+
    - Hard-coded max 4 batches per module
    - Consider making configurable
 
 2. **No Batch Priority**:
+
    - All batches process with equal priority
    - Could add priority for certain question types
 
@@ -1587,14 +1631,17 @@ docker compose up -d
 ### Potential Improvements
 
 1. **Smart Batch Distribution**:
+
    - Auto-suggest question type distribution based on content
    - ML model to recommend optimal mix
 
 2. **Batch Templates**:
+
    - Save common batch configurations
    - "Apply template" option for quick setup
 
 3. **Progressive Generation**:
+
    - Start showing results as batches complete
    - Don't wait for all batches to finish
 
@@ -1605,14 +1652,17 @@ docker compose up -d
 ### Scalability Considerations
 
 1. **Database**:
+
    - JSONB queries might slow with many quizzes
    - Consider indexing generation_metadata->successful_batches
 
 2. **LLM Provider Limits**:
+
    - 20 modules × 4 batches = 80 parallel requests max
    - Implement request queuing for large quizzes
 
 3. **Memory Usage**:
+
    - Large batches hold all questions in memory
    - Consider streaming for very large generations
 

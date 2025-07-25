@@ -1,8 +1,8 @@
 """Initial migration
 
-Revision ID: cadc98c91270
+Revision ID: a8587fe4d2d3
 Revises:
-Create Date: 2025-07-25 09:56:10.530231
+Create Date: 2025-07-25 10:51:28.375991
 
 """
 from alembic import op
@@ -11,7 +11,7 @@ import sqlmodel.sql.sqltypes
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'cadc98c91270'
+revision = 'a8587fe4d2d3'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -40,6 +40,7 @@ def upgrade():
     sa.Column('canvas_course_name', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('selected_modules', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('title', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+    sa.Column('question_count', sa.Integer(), nullable=False),
     sa.Column('llm_model', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('llm_temperature', sa.Float(), nullable=False),
     sa.Column('language', sa.Enum('ENGLISH', 'NORWEGIAN', name='quizlanguage'), nullable=False),

@@ -39,7 +39,6 @@ def create_quiz(session: Session, quiz_create: QuizCreate, owner_id: UUID) -> Qu
         course_id=quiz_create.canvas_course_id,
         title=quiz_create.title,
         total_modules=len(quiz_create.selected_modules),
-        total_questions=quiz_create.total_question_count,
     )
 
     # Convert ModuleSelection objects to dict for storage
@@ -71,6 +70,11 @@ def create_quiz(session: Session, quiz_create: QuizCreate, owner_id: UUID) -> Qu
         canvas_course_name=quiz_create.canvas_course_name,
         selected_modules=selected_modules,
         title=quiz_create.title,
+        question_count=sum(
+            batch["count"]
+            for module in selected_modules.values()
+            for batch in module["question_batches"]
+        ),
         llm_model=quiz_create.llm_model,
         llm_temperature=quiz_create.llm_temperature,
         language=quiz_create.language,
@@ -86,7 +90,7 @@ def create_quiz(session: Session, quiz_create: QuizCreate, owner_id: UUID) -> Qu
         quiz_id=str(quiz.id),
         owner_id=str(owner_id),
         total_modules=len(quiz.selected_modules),
-        total_questions=quiz.total_question_count,
+        total_questions=quiz.question_count,
     )
 
     return quiz
@@ -335,7 +339,7 @@ def prepare_question_generation(
     session.commit()
 
     return {
-        "question_count": quiz.total_question_count,
+        "question_count": quiz.question_count,  # Use the pre-calculated value
         "llm_model": quiz.llm_model,
         "llm_temperature": quiz.llm_temperature,
         "language": quiz.language,
@@ -397,7 +401,7 @@ async def reserve_quiz_job(
         quiz.failure_reason = None
         quiz.last_status_update = datetime.now(timezone.utc)
         settings = {
-            "target_questions": quiz.total_question_count,
+            "target_questions": quiz.question_count,
             "llm_model": quiz.llm_model,
             "llm_temperature": quiz.llm_temperature,
             "language": quiz.language,

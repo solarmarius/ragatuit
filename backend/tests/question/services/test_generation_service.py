@@ -47,7 +47,7 @@ def mock_quiz():
             "question_batches": [{"question_type": "multiple_choice", "count": 10}],
         },
     }
-    quiz.total_question_count = 15
+    quiz.question_count = 15
     quiz.generation_metadata = None  # No existing metadata by default
     return quiz
 
@@ -321,7 +321,7 @@ async def test_generate_questions_for_quiz_with_batch_tracking_preserves_questio
         )
 
         # Verify quiz total question count preserves original target (should NOT be updated)
-        assert mock_quiz.total_question_count == 15  # Original value preserved
+        assert mock_quiz.question_count == 15  # Original value preserved
         mock_session.commit.assert_not_called()  # No database update needed
 
 

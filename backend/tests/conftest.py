@@ -257,6 +257,15 @@ def create_quiz_in_session(session: Session, owner: User = None, **kwargs) -> "Q
         owner = create_user_in_session(session)
 
     QuizFactory._meta.sqlalchemy_session = session
+
+    # Calculate question_count from selected_modules if present
+    if "selected_modules" in kwargs:
+        question_count = 0
+        for module in kwargs["selected_modules"].values():
+            for batch in module.get("question_batches", []):
+                question_count += batch.get("count", 0)
+        kwargs["question_count"] = question_count
+
     quiz = QuizFactory.build(owner=owner, **kwargs)
     session.add(quiz)
     session.commit()
@@ -320,8 +329,8 @@ async def create_quiz_in_async_session(session, owner: User = None, **kwargs):
 
     # Create quiz with defaults if not provided
     # Handle question_count parameter for backward compatibility by converting to selected_modules
-    question_count = kwargs.get("question_count", 10)
     if "selected_modules" not in kwargs:
+        question_count = kwargs.get("question_count", 10)
         # Create default modules with question batches that match the desired question count
         kwargs["selected_modules"] = {
             "module_1": {
@@ -332,6 +341,12 @@ async def create_quiz_in_async_session(session, owner: User = None, **kwargs):
             }
         }
 
+    # Calculate question_count from selected_modules
+    question_count = 0
+    for module in kwargs["selected_modules"].values():
+        for batch in module.get("question_batches", []):
+            question_count += batch.get("count", 0)
+
     quiz_data = {
         "id": uuid.uuid4(),
         "owner_id": owner.id,
@@ -339,6 +354,7 @@ async def create_quiz_in_async_session(session, owner: User = None, **kwargs):
         "canvas_course_name": kwargs.get("canvas_course_name", "Test Course"),
         "selected_modules": kwargs["selected_modules"],
         "title": kwargs.get("title", "Test Quiz"),
+        "question_count": question_count,
         "llm_model": kwargs.get("llm_model", "o3"),
         "llm_temperature": kwargs.get("llm_temperature", 1.0),
         "status": kwargs.get("status", "created"),

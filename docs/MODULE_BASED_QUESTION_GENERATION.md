@@ -328,7 +328,7 @@ class QuizCreate(BaseModel):
         return v
 
     @property
-    def total_question_count(self) -> int:
+    def question_count(self) -> int:
         """Calculate total questions across all modules."""
         return sum(
             module.question_count if isinstance(module, ModuleSelection)
@@ -374,7 +374,7 @@ def test_quiz_create_validates_module_structure():
     }
 
     quiz = QuizCreate(**valid_data)
-    assert quiz.total_question_count == 25
+    assert quiz.question_count == 25
 
     # Test invalid question count
     invalid_data = valid_data.copy()
@@ -1530,17 +1530,18 @@ git commit -m "feat: simplify content service for module-based processing"
 
 **Original Plan vs. Implementation**:
 
-| Aspect | Original Plan | Actual Implementation |
-|--------|---------------|----------------------|
-| **Architecture** | Class-based ContentService with methods | 8 pure functions with no class structure |
-| **State Management** | Instance-based with potential state | Stateless functional approach |
-| **Import Structure** | Single class import | Multiple function imports |
-| **Configuration** | Class initialization with WorkflowConfiguration | No configuration dependency |
-| **Test Structure** | Class-based test patterns | Function-based tests with imports inside functions |
+| Aspect               | Original Plan                                   | Actual Implementation                              |
+| -------------------- | ----------------------------------------------- | -------------------------------------------------- |
+| **Architecture**     | Class-based ContentService with methods         | 8 pure functions with no class structure           |
+| **State Management** | Instance-based with potential state             | Stateless functional approach                      |
+| **Import Structure** | Single class import                             | Multiple function imports                          |
+| **Configuration**    | Class initialization with WorkflowConfiguration | No configuration dependency                        |
+| **Test Structure**   | Class-based test patterns                       | Function-based tests with imports inside functions |
 
 **Detailed Changes Made**:
 
 1. **Complete Class Elimination**:
+
    ```python
    # OLD (Original Plan)
    class ContentService:
@@ -1556,6 +1557,7 @@ git commit -m "feat: simplify content service for module-based processing"
    ```
 
 2. **Functional Architecture Benefits Realized**:
+
    - **Better Composability**: Functions can be easily combined in pipelines
    - **Simpler Testing**: Each function tested independently with imports inside test functions
    - **No State Dependencies**: Pure functions eliminate state-related bugs
@@ -1563,6 +1565,7 @@ git commit -m "feat: simplify content service for module-based processing"
    - **Performance**: No class instantiation overhead
 
 3. **Functions Created (8 total)**:
+
    - `get_content_from_quiz()` - Async content retrieval
    - `validate_module_content()` - Content validation and module combination
    - `prepare_content_for_generation()` - Main preparation pipeline
@@ -1573,6 +1576,7 @@ git commit -m "feat: simplify content service for module-based processing"
    - `_calculate_module_quality_score()` - Quality scoring algorithm
 
 4. **Enhanced Functionality Beyond Original Plan**:
+
    - **Quality Scoring System**: Sophisticated content quality evaluation (0.0-1.0 score)
    - **Content Statistics**: Comprehensive content analysis and metrics
    - **Pipeline Functions**: Convenience functions for common operation chains
@@ -1589,6 +1593,7 @@ git commit -m "feat: simplify content service for module-based processing"
 **Impact on Remaining Steps**:
 
 This functional refactoring creates a cleaner foundation for Step 10 (Quiz Orchestrator update) by:
+
 - Eliminating WorkflowConfiguration dependencies that were causing compatibility issues
 - Providing clear, composable functions that are easier to integrate
 - Reducing the complexity of content processing workflow integration
@@ -1597,6 +1602,7 @@ This functional refactoring creates a cleaner foundation for Step 10 (Quiz Orche
 **Justification for Deviation**:
 
 The functional approach proved superior for the module-based architecture because:
+
 1. **Module-based processing is inherently functional** - transform input modules to output content
 2. **No persistent state needed** - each content operation is independent
 3. **Better testability** - each function has clear inputs/outputs

@@ -104,18 +104,6 @@ class QuizCreate(SQLModel):
 
         return v
 
-    @property
-    def total_question_count(self) -> int:
-        """Calculate total questions across all modules and batches."""
-        total = 0
-        for module in self.selected_modules.values():
-            if isinstance(module, ModuleSelection):
-                total += module.total_questions
-            elif isinstance(module, dict) and "question_batches" in module:
-                for batch in module["question_batches"]:
-                    total += batch.get("count", 0)
-        return total
-
 
 class QuizUpdate(SQLModel):
     """Schema for updating quiz settings."""
@@ -136,7 +124,7 @@ class QuizPublic(SQLModel):
     canvas_course_name: str
     selected_modules: dict[str, dict[str, Any]]
     title: str
-    question_count: int  # Total questions across all batches (for frontend display)
+    question_count: int
     llm_model: str
     llm_temperature: float
     language: QuizLanguage

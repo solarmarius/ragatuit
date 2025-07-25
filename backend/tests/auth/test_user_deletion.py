@@ -96,7 +96,7 @@ def test_user_deletion_anonymizes_quizzes(session: Session):
     # Verify data is preserved for research
     assert anonymized_quiz.title == quiz.title
     assert anonymized_quiz.selected_modules == quiz.selected_modules
-    assert anonymized_quiz.total_question_count == quiz.total_question_count
+    assert anonymized_quiz.question_count == quiz.question_count
 
 
 def test_user_deletion_preserves_quiz_data_for_research(session: Session):
@@ -131,7 +131,7 @@ def test_user_deletion_preserves_quiz_data_for_research(session: Session):
 
     original_quiz_data = {
         "title": quiz.title,
-        "total_question_count": quiz.total_question_count,
+        "question_count": quiz.question_count,
         "llm_model": quiz.llm_model,
         "llm_temperature": quiz.llm_temperature,
         "selected_modules": quiz.selected_modules,
@@ -159,10 +159,7 @@ def test_user_deletion_preserves_quiz_data_for_research(session: Session):
 
     # Verify all original data is preserved for research
     assert anonymized_quiz.title == original_quiz_data["title"]
-    assert (
-        anonymized_quiz.total_question_count
-        == original_quiz_data["total_question_count"]
-    )
+    assert anonymized_quiz.question_count == original_quiz_data["question_count"]
     assert anonymized_quiz.llm_model == original_quiz_data["llm_model"]
     assert anonymized_quiz.llm_temperature == original_quiz_data["llm_temperature"]
     assert anonymized_quiz.selected_modules == original_quiz_data["selected_modules"]

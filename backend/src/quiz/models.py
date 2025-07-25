@@ -30,7 +30,9 @@ class Quiz(SQLModel, table=True):
         default_factory=dict, sa_column=Column(JSONB, nullable=False, default={})
     )
     title: str = Field(min_length=1)
-    # Removed: question_count field (now calculated from batches)
+    question_count: int = Field(
+        default=0, description="Total number of questions in the quiz"
+    )
     llm_model: str = Field(default="o3")
     llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
     language: QuizLanguage = Field(
@@ -104,16 +106,6 @@ class Quiz(SQLModel, table=True):
         sa_column=Column(DateTime(timezone=True), nullable=True),
         description="Timestamp when quiz was soft deleted",
     )
-
-    @property
-    def total_question_count(self) -> int:
-        """Calculate total questions from all module batches."""
-        total = 0
-        for module_data in self.selected_modules.values():
-            if "question_batches" in module_data:
-                for batch in module_data["question_batches"]:
-                    total += batch.get("count", 0)
-        return total
 
     @property
     def module_batch_distribution(self) -> dict[str, list[dict[str, Any]]]:

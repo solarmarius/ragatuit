@@ -95,7 +95,6 @@ async def create_new_quiz(
         user_id=str(current_user.id),
         canvas_id=current_user.canvas_id,
         canvas_course_id=quiz_data.canvas_course_id,
-        question_count=quiz_data.total_question_count,
         llm_model=quiz_data.llm_model,
     )
 
@@ -124,7 +123,6 @@ async def create_new_quiz(
             user_id=str(current_user.id),
             quiz_id=str(quiz.id),
             canvas_course_id=quiz_data.canvas_course_id,
-            question_count=quiz_data.total_question_count,
         )
 
         return quiz
