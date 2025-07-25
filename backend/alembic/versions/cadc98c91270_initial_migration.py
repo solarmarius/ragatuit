@@ -1,8 +1,8 @@
-"""Intial migration
+"""Initial migration
 
-Revision ID: a67f4ec522d2
+Revision ID: cadc98c91270
 Revises:
-Create Date: 2025-07-22 10:18:41.681429
+Create Date: 2025-07-25 09:56:10.530231
 
 """
 from alembic import op
@@ -11,7 +11,7 @@ import sqlmodel.sql.sqltypes
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'a67f4ec522d2'
+revision = 'cadc98c91270'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -40,11 +40,9 @@ def upgrade():
     sa.Column('canvas_course_name', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('selected_modules', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('title', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-    sa.Column('question_count', sa.Integer(), nullable=False),
     sa.Column('llm_model', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
     sa.Column('llm_temperature', sa.Float(), nullable=False),
     sa.Column('language', sa.Enum('ENGLISH', 'NORWEGIAN', name='quizlanguage'), nullable=False),
-    sa.Column('question_type', sa.Enum('MULTIPLE_CHOICE', 'FILL_IN_BLANK', 'MATCHING', 'CATEGORIZATION', name='questiontype'), nullable=False),
     sa.Column('status', sa.Enum('CREATED', 'EXTRACTING_CONTENT', 'GENERATING_QUESTIONS', 'READY_FOR_REVIEW', 'READY_FOR_REVIEW_PARTIAL', 'EXPORTING_TO_CANVAS', 'PUBLISHED', 'FAILED', name='quizstatus'), nullable=False),
     sa.Column('failure_reason', sa.Enum('CONTENT_EXTRACTION_ERROR', 'NO_CONTENT_FOUND', 'LLM_GENERATION_ERROR', 'NO_QUESTIONS_GENERATED', 'CANVAS_EXPORT_ERROR', 'NETWORK_ERROR', 'VALIDATION_ERROR', name='failurereason'), nullable=True),
     sa.Column('last_status_update', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -68,7 +66,7 @@ def upgrade():
     op.create_table('question',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('quiz_id', sa.Uuid(), nullable=False),
-    sa.Column('question_type', sa.Enum('MULTIPLE_CHOICE', 'FILL_IN_BLANK', name='questiontype'), nullable=False),
+    sa.Column('question_type', sa.Enum('MULTIPLE_CHOICE', 'FILL_IN_BLANK', 'MATCHING', 'CATEGORIZATION', name='questiontype'), nullable=False),
     sa.Column('question_data', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('difficulty', sa.Enum('EASY', 'MEDIUM', 'HARD', name='questiondifficulty'), nullable=True),
     sa.Column('tags', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
@@ -79,7 +77,7 @@ def upgrade():
     sa.Column('canvas_item_id', sqlmodel.sql.sqltypes.AutoString(), nullable=True),
     sa.Column('deleted', sa.Boolean(), nullable=False),
     sa.Column('deleted_at', sa.DateTime(timezone=True), nullable=True),
-    sa.ForeignKeyConstraint(['quiz_id'], ['quiz.id']),
+    sa.ForeignKeyConstraint(['quiz_id'], ['quiz.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_question_deleted'), 'question', ['deleted'], unique=False)
