@@ -28,10 +28,6 @@ import type {
   QuestionsDeleteQuestionResponse,
   QuestionsApproveQuestionData,
   QuestionsApproveQuestionResponse,
-  QuestionsGenerateQuestionsData,
-  QuestionsGenerateQuestionsResponse,
-  QuestionsBatchGenerateQuestionsData,
-  QuestionsBatchGenerateQuestionsResponse,
   QuizGetUserQuizzesEndpointResponse,
   QuizCreateNewQuizData,
   QuizCreateNewQuizResponse,
@@ -633,67 +629,6 @@ export class QuestionsService {
       },
     })
   }
-
-  /**
-   * Generate Questions
-   * Generate questions for a quiz using module-based AI generation.
-   *
-   * **Parameters:**
-   * quiz_id: Quiz identifier
-   * generation_request: Generation parameters
-   *
-   * **Returns:**
-   * Generation result with statistics
-   * @param data The data for the request.
-   * @param data.quizId
-   * @param data.requestBody
-   * @returns GenerationResponse Successful Response
-   * @throws ApiError
-   */
-  public static generateQuestions(
-    data: QuestionsGenerateQuestionsData,
-  ): CancelablePromise<QuestionsGenerateQuestionsResponse> {
-    return __request(OpenAPI, {
-      method: "POST",
-      url: "/api/v1/questions/{quiz_id}/generate",
-      path: {
-        quiz_id: data.quizId,
-      },
-      body: data.requestBody,
-      mediaType: "application/json",
-      errors: {
-        422: "Validation Error",
-      },
-    })
-  }
-
-  /**
-   * Batch Generate Questions
-   * Generate questions for multiple quizzes in batch using module-based generation.
-   *
-   * **Parameters:**
-   * batch_request: Batch generation requests
-   *
-   * **Returns:**
-   * Batch generation results
-   * @param data The data for the request.
-   * @param data.requestBody
-   * @returns BatchGenerationResponse Successful Response
-   * @throws ApiError
-   */
-  public static batchGenerateQuestions(
-    data: QuestionsBatchGenerateQuestionsData,
-  ): CancelablePromise<QuestionsBatchGenerateQuestionsResponse> {
-    return __request(OpenAPI, {
-      method: "POST",
-      url: "/api/v1/questions/batch/generate",
-      body: data.requestBody,
-      mediaType: "application/json",
-      errors: {
-        422: "Validation Error",
-      },
-    })
-  }
 }
 
 export class QuizService {
@@ -721,9 +656,16 @@ export class QuizService {
    * "owner_id": "87654321-4321-8765-cba9-987654321abc",
    * "canvas_course_id": 12345,
    * "canvas_course_name": "Introduction to AI",
-   * "selected_modules": "{"173467": "Machine Learning Basics"}",
+   * "selected_modules": {
+   * "173467": {
+   * "name": "Machine Learning Basics",
+   * "question_batches": [
+   * {"question_type": "multiple_choice", "count": 30},
+   * {"question_type": "fill_in_blank", "count": 20}
+   * ]
+   * }
+   * },
    * "title": "AI Fundamentals Quiz",
-   * "question_count": 50,
    * "llm_model": "gpt-4o",
    * "llm_temperature": 1,
    * "created_at": "2023-01-01T12:00:00Z",
@@ -752,9 +694,8 @@ export class QuizService {
    * quiz_data (QuizCreate): Quiz creation data including:
    * - canvas_course_id: Canvas course ID
    * - canvas_course_name: Canvas course name
-   * - selected_modules: Dict mapping module IDs to names
+   * - selected_modules: Dict mapping module IDs to ModuleSelection with question_batches
    * - title: Quiz title
-   * - question_count: Number of questions to generate (1-200, default 100)
    * - llm_model: LLM model to use (default "o3")
    * - llm_temperature: LLM temperature setting (0.0-2.0, default 1)
    *
@@ -773,9 +714,16 @@ export class QuizService {
    * {
    * "canvas_course_id": 12345,
    * "canvas_course_name": "Introduction to AI",
-   * "selected_modules": {"173467": "Machine Learning Basics"},
+   * "selected_modules": {
+   * "173467": {
+   * "name": "Machine Learning Basics",
+   * "question_batches": [
+   * {"question_type": "multiple_choice", "count": 30},
+   * {"question_type": "fill_in_blank", "count": 20}
+   * ]
+   * }
+   * },
    * "title": "AI Fundamentals Quiz",
-   * "question_count": 50,
    * "llm_model": "gpt-4o",
    * "llm_temperature": 1
    * }
@@ -826,9 +774,16 @@ export class QuizService {
    * "owner_id": "87654321-4321-8765-cba9-987654321abc",
    * "canvas_course_id": 12345,
    * "canvas_course_name": "Introduction to AI",
-   * "selected_modules": "{"173467": "Machine Learning Basics"}",
+   * "selected_modules": {
+   * "173467": {
+   * "name": "Machine Learning Basics",
+   * "question_batches": [
+   * {"question_type": "multiple_choice", "count": 30},
+   * {"question_type": "fill_in_blank", "count": 20}
+   * ]
+   * }
+   * },
    * "title": "AI Fundamentals Quiz",
-   * "question_count": 50,
    * "llm_model": "gpt-4o",
    * "llm_temperature": 1,
    * "created_at": "2023-01-01T12:00:00Z",
