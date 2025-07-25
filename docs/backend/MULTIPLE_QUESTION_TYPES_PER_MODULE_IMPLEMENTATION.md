@@ -327,7 +327,9 @@ class Quiz(SQLModel, table=True):
         default_factory=dict, sa_column=Column(JSONB, nullable=False, default={})
     )
     title: str = Field(min_length=1)
-    # Removed: question_count field (now calculated from modules)
+    question_count: int = Field(
+        default=0, description="Total number of questions in the quiz"
+    )
     llm_model: str = Field(default="o3")
     llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
     language: QuizLanguage = Field(
@@ -402,15 +404,7 @@ class Quiz(SQLModel, table=True):
         description="Timestamp when quiz was soft deleted",
     )
 
-    @property
-    def question_count(self) -> int:
-        """Calculate total questions from all module batches."""
-        total = 0
-        for module_data in self.selected_modules.values():
-            if "question_batches" in module_data:
-                for batch in module_data["question_batches"]:
-                    total += batch.get("count", 0)
-        return total
+    # Note: question_count is now a stored field, calculated during quiz creation
 
     @property
     def module_batch_distribution(self) -> dict[str, list[dict[str, Any]]]:
@@ -480,9 +474,10 @@ class Quiz(SQLModel, table=True):
 
 **Key Changes:**
 
-- Removed `question_type` and `question_count` fields
+- Removed `question_type` field (now per batch)
+- Added `question_count` field as stored database column (calculated during creation)
 - Updated `selected_modules` validator for new structure with `question_batches`
-- Added properties for batch distribution and total count calculation
+- Added properties for batch distribution
 - Enhanced validation for batch limits and structure
 
 #### Step 3: Update Generation Service
@@ -1176,10 +1171,14 @@ async def create_quiz(
         canvas_course_name=quiz_create.canvas_course_name,
         selected_modules=selected_modules_dict,
         title=quiz_create.title,
+        question_count=sum(
+            batch["count"]
+            for module in selected_modules_dict.values()
+            for batch in module["question_batches"]
+        ),
         llm_model=quiz_create.llm_model,
         llm_temperature=quiz_create.llm_temperature,
         language=quiz_create.language,
-        # Note: question_type field removed
     )
 
     session.add(quiz)
