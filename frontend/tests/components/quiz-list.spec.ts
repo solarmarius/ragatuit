@@ -49,8 +49,18 @@ test.describe("Quiz List Component", () => {
         canvas_course_id: 12345,
         canvas_course_name: "Intro to AI",
         selected_modules: {
-          "173467": "Neural Networks",
-          "173468": "Deep Learning",
+          "173467": {
+            name: "Neural Networks",
+            question_batches: [
+              { question_type: "multiple_choice", count: 25 }
+            ]
+          },
+          "173468": {
+            name: "Deep Learning",
+            question_batches: [
+              { question_type: "multiple_choice", count: 25 }
+            ]
+          },
         },
         question_count: 50,
         llm_model: "gpt-4o",
@@ -65,9 +75,24 @@ test.describe("Quiz List Component", () => {
         canvas_course_id: 67890,
         canvas_course_name: "CS101",
         selected_modules: {
-          "173469": "Variables",
-          "173470": "Functions",
-          "173471": "Classes",
+          "173469": {
+            name: "Variables",
+            question_batches: [
+              { question_type: "multiple_choice", count: 8 }
+            ]
+          },
+          "173470": {
+            name: "Functions",
+            question_batches: [
+              { question_type: "multiple_choice", count: 9 }
+            ]
+          },
+          "173471": {
+            name: "Classes",
+            question_batches: [
+              { question_type: "multiple_choice", count: 8 }
+            ]
+          },
         },
         question_count: 25,
         llm_model: "o3",
@@ -134,7 +159,14 @@ test.describe("Quiz List Component", () => {
         title: "Single Module Quiz",
         canvas_course_id: 12345,
         canvas_course_name: "Test Course",
-        selected_modules: { "173467": "Single Module" },
+        selected_modules: {
+          "173467": {
+            name: "Single Module",
+            question_batches: [
+              { question_type: "multiple_choice", count: 30 }
+            ]
+          }
+        },
         question_count: 30,
         llm_model: "gpt-4o",
         llm_temperature: 0.5,
@@ -216,7 +248,14 @@ test.describe("Quiz List Component", () => {
         title: "Test Quiz",
         canvas_course_id: 12345,
         canvas_course_name: "Test Course",
-        selected_modules: { "173467": "Module 1" },
+        selected_modules: {
+          "173467": {
+            name: "Module 1",
+            question_batches: [
+              { question_type: "multiple_choice", count: 30 }
+            ]
+          }
+        },
         question_count: 30,
         llm_model: "gpt-4o",
         llm_temperature: 0.5,
@@ -294,7 +333,14 @@ test.describe("Quiz List Component", () => {
         title: "No Date Quiz",
         canvas_course_id: 12345,
         canvas_course_name: "Test Course",
-        selected_modules: { "173467": "Module 1" },
+        selected_modules: {
+          "173467": {
+            name: "Module 1",
+            question_batches: [
+              { question_type: "multiple_choice", count: 30 }
+            ]
+          }
+        },
         question_count: 30,
         llm_model: "gpt-4o",
         llm_temperature: 0.5,
@@ -325,7 +371,14 @@ test.describe("Quiz List Component", () => {
         title: "Style Test Quiz",
         canvas_course_id: 12345,
         canvas_course_name: "Test Course",
-        selected_modules: { "173467": "Module 1" },
+        selected_modules: {
+          "173467": {
+            name: "Module 1",
+            question_batches: [
+              { question_type: "multiple_choice", count: 75 }
+            ]
+          }
+        },
         question_count: 75,
         llm_model: "gpt-4.1-mini",
         llm_temperature: 0.8,

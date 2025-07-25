@@ -11,13 +11,13 @@ import {
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useCallback, useState } from "react"
 
-import { type QuestionType, type QuizLanguage, QuizService } from "@/client"
+import { type QuizLanguage, QuizService, type QuestionBatch } from "@/client"
 import { CourseSelectionStep } from "@/components/QuizCreation/CourseSelectionStep"
 import { ModuleQuestionSelectionStep } from "@/components/QuizCreation/ModuleQuestionSelectionStep"
 import { ModuleSelectionStep } from "@/components/QuizCreation/ModuleSelectionStep"
 import { QuizSettingsStep } from "@/components/QuizCreation/QuizSettingsStep"
 import { useCustomToast, useErrorHandler } from "@/hooks/common"
-import { QUESTION_TYPES, QUIZ_LANGUAGES } from "@/lib/constants"
+import { QUIZ_LANGUAGES } from "@/lib/constants"
 
 export const Route = createFileRoute("/_layout/create-quiz")({
   component: CreateQuiz,
@@ -29,10 +29,9 @@ interface QuizFormData {
     name: string
   }
   selectedModules?: { [id: number]: string }
-  moduleQuestions?: { [id: string]: number }
+  moduleQuestions?: { [id: string]: QuestionBatch[] }
   title?: string
   language?: QuizLanguage
-  questionType?: QuestionType
 }
 
 const TOTAL_STEPS = 4 // Course selection, Module selection, Questions per module, Quiz settings
@@ -69,10 +68,10 @@ function CreateQuiz() {
     (modules: { [id: number]: string }) => {
       const moduleQuestions = { ...formData.moduleQuestions }
 
-      // Add default 10 questions for newly selected modules
+      // Initialize empty arrays for newly selected modules
       Object.keys(modules).forEach((moduleId) => {
         if (!moduleQuestions[moduleId]) {
-          moduleQuestions[moduleId] = 10
+          moduleQuestions[moduleId] = []
         }
       })
 
@@ -92,11 +91,11 @@ function CreateQuiz() {
   )
 
   const handleModuleQuestionChange = useCallback(
-    (moduleId: string, count: number) => {
+    (moduleId: string, batches: QuestionBatch[]) => {
       updateFormData({
         moduleQuestions: {
           ...formData.moduleQuestions,
-          [moduleId]: count,
+          [moduleId]: batches,
         },
       })
     },
@@ -117,15 +116,15 @@ function CreateQuiz() {
     setIsCreating(true)
 
     try {
-      // Transform data to match backend expectations
-      const selectedModulesWithCounts = Object.entries(
+      // Transform data to new backend format
+      const selectedModulesWithBatches = Object.entries(
         formData.selectedModules,
       ).reduce(
         (acc, [moduleId, moduleName]) => ({
           ...acc,
           [moduleId]: {
             name: moduleName,
-            question_count: formData.moduleQuestions?.[moduleId] || 10,
+            question_batches: formData.moduleQuestions?.[moduleId] || [],
           },
         }),
         {},
@@ -134,10 +133,9 @@ function CreateQuiz() {
       const quizData = {
         canvas_course_id: formData.selectedCourse.id,
         canvas_course_name: formData.selectedCourse.name,
-        selected_modules: selectedModulesWithCounts,
+        selected_modules: selectedModulesWithBatches,
         title: formData.title,
         language: formData.language || QUIZ_LANGUAGES.ENGLISH,
-        question_type: formData.questionType || QUESTION_TYPES.MULTIPLE_CHOICE,
       }
 
       const response = await QuizService.createNewQuiz({
@@ -164,7 +162,7 @@ function CreateQuiz() {
       case 2:
         return "Select Modules"
       case 3:
-        return "Questions per Module"
+        return "Configure Question Types"
       case 4:
         return "Quiz Configuration"
       default:
@@ -213,12 +211,10 @@ function CreateQuiz() {
           <QuizSettingsStep
             settings={{
               language: formData.language || QUIZ_LANGUAGES.ENGLISH,
-              questionType: formData.questionType || QUESTION_TYPES.MULTIPLE_CHOICE,
             }}
             onSettingsChange={(settings) =>
               updateFormData({
                 language: settings.language,
-                questionType: settings.questionType,
               })
             }
           />
@@ -242,13 +238,22 @@ function CreateQuiz() {
           Object.keys(formData.selectedModules).length > 0
         )
       case 3:
-        return (
-          formData.moduleQuestions != null &&
-          Object.keys(formData.moduleQuestions).length > 0 &&
-          Object.values(formData.moduleQuestions).every(
-            (count) => count >= 1 && count <= 20,
-          )
+        // Validate question batches instead of simple counts
+        if (!formData.moduleQuestions) return false
+
+        const hasValidBatches = Object.values(formData.moduleQuestions).every(
+          (batches) => {
+            // Each module must have at least one batch
+            if (batches.length === 0) return false
+
+            // All batches must have valid counts
+            return batches.every(
+              (batch) => batch.count >= 1 && batch.count <= 20
+            )
+          }
         )
+
+        return hasValidBatches && Object.keys(formData.moduleQuestions).length > 0
       case 4:
         // Step 4 is always valid since we have default values
         return true

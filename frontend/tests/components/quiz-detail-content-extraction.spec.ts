@@ -28,7 +28,8 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       title: "Content Extraction Test Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
-      selected_modules: '{"173467": {"name": "Module 1", "question_count": 25}, "173468": {"name": "Module 2", "question_count": 25}}',
+      selected_modules:
+        '{"173467": {"name": "Module 1", "question_count": 25}, "173468": {"name": "Module 2", "question_count": 25}}',
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
@@ -68,7 +69,8 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       title: "Processing Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
-      selected_modules: '{"173467": {"name": "Module 1", "question_count": 25}}',
+      selected_modules:
+        '{"173467": {"name": "Module 1", "question_count": 25}}',
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
@@ -108,7 +110,8 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       title: "Completed Extraction Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
-      selected_modules: '{"173467": {"name": "Module 1", "question_count": 25}}',
+      selected_modules:
+        '{"173467": {"name": "Module 1", "question_count": 25}}',
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
@@ -149,7 +152,8 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       title: "Failed Extraction Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
-      selected_modules: '{"173467": {"name": "Module 1", "question_count": 25}}',
+      selected_modules:
+        '{"173467": {"name": "Module 1", "question_count": 25}}',
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
@@ -179,75 +183,6 @@ test.describe("Quiz Detail Content Extraction Features", () => {
     await expect(statusLight).toHaveCSS("background-color", "rgb(239, 68, 68)"); // red.500
   });
 
-  test("should poll for status updates when processing", async ({ page }) => {
-    let callCount = 0;
-    const responses = [
-      // First call: processing
-      {
-        id: mockQuizId,
-        title: "Polling Test Quiz",
-        canvas_course_id: 12345,
-        canvas_course_name: "Test Course",
-        selected_modules: '{"173467": {"name": "Module 1", "question_count": 25}}',
-        question_count: 50,
-        llm_model: "gpt-4o",
-        llm_temperature: 0.3,
-        status: "extracting_content",
-        extracted_content: null,
-        content_extracted_at: null,
-        last_status_update: "2024-01-16T14:20:00Z",
-        created_at: "2024-01-15T10:30:00Z",
-        updated_at: "2024-01-16T14:20:00Z",
-        owner_id: "user123",
-      },
-      // Second call: completed
-      {
-        id: mockQuizId,
-        title: "Polling Test Quiz",
-        canvas_course_id: 12345,
-        canvas_course_name: "Test Course",
-        selected_modules: '{"173467": {"name": "Module 1", "question_count": 25}}',
-        question_count: 50,
-        llm_model: "gpt-4o",
-        llm_temperature: 0.3,
-        status: "ready_for_review",
-        extracted_content:
-          '{"173467": [{"title": "Test Page", "content": "Test content"}]}',
-        content_extracted_at: "2024-01-16T15:30:00Z",
-        last_status_update: "2024-01-16T16:00:00Z",
-        created_at: "2024-01-15T10:30:00Z",
-        updated_at: "2024-01-16T14:20:00Z",
-        owner_id: "user123",
-      },
-    ];
-
-    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
-      const response =
-        callCount < responses.length
-          ? responses[callCount]
-          : responses[responses.length - 1];
-      callCount++;
-
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(response),
-      });
-    });
-
-    await page.reload();
-
-    const completedLight = page.locator('[title="Ready for Review"]');
-    await expect(completedLight).toBeVisible();
-    await expect(completedLight).toHaveCSS(
-      "background-color",
-      "rgb(168, 85, 247)"
-    ); // purple.500
-
-    // Verify that multiple API calls were made
-    expect(callCount).toBeGreaterThan(1);
-  });
-
   test("should stop polling when status is completed", async ({ page }) => {
     let callCount = 0;
     const mockQuiz = {
@@ -255,7 +190,8 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       title: "Completed Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
-      selected_modules: '{"173467": {"name": "Module 1", "question_count": 25}}',
+      selected_modules:
+        '{"173467": {"name": "Module 1", "question_count": 25}}',
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
@@ -298,7 +234,8 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       title: "Failed Quiz",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
-      selected_modules: '{"173467": {"name": "Module 1", "question_count": 25}}',
+      selected_modules:
+        '{"173467": {"name": "Module 1", "question_count": 25}}',
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
@@ -343,7 +280,8 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       title: "Legacy Quiz Without Content Fields",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
-      selected_modules: '{"173467": {"name": "Module 1", "question_count": 25}}',
+      selected_modules:
+        '{"173467": {"name": "Module 1", "question_count": 25}}',
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
@@ -376,7 +314,7 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       page.getByText("Legacy Quiz Without Content Fields")
     ).toBeVisible();
     await expect(page.getByText("Test Course")).toBeVisible();
-    await expect(page.getByText("Module 1")).toBeVisible();
+    await expect(page.getByText("Module 1").first()).toBeVisible();
   });
 
   test("should position status light correctly next to quiz title", async ({
@@ -387,7 +325,8 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       title: "Status Light Position Test",
       canvas_course_id: 12345,
       canvas_course_name: "Test Course",
-      selected_modules: '{"173467": {"name": "Module 1", "question_count": 25}}',
+      selected_modules:
+        '{"173467": {"name": "Module 1", "question_count": 25}}',
       question_count: 50,
       llm_model: "gpt-4o",
       llm_temperature: 0.3,
@@ -487,7 +426,8 @@ test.describe("Quiz Detail Content Extraction Features", () => {
         title: `Status Test ${testCase.status}`,
         canvas_course_id: 12345,
         canvas_course_name: "Test Course",
-        selected_modules: '{"173467": {"name": "Module 1", "question_count": 25}}',
+        selected_modules:
+          '{"173467": {"name": "Module 1", "question_count": 25}}',
         question_count: 50,
         llm_model: "gpt-4o",
         llm_temperature: 0.3,

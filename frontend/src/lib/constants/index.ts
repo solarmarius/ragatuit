@@ -238,6 +238,28 @@ export const VALIDATION = {
 } as const;
 
 // =============================================================================
+// Question Batch Validation Constants
+// =============================================================================
+
+export const VALIDATION_RULES = {
+  MAX_BATCHES_PER_MODULE: 4,
+  MIN_QUESTIONS_PER_BATCH: 1,
+  MAX_QUESTIONS_PER_BATCH: 20,
+} as const;
+
+export const VALIDATION_MESSAGES = {
+  MAX_BATCHES: "Maximum 4 question batches per module",
+  DUPLICATE_TYPES: "Cannot have duplicate question types in the same module",
+  INVALID_COUNT: "Question count must be between 1 and 20",
+  NO_BATCHES: "Each module must have at least one question batch",
+} as const;
+
+export const QUESTION_BATCH_DEFAULTS = {
+  DEFAULT_QUESTION_TYPE: QUESTION_TYPES.MULTIPLE_CHOICE,
+  DEFAULT_QUESTION_COUNT: 10,
+} as const;
+
+// =============================================================================
 // Feature Flags
 // =============================================================================
 
