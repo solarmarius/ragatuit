@@ -319,22 +319,39 @@ async def create_quiz_in_async_session(session, owner: User = None, **kwargs):
         owner = await create_user_in_async_session(session)
 
     # Create quiz with defaults if not provided
+    # Handle question_count parameter for backward compatibility by converting to selected_modules
+    question_count = kwargs.get("question_count", 10)
+    if "selected_modules" not in kwargs:
+        # Create default modules with question batches that match the desired question count
+        kwargs["selected_modules"] = {
+            "module_1": {
+                "name": "Introduction",
+                "question_batches": [
+                    {"question_type": "multiple_choice", "count": question_count}
+                ],
+            }
+        }
+
     quiz_data = {
         "id": uuid.uuid4(),
         "owner_id": owner.id,
         "canvas_course_id": kwargs.get("canvas_course_id", 100),
         "canvas_course_name": kwargs.get("canvas_course_name", "Test Course"),
-        "selected_modules": kwargs.get(
-            "selected_modules", {"module_1": "Introduction"}
-        ),
+        "selected_modules": kwargs["selected_modules"],
         "title": kwargs.get("title", "Test Quiz"),
-        "question_count": kwargs.get("question_count", 10),
         "llm_model": kwargs.get("llm_model", "o3"),
         "llm_temperature": kwargs.get("llm_temperature", 1.0),
         "status": kwargs.get("status", "created"),
         "failure_reason": kwargs.get("failure_reason", None),
-        **kwargs,
     }
+
+    # Remove question_count from kwargs to avoid passing it to Quiz constructor
+    filtered_kwargs = {
+        k: v
+        for k, v in kwargs.items()
+        if k not in ["question_count", "selected_modules"]
+    }
+    quiz_data.update(filtered_kwargs)
 
     quiz = Quiz(**quiz_data)
     session.add(quiz)

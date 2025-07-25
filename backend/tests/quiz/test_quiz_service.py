@@ -20,12 +20,25 @@ def test_create_quiz_success(session: Session):
 
     user = create_user_in_session(session)
 
+    from src.question.types import QuestionType
+    from src.quiz.schemas import QuestionBatch
+
     quiz_data = QuizCreate(
         canvas_course_id=123,
         canvas_course_name="Test Course",
         selected_modules={
-            "456": ModuleSelection(name="Module 1", question_count=10),
-            "789": ModuleSelection(name="Module 2", question_count=15),
+            "456": ModuleSelection(
+                name="Module 1",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                ],
+            ),
+            "789": ModuleSelection(
+                name="Module 2",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=15)
+                ],
+            ),
         },
         title="Test Quiz",
         llm_model="gpt-4",
@@ -39,11 +52,17 @@ def test_create_quiz_success(session: Session):
     assert quiz.canvas_course_id == 123
     assert quiz.canvas_course_name == "Test Course"
     assert quiz.selected_modules == {
-        "456": {"name": "Module 1", "question_count": 10},
-        "789": {"name": "Module 2", "question_count": 15},
+        "456": {
+            "name": "Module 1",
+            "question_batches": [{"question_type": "multiple_choice", "count": 10}],
+        },
+        "789": {
+            "name": "Module 2",
+            "question_batches": [{"question_type": "multiple_choice", "count": 15}],
+        },
     }
     assert quiz.title == "Test Quiz"
-    assert quiz.question_count == 25  # 10 + 15 from modules
+    assert quiz.total_question_count == 25  # 10 + 15 from modules
     assert quiz.llm_model == "gpt-4"
     assert quiz.llm_temperature == 0.7
     assert quiz.updated_at is not None
@@ -51,76 +70,8 @@ def test_create_quiz_success(session: Session):
 
 def test_create_quiz_with_defaults(session: Session):
     """Test quiz creation with default values."""
-    from src.quiz.schemas import ModuleSelection, QuizCreate
-    from src.quiz.service import create_quiz
-    from tests.conftest import create_user_in_session
-
-    user = create_user_in_session(session)
-
-    quiz_data = QuizCreate(
-        canvas_course_id=123,
-        canvas_course_name="Test Course",
-        selected_modules={"456": ModuleSelection(name="Module 1", question_count=10)},
-        title="Default Quiz",
-    )
-
-    quiz = create_quiz(session, quiz_data, user.id)
-
-    # Verify defaults
-    assert quiz.question_count == 10  # Sum of module question counts
-    assert quiz.llm_model == "o3"  # Default
-    assert quiz.llm_temperature == 1.0  # Default
-
-
-def test_create_quiz_with_question_type_persistence(session: Session):
-    """Test that question_type field is properly persisted during quiz creation."""
-    from src.question.types import QuestionType, QuizLanguage
-    from src.quiz.schemas import ModuleSelection, QuizCreate
-    from src.quiz.service import create_quiz
-    from tests.conftest import create_user_in_session
-
-    user = create_user_in_session(session)
-
-    # Test with MULTIPLE_CHOICE
-    mcq_quiz_data = QuizCreate(
-        canvas_course_id=123,
-        canvas_course_name="MCQ Test Course",
-        selected_modules={"456": ModuleSelection(name="Module 1", question_count=10)},
-        title="MCQ Quiz",
-        question_type=QuestionType.MULTIPLE_CHOICE,
-        language=QuizLanguage.ENGLISH,
-    )
-
-    mcq_quiz = create_quiz(session, mcq_quiz_data, user.id)
-
-    # Verify MCQ quiz has correct question type
-    assert mcq_quiz.question_type == QuestionType.MULTIPLE_CHOICE
-    assert mcq_quiz.language == QuizLanguage.ENGLISH
-
-    # Test with FILL_IN_BLANK
-    fib_quiz_data = QuizCreate(
-        canvas_course_id=124,
-        canvas_course_name="FIB Test Course",
-        selected_modules={"789": ModuleSelection(name="Module 2", question_count=15)},
-        title="Fill-in-Blank Quiz",
-        question_type=QuestionType.FILL_IN_BLANK,
-        language=QuizLanguage.NORWEGIAN,
-    )
-
-    fib_quiz = create_quiz(session, fib_quiz_data, user.id)
-
-    # Verify FIB quiz has correct question type
-    assert fib_quiz.question_type == QuestionType.FILL_IN_BLANK
-    assert fib_quiz.language == QuizLanguage.NORWEGIAN
-
-    # Verify both quizzes are persisted correctly
-    assert mcq_quiz.id != fib_quiz.id
-    assert mcq_quiz.question_type != fib_quiz.question_type
-
-
-def test_create_quiz_module_id_conversion(session: Session):
-    """Test that module IDs are handled correctly as strings."""
-    from src.quiz.schemas import ModuleSelection, QuizCreate
+    from src.question.types import QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
 
@@ -130,9 +81,119 @@ def test_create_quiz_module_id_conversion(session: Session):
         canvas_course_id=123,
         canvas_course_name="Test Course",
         selected_modules={
-            "111": ModuleSelection(name="Module A", question_count=10),
-            "222": ModuleSelection(name="Module B", question_count=15),
-            "333": ModuleSelection(name="Module C", question_count=5),
+            "456": ModuleSelection(
+                name="Module 1",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                ],
+            )
+        },
+        title="Default Quiz",
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify defaults
+    assert quiz.total_question_count == 10  # Sum of module question counts
+    assert quiz.llm_model == "o3"  # Default
+    assert quiz.llm_temperature == 1.0  # Default
+
+
+def test_create_quiz_with_multiple_question_types_per_module(session: Session):
+    """Test that multiple question types per module are properly persisted."""
+    from src.question.types import QuestionType, QuizLanguage
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    # Test with multiple question types per module
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Multi-Type Test Course",
+        selected_modules={
+            "456": ModuleSelection(
+                name="Module 1",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10),
+                    QuestionBatch(question_type=QuestionType.FILL_IN_BLANK, count=5),
+                ],
+            ),
+            "789": ModuleSelection(
+                name="Module 2",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MATCHING, count=3),
+                    QuestionBatch(question_type=QuestionType.CATEGORIZATION, count=2),
+                ],
+            ),
+        },
+        title="Multi-Type Quiz",
+        language=QuizLanguage.ENGLISH,
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify multiple question types are persisted correctly
+    assert quiz.language == QuizLanguage.ENGLISH
+    assert quiz.total_question_count == 20  # 10 + 5 + 3 + 2
+
+    # Verify module structure
+    expected_modules = {
+        "456": {
+            "name": "Module 1",
+            "question_batches": [
+                {"question_type": "multiple_choice", "count": 10},
+                {"question_type": "fill_in_blank", "count": 5},
+            ],
+        },
+        "789": {
+            "name": "Module 2",
+            "question_batches": [
+                {"question_type": "matching", "count": 3},
+                {"question_type": "categorization", "count": 2},
+            ],
+        },
+    }
+    assert quiz.selected_modules == expected_modules
+
+    # Verify batch distribution property works
+    batch_distribution = quiz.module_batch_distribution
+    assert len(batch_distribution["456"]) == 2
+    assert len(batch_distribution["789"]) == 2
+
+
+def test_create_quiz_module_id_conversion(session: Session):
+    """Test that module IDs are handled correctly as strings."""
+    from src.question.types import QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Test Course",
+        selected_modules={
+            "111": ModuleSelection(
+                name="Module A",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                ],
+            ),
+            "222": ModuleSelection(
+                name="Module B",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=15)
+                ],
+            ),
+            "333": ModuleSelection(
+                name="Module C",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=5)
+                ],
+            ),
         },
         title="Module Test Quiz",
     )
@@ -141,9 +202,18 @@ def test_create_quiz_module_id_conversion(session: Session):
 
     # Verify module ID conversion
     expected_modules = {
-        "111": {"name": "Module A", "question_count": 10},
-        "222": {"name": "Module B", "question_count": 15},
-        "333": {"name": "Module C", "question_count": 5},
+        "111": {
+            "name": "Module A",
+            "question_batches": [{"question_type": "multiple_choice", "count": 10}],
+        },
+        "222": {
+            "name": "Module B",
+            "question_batches": [{"question_type": "multiple_choice", "count": 15}],
+        },
+        "333": {
+            "name": "Module C",
+            "question_batches": [{"question_type": "multiple_choice", "count": 5}],
+        },
     }
     assert quiz.selected_modules == expected_modules
 
@@ -427,9 +497,24 @@ def test_prepare_question_generation_success(session: Session):
     from src.quiz.service import prepare_question_generation
     from tests.conftest import create_quiz_in_session
 
+    # Create quiz with selected_modules that total 75 questions
+    selected_modules = {
+        "module_1": {
+            "name": "Introduction",
+            "question_batches": [{"question_type": "multiple_choice", "count": 30}],
+        },
+        "module_2": {
+            "name": "Advanced Topics",
+            "question_batches": [
+                {"question_type": "multiple_choice", "count": 25},
+                {"question_type": "fill_in_blank", "count": 20},
+            ],
+        },
+    }
+
     quiz = create_quiz_in_session(
         session,
-        question_count=75,
+        selected_modules=selected_modules,
         llm_model="gpt-4",
         llm_temperature=0.8,
     )
@@ -469,9 +554,13 @@ async def test_reserve_quiz_job_extraction_success(async_session):
         owner_id=user.id,
         canvas_course_id=123,
         canvas_course_name="Test Course",
-        selected_modules={"1": {"name": "Module 1", "question_count": 10}},
+        selected_modules={
+            "1": {
+                "name": "Module 1",
+                "question_batches": [{"question_type": "multiple_choice", "count": 50}],
+            }
+        },
         title="Test Quiz",
-        question_count=50,
         llm_model="gpt-4",
         llm_temperature=0.7,
         status="created",
@@ -574,7 +663,8 @@ async def test_update_quiz_status_quiz_not_found(async_session):
 
 def test_quiz_lifecycle_creation_to_deletion(session: Session):
     """Test complete quiz lifecycle from creation to deletion."""
-    from src.quiz.schemas import ModuleSelection, QuizCreate
+    from src.question.types import QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
     from src.quiz.service import (
         create_quiz,
         delete_quiz,
@@ -590,8 +680,18 @@ def test_quiz_lifecycle_creation_to_deletion(session: Session):
         canvas_course_id=999,
         canvas_course_name="Lifecycle Course",
         selected_modules={
-            "111": ModuleSelection(name="Module Alpha", question_count=15),
-            "222": ModuleSelection(name="Module Beta", question_count=10),
+            "111": ModuleSelection(
+                name="Module Alpha",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=15)
+                ],
+            ),
+            "222": ModuleSelection(
+                name="Module Beta",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                ],
+            ),
         },
         title="Lifecycle Quiz",
     )
@@ -678,7 +778,8 @@ def test_create_quiz_with_various_parameters(
     session: Session, question_count: int, llm_model: str, temperature: float
 ):
     """Test quiz creation with various parameter combinations."""
-    from src.quiz.schemas import ModuleSelection, QuizCreate
+    from src.question.types import QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
 
@@ -689,7 +790,13 @@ def test_create_quiz_with_various_parameters(
         canvas_course_name="Param Test Course",
         selected_modules={
             "1": ModuleSelection(
-                name="Module 1", question_count=min(question_count, 20)
+                name="Module 1",
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=min(question_count, 20),
+                    )
+                ],
             )
         },
         title=f"Quiz {question_count}q",
@@ -699,7 +806,7 @@ def test_create_quiz_with_various_parameters(
 
     quiz = create_quiz(session, quiz_data, user.id)
 
-    assert quiz.question_count == min(question_count, 20)
+    assert quiz.total_question_count == min(question_count, 20)
     assert quiz.llm_model == llm_model
     assert quiz.llm_temperature == temperature
 
@@ -709,8 +816,8 @@ def test_create_quiz_with_various_parameters(
 
 def test_create_quiz_with_norwegian_language(session: Session):
     """Test quiz creation with Norwegian language selection."""
-    from src.question.types import QuizLanguage
-    from src.quiz.schemas import ModuleSelection, QuizCreate
+    from src.question.types import QuestionType, QuizLanguage
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
 
@@ -719,7 +826,14 @@ def test_create_quiz_with_norwegian_language(session: Session):
     quiz_data = QuizCreate(
         canvas_course_id=123,
         canvas_course_name="Norwegian Course",
-        selected_modules={"456": ModuleSelection(name="Modul 1", question_count=10)},
+        selected_modules={
+            "456": ModuleSelection(
+                name="Modul 1",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                ],
+            )
+        },
         title="Norsk Quiz",
         language=QuizLanguage.NORWEGIAN,
     )
@@ -734,8 +848,8 @@ def test_create_quiz_with_norwegian_language(session: Session):
 
 def test_create_quiz_language_defaults_to_english(session: Session):
     """Test quiz creation defaults to English when language not specified."""
-    from src.question.types import QuizLanguage
-    from src.quiz.schemas import ModuleSelection, QuizCreate
+    from src.question.types import QuestionType, QuizLanguage
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
 
@@ -744,7 +858,14 @@ def test_create_quiz_language_defaults_to_english(session: Session):
     quiz_data = QuizCreate(
         canvas_course_id=123,
         canvas_course_name="Default Language Course",
-        selected_modules={"456": ModuleSelection(name="Module 1", question_count=10)},
+        selected_modules={
+            "456": ModuleSelection(
+                name="Module 1",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                ],
+            )
+        },
         title="Default Quiz",
         # language not specified - should default to English
     )
@@ -757,8 +878,8 @@ def test_create_quiz_language_defaults_to_english(session: Session):
 
 def test_create_quiz_with_english_language_explicit(session: Session):
     """Test quiz creation with explicit English language selection."""
-    from src.question.types import QuizLanguage
-    from src.quiz.schemas import QuizCreate
+    from src.question.types import QuestionType, QuizLanguage
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
 
@@ -767,7 +888,14 @@ def test_create_quiz_with_english_language_explicit(session: Session):
     quiz_data = QuizCreate(
         canvas_course_id=123,
         canvas_course_name="English Course",
-        selected_modules={"456": {"name": "Module 1", "question_count": 10}},
+        selected_modules={
+            "456": ModuleSelection(
+                name="Module 1",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                ],
+            )
+        },
         title="English Quiz",
         language=QuizLanguage.ENGLISH,
     )
@@ -784,10 +912,21 @@ def test_prepare_question_generation_includes_language(session: Session):
     from src.quiz.service import prepare_question_generation
     from tests.conftest import create_quiz_in_session
 
-    # Create quiz with Norwegian language
+    # Create quiz with Norwegian language and selected_modules that total 75 questions
+    selected_modules = {
+        "module_1": {
+            "name": "Introduction",
+            "question_batches": [{"question_type": "multiple_choice", "count": 40}],
+        },
+        "module_2": {
+            "name": "Advanced Topics",
+            "question_batches": [{"question_type": "fill_in_blank", "count": 35}],
+        },
+    }
+
     quiz = create_quiz_in_session(
         session,
-        question_count=75,
+        selected_modules=selected_modules,
         llm_model="gpt-4",
         llm_temperature=0.8,
         language=QuizLanguage.NORWEGIAN,
@@ -830,9 +969,13 @@ async def test_reserve_quiz_job_includes_language_setting(async_session):
         owner_id=user.id,
         canvas_course_id=123,
         canvas_course_name="Norwegian Test Course",
-        selected_modules={"1": {"name": "Modul 1", "question_count": 10}},
+        selected_modules={
+            "1": {
+                "name": "Modul 1",
+                "question_batches": [{"question_type": "multiple_choice", "count": 50}],
+            }
+        },
         title="Norsk Test Quiz",
-        question_count=50,
         llm_model="gpt-4",
         llm_temperature=0.7,
         language=QuizLanguage.NORWEGIAN,
@@ -1144,7 +1287,7 @@ def test_soft_delete_preserves_all_quiz_data(session: Session):
 
     original_data = {
         "title": quiz.title,
-        "question_count": quiz.question_count,
+        "question_count": quiz.total_question_count,
         "llm_model": quiz.llm_model,
         "llm_temperature": quiz.llm_temperature,
         "selected_modules": quiz.selected_modules,
@@ -1164,7 +1307,7 @@ def test_soft_delete_preserves_all_quiz_data(session: Session):
 
     # Verify all original data is preserved
     assert soft_deleted_quiz.title == original_data["title"]
-    assert soft_deleted_quiz.question_count == original_data["question_count"]
+    assert soft_deleted_quiz.total_question_count == original_data["question_count"]
     assert soft_deleted_quiz.llm_model == original_data["llm_model"]
     assert soft_deleted_quiz.llm_temperature == original_data["llm_temperature"]
     assert soft_deleted_quiz.selected_modules == original_data["selected_modules"]

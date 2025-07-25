@@ -96,29 +96,42 @@ def test_user_deletion_anonymizes_quizzes(session: Session):
     # Verify data is preserved for research
     assert anonymized_quiz.title == quiz.title
     assert anonymized_quiz.selected_modules == quiz.selected_modules
-    assert anonymized_quiz.question_count == quiz.question_count
+    assert anonymized_quiz.total_question_count == quiz.total_question_count
 
 
 def test_user_deletion_preserves_quiz_data_for_research(session: Session):
     """Test user deletion preserves all quiz data for research purposes."""
     # Create user with comprehensive quiz data
     user = create_user_in_session(session)
+    selected_modules = {
+        "123": {
+            "name": "Advanced AI",
+            "question_batches": [
+                {"question_type": "multiple_choice", "count": 30},
+                {"question_type": "fill_in_blank", "count": 20},
+            ],
+        },
+        "456": {
+            "name": "Machine Learning",
+            "question_batches": [
+                {"question_type": "multiple_choice", "count": 35},
+                {"question_type": "categorization", "count": 15},
+            ],
+        },
+    }
+
     quiz = create_quiz_in_session(
         session,
         owner=user,
         title="Research Study Quiz",
-        question_count=100,
+        selected_modules=selected_modules,
         llm_model="gpt-4",
         llm_temperature=0.8,
-        selected_modules={
-            "123": {"name": "Advanced AI", "question_count": 50},
-            "456": {"name": "Machine Learning", "question_count": 50},
-        },
     )
 
     original_quiz_data = {
         "title": quiz.title,
-        "question_count": quiz.question_count,
+        "total_question_count": quiz.total_question_count,
         "llm_model": quiz.llm_model,
         "llm_temperature": quiz.llm_temperature,
         "selected_modules": quiz.selected_modules,
@@ -126,7 +139,6 @@ def test_user_deletion_preserves_quiz_data_for_research(session: Session):
         "canvas_course_name": quiz.canvas_course_name,
         "status": quiz.status,
         "language": quiz.language,
-        "question_type": quiz.question_type,
     }
 
     # Simulate user deletion process
@@ -147,7 +159,10 @@ def test_user_deletion_preserves_quiz_data_for_research(session: Session):
 
     # Verify all original data is preserved for research
     assert anonymized_quiz.title == original_quiz_data["title"]
-    assert anonymized_quiz.question_count == original_quiz_data["question_count"]
+    assert (
+        anonymized_quiz.total_question_count
+        == original_quiz_data["total_question_count"]
+    )
     assert anonymized_quiz.llm_model == original_quiz_data["llm_model"]
     assert anonymized_quiz.llm_temperature == original_quiz_data["llm_temperature"]
     assert anonymized_quiz.selected_modules == original_quiz_data["selected_modules"]
@@ -157,7 +172,6 @@ def test_user_deletion_preserves_quiz_data_for_research(session: Session):
     )
     assert anonymized_quiz.status == original_quiz_data["status"]
     assert anonymized_quiz.language == original_quiz_data["language"]
-    assert anonymized_quiz.question_type == original_quiz_data["question_type"]
 
 
 def test_user_deletion_gdpr_compliance(session: Session):

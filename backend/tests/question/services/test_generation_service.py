@@ -30,7 +30,6 @@ def generation_service():
 @pytest.fixture
 def mock_quiz():
     """Create mock quiz with module structure."""
-    from src.question.types import QuestionType
     from src.quiz.models import Quiz
     from src.quiz.schemas import QuizStatus
 
@@ -38,12 +37,17 @@ def mock_quiz():
     quiz.id = UUID("12345678-1234-5678-1234-567812345678")
     quiz.status = QuizStatus.GENERATING_QUESTIONS
     quiz.language = "en"
-    quiz.question_type = QuestionType.MULTIPLE_CHOICE
     quiz.selected_modules = {
-        "module_1": {"name": "Introduction", "question_count": 5},
-        "module_2": {"name": "Advanced Topics", "question_count": 10},
+        "module_1": {
+            "name": "Introduction",
+            "question_batches": [{"question_type": "multiple_choice", "count": 5}],
+        },
+        "module_2": {
+            "name": "Advanced Topics",
+            "question_batches": [{"question_type": "multiple_choice", "count": 10}],
+        },
     }
-    quiz.question_count = 0
+    quiz.total_question_count = 15
     quiz.generation_metadata = None  # No existing metadata by default
     return quiz
 
@@ -118,7 +122,7 @@ async def test_generate_questions_for_quiz_with_batch_tracking_success(
 
         # Mock parallel processor
         mock_processor = MagicMock()
-        mock_processor.process_all_modules = AsyncMock(
+        mock_processor.process_all_modules_with_batches = AsyncMock(
             return_value={
                 "module_1": [mock_questions[0]],
                 "module_2": [mock_questions[1]],
@@ -146,8 +150,8 @@ async def test_generate_questions_for_quiz_with_batch_tracking_success(
     )
 
     # Verify processor was called correctly
-    mock_processor.process_all_modules.assert_called_once()
-    call_args = mock_processor.process_all_modules.call_args
+    mock_processor.process_all_modules_with_batches.assert_called_once()
+    call_args = mock_processor.process_all_modules_with_batches.call_args
     assert call_args[0][0] == quiz_id  # quiz_id
     assert "module_1" in call_args[0][1]  # modules_data
     assert "module_2" in call_args[0][1]
@@ -223,7 +227,9 @@ async def test_generate_questions_for_quiz_with_batch_tracking_missing_module_co
         generation_service.provider_registry.get_provider.return_value = mock_provider
 
         mock_processor = MagicMock()
-        mock_processor.process_all_modules = AsyncMock(return_value={"module_1": []})
+        mock_processor.process_all_modules_with_batches = AsyncMock(
+            return_value={"module_1": []}
+        )
         mock_processor_class.return_value = mock_processor
 
         await generation_service.generate_questions_for_quiz_with_batch_tracking(
@@ -231,7 +237,7 @@ async def test_generate_questions_for_quiz_with_batch_tracking_missing_module_co
         )
 
         # Should only process the one module with content
-        call_args = mock_processor.process_all_modules.call_args[0][1]
+        call_args = mock_processor.process_all_modules_with_batches.call_args[0][1]
         assert len(call_args) == 1
         assert "module_1" in call_args
         assert "module_2" not in call_args
@@ -261,7 +267,7 @@ async def test_generate_questions_for_quiz_with_batch_tracking_norwegian_languag
         generation_service.provider_registry.get_provider.return_value = mock_provider
 
         mock_processor = MagicMock()
-        mock_processor.process_all_modules = AsyncMock(return_value={})
+        mock_processor.process_all_modules_with_batches = AsyncMock(return_value={})
         mock_processor_class.return_value = mock_processor
 
         await generation_service.generate_questions_for_quiz_with_batch_tracking(
@@ -275,7 +281,7 @@ async def test_generate_questions_for_quiz_with_batch_tracking_norwegian_languag
             llm_provider=mock_provider,
             template_manager=generation_service.template_manager,
             language=QuizLanguage.NORWEGIAN,
-            question_type=mock_quiz.question_type,
+            # Note: question_type is now specified per batch, not globally
         )
 
 
@@ -302,7 +308,7 @@ async def test_generate_questions_for_quiz_with_batch_tracking_preserves_questio
         generation_service.provider_registry.get_provider.return_value = mock_provider
 
         mock_processor = MagicMock()
-        mock_processor.process_all_modules = AsyncMock(
+        mock_processor.process_all_modules_with_batches = AsyncMock(
             return_value={
                 "module_1": [mock_questions[0]],
                 "module_2": [mock_questions[1]],
@@ -314,8 +320,8 @@ async def test_generate_questions_for_quiz_with_batch_tracking_preserves_questio
             quiz_id, extracted_content
         )
 
-        # Verify quiz question count preserves original target (should NOT be updated)
-        assert mock_quiz.question_count == 0  # Original value preserved
+        # Verify quiz total question count preserves original target (should NOT be updated)
+        assert mock_quiz.total_question_count == 15  # Original value preserved
         mock_session.commit.assert_not_called()  # No database update needed
 
 
@@ -369,7 +375,7 @@ async def test_generate_questions_for_quiz_with_batch_tracking_custom_provider(
         generation_service.provider_registry.get_provider.return_value = mock_provider
 
         mock_processor = MagicMock()
-        mock_processor.process_all_modules = AsyncMock(return_value={})
+        mock_processor.process_all_modules_with_batches = AsyncMock(return_value={})
         mock_processor_class.return_value = mock_processor
 
         await generation_service.generate_questions_for_quiz_with_batch_tracking(
@@ -416,7 +422,7 @@ async def test_generate_uses_quiz_question_type(generation_service, mock_quiz):
             "src.question.services.generation_service.ParallelModuleProcessor"
         ) as MockProcessor:
             mock_processor_instance = MagicMock()
-            mock_processor_instance.process_all_modules = AsyncMock(
+            mock_processor_instance.process_all_modules_with_batches = AsyncMock(
                 return_value={"module_1": [], "module_2": []}
             )
             MockProcessor.return_value = mock_processor_instance
@@ -426,14 +432,14 @@ async def test_generate_uses_quiz_question_type(generation_service, mock_quiz):
                 quiz_id=mock_quiz.id, extracted_content=extracted_content
             )
 
-            # Verify ParallelModuleProcessor was called with correct question type
-            from src.question.types import QuestionType, QuizLanguage
+            # Verify ParallelModuleProcessor was called with correct parameters
+            from src.question.types import QuizLanguage
 
             MockProcessor.assert_called_once_with(
                 llm_provider=mock_provider,
                 template_manager=generation_service.template_manager,
                 language=QuizLanguage.ENGLISH,
-                question_type=QuestionType.MULTIPLE_CHOICE,  # From mock quiz
+                # Note: question_type is now specified per batch, not globally
             )
 
 
@@ -456,7 +462,6 @@ async def test_workflow_uses_correct_template():
         llm_provider=mock_provider,
         template_manager=mock_template_manager,
         language=QuizLanguage.ENGLISH,
-        question_type=QuestionType.MULTIPLE_CHOICE,
     )
 
     # Mock template manager to verify calls
@@ -467,13 +472,14 @@ async def test_workflow_uses_correct_template():
         ]
     )
 
-    # Create test state
+    # Create test state with question type
     state = ModuleBatchState(
         quiz_id=uuid4(),
         module_id="test_module",
         module_name="Test Module",
         module_content="Test content",
         target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
         llm_provider=mock_provider,
         template_manager=mock_template_manager,
     )
