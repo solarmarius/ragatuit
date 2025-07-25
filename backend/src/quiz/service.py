@@ -23,7 +23,7 @@ logger = get_logger("quiz_service")
 
 def create_quiz(session: Session, quiz_create: QuizCreate, owner_id: UUID) -> Quiz:
     """
-    Create a new quiz.
+    Create a new quiz with module-based question batches.
 
     Args:
         session: Database session
@@ -38,17 +38,32 @@ def create_quiz(session: Session, quiz_create: QuizCreate, owner_id: UUID) -> Qu
         owner_id=str(owner_id),
         course_id=quiz_create.canvas_course_id,
         title=quiz_create.title,
+        total_modules=len(quiz_create.selected_modules),
+        total_questions=quiz_create.total_question_count,
     )
 
     # Convert ModuleSelection objects to dict for storage
     selected_modules: dict[str, dict[str, Any]] = {}
-    for module_id, module_data in quiz_create.selected_modules.items():
-        if hasattr(module_data, "model_dump"):
-            # ModuleSelection object
-            selected_modules[str(module_id)] = module_data.model_dump()
-        else:
-            # Already a dict
-            selected_modules[str(module_id)] = dict(module_data)
+    for module_id, module_selection in quiz_create.selected_modules.items():
+        # ModuleSelection object - convert with proper batch structure
+        module_dict = module_selection.model_dump()
+        # Ensure question types are stored as strings
+        batches = []
+        for batch in module_dict.get("question_batches", []):
+            batches.append(
+                {
+                    "question_type": (
+                        batch["question_type"].value
+                        if hasattr(batch.get("question_type"), "value")
+                        else batch["question_type"]
+                    ),
+                    "count": batch["count"],
+                }
+            )
+        selected_modules[str(module_id)] = {
+            "name": module_dict["name"],
+            "question_batches": batches,
+        }
 
     quiz = Quiz(
         owner_id=owner_id,
@@ -70,6 +85,8 @@ def create_quiz(session: Session, quiz_create: QuizCreate, owner_id: UUID) -> Qu
         "quiz_created_successfully",
         quiz_id=str(quiz.id),
         owner_id=str(owner_id),
+        total_modules=len(quiz.selected_modules),
+        total_questions=quiz.total_question_count,
     )
 
     return quiz
