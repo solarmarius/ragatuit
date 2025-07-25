@@ -1,6 +1,6 @@
 # Categorization Question Type Implementation Guide
 
-**Document Date**: January 23, 2025
+**Document Date**: July 23, 2025
 **Feature**: Categorization Question Type Support
 **Target System**: Rag@UiT Canvas LMS Quiz Generator
 
@@ -165,6 +165,7 @@ class CanvasInteractionType:
 ```
 
 **Testing**: After this step:
+
 1. Run `cd backend && source .venv/bin/activate && bash scripts/test.sh`
 2. Run `cd backend && source .venv/bin/activate && bash scripts/lint.sh`
 3. Commit changes: `git add -A && git commit -m "feat: add categorization question type constants"`
@@ -581,6 +582,7 @@ class CategorizationQuestionType(BaseQuestionType):
 - Validation ensures data integrity and Canvas compatibility
 
 **Testing**: After this step:
+
 1. Run `cd backend && source .venv/bin/activate && bash scripts/test.sh`
 2. Run `cd backend && source .venv/bin/activate && bash scripts/lint.sh`
 3. Commit changes: `git add -A && git commit -m "feat: add categorization question data models and implementation"`
@@ -634,6 +636,7 @@ def _initialize_default_types(self) -> None:
 ```
 
 **Testing**: After this step:
+
 1. Run `cd backend && source .venv/bin/activate && bash scripts/test.sh`
 2. Run `cd backend && source .venv/bin/activate && bash scripts/lint.sh`
 3. Commit changes: `git add -A && git commit -m "feat: register categorization question type in registry"`
@@ -644,7 +647,7 @@ def _initialize_default_types(self) -> None:
 
 **Complete Template**:
 
-```json
+````json
 {
   "name": "batch_categorization",
   "version": "1.0",
@@ -667,9 +670,10 @@ def _initialize_default_types(self) -> None:
   "min_content_length": 100,
   "max_content_length": 50000
 }
-```
+````
 
 **Testing**: After this step:
+
 1. Run `cd backend && source .venv/bin/activate && bash scripts/test.sh`
 2. Run `cd backend && source .venv/bin/activate && bash scripts/lint.sh`
 
@@ -679,7 +683,7 @@ def _initialize_default_types(self) -> None:
 
 **Complete Template**:
 
-```json
+````json
 {
   "name": "batch_categorization_no",
   "version": "1.0",
@@ -703,9 +707,10 @@ def _initialize_default_types(self) -> None:
   "min_content_length": 100,
   "max_content_length": 50000
 }
-```
+````
 
 **Testing**: After this step:
+
 1. Run `cd backend && source .venv/bin/activate && bash scripts/test.sh`
 2. Run `cd backend && source .venv/bin/activate && bash scripts/lint.sh`
 3. Commit changes: `git add -A && git commit -m "feat: add AI templates for categorization questions (English and Norwegian)"`
@@ -1402,6 +1407,7 @@ class TestCategorizationQuestionEndToEnd:
 ```
 
 **Testing**: After this step:
+
 1. Run `cd backend && source .venv/bin/activate && bash scripts/test.sh`
 2. Run `cd backend && source .venv/bin/activate && bash scripts/lint.sh`
 3. Commit changes: `git add -A && git commit -m "feat: add comprehensive test suite for categorization questions"`
@@ -1462,16 +1468,16 @@ class CategorizationData(BaseQuestionData):
     }
   ],
   "items": [
-    {"id": "item1", "text": "Dolphin"},
-    {"id": "item2", "text": "Elephant"},
-    {"id": "item3", "text": "Eagle"},
-    {"id": "item4", "text": "Penguin"},
-    {"id": "item5", "text": "Shark"},
-    {"id": "item6", "text": "Octopus"}
+    { "id": "item1", "text": "Dolphin" },
+    { "id": "item2", "text": "Elephant" },
+    { "id": "item3", "text": "Eagle" },
+    { "id": "item4", "text": "Penguin" },
+    { "id": "item5", "text": "Shark" },
+    { "id": "item6", "text": "Octopus" }
   ],
   "distractors": [
-    {"id": "dist1", "text": "Jellyfish"},
-    {"id": "dist2", "text": "Coral"}
+    { "id": "dist1", "text": "Jellyfish" },
+    { "id": "dist2", "text": "Coral" }
   ],
   "explanation": "These categories represent major vertebrate classes"
 }
@@ -1483,18 +1489,18 @@ class CategorizationData(BaseQuestionData):
 {
   "interaction_data": {
     "categories": {
-      "cat1": {"id": "cat1", "item_body": "Mammals"},
-      "cat2": {"id": "cat2", "item_body": "Birds"}
+      "cat1": { "id": "cat1", "item_body": "Mammals" },
+      "cat2": { "id": "cat2", "item_body": "Birds" }
     },
     "distractors": {
-      "item1": {"id": "item1", "item_body": "Dolphin"},
-      "item2": {"id": "item2", "item_body": "Elephant"},
-      "item3": {"id": "item3", "item_body": "Eagle"},
-      "item4": {"id": "item4", "item_body": "Penguin"},
-      "item5": {"id": "item5", "item_body": "Shark"},
-      "item6": {"id": "item6", "item_body": "Octopus"},
-      "dist1": {"id": "dist1", "item_body": "Jellyfish"},
-      "dist2": {"id": "dist2", "item_body": "Coral"}
+      "item1": { "id": "item1", "item_body": "Dolphin" },
+      "item2": { "id": "item2", "item_body": "Elephant" },
+      "item3": { "id": "item3", "item_body": "Eagle" },
+      "item4": { "id": "item4", "item_body": "Penguin" },
+      "item5": { "id": "item5", "item_body": "Shark" },
+      "item6": { "id": "item6", "item_body": "Octopus" },
+      "dist1": { "id": "dist1", "item_body": "Jellyfish" },
+      "dist2": { "id": "dist2", "item_body": "Coral" }
     },
     "category_order": ["cat1", "cat2"]
   },
