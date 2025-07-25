@@ -1,12 +1,15 @@
-import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react"
-import { memo } from "react"
+import { Badge, HStack, Text, VStack } from "@chakra-ui/react";
+import { memo } from "react";
 
-import type { Quiz } from "@/client/types.gen"
-import { getModuleQuestionTypeBreakdown, formatQuestionTypeDisplay } from "@/lib/utils"
+import type { Quiz } from "@/client/types.gen";
+import {
+  getModuleQuestionTypeBreakdown,
+  formatQuestionTypeDisplay,
+} from "@/lib/utils";
 
 interface QuestionTypeBreakdownProps {
-  quiz: Quiz
-  variant?: "compact" | "detailed"
+  quiz: Quiz;
+  variant?: "compact" | "detailed";
 }
 
 /**
@@ -17,60 +20,62 @@ interface QuestionTypeBreakdownProps {
  */
 export const QuestionTypeBreakdown = memo(function QuestionTypeBreakdown({
   quiz,
-  variant = "detailed"
+  variant = "detailed",
 }: QuestionTypeBreakdownProps) {
-  const breakdown = getModuleQuestionTypeBreakdown(quiz)
-  const moduleEntries = Object.entries(breakdown)
+  const breakdown = getModuleQuestionTypeBreakdown(quiz);
+  const moduleEntries = Object.entries(breakdown);
 
   if (moduleEntries.length === 0) {
     return (
       <Text fontSize="sm" color="gray.500">
         No question types configured
       </Text>
-    )
+    );
   }
 
   if (variant === "compact") {
     // Show aggregated counts across all modules
-    const aggregatedTypes: Record<string, number> = {}
+    const aggregatedTypes: Record<string, number> = {};
 
     moduleEntries.forEach(([_, moduleTypes]) => {
       Object.entries(moduleTypes).forEach(([type, count]) => {
-        aggregatedTypes[type] = (aggregatedTypes[type] || 0) + count
-      })
-    })
+        aggregatedTypes[type] = (aggregatedTypes[type] || 0) + count;
+      });
+    });
 
     return (
       <HStack gap={2} flexWrap="wrap">
         {Object.entries(aggregatedTypes).map(([type, count]) => (
-          <Badge key={type} variant="solid" colorScheme="blue" size="sm">
-            {count} {formatQuestionTypeDisplay(type)}
+          <Badge key={type} variant="solid" size="sm">
+            {formatQuestionTypeDisplay(type)}: {count}
           </Badge>
         ))}
       </HStack>
-    )
+    );
   }
 
   return (
     <VStack align="stretch" gap={2}>
       {moduleEntries.map(([moduleId, moduleTypes]) => {
-        const moduleName = (quiz.selected_modules as any)?.[moduleId]?.name || `Module ${moduleId}`
+        const moduleName =
+          (quiz.selected_modules as any)?.[moduleId]?.name ||
+          `Module ${moduleId}`;
 
         return (
-          <Box key={moduleId}>
+          <HStack key={moduleId} justify="space-between" align="flex-start">
             <Text fontSize="sm" fontWeight="medium" color="gray.700">
               {moduleName}:
             </Text>
-            <HStack gap={2} ml={2} flexWrap="wrap">
+            <VStack align="flex-end" gap={1}>
               {Object.entries(moduleTypes).map(([type, count]) => (
-                <Badge key={type} variant="outline" colorScheme="blue" size="sm">
-                  {count} {formatQuestionTypeDisplay(type)}
+                <Badge key={type} variant="outline" size="sm">
+                  {formatQuestionTypeDisplay(type)}: {count}
                 </Badge>
               ))}
-            </HStack>
-          </Box>
-        )
+            </VStack>
+          </HStack>
+        );
       })}
     </VStack>
-  )
-})
+  );
+});
