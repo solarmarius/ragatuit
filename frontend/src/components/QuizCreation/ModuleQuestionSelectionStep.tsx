@@ -17,6 +17,16 @@ import type React from "react"
 import { useMemo, useState } from "react"
 
 import type { QuestionBatch, QuestionType } from "@/client"
+import {
+  VALIDATION_RULES,
+  VALIDATION_MESSAGES,
+  QUESTION_BATCH_DEFAULTS,
+} from "@/lib/constants"
+import {
+  calculateTotalQuestionsFromBatches,
+  calculateModuleQuestions,
+  validateModuleBatches,
+} from "@/lib/utils"
 
 interface ModuleQuestionSelectionStepProps {
   selectedModules: Record<string, string>
@@ -45,64 +55,6 @@ const questionTypeCollection = createListCollection({
     },
   ],
 })
-
-// Validation constants
-const VALIDATION_RULES = {
-  MAX_BATCHES_PER_MODULE: 4,
-  MIN_QUESTIONS_PER_BATCH: 1,
-  MAX_QUESTIONS_PER_BATCH: 20,
-}
-
-const VALIDATION_MESSAGES = {
-  MAX_BATCHES: "Maximum 4 question batches per module",
-  DUPLICATE_TYPES: "Cannot have duplicate question types in the same module",
-  INVALID_COUNT: "Question count must be between 1 and 20",
-}
-
-const QUESTION_BATCH_DEFAULTS = {
-  DEFAULT_QUESTION_TYPE: "multiple_choice" as QuestionType,
-  DEFAULT_QUESTION_COUNT: 10,
-}
-
-// Utility functions
-const calculateTotalQuestionsFromBatches = (
-  moduleQuestions: Record<string, QuestionBatch[]>
-): number => {
-  return Object.values(moduleQuestions).reduce(
-    (total, batches) => total + calculateModuleQuestions(batches),
-    0
-  )
-}
-
-const calculateModuleQuestions = (batches: QuestionBatch[]): number => {
-  return batches.reduce((sum, batch) => sum + batch.count, 0)
-}
-
-const validateModuleBatches = (batches: QuestionBatch[]): string[] => {
-  const errors: string[] = []
-
-  // Check batch count limit
-  if (batches.length > VALIDATION_RULES.MAX_BATCHES_PER_MODULE) {
-    errors.push(VALIDATION_MESSAGES.MAX_BATCHES)
-  }
-
-  // Check for duplicate question types
-  const types = batches.map(batch => batch.question_type)
-  const uniqueTypes = new Set(types)
-  if (types.length !== uniqueTypes.size) {
-    errors.push(VALIDATION_MESSAGES.DUPLICATE_TYPES)
-  }
-
-  // Check individual batch counts
-  batches.forEach((batch, index) => {
-    if (batch.count < VALIDATION_RULES.MIN_QUESTIONS_PER_BATCH ||
-        batch.count > VALIDATION_RULES.MAX_QUESTIONS_PER_BATCH) {
-      errors.push(`Batch ${index + 1}: ${VALIDATION_MESSAGES.INVALID_COUNT}`)
-    }
-  })
-
-  return errors
-}
 
 export const ModuleQuestionSelectionStep: React.FC<
   ModuleQuestionSelectionStepProps

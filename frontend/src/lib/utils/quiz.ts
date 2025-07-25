@@ -1,5 +1,5 @@
-import type { Quiz } from "@/client/types.gen"
-import { QUIZ_STATUS, UI_TEXT } from "@/lib/constants"
+import type { Quiz, QuestionBatch } from "@/client/types.gen"
+import { QUIZ_STATUS, UI_TEXT, QUESTION_TYPE_LABELS, VALIDATION_RULES, VALIDATION_MESSAGES } from "@/lib/constants"
 
 /**
  * Quiz utility functions for status handling, filtering, and processing
@@ -245,4 +245,123 @@ export function sortQuizzesByStatus(quizzes: Quiz[]): Quiz[] {
 
     return getPriority(a) - getPriority(b)
   })
+}
+
+// =============================================================================
+// Question Batch Functions
+// =============================================================================
+
+/**
+ * Calculate total questions from question batches across all modules
+ */
+export function calculateTotalQuestionsFromBatches(
+  moduleQuestions: Record<string, QuestionBatch[]>
+): number {
+  return Object.values(moduleQuestions).reduce(
+    (total, batches) => total + calculateModuleQuestions(batches),
+    0
+  )
+}
+
+/**
+ * Calculate questions for a single module's batches
+ */
+export function calculateModuleQuestions(batches: QuestionBatch[]): number {
+  return batches.reduce((sum, batch) => sum + batch.count, 0)
+}
+
+/**
+ * Get all unique question types used in a quiz
+ */
+export function getQuizQuestionTypes(quiz: Quiz): string[] {
+  if (!quiz.selected_modules) return []
+
+  const types = new Set<string>()
+
+  Object.values(quiz.selected_modules).forEach((module: any) => {
+    if (module.question_batches) {
+      module.question_batches.forEach((batch: QuestionBatch) => {
+        types.add(batch.question_type)
+      })
+    }
+  })
+
+  return Array.from(types)
+}
+
+/**
+ * Get detailed question type breakdown per module
+ * Returns: { moduleId: { questionType: count } }
+ */
+export function getModuleQuestionTypeBreakdown(
+  quiz: Quiz
+): Record<string, Record<string, number>> {
+  if (!quiz.selected_modules) return {}
+
+  const breakdown: Record<string, Record<string, number>> = {}
+
+  Object.entries(quiz.selected_modules).forEach(([moduleId, module]: [string, any]) => {
+    breakdown[moduleId] = {}
+
+    if (module.question_batches) {
+      module.question_batches.forEach((batch: QuestionBatch) => {
+        breakdown[moduleId][batch.question_type] =
+          (breakdown[moduleId][batch.question_type] || 0) + batch.count
+      })
+    }
+  })
+
+  return breakdown
+}
+
+/**
+ * Validate question batches for a module
+ * Returns array of error messages (empty if valid)
+ */
+export function validateModuleBatches(batches: QuestionBatch[]): string[] {
+  const errors: string[] = []
+
+  // Check batch count limit
+  if (batches.length > VALIDATION_RULES.MAX_BATCHES_PER_MODULE) {
+    errors.push(VALIDATION_MESSAGES.MAX_BATCHES)
+  }
+
+  // Check for duplicate question types
+  const types = batches.map(batch => batch.question_type)
+  const uniqueTypes = new Set(types)
+  if (types.length !== uniqueTypes.size) {
+    errors.push(VALIDATION_MESSAGES.DUPLICATE_TYPES)
+  }
+
+  // Check individual batch counts
+  batches.forEach((batch, index) => {
+    if (batch.count < VALIDATION_RULES.MIN_QUESTIONS_PER_BATCH ||
+        batch.count > VALIDATION_RULES.MAX_QUESTIONS_PER_BATCH) {
+      errors.push(`Batch ${index + 1}: ${VALIDATION_MESSAGES.INVALID_COUNT}`)
+    }
+  })
+
+  return errors
+}
+
+/**
+ * Format question type for display
+ */
+export function formatQuestionTypeDisplay(questionType: string): string {
+  return QUESTION_TYPE_LABELS[questionType as keyof typeof QUESTION_TYPE_LABELS] || questionType
+}
+
+/**
+ * Format multiple question types for compact display
+ */
+export function formatQuestionTypesDisplay(types: string[]): string {
+  if (types.length === 0) return "No questions"
+  if (types.length === 1) return formatQuestionTypeDisplay(types[0])
+
+  const formatted = types.map(formatQuestionTypeDisplay)
+  if (formatted.length <= 2) {
+    return formatted.join(" & ")
+  }
+
+  return `${formatted.slice(0, 2).join(", ")} & ${formatted.length - 2} more`
 }
