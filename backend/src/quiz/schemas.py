@@ -37,11 +37,25 @@ class FailureReason(str, Enum):
     VALIDATION_ERROR = "validation_error"
 
 
+class QuestionBatch(SQLModel):
+    """Schema for a batch of questions of a specific type."""
+
+    question_type: QuestionType
+    count: int = Field(ge=1, le=20, description="Number of questions (1-20)")
+
+
 class ModuleSelection(SQLModel):
-    """Schema for module selection with question count."""
+    """Schema for module selection with multiple question type batches."""
 
     name: str
-    question_count: int = Field(ge=1, le=20, description="Questions per module (1-20)")
+    question_batches: list[QuestionBatch] = Field(
+        min_length=1, max_length=4, description="Question type batches (1-4 per module)"
+    )
+
+    @property
+    def total_questions(self) -> int:
+        """Calculate total questions across all batches."""
+        return sum(batch.count for batch in self.question_batches)
 
 
 class QuizCreate(SQLModel):
@@ -54,7 +68,7 @@ class QuizCreate(SQLModel):
     llm_model: str = Field(default="o3")
     llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
     language: QuizLanguage = Field(default=QuizLanguage.ENGLISH)
-    question_type: QuestionType = Field(default=QuestionType.MULTIPLE_CHOICE)
+    # Removed: question_type field
 
     @field_validator("selected_modules")
     def validate_modules(cls, v: dict[str, Any]) -> dict[str, Any]:
@@ -62,36 +76,44 @@ class QuizCreate(SQLModel):
         if not v:
             raise ValueError("At least one module must be selected")
 
-        # Validate each module has required fields
         for module_id, module_data in v.items():
-            if not isinstance(module_data, dict) and not isinstance(
-                module_data, ModuleSelection
-            ):
+            if not isinstance(module_data, dict | ModuleSelection):
                 raise ValueError(f"Module {module_id} must be a valid module selection")
 
-            # Convert to dict if ModuleSelection object
-            if isinstance(module_data, ModuleSelection):
-                module_dict = module_data.model_dump()
+            # Convert to ModuleSelection if dict
+            if isinstance(module_data, dict):
+                try:
+                    module_selection = ModuleSelection(**module_data)
+                except Exception as e:
+                    raise ValueError(f"Module {module_id} has invalid structure: {e}")
             else:
-                module_dict = module_data
+                module_selection = module_data
 
-            if "name" not in module_dict or "question_count" not in module_dict:
-                raise ValueError(f"Module {module_id} missing required fields")
+            # Validate batch count
+            if len(module_selection.question_batches) > 4:
+                raise ValueError(
+                    f"Module {module_id} cannot have more than 4 question batches"
+                )
 
-            if not 1 <= module_dict["question_count"] <= 20:
-                raise ValueError(f"Module {module_id} question count must be 1-20")
+            # Validate no duplicate question types in same module
+            question_types = [
+                batch.question_type for batch in module_selection.question_batches
+            ]
+            if len(question_types) != len(set(question_types)):
+                raise ValueError(f"Module {module_id} has duplicate question types")
 
         return v
 
     @property
     def total_question_count(self) -> int:
-        """Calculate total questions across all modules."""
+        """Calculate total questions across all modules and batches."""
         total = 0
         for module in self.selected_modules.values():
             if isinstance(module, ModuleSelection):
-                total += module.question_count
-            elif isinstance(module, dict) and "question_count" in module:
-                total += module["question_count"]
+                total += module.total_questions
+            elif isinstance(module, dict) and "question_batches" in module:
+                for batch in module["question_batches"]:
+                    total += batch.get("count", 0)
         return total
 
 
@@ -102,7 +124,7 @@ class QuizUpdate(SQLModel):
     llm_model: str | None = None
     llm_temperature: float | None = Field(default=None, ge=0.0, le=2.0)
     language: QuizLanguage | None = None
-    question_type: QuestionType | None = None
+    # Removed: question_type field
 
 
 class QuizPublic(SQLModel):
@@ -114,11 +136,11 @@ class QuizPublic(SQLModel):
     canvas_course_name: str
     selected_modules: dict[str, dict[str, Any]]
     title: str
-    question_count: int
+    question_count: int  # Total questions across all batches (for frontend display)
     llm_model: str
     llm_temperature: float
     language: QuizLanguage
-    question_type: QuestionType
+    # Removed: question_type field (now per batch)
     status: QuizStatus
     failure_reason: FailureReason | None = None
     last_status_update: datetime
@@ -166,11 +188,11 @@ class QuizQuestionGenerationData(SQLModel):
     """Typed data for question generation flow operations."""
 
     quiz_id: UUID
-    target_question_count: int
+    # Removed: target_question_count (now per batch)
     llm_model: str
     llm_temperature: float
     language: QuizLanguage
-    question_type: QuestionType
+    # Removed: question_type (now per batch)
 
 
 class QuizExportData(SQLModel):
