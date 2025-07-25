@@ -174,8 +174,7 @@ class QuestionGenerationService:
                     language=language,
                 )
 
-                # TODO: Update this when workflow is updated for batches
-                results = await processor.process_all_modules(
+                results = await processor.process_all_modules_with_batches(
                     quiz_id, modules_to_process
                 )
 

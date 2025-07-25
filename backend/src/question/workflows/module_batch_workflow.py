@@ -28,6 +28,7 @@ class ModuleBatchState(BaseModel):
     module_content: str
     target_question_count: int
     language: QuizLanguage = QuizLanguage.ENGLISH
+    question_type: QuestionType  # Now passed per batch, not at init
 
     # Provider configuration
     llm_provider: BaseLLMProvider
@@ -91,12 +92,11 @@ class ModuleBatchWorkflow:
         llm_provider: BaseLLMProvider,
         template_manager: TemplateManager | None = None,
         language: QuizLanguage = QuizLanguage.ENGLISH,
-        question_type: QuestionType = QuestionType.MULTIPLE_CHOICE,
     ):
         self.llm_provider = llm_provider
         self.template_manager = template_manager or get_template_manager()
         self.language = language
-        self.question_type = question_type
+        # Removed: question_type initialization
         self.graph = self._build_graph()
 
     def _build_graph(self) -> Any:
@@ -176,13 +176,13 @@ class ModuleBatchWorkflow:
                 else "EMPTY_CONTENT",
                 module_name=state.module_name,
                 question_count=remaining_questions,
-                question_type=self.question_type.value,
+                question_type=state.question_type.value,
             )
 
             # Create messages using template
             # Template will be automatically selected based on question type and language
             messages = await self.template_manager.create_messages(
-                self.question_type,
+                state.question_type,
                 state.module_content,
                 generation_parameters,
                 template_name=None,  # Let template manager select based on question type
@@ -299,13 +299,13 @@ class ModuleBatchWorkflow:
                     from ..types.registry import get_question_type_registry
 
                     registry = get_question_type_registry()
-                    question_type_impl = registry.get_question_type(self.question_type)
+                    question_type_impl = registry.get_question_type(state.question_type)
                     validated_data = question_type_impl.validate_data(q_data)
 
                     # Create question object with validated data
                     question = Question(
                         quiz_id=state.quiz_id,
-                        question_type=self.question_type,
+                        question_type=state.question_type,
                         question_data=validated_data.model_dump(),
                         difficulty=difficulty,
                         is_approved=False,
@@ -493,7 +493,7 @@ class ModuleBatchWorkflow:
                 f"1. Return ONLY a JSON array containing the {len(state.failed_questions_data)} corrected questions\n"
                 f"2. Fix the validation errors mentioned above\n"
                 f"3. Preserve the original question intent and content where possible\n"
-                f"4. Each question must follow the correct format for {self.question_type.value} questions\n"
+                f"4. Each question must follow the correct format for {state.question_type.value} questions\n"
                 f"5. No markdown code blocks or explanatory text\n"
                 f"6. Do not generate new questions - fix the existing ones provided\n\n"
                 f"Please provide the corrected questions as a JSON array:"
@@ -709,6 +709,7 @@ class ModuleBatchWorkflow:
         module_name: str,
         module_content: str,
         question_count: int,
+        question_type: QuestionType,  # Now passed as parameter
     ) -> list[Question]:
         """Process a single module to generate questions."""
         initial_state = ModuleBatchState(
@@ -718,6 +719,7 @@ class ModuleBatchWorkflow:
             module_content=module_content,
             target_question_count=question_count,
             language=self.language,
+            question_type=question_type,  # Set from parameter
             llm_provider=self.llm_provider,
             template_manager=self.template_manager,
         )
@@ -776,12 +778,11 @@ class ParallelModuleProcessor:
         llm_provider: BaseLLMProvider,
         template_manager: TemplateManager | None = None,
         language: QuizLanguage = QuizLanguage.ENGLISH,
-        question_type: QuestionType = QuestionType.MULTIPLE_CHOICE,
     ):
         self.llm_provider = llm_provider
         self.template_manager = template_manager or get_template_manager()
         self.language = language
-        self.question_type = question_type
+        # Removed: question_type initialization
 
     async def process_all_modules(
         self,
@@ -830,16 +831,17 @@ class ParallelModuleProcessor:
                     llm_provider=self.llm_provider,
                     template_manager=self.template_manager,
                     language=self.language,
-                    question_type=self.question_type,
                 )
 
                 try:
+                    # TODO: This needs to be updated for batch processing
                     questions = await workflow.process_module(
                         quiz_id=quiz_id,
                         module_id=module_id,
                         module_name=module_info["name"],
                         module_content=module_info["content"],
                         question_count=module_info["question_count"],
+                        question_type=QuestionType.MULTIPLE_CHOICE,  # Temporary default
                     )
 
                     logger.info(
@@ -897,3 +899,240 @@ class ParallelModuleProcessor:
         )
 
         return results
+
+    async def process_all_modules_with_batches(
+        self,
+        quiz_id: UUID,
+        modules_data: dict[str, dict[str, Any]],
+    ) -> dict[str, list[Question]]:
+        """
+        Process all modules with their batches in parallel.
+
+        Args:
+            quiz_id: The quiz identifier
+            modules_data: Dictionary with module data including batches:
+                {
+                    "module_id": {
+                        "name": "Module Name",
+                        "content": "...",
+                        "batches": [
+                            {"question_type": QuestionType, "count": int, "batch_key": str},
+                            ...
+                        ]
+                    }
+                }
+
+        Returns:
+            Dictionary mapping module IDs to lists of generated questions
+        """
+        # Create tasks for all batches across all modules
+        tasks = []
+        batch_info_map = {}  # Track which task belongs to which module/batch
+
+        for module_id, module_info in modules_data.items():
+            module_name = module_info["name"]
+            module_content = module_info["content"]
+
+            for batch in module_info["batches"]:
+                question_type = batch["question_type"]
+                count = batch["count"]
+                batch_key = batch["batch_key"]
+
+                # Create workflow for this specific batch
+                workflow = ModuleBatchWorkflow(
+                    llm_provider=self.llm_provider,
+                    template_manager=self.template_manager,
+                    language=self.language,
+                )
+
+                # Create task for this batch
+                task = asyncio.create_task(
+                    self._process_single_batch(
+                        workflow,
+                        module_id,
+                        module_name,
+                        module_content,
+                        quiz_id,
+                        count,
+                        question_type,
+                        batch_key,
+                    )
+                )
+
+                tasks.append(task)
+                batch_info_map[id(task)] = {
+                    "module_id": module_id,
+                    "batch_key": batch_key,
+                    "question_type": question_type,
+                }
+
+        # Execute all batch tasks in parallel
+        logger.info(
+            "parallel_batch_processing_started",
+            quiz_id=str(quiz_id),
+            total_batches=len(tasks),
+            modules_count=len(modules_data),
+        )
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Process results and organize by module
+        final_results: dict[str, list[Question]] = {}
+        successful_batches = []
+        failed_batches = []
+
+        for task_idx, result in enumerate(results):
+            task = tasks[task_idx]
+            batch_info = batch_info_map[id(task)]
+            module_id = batch_info["module_id"]
+            batch_key = batch_info["batch_key"]
+
+            if isinstance(result, BaseException):
+                logger.error(
+                    "parallel_batch_processing_batch_failed",
+                    quiz_id=str(quiz_id),
+                    module_id=module_id,
+                    batch_key=batch_key,
+                    error=str(result),
+                )
+                failed_batches.append(batch_key)
+            else:
+                questions, _metadata = result
+
+                # Initialize module results if needed
+                if module_id not in final_results:
+                    final_results[module_id] = []
+
+                # Add questions from this batch
+                final_results[module_id].extend(questions)
+
+                if questions:
+                    successful_batches.append(batch_key)
+                    logger.info(
+                        "parallel_batch_processing_batch_completed",
+                        quiz_id=str(quiz_id),
+                        module_id=module_id,
+                        batch_key=batch_key,
+                        questions_generated=len(questions),
+                    )
+                else:
+                    failed_batches.append(batch_key)
+
+        # Update generation metadata
+        await self._update_generation_metadata(
+            quiz_id, successful_batches, failed_batches
+        )
+
+        logger.info(
+            "parallel_batch_processing_completed",
+            quiz_id=str(quiz_id),
+            successful_batches=len(successful_batches),
+            failed_batches=len(failed_batches),
+            total_questions=sum(len(q) for q in final_results.values()),
+        )
+
+        return final_results
+
+    async def _process_single_batch(
+        self,
+        workflow: ModuleBatchWorkflow,
+        module_id: str,
+        module_name: str,
+        module_content: str,
+        quiz_id: UUID,
+        target_count: int,
+        question_type: QuestionType,
+        batch_key: str,
+    ) -> tuple[list[Question], dict[str, Any]]:
+        """
+        Process a single batch for a module.
+
+        Returns:
+            Tuple of (questions, metadata)
+        """
+        try:
+            logger.info(
+                "processing_single_batch",
+                quiz_id=str(quiz_id),
+                module_id=module_id,
+                batch_key=batch_key,
+                question_type=question_type.value,
+                target_count=target_count,
+            )
+
+            questions = await workflow.process_module(
+                module_id=module_id,
+                module_name=module_name,
+                module_content=module_content,
+                quiz_id=quiz_id,
+                question_count=target_count,
+                question_type=question_type,
+            )
+
+            metadata = {
+                "batch_key": batch_key,
+                "questions_generated": len(questions),
+                "target_count": target_count,
+                "question_type": question_type.value,
+            }
+
+            return questions, metadata
+
+        except Exception as e:
+            logger.error(
+                "batch_processing_error",
+                quiz_id=str(quiz_id),
+                module_id=module_id,
+                batch_key=batch_key,
+                error=str(e),
+                exc_info=True,
+            )
+            raise
+
+    async def _update_generation_metadata(
+        self,
+        quiz_id: UUID,
+        successful_batches: list[str],
+        failed_batches: list[str],
+    ) -> None:
+        """Update quiz generation metadata with batch results."""
+        try:
+            from src.quiz.models import Quiz
+
+            async with get_async_session() as session:
+                quiz = await session.get(Quiz, quiz_id)
+                if quiz:
+                    # Initialize metadata if needed
+                    if not quiz.generation_metadata:
+                        quiz.generation_metadata = {}
+
+                    # Update successful batches
+                    existing_successful = set(
+                        quiz.generation_metadata.get("successful_batches", [])
+                    )
+                    existing_successful.update(successful_batches)
+                    quiz.generation_metadata["successful_batches"] = list(
+                        existing_successful
+                    )
+
+                    # Update failed batches (remove any that succeeded)
+                    existing_failed = set(
+                        quiz.generation_metadata.get("failed_batches", [])
+                    )
+                    existing_failed.update(failed_batches)
+                    existing_failed -= existing_successful
+                    quiz.generation_metadata["failed_batches"] = list(existing_failed)
+
+                    # Force update of JSONB column
+                    quiz.generation_metadata = {**quiz.generation_metadata}
+
+                    session.add(quiz)
+                    await session.commit()
+
+        except Exception as e:
+            logger.error(
+                "metadata_update_failed",
+                quiz_id=str(quiz_id),
+                error=str(e),
+                exc_info=True,
+            )
