@@ -1,8 +1,8 @@
 import { Card, VStack } from "@chakra-ui/react"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 
-import { type Quiz, QuizService } from "@/client"
+import { QuizService } from "@/client"
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common"
 import { QuestionReview } from "@/components/Questions/QuestionReview"
 import { QuestionStats } from "@/components/Questions/QuestionStats"
@@ -39,10 +39,6 @@ function renderErrorForFailureReason(failureReason: string | null | undefined) {
 
 function QuizQuestions() {
   const { id } = Route.useParams()
-  const queryClient = useQueryClient()
-
-  // Get cached quiz data immediately if available
-  const cachedQuiz = queryClient.getQueryData<Quiz>(queryKeys.quiz(id))
 
   const { data: quiz, isLoading } = useQuery({
     queryKey: queryKeys.quiz(id),
@@ -52,8 +48,6 @@ function QuizQuestions() {
     },
     ...quizQueryConfig,
     refetchInterval: false, // No polling on questions page as specified
-    // Use cached data immediately if available
-    initialData: cachedQuiz,
   })
 
   // Only show skeleton when loading and no cached data exists
