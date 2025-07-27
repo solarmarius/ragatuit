@@ -1,16 +1,16 @@
-import { Badge, Box, Card, HStack, Text, VStack } from "@chakra-ui/react"
-import { Link as RouterLink } from "@tanstack/react-router"
-import { memo, useMemo } from "react"
+import { Badge, Box, Card, HStack, Text, VStack } from "@chakra-ui/react";
+import { Link as RouterLink } from "@tanstack/react-router";
+import { memo, useMemo } from "react";
 
-import type { Quiz } from "@/client/types.gen"
-import { EmptyState, LoadingSkeleton, QuizListCard } from "@/components/Common"
-import { Button } from "@/components/ui/button"
-import { UI_SIZES, UI_TEXT } from "@/lib/constants"
-import { getQuizzesNeedingReview } from "@/lib/utils"
+import type { Quiz } from "@/client/types.gen";
+import { EmptyState, LoadingSkeleton, QuizListCard } from "@/components/Common";
+import { Button } from "@/components/ui/button";
+import { UI_SIZES, UI_TEXT } from "@/lib/constants";
+import { getQuizzesNeedingReview } from "@/lib/utils";
 
 interface QuizReviewPanelProps {
-  quizzes: Quiz[]
-  isLoading: boolean
+  quizzes: Quiz[];
+  isLoading: boolean;
 }
 
 export const QuizReviewPanel = memo(function QuizReviewPanel({
@@ -19,11 +19,11 @@ export const QuizReviewPanel = memo(function QuizReviewPanel({
 }: QuizReviewPanelProps) {
   const reviewQuizzes = useMemo(
     () => getQuizzesNeedingReview(quizzes),
-    [quizzes],
-  )
+    [quizzes]
+  );
 
   if (isLoading) {
-    return <QuizReviewPanelSkeleton />
+    return <QuizReviewPanelSkeleton />;
   }
 
   return (
@@ -55,7 +55,7 @@ export const QuizReviewPanel = memo(function QuizReviewPanel({
                 quiz={quiz}
                 actionButton={{
                   text: "Review",
-                  to: "/quiz/$id",
+                  to: "/quiz/$id/questions",
                   params: { id: quiz.id || "" },
                 }}
                 compact
@@ -76,8 +76,8 @@ export const QuizReviewPanel = memo(function QuizReviewPanel({
         )}
       </Card.Body>
     </Card.Root>
-  )
-})
+  );
+});
 
 function QuizReviewPanelSkeleton() {
   return (
@@ -151,5 +151,5 @@ function QuizReviewPanelSkeleton() {
         </VStack>
       </Card.Body>
     </Card.Root>
-  )
+  );
 }

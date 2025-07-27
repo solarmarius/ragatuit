@@ -58,9 +58,9 @@ export const QuizListCard = memo(function QuizListCard({
 
           <Button size="sm" variant="outline" asChild flexShrink={0}>
             <RouterLink
-              to={actionButton.to}
-              params={actionButton.params}
-              search={actionButton.search}
+              to={actionButton.to as any}
+              params={actionButton.params as any}
+              search={actionButton.search as any}
             >
               {actionButton.text}
             </RouterLink>

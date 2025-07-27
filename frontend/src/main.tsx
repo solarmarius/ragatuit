@@ -23,6 +23,24 @@ const handleApiError = (error: Error) => {
   }
 }
 const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Cache quiz data for 10 minutes to reduce API calls
+      staleTime: 10 * 60 * 1000, // 10 minutes
+      // Keep cached data for 30 minutes
+      gcTime: 30 * 60 * 1000, // 30 minutes (renamed from cacheTime)
+      // Retry failed requests up to 2 times
+      retry: 2,
+      // Don't refetch on window focus for better UX
+      refetchOnWindowFocus: false,
+      // Keep previous data while fetching new data
+      placeholderData: (previousData: unknown) => previousData,
+    },
+    mutations: {
+      // Retry failed mutations once
+      retry: 1,
+    },
+  },
   queryCache: new QueryCache({
     onError: handleApiError,
   }),

@@ -16,6 +16,7 @@ import { type Quiz, QuizService } from "@/client"
 import { ErrorState, LoadingSkeleton } from "@/components/Common"
 import { useCustomToast, useErrorHandler } from "@/hooks/common"
 import { QUIZ_STATUS, UI_SIZES } from "@/lib/constants"
+import { queryKeys, questionStatsQueryConfig } from "@/lib/queryConfig"
 import {
   type QuestionStats as TypedQuestionStats,
   mergeLegacyStats,
@@ -64,7 +65,7 @@ export const QuestionStats = memo(function QuestionStats({
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["quiz", quiz.id, "questions", "stats"],
+    queryKey: queryKeys.quizQuestionStats(quiz.id!),
     queryFn: async () => {
       if (!quiz.id) {
         throw new Error("Quiz ID is required")
@@ -73,6 +74,8 @@ export const QuestionStats = memo(function QuestionStats({
         quizId: quiz.id,
       })
     },
+    ...questionStatsQueryConfig,
+    enabled: !!quiz.id, // Only run query if quiz.id exists
   })
 
   // Convert legacy stats format to typed format
@@ -97,7 +100,7 @@ export const QuestionStats = memo(function QuestionStats({
     onSuccess: () => {
       showSuccessToast("Quiz export to Canvas started successfully")
       // Invalidate quiz queries to trigger status updates and polling
-      queryClient.invalidateQueries({ queryKey: ["quiz", quiz.id] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.quiz(quiz.id!) })
     },
     onError: handleError,
   })

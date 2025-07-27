@@ -551,8 +551,11 @@ test.describe("Quiz Detail Component", () => {
 
     await page.reload();
 
-    // Click on Questions tab
+    // Click on Questions tab should navigate to questions route
     await page.getByRole("tab", { name: "Questions" }).click();
+
+    // Should be on the questions route
+    await expect(page).toHaveURL(`/quiz/${mockQuizId}/questions`);
 
     // Questions tab should now be active
     await expect(page.getByRole("tab", { name: "Questions" })).toHaveAttribute(
@@ -608,8 +611,11 @@ test.describe("Quiz Detail Component", () => {
     const reviewButton = page.getByRole("button", { name: "Review Quiz" });
     await expect(reviewButton).toBeVisible();
 
-    // Click Review Quiz button should navigate to Questions tab
+    // Click Review Quiz button should navigate to questions route
     await reviewButton.click();
+
+    // Should be on the questions route
+    await expect(page).toHaveURL(`/quiz/${mockQuizId}/questions`);
 
     // Questions tab should be active
     await expect(page.getByRole("tab", { name: "Questions" })).toHaveAttribute(
