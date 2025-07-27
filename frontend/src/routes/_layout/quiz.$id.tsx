@@ -9,7 +9,7 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, Outlet, useChildMatches } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 
 import { QuizService } from "@/client";
 import {
@@ -31,8 +31,12 @@ export const Route = createFileRoute("/_layout/quiz/$id")({
 function QuizLayout() {
   const { id } = Route.useParams();
   const pollingInterval = useQuizStatusPolling();
-  const childMatches = useChildMatches();
-  const isQuestionsRoute = childMatches.some(match => match.routeId.includes('questions'));
+
+  // Use router state to detect current route more reliably
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  const isQuestionsRoute = pathname.endsWith('/questions');
 
   const {
     data: quiz,
