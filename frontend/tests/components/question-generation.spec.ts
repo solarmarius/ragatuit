@@ -137,10 +137,8 @@ test.describe("Question Generation Components", () => {
         },
       )
 
-      await page.goto(`/quiz/${mockQuizId}`)
-
-      // Click Questions tab
-      await page.getByRole("tab", { name: "Questions" }).click()
+      // Go directly to questions route
+      await page.goto(`/quiz/${mockQuizId}/questions`)
 
       // Check statistics are displayed
       await expect(page.getByText("Question Review Progress")).toBeVisible()
@@ -247,17 +245,11 @@ test.describe("Question Generation Components", () => {
         },
       )
 
-      await page.goto(`/quiz/${mockQuizId}`)
-
-      // Click Questions tab to trigger loading
-      const questionsTabPromise = page
-        .getByRole("tab", { name: "Questions" })
-        .click()
+      // Go directly to questions route to trigger loading
+      await page.goto(`/quiz/${mockQuizId}/questions`)
 
       // Check skeleton loader is visible
       await expect(page.locator('[class*="skeleton"]').first()).toBeVisible()
-
-      await questionsTabPromise
     })
 
     test("should handle stats API error", async ({ page }) => {
