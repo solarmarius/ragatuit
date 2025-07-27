@@ -9,7 +9,7 @@ import {
   VStack,
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Outlet, useChildMatches } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useChildMatches } from "@tanstack/react-router";
 
 import { QuizService } from "@/client";
 import {
@@ -89,9 +89,11 @@ function QuizLayout() {
                 <Button
                   colorPalette="blue"
                   size="sm"
-                  onClick={() => console.log('Navigate to questions')}
+                  asChild
                 >
-                  Review Quiz
+                  <Link to="/quiz/$id/questions" params={{ id }}>
+                    Review Quiz
+                  </Link>
                 </Button>
               )}
               <DeleteQuizConfirmation quizId={id} quizTitle={quiz.title} />
@@ -108,11 +110,15 @@ function QuizLayout() {
           size="lg"
         >
           <Tabs.List>
-            <Tabs.Trigger value="info">
-              Quiz Information
+            <Tabs.Trigger value="info" asChild>
+              <Link to="/quiz/$id" params={{ id }}>
+                Quiz Information
+              </Link>
             </Tabs.Trigger>
-            <Tabs.Trigger value="questions">
-              Questions
+            <Tabs.Trigger value="questions" asChild>
+              <Link to="/quiz/$id/questions" params={{ id }}>
+                Questions
+              </Link>
             </Tabs.Trigger>
           </Tabs.List>
 
