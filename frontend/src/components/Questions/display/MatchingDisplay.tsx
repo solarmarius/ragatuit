@@ -23,7 +23,7 @@ export const MatchingDisplay = memo(function MatchingDisplay({
       <VStack gap={4} align="stretch">
         {/* Question Text */}
         <Box>
-          <Text fontSize="md" fontWeight="medium" mb={2}>
+          <Text fontSize="md" fontWeight="medium">
             {matchingData.question_text}
           </Text>
         </Box>
@@ -41,7 +41,7 @@ export const MatchingDisplay = memo(function MatchingDisplay({
                 >
                   <Text fontSize="sm">{pair.question}</Text>
                 </Box>
-                <Text fontSize="sm" color="blue.600" fontWeight="medium">
+                <Text fontSize="sm" color="gray.600" fontWeight="medium">
                   →
                 </Text>
                 <Box
