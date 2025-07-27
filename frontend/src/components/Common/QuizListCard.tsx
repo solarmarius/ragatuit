@@ -1,21 +1,21 @@
-import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react"
-import { Link as RouterLink } from "@tanstack/react-router"
-import { memo } from "react"
+import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
+import { Link as RouterLink } from "@tanstack/react-router";
+import { memo } from "react";
 
-import type { Quiz } from "@/client/types.gen"
-import { Button } from "@/components/ui/button"
-import { StatusLight } from "@/components/ui/status-light"
+import type { Quiz } from "@/client/types.gen";
+import { Button } from "@/components/ui/button";
+import { StatusLight } from "@/components/ui/status-light";
 
 interface QuizListCardProps {
-  quiz: Quiz
+  quiz: Quiz;
   actionButton?: {
-    text: string
-    to: string
-    params?: Record<string, any>
-    search?: Record<string, any>
-  }
-  showCourseInfo?: boolean
-  compact?: boolean
+    text: string;
+    to: string;
+    params?: Record<string, any>;
+    search?: Record<string, any>;
+  };
+  showCourseInfo?: boolean;
+  compact?: boolean;
 }
 
 export const QuizListCard = memo(function QuizListCard({
@@ -42,11 +42,13 @@ export const QuizListCard = memo(function QuizListCard({
             </Text>
             <StatusLight status={quiz.status || "created"} />
           </HStack>
-          {showCourseInfo && (
-            <Text fontSize="xs" color="gray.600" truncate>
-              {quiz.canvas_course_name}
-            </Text>
-          )}
+          <HStack justify="space-between" align="start" width="100%">
+            {showCourseInfo && (
+              <Text fontSize="xs" color="gray.600" truncate>
+                {quiz.canvas_course_name}
+              </Text>
+            )}
+          </HStack>
         </VStack>
 
         <HStack justify="space-between" align="center" gap={2} flexWrap="wrap">
@@ -68,5 +70,5 @@ export const QuizListCard = memo(function QuizListCard({
         </HStack>
       </VStack>
     </Box>
-  )
-})
+  );
+});

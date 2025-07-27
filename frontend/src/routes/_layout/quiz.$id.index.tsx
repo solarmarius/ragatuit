@@ -1,11 +1,4 @@
-import {
-  Badge,
-  Box,
-  Card,
-  HStack,
-  Text,
-  VStack,
-} from "@chakra-ui/react";
+import { Badge, Box, Card, HStack, Text, VStack } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
@@ -109,11 +102,7 @@ function QuizInformation() {
               {moduleNames.length > 0 ? (
                 <HStack wrap="wrap" gap={2}>
                   {moduleNames.map((moduleName, index) => (
-                    <Badge
-                      key={index}
-                      variant="outline"
-                      colorScheme="blue"
-                    >
+                    <Badge key={index} variant="outline" colorScheme="blue">
                       {moduleName}
                     </Badge>
                   ))}
@@ -130,7 +119,7 @@ function QuizInformation() {
       <Card.Root>
         <Card.Header>
           <Text fontSize="xl" fontWeight="semibold">
-            Quiz Settings
+            Settings
           </Text>
         </Card.Header>
         <Card.Body>
@@ -162,7 +151,7 @@ function QuizInformation() {
       <Card.Root>
         <Card.Header>
           <Text fontSize="xl" fontWeight="semibold">
-            Quiz Metadata
+            Metadata
           </Text>
         </Card.Header>
         <Card.Body>
@@ -201,7 +190,7 @@ function QuizInformation() {
       <Card.Root>
         <Card.Header>
           <Text fontSize="xl" fontWeight="semibold">
-            Quiz Generation Progress
+            Generation Progress
           </Text>
         </Card.Header>
         <Card.Body>
