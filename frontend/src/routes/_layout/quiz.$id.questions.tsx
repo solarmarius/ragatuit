@@ -1,38 +1,28 @@
-import {
-  Card,
-  VStack,
-} from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { Card, VStack } from "@chakra-ui/react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { createFileRoute } from "@tanstack/react-router"
 
-import { QuizService } from "@/client";
-import {
-  EmptyState,
-  ErrorState,
-  LoadingSkeleton,
-} from "@/components/Common";
-import { QuestionReview } from "@/components/Questions/QuestionReview";
-import { QuestionStats } from "@/components/Questions/QuestionStats";
-import {
-  FAILURE_REASON,
-  QUIZ_STATUS,
-  UI_TEXT,
-} from "@/lib/constants";
+import { type Quiz, QuizService } from "@/client"
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common"
+import { QuestionReview } from "@/components/Questions/QuestionReview"
+import { QuestionStats } from "@/components/Questions/QuestionStats"
+import { FAILURE_REASON, QUIZ_STATUS, UI_TEXT } from "@/lib/constants"
+import { queryKeys, quizQueryConfig } from "@/lib/queryConfig"
 
 export const Route = createFileRoute("/_layout/quiz/$id/questions")({
   component: QuizQuestions,
-});
+})
 
 function renderErrorForFailureReason(failureReason: string | null | undefined) {
   if (!failureReason) {
-    return null;
+    return null
   }
 
   // Get the error message from constants or use generic fallback
   const errorMessage =
     UI_TEXT.FAILURE_MESSAGES[
       failureReason as keyof typeof UI_TEXT.FAILURE_MESSAGES
-    ] || UI_TEXT.FAILURE_MESSAGES.GENERIC;
+    ] || UI_TEXT.FAILURE_MESSAGES.GENERIC
 
   return (
     <Card.Root>
@@ -44,23 +34,35 @@ function renderErrorForFailureReason(failureReason: string | null | undefined) {
         />
       </Card.Body>
     </Card.Root>
-  );
+  )
 }
 
 function QuizQuestions() {
-  const { id } = Route.useParams();
+  const { id } = Route.useParams()
+  const queryClient = useQueryClient()
+
+  // Get cached quiz data immediately if available
+  const cachedQuiz = queryClient.getQueryData<Quiz>(queryKeys.quiz(id))
 
   const { data: quiz, isLoading } = useQuery({
-    queryKey: ["quiz", id],
+    queryKey: queryKeys.quiz(id),
     queryFn: async () => {
-      const response = await QuizService.getQuiz({ quizId: id });
-      return response;
+      const response = await QuizService.getQuiz({ quizId: id })
+      return response
     },
+    ...quizQueryConfig,
     refetchInterval: false, // No polling on questions page as specified
-  });
+    // Use cached data immediately if available
+    initialData: cachedQuiz,
+  })
 
-  if (isLoading || !quiz) {
-    return <QuizQuestionsSkeleton />;
+  // Only show skeleton when loading and no cached data exists
+  if (isLoading && !quiz) {
+    return <QuizQuestionsSkeleton />
+  }
+
+  if (!quiz) {
+    return <QuizQuestionsSkeleton />
   }
 
   return (
@@ -70,8 +72,7 @@ function QuizQuestions() {
         quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS ||
         quiz.status === QUIZ_STATUS.PUBLISHED ||
         (quiz.status === QUIZ_STATUS.FAILED &&
-          quiz.failure_reason ===
-            FAILURE_REASON.CANVAS_EXPORT_ERROR)) && (
+          quiz.failure_reason === FAILURE_REASON.CANVAS_EXPORT_ERROR)) && (
         <QuestionStats quiz={quiz} />
       )}
 
@@ -85,8 +86,7 @@ function QuizQuestions() {
         quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS ||
         quiz.status === QUIZ_STATUS.PUBLISHED ||
         (quiz.status === QUIZ_STATUS.FAILED &&
-          quiz.failure_reason ===
-            FAILURE_REASON.CANVAS_EXPORT_ERROR)) && (
+          quiz.failure_reason === FAILURE_REASON.CANVAS_EXPORT_ERROR)) && (
         <QuestionReview quizId={id} />
       )}
 
@@ -110,7 +110,7 @@ function QuizQuestions() {
           </Card.Root>
         )}
     </VStack>
-  );
+  )
 }
 
 function QuizQuestionsSkeleton() {
@@ -119,22 +119,12 @@ function QuizQuestionsSkeleton() {
       {/* Question Statistics Skeleton */}
       <Card.Root>
         <Card.Header>
-          <LoadingSkeleton
-            height="24px"
-            width="200px"
-          />
+          <LoadingSkeleton height="24px" width="200px" />
         </Card.Header>
         <Card.Body>
           <VStack gap={4} align="stretch">
-            <LoadingSkeleton
-              height="20px"
-              width="100%"
-              lines={2}
-            />
-            <LoadingSkeleton
-              height="40px"
-              width="150px"
-            />
+            <LoadingSkeleton height="20px" width="100%" lines={2} />
+            <LoadingSkeleton height="40px" width="150px" />
           </VStack>
         </Card.Body>
       </Card.Root>
@@ -142,37 +132,21 @@ function QuizQuestionsSkeleton() {
       {/* Question Review Skeleton */}
       <Card.Root>
         <Card.Header>
-          <LoadingSkeleton
-            height="32px"
-            width="180px"
-          />
-          <LoadingSkeleton
-            height="16px"
-            width="300px"
-          />
+          <LoadingSkeleton height="32px" width="180px" />
+          <LoadingSkeleton height="16px" width="300px" />
         </Card.Header>
         <Card.Body>
           <VStack gap={4} align="stretch">
             {/* Filter buttons skeleton */}
-            <LoadingSkeleton
-              height="32px"
-              width="200px"
-            />
+            <LoadingSkeleton height="32px" width="200px" />
 
             {/* Questions list skeleton */}
             {[1, 2, 3].map((i) => (
               <Card.Root key={i}>
                 <Card.Body>
                   <VStack gap={3} align="stretch">
-                    <LoadingSkeleton
-                      height="20px"
-                      width="100%"
-                      lines={3}
-                    />
-                    <LoadingSkeleton
-                      height="32px"
-                      width="120px"
-                    />
+                    <LoadingSkeleton height="20px" width="100%" lines={3} />
+                    <LoadingSkeleton height="32px" width="120px" />
                   </VStack>
                 </Card.Body>
               </Card.Root>
@@ -181,5 +155,5 @@ function QuizQuestionsSkeleton() {
         </Card.Body>
       </Card.Root>
     </VStack>
-  );
+  )
 }

@@ -24,6 +24,7 @@ import {
   useFormattedDate,
 } from "@/hooks/common"
 import { UI_SIZES } from "@/lib/constants"
+import { queryKeys, questionsQueryConfig } from "@/lib/queryConfig"
 import { QuestionDisplay } from "./display"
 import { QuestionEditor } from "./editors"
 
@@ -74,13 +75,13 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
   const { editingId, startEditing, cancelEditing, isEditing } =
     useEditingState<QuestionResponse>((question) => question.id)
 
-  // Fetch questions
+  // Fetch questions with optimized caching
   const {
     data: questions,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["quiz", quizId, "questions"],
+    queryKey: queryKeys.quizQuestions(quizId),
     queryFn: async () => {
       const response = await QuestionsService.getQuizQuestions({
         quizId,
@@ -88,6 +89,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       })
       return response
     },
+    ...questionsQueryConfig,
   })
 
   // Filter questions based on current view and calculate counts
@@ -117,8 +119,8 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
     {
       successMessage: "Question approved",
       invalidateQueries: [
-        ["quiz", quizId, "questions"],
-        ["quiz", quizId, "questions", "stats"],
+        queryKeys.quizQuestions(quizId),
+        queryKeys.quizQuestionStats(quizId),
       ],
     },
   )
@@ -140,7 +142,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
     },
     {
       successMessage: "Question updated",
-      invalidateQueries: [["quiz", quizId, "questions"]],
+      invalidateQueries: [queryKeys.quizQuestions(quizId)],
       onSuccess: () => {
         cancelEditing()
       },
@@ -158,8 +160,8 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
     {
       successMessage: "Question deleted",
       invalidateQueries: [
-        ["quiz", quizId, "questions"],
-        ["quiz", quizId, "questions", "stats"],
+        queryKeys.quizQuestions(quizId),
+        queryKeys.quizQuestionStats(quizId),
       ],
     },
   )
