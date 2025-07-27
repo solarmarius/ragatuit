@@ -10,9 +10,9 @@ import {
 } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import {
-  Link,
   Outlet,
   createFileRoute,
+  useRouter,
   useRouterState,
 } from "@tanstack/react-router"
 
@@ -30,6 +30,7 @@ export const Route = createFileRoute("/_layout/quiz/$id")({
 
 function QuizLayout() {
   const { id } = Route.useParams()
+  const router = useRouter()
   const pollingInterval = useQuizStatusPolling()
 
   // Use router state to detect current route more reliably
@@ -90,10 +91,15 @@ function QuizLayout() {
             </HStack>
             <HStack gap={3}>
               {isQuizReadyForApproval && (
-                <Button colorPalette="blue" size="sm" asChild>
-                  <Link to="/quiz/$id/questions" params={{ id }}>
-                    Review Quiz
-                  </Link>
+                <Button
+                  colorPalette="blue"
+                  size="sm"
+                  onClick={() => router.navigate({
+                    to: "/quiz/$id/questions",
+                    params: { id }
+                  })}
+                >
+                  Review Quiz
                 </Button>
               )}
               <DeleteQuizConfirmation quizId={id} quizTitle={quiz.title} />
@@ -107,15 +113,23 @@ function QuizLayout() {
         {/* Tabs */}
         <Tabs.Root value={isQuestionsRoute ? "questions" : "info"} size="lg">
           <Tabs.List>
-            <Tabs.Trigger value="info" asChild>
-              <Link to="/quiz/$id" params={{ id }}>
-                Quiz Information
-              </Link>
+            <Tabs.Trigger
+              value="info"
+              onClick={() => router.navigate({
+                to: "/quiz/$id",
+                params: { id }
+              })}
+            >
+              Quiz Information
             </Tabs.Trigger>
-            <Tabs.Trigger value="questions" asChild>
-              <Link to="/quiz/$id/questions" params={{ id }}>
-                Questions
-              </Link>
+            <Tabs.Trigger
+              value="questions"
+              onClick={() => router.navigate({
+                to: "/quiz/$id/questions",
+                params: { id }
+              })}
+            >
+              Questions
             </Tabs.Trigger>
           </Tabs.List>
 
