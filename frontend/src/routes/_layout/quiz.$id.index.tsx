@@ -15,6 +15,7 @@ import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenera
 import { QuizPhaseProgress } from "@/components/ui/quiz-phase-progress";
 import { useFormattedDate } from "@/hooks/common";
 import { QUIZ_LANGUAGE_LABELS } from "@/lib/constants";
+import { queryKeys, quizQueryConfig } from "@/lib/queryConfig";
 
 export const Route = createFileRoute("/_layout/quiz/$id/")({
   component: QuizInformation,
@@ -32,11 +33,12 @@ function QuizInformation() {
   const { id } = Route.useParams();
 
   const { data: quiz } = useQuery({
-    queryKey: ["quiz", id],
+    queryKey: queryKeys.quiz(id),
     queryFn: async () => {
       const response = await QuizService.getQuiz({ quizId: id });
       return response;
     },
+    ...quizQueryConfig,
     refetchInterval: false, // No polling on this route
   });
 
