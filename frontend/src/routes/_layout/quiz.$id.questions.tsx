@@ -9,6 +9,7 @@ import { QuizService } from "@/client";
 import {
   EmptyState,
   ErrorState,
+  LoadingSkeleton,
 } from "@/components/Common";
 import { QuestionReview } from "@/components/Questions/QuestionReview";
 import { QuestionStats } from "@/components/Questions/QuestionStats";
@@ -49,7 +50,7 @@ function renderErrorForFailureReason(failureReason: string | null | undefined) {
 function QuizQuestions() {
   const { id } = Route.useParams();
 
-  const { data: quiz } = useQuery({
+  const { data: quiz, isLoading } = useQuery({
     queryKey: ["quiz", id],
     queryFn: async () => {
       const response = await QuizService.getQuiz({ quizId: id });
@@ -58,15 +59,8 @@ function QuizQuestions() {
     refetchInterval: false, // No polling on questions page as specified
   });
 
-  if (!quiz) {
-    return (
-      <VStack gap={6} align="stretch">
-        <EmptyState
-          title="Loading Questions"
-          description="Please wait while we load the quiz questions."
-        />
-      </VStack>
-    );
+  if (isLoading || !quiz) {
+    return <QuizQuestionsSkeleton />;
   }
 
   return (
@@ -115,6 +109,77 @@ function QuizQuestions() {
             </Card.Body>
           </Card.Root>
         )}
+    </VStack>
+  );
+}
+
+function QuizQuestionsSkeleton() {
+  return (
+    <VStack gap={6} align="stretch">
+      {/* Question Statistics Skeleton */}
+      <Card.Root>
+        <Card.Header>
+          <LoadingSkeleton
+            height="24px"
+            width="200px"
+          />
+        </Card.Header>
+        <Card.Body>
+          <VStack gap={4} align="stretch">
+            <LoadingSkeleton
+              height="20px"
+              width="100%"
+              lines={2}
+            />
+            <LoadingSkeleton
+              height="40px"
+              width="150px"
+            />
+          </VStack>
+        </Card.Body>
+      </Card.Root>
+
+      {/* Question Review Skeleton */}
+      <Card.Root>
+        <Card.Header>
+          <LoadingSkeleton
+            height="32px"
+            width="180px"
+          />
+          <LoadingSkeleton
+            height="16px"
+            width="300px"
+          />
+        </Card.Header>
+        <Card.Body>
+          <VStack gap={4} align="stretch">
+            {/* Filter buttons skeleton */}
+            <LoadingSkeleton
+              height="32px"
+              width="200px"
+            />
+
+            {/* Questions list skeleton */}
+            {[1, 2, 3].map((i) => (
+              <Card.Root key={i}>
+                <Card.Body>
+                  <VStack gap={3} align="stretch">
+                    <LoadingSkeleton
+                      height="20px"
+                      width="100%"
+                      lines={3}
+                    />
+                    <LoadingSkeleton
+                      height="32px"
+                      width="120px"
+                    />
+                  </VStack>
+                </Card.Body>
+              </Card.Root>
+            ))}
+          </VStack>
+        </Card.Body>
+      </Card.Root>
     </VStack>
   );
 }
