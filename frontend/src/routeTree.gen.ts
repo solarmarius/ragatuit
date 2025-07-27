@@ -21,6 +21,7 @@ import { Route as LayoutPrivacyPolicyImport } from './routes/_layout/privacy-pol
 import { Route as LayoutCreateQuizImport } from './routes/_layout/create-quiz'
 import { Route as LayoutQuizIdImport } from './routes/_layout/quiz.$id'
 import { Route as LayoutQuizIdIndexImport } from './routes/_layout/quiz.$id.index'
+import { Route as LayoutQuizIdQuestionsImport } from './routes/_layout/quiz.$id.questions'
 
 // Create/Update Routes
 
@@ -74,6 +75,11 @@ const LayoutQuizIdIndexRoute = LayoutQuizIdIndexImport.update({
   getParentRoute: () => LayoutQuizIdRoute,
 } as any)
 
+const LayoutQuizIdQuestionsRoute = LayoutQuizIdQuestionsImport.update({
+  path: '/questions',
+  getParentRoute: () => LayoutQuizIdRoute,
+} as any)
+
 // Populate the FileRoutesByPath interface
 
 declare module '@tanstack/react-router' {
@@ -114,6 +120,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutQuizIdImport
       parentRoute: typeof LayoutImport
     }
+    '/_layout/quiz/$id/questions': {
+      preLoaderRoute: typeof LayoutQuizIdQuestionsImport
+      parentRoute: typeof LayoutQuizIdImport
+    }
     '/_layout/quiz/$id/': {
       preLoaderRoute: typeof LayoutQuizIdIndexImport
       parentRoute: typeof LayoutQuizIdImport
@@ -130,7 +140,10 @@ export const routeTree = rootRoute.addChildren([
     LayoutQuizzesRoute,
     LayoutSettingsRoute,
     LayoutIndexRoute,
-    LayoutQuizIdRoute.addChildren([LayoutQuizIdIndexRoute]),
+    LayoutQuizIdRoute.addChildren([
+      LayoutQuizIdQuestionsRoute,
+      LayoutQuizIdIndexRoute,
+    ]),
   ]),
   LoginRoute.addChildren([LoginSuccessRoute]),
 ])
