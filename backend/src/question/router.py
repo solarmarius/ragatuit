@@ -4,8 +4,8 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query
+from sqlalchemy.ext.asyncio import AsyncSession
 
-# Removed unused AsyncSession import
 from src.auth.dependencies import CurrentUser
 from src.config import get_logger
 from src.database import get_async_session
@@ -424,11 +424,15 @@ async def delete_question(
         # Verify quiz ownership
         await _verify_quiz_ownership(quiz_id, current_user.id)
 
-        # Delete question
+        # Delete question and decrement quiz question count
         async with get_async_session() as session:
             success = await service.delete_question(
                 session, question_id, current_user.id
             )
+
+            if success:
+                # Decrement question count
+                await _decrement_question_count(session, quiz_id)
 
         if not success:
             raise HTTPException(status_code=404, detail="Question not found")
@@ -480,3 +484,20 @@ async def _verify_quiz_ownership(quiz_id: UUID, user_id: UUID) -> None:
 
         if quiz.owner_id != user_id:
             raise HTTPException(status_code=404, detail="Quiz not found")
+
+
+async def _decrement_question_count(session: AsyncSession, quiz_id: UUID) -> None:
+    """
+    Decrement the question_count field for a quiz.
+
+    Args:
+        session: Database session
+        quiz_id: Quiz ID
+    """
+    from src.quiz.service import get_quiz_for_update
+
+    quiz = await get_quiz_for_update(session, quiz_id)
+
+    if quiz and quiz.question_count > 0:
+        quiz.question_count = quiz.question_count - 1
+        await session.commit()
