@@ -1,25 +1,24 @@
-import { Alert, Box, Button, Flex, Input, Link, Text } from "@chakra-ui/react"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { useState } from "react"
-import { type SubmitHandler, useForm } from "react-hook-form"
+import { Alert, Box, Button, Flex, Input, Link, Text } from "@chakra-ui/react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { type SubmitHandler, useForm } from "react-hook-form";
 
 import {
   type ApiError,
   type UserPublic,
   type UserUpdateMe,
   UsersService,
-} from "@/client"
-import { PageHeader } from "@/components/Common"
-import { FormField, FormGroup } from "@/components/forms"
-import { useCustomToast, useErrorHandler } from "@/hooks/common"
-import useAuth from "@/hooks/useCanvasAuth"
+} from "@/client";
+import { FormField, FormGroup } from "@/components/forms";
+import { useCustomToast, useErrorHandler } from "@/hooks/common";
+import useAuth from "@/hooks/useCanvasAuth";
 
 const UserInformation = () => {
-  const queryClient = useQueryClient()
-  const { showSuccessToast } = useCustomToast()
-  const { handleError } = useErrorHandler()
-  const [editMode, setEditMode] = useState(false)
-  const { user: currentUser } = useAuth()
+  const queryClient = useQueryClient();
+  const { showSuccessToast } = useCustomToast();
+  const { handleError } = useErrorHandler();
+  const [editMode, setEditMode] = useState(false);
+  const { user: currentUser } = useAuth();
   const {
     register,
     handleSubmit,
@@ -32,34 +31,34 @@ const UserInformation = () => {
     defaultValues: {
       name: currentUser?.name,
     },
-  })
+  });
 
   const toggleEditMode = () => {
-    setEditMode(!editMode)
-  }
+    setEditMode(!editMode);
+  };
 
   const mutation = useMutation({
     mutationFn: (data: UserUpdateMe) =>
       UsersService.updateUserMe({ requestBody: data }),
     onSuccess: () => {
-      showSuccessToast("User updated successfully.")
+      showSuccessToast("User updated successfully.");
     },
     onError: (err: ApiError) => {
-      handleError(err)
+      handleError(err);
     },
     onSettled: () => {
-      queryClient.invalidateQueries()
+      queryClient.invalidateQueries();
     },
-  })
+  });
 
   const onSubmit: SubmitHandler<UserUpdateMe> = async (data) => {
-    mutation.mutate(data)
-  }
+    mutation.mutate(data);
+  };
 
   const onCancel = () => {
-    reset()
-    toggleEditMode()
-  }
+    reset();
+    toggleEditMode();
+  };
 
   return (
     <>
@@ -131,7 +130,7 @@ const UserInformation = () => {
         </Alert.Content>
       </Alert.Root>
     </>
-  )
-}
+  );
+};
 
-export default UserInformation
+export default UserInformation;
