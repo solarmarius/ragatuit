@@ -21,7 +21,7 @@ test.describe("HelpPanel Component", () => {
   })
 
   test("should display help panel header", async ({ page }) => {
-    await expect(page.getByText("Help & Resources")).toBeVisible()
+    await expect(page.getByText("Help and Resources")).toBeVisible()
     await expect(
       page.getByText("Learn how to use Rag@UiT effectively"),
     ).toBeVisible()
@@ -31,12 +31,12 @@ test.describe("HelpPanel Component", () => {
     await expect(page.getByText("About Rag@UiT")).toBeVisible()
     await expect(
       page.getByText(
-        "Rag@UiT uses advanced AI to generate multiple-choice questions from your Canvas course materials.",
+        "Rag@UiT uses LLMs to generate multiple-choice questions from your Canvas course materials.",
       ),
     ).toBeVisible()
     await expect(
       page.getByText(
-        "The system analyzes your course content and creates relevant questions",
+        "The system analyzes the modules from a course and creates relevant questions that you can review, approve, and export directly to Canvas.",
       ),
     ).toBeVisible()
   })
@@ -49,13 +49,15 @@ test.describe("HelpPanel Component", () => {
     // Check all 5 steps are present using more specific selectors
     const howItWorksSection = page.locator('text="How It Works"').locator("..")
     await expect(
-      howItWorksSection.getByText("Select course modules from Canvas"),
+      howItWorksSection.getByText("Select course and modules from Canvas"),
     ).toBeVisible()
     await expect(
-      howItWorksSection.getByText("AI extracts and analyzes content"),
+      howItWorksSection.getByText(
+        "The app extracts PDFs and pages from modules",
+      ),
     ).toBeVisible()
     await expect(
-      howItWorksSection.getByText("Multiple-choice questions are generated"),
+      howItWorksSection.getByText("LLM generate questions per module"),
     ).toBeVisible()
     await expect(
       howItWorksSection.getByText("Review and approve questions"),
@@ -91,8 +93,8 @@ test.describe("HelpPanel Component", () => {
     await expect(canvasLink).toHaveAttribute("target", "_blank")
     await expect(canvasLink).toHaveAttribute("rel", "noopener noreferrer")
 
-    // Check Contact Support link
-    const supportLink = page.getByRole("link", { name: "Contact Support" })
+    // Check Contact Developer link
+    const supportLink = page.getByRole("link", { name: "Contact Developer" })
     await expect(supportLink).toBeVisible()
     await expect(supportLink).toHaveAttribute(
       "href",
@@ -108,8 +110,8 @@ test.describe("HelpPanel Component", () => {
     )
   })
 
-  test("should display contact support email link", async ({ page }) => {
-    const supportLink = page.getByRole("link", { name: "Contact Support" })
+  test("should display Contact Developer email link", async ({ page }) => {
+    const supportLink = page.getByRole("link", { name: "Contact Developer" })
     await expect(supportLink).toBeVisible()
     await expect(supportLink).toHaveAttribute(
       "href",
@@ -125,13 +127,15 @@ test.describe("HelpPanel Component", () => {
 
     // Check all three tips
     await expect(
-      page.getByText("• Use course materials with clear, factual content"),
+      page.getByText("• Adjust question count based on module content length"),
     ).toBeVisible()
     await expect(
       page.getByText("• Review all generated questions before approval"),
     ).toBeVisible()
     await expect(
-      page.getByText("• Adjust question count based on content complexity"),
+      page.getByText(
+        "• Make sure diagrams and images in the course are explained with text",
+      ),
     ).toBeVisible()
   })
 
@@ -171,14 +175,14 @@ test.describe("HelpPanel Component", () => {
     await page.goto("/")
 
     // All sections should still be visible
-    await expect(page.getByText("Help & Resources")).toBeVisible()
+    await expect(page.getByText("Help and Resources")).toBeVisible()
     await expect(page.getByText("About Rag@UiT")).toBeVisible()
     await expect(page.getByText("How It Works")).toBeVisible()
     await expect(page.getByText("Helpful Links")).toBeVisible()
     await expect(page.getByText("💡 Tips for Best Results")).toBeVisible()
 
     // Content should wrap properly
-    const helpPanel = page.locator('text="Help & Resources"').locator("..")
+    const helpPanel = page.locator('text="Help and Resources"').locator("..")
     await expect(helpPanel).toBeVisible()
   })
 
@@ -186,7 +190,7 @@ test.describe("HelpPanel Component", () => {
     page,
   }) => {
     // Check that main title has proper styling (not necessarily semantic heading)
-    const mainTitle = page.getByText("Help & Resources")
+    const mainTitle = page.getByText("Help and Resources")
     await expect(mainTitle).toBeVisible()
     await expect(mainTitle).toHaveCSS("font-size", /18px|1.125rem/)
     await expect(mainTitle).toHaveCSS("font-weight", /semibold|600/)
@@ -209,14 +213,14 @@ test.describe("HelpPanel Component", () => {
 
   test("should maintain consistent spacing and layout", async ({ page }) => {
     // Check that main sections are present and properly spaced
-    await expect(page.getByText("Help & Resources")).toBeVisible()
+    await expect(page.getByText("Help and Resources")).toBeVisible()
     await expect(page.getByText("About Rag@UiT")).toBeVisible()
     await expect(page.getByText("How It Works")).toBeVisible()
     await expect(page.getByText("Helpful Links")).toBeVisible()
     await expect(page.getByText("💡 Tips for Best Results")).toBeVisible()
 
     // Verify card structure
-    const helpCard = page.locator('text="Help & Resources"').locator("..")
+    const helpCard = page.locator('text="Help and Resources"').locator("..")
     await expect(helpCard).toBeVisible()
   })
 })

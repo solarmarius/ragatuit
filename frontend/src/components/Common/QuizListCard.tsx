@@ -42,11 +42,13 @@ export const QuizListCard = memo(function QuizListCard({
             </Text>
             <StatusLight status={quiz.status || "created"} />
           </HStack>
-          {showCourseInfo && (
-            <Text fontSize="xs" color="gray.600" truncate>
-              {quiz.canvas_course_name}
-            </Text>
-          )}
+          <HStack justify="space-between" align="start" width="100%">
+            {showCourseInfo && (
+              <Text fontSize="xs" color="gray.600" truncate>
+                {quiz.canvas_course_name}
+              </Text>
+            )}
+          </HStack>
         </VStack>
 
         <HStack justify="space-between" align="center" gap={2} flexWrap="wrap">

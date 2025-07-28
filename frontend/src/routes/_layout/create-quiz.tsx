@@ -11,7 +11,7 @@ import {
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useCallback, useState } from "react"
 
-import { type QuizLanguage, QuizService, type QuestionBatch } from "@/client"
+import { type QuestionBatch, type QuizLanguage, QuizService } from "@/client"
 import { CourseSelectionStep } from "@/components/QuizCreation/CourseSelectionStep"
 import { ModuleQuestionSelectionStep } from "@/components/QuizCreation/ModuleQuestionSelectionStep"
 import { ModuleSelectionStep } from "@/components/QuizCreation/ModuleSelectionStep"
@@ -237,7 +237,7 @@ function CreateQuiz() {
           formData.selectedModules != null &&
           Object.keys(formData.selectedModules).length > 0
         )
-      case 3:
+      case 3: {
         // Validate question batches instead of simple counts
         if (!formData.moduleQuestions) return false
 
@@ -248,12 +248,15 @@ function CreateQuiz() {
 
             // All batches must have valid counts
             return batches.every(
-              (batch) => batch.count >= 1 && batch.count <= 20
+              (batch) => batch.count >= 1 && batch.count <= 20,
             )
-          }
+          },
         )
 
-        return hasValidBatches && Object.keys(formData.moduleQuestions).length > 0
+        return (
+          hasValidBatches && Object.keys(formData.moduleQuestions).length > 0
+        )
+      }
       case 4:
         // Step 4 is always valid since we have default values
         return true

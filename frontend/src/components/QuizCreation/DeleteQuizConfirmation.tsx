@@ -66,7 +66,7 @@ const DeleteQuizConfirmation = ({
       >
         <DialogTrigger asChild>
           <Button variant="solid" colorPalette="red" size="sm">
-            Delete Quiz
+            Delete
           </Button>
         </DialogTrigger>
 
@@ -81,16 +81,7 @@ const DeleteQuizConfirmation = ({
                 Are you sure you want to delete the quiz{" "}
                 <strong>"{quizTitle}"</strong>?
               </Text>
-              <Text mb={4}>
-                This will <strong>permanently delete</strong> the quiz and all
-                its associated data, including:
-              </Text>
-              <Text as="ul" ml={4} mb={4}>
-                <Text as="li">• Quiz settings and configuration</Text>
-                <Text as="li">• Extracted content from Canvas modules</Text>
-                <Text as="li">• Generated questions (if any)</Text>
-                <Text as="li">• Progress tracking information</Text>
-              </Text>
+
               <Text fontWeight="semibold" color="red.500">
                 This action cannot be undone.
               </Text>

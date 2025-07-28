@@ -32,14 +32,10 @@ function PrivacyPolicy() {
               </List.Item>
               <List.Item>
                 Quiz generation data including: number of questions per quiz,
-                LLM settings (temperature, score, model), and instances of
-                question regeneration or editing
+                course name, module content, questions data including
+                approval/deletion.
               </List.Item>
             </List.Root>
-          </Text>
-          <Text mb={4}>
-            Quiz generation data is collected anonymously - no name or Canvas ID
-            is associated with this information.
           </Text>
         </Box>
 
@@ -50,25 +46,23 @@ function PrivacyPolicy() {
           <Text mb={4}>We use the information we collect to:</Text>
           <Text pl={6} mb={4}>
             <List.Root>
-              <List.Item>Provide, maintain, and improve our services</List.Item>
               <List.Item>
                 Authenticate users through Canvas integration
               </List.Item>
               <List.Item>
-                Conduct research on LLM usage in multiple choice question
-                generation
+                Conduct research on LLM usage in quiz generation
               </List.Item>
               <List.Item>
-                Create aggregated and summarized reports for academic research
-                purposes
+                Create aggregated and summarized reports of quiz data for
+                academic research purposes
               </List.Item>
             </List.Root>
           </Text>
           <Text mb={4}>
-            The anonymized quiz generation data will be used in a research
-            project paper examining LLM usage in multiple choice question
-            generation. All data will be aggregated and summarized in reports
-            without any personal identifiers.
+            The quiz generation data may be used in a research project paper
+            examining LLM usage in educational quiz generation. All data will be
+            aggregated and summarized in reports without any personal
+            identifiers.
           </Text>
         </Box>
 
@@ -121,7 +115,7 @@ function PrivacyPolicy() {
           </Heading>
           <Text>
             If you have any questions about this privacy policy, please contact
-            us at: mso270@uit.no
+            us at: Marius Solaas, mso270@uit.no
           </Text>
         </Box>
       </VStack>

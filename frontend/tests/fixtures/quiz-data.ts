@@ -1,9 +1,9 @@
-import type { Quiz } from "../../src/client/types.gen";
+import type { Quiz } from "../../src/client/types.gen"
 
 export const mockUserData = {
   name: "Test User",
   onboarding_completed: true,
-};
+}
 
 // Base quiz template
 const baseQuiz = {
@@ -19,7 +19,7 @@ const baseQuiz = {
   llm_temperature: 0.7,
   created_at: "2024-01-15T10:30:00Z",
   updated_at: "2024-01-16T14:20:00Z",
-};
+}
 
 // Quiz needing review (ready for review status)
 export const quizNeedingReview: Quiz = {
@@ -29,7 +29,7 @@ export const quizNeedingReview: Quiz = {
   status: "ready_for_review",
   last_status_update: "2024-01-15T11:00:00Z",
   content_extracted_at: "2024-01-15T11:00:00Z",
-};
+}
 
 export const secondQuizNeedingReview: Quiz = {
   ...baseQuiz,
@@ -40,7 +40,7 @@ export const secondQuizNeedingReview: Quiz = {
   status: "ready_for_review",
   last_status_update: "2024-01-14T09:30:00Z",
   content_extracted_at: "2024-01-14T09:30:00Z",
-};
+}
 
 // Quiz created (ready to start)
 export const quizPendingExtraction: Quiz = {
@@ -51,7 +51,7 @@ export const quizPendingExtraction: Quiz = {
   status: "created",
   last_status_update: "2024-01-15T10:30:00Z",
   question_count: 30,
-};
+}
 
 // Quiz extracting content
 export const quizProcessingExtraction: Quiz = {
@@ -62,7 +62,7 @@ export const quizProcessingExtraction: Quiz = {
   status: "extracting_content",
   last_status_update: "2024-01-15T11:15:00Z",
   question_count: 40,
-};
+}
 
 // Quiz generating questions
 export const quizPendingGeneration: Quiz = {
@@ -74,7 +74,7 @@ export const quizPendingGeneration: Quiz = {
   last_status_update: "2024-01-15T12:15:00Z",
   content_extracted_at: "2024-01-15T12:15:00Z",
   question_count: 35,
-};
+}
 
 // Quiz generating questions
 export const quizProcessingGeneration: Quiz = {
@@ -86,7 +86,7 @@ export const quizProcessingGeneration: Quiz = {
   last_status_update: "2024-01-15T10:45:00Z",
   content_extracted_at: "2024-01-15T10:45:00Z",
   question_count: 60,
-};
+}
 
 // Failed quizzes
 export const quizFailedExtraction: Quiz = {
@@ -97,7 +97,7 @@ export const quizFailedExtraction: Quiz = {
   failure_reason: "content_extraction_error",
   last_status_update: "2024-01-15T10:30:00Z",
   question_count: 20,
-};
+}
 
 export const quizFailedGeneration: Quiz = {
   ...baseQuiz,
@@ -108,7 +108,7 @@ export const quizFailedGeneration: Quiz = {
   last_status_update: "2024-01-15T10:00:00Z",
   content_extracted_at: "2024-01-15T10:00:00Z",
   question_count: 45,
-};
+}
 
 // Collections for different dashboard states
 export const quizzesNeedingReview = [
@@ -150,7 +150,7 @@ export const quizzesNeedingReview = [
     last_status_update: "2024-01-15T16:00:00Z",
     question_count: 10,
   },
-] as Quiz[];
+] as Quiz[]
 
 export const quizzesBeingGenerated = [
   quizPendingExtraction,
@@ -166,27 +166,27 @@ export const quizzesBeingGenerated = [
     last_status_update: "2024-01-15T17:00:00Z",
     question_count: 25,
   },
-] as Quiz[];
+] as Quiz[]
 
 // Quizzes that should actually be visible in the generation panel (after filtering)
 export const visibleQuizzesBeingGenerated = [
   quizProcessingExtraction,
   quizPendingGeneration,
   quizProcessingGeneration,
-] as Quiz[];
+] as Quiz[]
 
 export const failedQuizzes = [
   quizFailedExtraction,
   quizFailedGeneration,
-] as Quiz[];
+] as Quiz[]
 
 export const allMockQuizzes = [
   ...quizzesNeedingReview,
   ...quizzesBeingGenerated,
   ...failedQuizzes,
-] as Quiz[];
+] as Quiz[]
 
-export const emptyQuizList: Quiz[] = [];
+export const emptyQuizList: Quiz[] = []
 
 // Long quiz title for testing truncation
 export const quizWithLongTitle: Quiz = {
@@ -197,26 +197,26 @@ export const quizWithLongTitle: Quiz = {
   status: "ready_for_review",
   last_status_update: "2024-01-15T18:00:00Z",
   question_count: 100,
-};
+}
 
 // Mock API responses
 export const createQuizListResponse = (quizzes: Quiz[]) => ({
   status: 200,
   contentType: "application/json",
   body: JSON.stringify(quizzes),
-});
+})
 
 export const createUserResponse = () => ({
   status: 200,
   contentType: "application/json",
   body: JSON.stringify(mockUserData),
-});
+})
 
 export const createErrorResponse = (
   status = 500,
-  message = "Internal Server Error"
+  message = "Internal Server Error",
 ) => ({
   status,
   contentType: "application/json",
   body: JSON.stringify({ detail: message }),
-});
+})

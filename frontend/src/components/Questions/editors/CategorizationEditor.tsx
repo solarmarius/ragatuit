@@ -1,36 +1,45 @@
-import { memo, useCallback, useMemo } from "react";
+import type { QuestionResponse, QuestionUpdateRequest } from "@/client"
+import { FormField, FormGroup } from "@/components/forms"
+import type { CategorizationFormData } from "@/lib/validation/questionSchemas"
 import {
-  VStack,
-  HStack,
-  Button,
-  Text,
+  categorizationSchema,
+  validationMessages,
+} from "@/lib/validation/questionSchemas"
+import { extractQuestionData } from "@/types/questionTypes"
+import {
   Box,
-  SimpleGrid,
+  Button,
   Card,
+  HStack,
   IconButton,
-  Textarea,
   Input,
-} from "@chakra-ui/react";
-import { useForm, useFieldArray, Controller, Control, FieldErrors } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { MdAdd, MdDelete } from "react-icons/md";
-import type { QuestionResponse, QuestionUpdateRequest } from "@/client";
-import { extractQuestionData } from "@/types/questionTypes";
-import type { CategorizationFormData } from "@/lib/validation/questionSchemas";
-import { categorizationSchema, validationMessages } from "@/lib/validation/questionSchemas";
-import { FormField, FormGroup } from "@/components/forms";
-import { ErrorEditor } from "./ErrorEditor";
+  SimpleGrid,
+  Text,
+  Textarea,
+  VStack,
+} from "@chakra-ui/react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { memo, useCallback, useMemo } from "react"
+import {
+  type Control,
+  Controller,
+  type FieldErrors,
+  useFieldArray,
+  useForm,
+} from "react-hook-form"
+import { MdAdd, MdDelete } from "react-icons/md"
+import { ErrorEditor } from "./ErrorEditor"
 
 // Utility function to generate stable IDs
 function generateId(prefix: string): string {
-  return `${prefix}_${Math.random().toString(36).substr(2, 9)}`;
+  return `${prefix}_${Math.random().toString(36).substr(2, 9)}`
 }
 
 interface CategorizationEditorProps {
-  question: QuestionResponse;
-  onSave: (updateData: QuestionUpdateRequest) => void;
-  onCancel: () => void;
-  isLoading?: boolean;
+  question: QuestionResponse
+  onSave: (updateData: QuestionUpdateRequest) => void
+  onCancel: () => void
+  isLoading?: boolean
 }
 
 /**
@@ -45,28 +54,32 @@ function CategorizationEditorComponent({
   isLoading = false,
 }: CategorizationEditorProps) {
   try {
-    const categorizationData = extractQuestionData(question, "categorization");
+    const categorizationData = extractQuestionData(question, "categorization")
 
     // Transform backend data to new form data format with stable IDs
-    const defaultFormData: CategorizationFormData = useMemo(() => ({
-      questionText: categorizationData.question_text,
-      categories: categorizationData.categories.map((cat) => ({
-        id: cat.id, // Preserve existing backend ID
-        name: cat.name,
-        items: cat.correct_items.map((itemId) => {
-          const item = categorizationData.items.find((i) => i.id === itemId);
-          return {
-            id: itemId, // Preserve existing backend ID
-            text: item?.text || ""
-          };
-        }),
-      })),
-      distractors: categorizationData.distractors?.map((dist) => ({
-        id: dist.id, // Preserve existing backend ID
-        text: dist.text,
-      })) || [],
-      explanation: categorizationData.explanation || "",
-    }), [categorizationData]);
+    const defaultFormData: CategorizationFormData = useMemo(
+      () => ({
+        questionText: categorizationData.question_text,
+        categories: categorizationData.categories.map((cat) => ({
+          id: cat.id, // Preserve existing backend ID
+          name: cat.name,
+          items: cat.correct_items.map((itemId) => {
+            const item = categorizationData.items.find((i) => i.id === itemId)
+            return {
+              id: itemId, // Preserve existing backend ID
+              text: item?.text || "",
+            }
+          }),
+        })),
+        distractors:
+          categorizationData.distractors?.map((dist) => ({
+            id: dist.id, // Preserve existing backend ID
+            text: dist.text,
+          })) || [],
+        explanation: categorizationData.explanation || "",
+      }),
+      [categorizationData],
+    )
 
     const {
       control,
@@ -75,7 +88,7 @@ function CategorizationEditorComponent({
     } = useForm<CategorizationFormData>({
       resolver: zodResolver(categorizationSchema),
       defaultValues: defaultFormData,
-    });
+    })
 
     // Field arrays for dynamic management
     const {
@@ -85,7 +98,7 @@ function CategorizationEditorComponent({
     } = useFieldArray({
       control,
       name: "categories",
-    });
+    })
 
     const {
       fields: distractorFields,
@@ -94,37 +107,37 @@ function CategorizationEditorComponent({
     } = useFieldArray({
       control,
       name: "distractors",
-    });
+    })
 
     // Handle form submission - transform back to backend format
     const onSubmit = useCallback(
       (formData: CategorizationFormData) => {
         // Use existing stable IDs from form data
-        const items: Array<{ id: string; text: string }> = [];
+        const items: Array<{ id: string; text: string }> = []
         const categories: Array<{
-          id: string;
-          name: string;
-          correct_items: string[];
-        }> = [];
+          id: string
+          name: string
+          correct_items: string[]
+        }> = []
 
         // Process each category and its items with stable IDs
         formData.categories.forEach((formCategory) => {
-          const categoryItemIds: string[] = [];
+          const categoryItemIds: string[] = []
 
           formCategory.items.forEach((formItem) => {
             items.push({
               id: formItem.id, // Use existing stable ID
               text: formItem.text,
-            });
-            categoryItemIds.push(formItem.id);
-          });
+            })
+            categoryItemIds.push(formItem.id)
+          })
 
           categories.push({
             id: formCategory.id, // Use existing stable ID
             name: formCategory.name,
             correct_items: categoryItemIds,
-          });
-        });
+          })
+        })
 
         const updateData: QuestionUpdateRequest = {
           question_data: {
@@ -139,12 +152,12 @@ function CategorizationEditorComponent({
               : null,
             explanation: formData.explanation || null,
           },
-        };
+        }
 
-        onSave(updateData);
+        onSave(updateData)
       },
-      [onSave]
-    );
+      [onSave],
+    )
 
     // Add new category with one empty item
     const handleAddCategory = useCallback(() => {
@@ -152,23 +165,25 @@ function CategorizationEditorComponent({
         appendCategory({
           id: generateId("cat"),
           name: "",
-          items: [{
-            id: generateId("item"),
-            text: ""
-          }]
-        });
+          items: [
+            {
+              id: generateId("item"),
+              text: "",
+            },
+          ],
+        })
       }
-    }, [appendCategory, categoryFields.length]);
+    }, [appendCategory, categoryFields.length])
 
     // Add new distractor
     const handleAddDistractor = useCallback(() => {
       if (distractorFields.length < 5) {
         appendDistractor({
           id: generateId("dist"),
-          text: ""
-        });
+          text: "",
+        })
       }
-    }, [appendDistractor, distractorFields.length]);
+    }, [appendDistractor, distractorFields.length])
 
     return (
       <Box as="form" onSubmit={handleSubmit(onSubmit)}>
@@ -337,15 +352,15 @@ function CategorizationEditorComponent({
           </HStack>
         </VStack>
       </Box>
-    );
+    )
   } catch (error) {
-    console.error("Error rendering categorization question editor:", error);
+    console.error("Error rendering categorization question editor:", error)
     return (
       <ErrorEditor
         error="Error loading question data for editing"
         onCancel={onCancel}
       />
-    );
+    )
   }
 }
 
@@ -353,11 +368,11 @@ function CategorizationEditorComponent({
  * Individual category editor component matching the display layout
  */
 interface CategoryEditorProps {
-  categoryIndex: number;
-  control: Control<CategorizationFormData>;
-  errors: FieldErrors<CategorizationFormData>;
-  onRemoveCategory: () => void;
-  canRemoveCategory: boolean;
+  categoryIndex: number
+  control: Control<CategorizationFormData>
+  errors: FieldErrors<CategorizationFormData>
+  onRemoveCategory: () => void
+  canRemoveCategory: boolean
 }
 
 function CategoryEditor({
@@ -374,14 +389,14 @@ function CategoryEditor({
   } = useFieldArray({
     control,
     name: `categories.${categoryIndex}.items`,
-  });
+  })
 
   const handleAddItem = useCallback(() => {
     appendItem({
       id: generateId("item"),
-      text: ""
-    });
-  }, [appendItem]);
+      text: "",
+    })
+  }, [appendItem])
 
   return (
     <Card.Root variant="outline">
@@ -481,11 +496,11 @@ function CategoryEditor({
         </VStack>
       </Card.Body>
     </Card.Root>
-  );
+  )
 }
 
 /**
  * Memoized categorization editor component for performance optimization.
  */
-export const CategorizationEditor = memo(CategorizationEditorComponent);
-CategorizationEditor.displayName = "CategorizationEditor";
+export const CategorizationEditor = memo(CategorizationEditorComponent)
+CategorizationEditor.displayName = "CategorizationEditor"

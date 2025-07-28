@@ -1,7 +1,7 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test"
 
 test.describe("Quiz Detail Content Extraction Features", () => {
-  const mockQuizId = "123e4567-e89b-12d3-a456-426614174000";
+  const mockQuizId = "123e4567-e89b-12d3-a456-426614174000"
 
   test.beforeEach(async ({ page }) => {
     // Mock the current user API call
@@ -13,12 +13,12 @@ test.describe("Quiz Detail Content Extraction Features", () => {
           name: "Test User",
           onboarding_completed: true,
         }),
-      });
-    });
+      })
+    })
 
     // Navigate to the quiz detail page
-    await page.goto(`/quiz/${mockQuizId}`);
-  });
+    await page.goto(`/quiz/${mockQuizId}`)
+  })
 
   test("should display content extraction status with pending extraction", async ({
     page,
@@ -40,26 +40,26 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
-    };
+    }
 
     await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(mockQuiz),
-      });
-    });
+      })
+    })
 
-    await page.reload();
+    await page.reload()
 
     // Check that status light is visible with correct title
-    const statusLight = page.locator('[title="Ready to Start"]');
-    await expect(statusLight).toBeVisible();
+    const statusLight = page.locator('[title="Ready to Start"]')
+    await expect(statusLight).toBeVisible()
 
     // Check that quiz title and status light are in the same row
-    await expect(page.getByText("Content Extraction Test Quiz")).toBeVisible();
-    await expect(statusLight).toBeVisible();
-  });
+    await expect(page.getByText("Content Extraction Test Quiz")).toBeVisible()
+    await expect(statusLight).toBeVisible()
+  })
 
   test("should display content extraction status with processing extraction", async ({
     page,
@@ -81,26 +81,23 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
-    };
+    }
 
     await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(mockQuiz),
-      });
-    });
+      })
+    })
 
-    await page.reload();
+    await page.reload()
 
     // Check that status light shows processing state
-    const statusLight = page.locator('[title="Extracting Content"]');
-    await expect(statusLight).toBeVisible();
-    await expect(statusLight).toHaveCSS(
-      "background-color",
-      "rgb(249, 115, 22)"
-    ); // orange.500
-  });
+    const statusLight = page.locator('[title="Extracting Content"]')
+    await expect(statusLight).toBeVisible()
+    await expect(statusLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
+  })
 
   test("should display content extraction status with completed extraction", async ({
     page,
@@ -123,26 +120,23 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
-    };
+    }
 
     await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(mockQuiz),
-      });
-    });
+      })
+    })
 
-    await page.reload();
+    await page.reload()
 
     // Check that status light shows ready for review state
-    const statusLight = page.locator('[title="Ready for Review"]');
-    await expect(statusLight).toBeVisible();
-    await expect(statusLight).toHaveCSS(
-      "background-color",
-      "rgb(168, 85, 247)"
-    ); // purple.500
-  });
+    const statusLight = page.locator('[title="Ready for Review"]')
+    await expect(statusLight).toBeVisible()
+    await expect(statusLight).toHaveCSS("background-color", "rgb(168, 85, 247)") // purple.500
+  })
 
   test("should display content extraction status with failed extraction", async ({
     page,
@@ -165,26 +159,26 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
-    };
+    }
 
     await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(mockQuiz),
-      });
-    });
+      })
+    })
 
-    await page.reload();
+    await page.reload()
 
     // Check that status light shows failed state
-    const statusLight = page.locator('[title="Failed"]');
-    await expect(statusLight).toBeVisible();
-    await expect(statusLight).toHaveCSS("background-color", "rgb(239, 68, 68)"); // red.500
-  });
+    const statusLight = page.locator('[title="Failed"]')
+    await expect(statusLight).toBeVisible()
+    await expect(statusLight).toHaveCSS("background-color", "rgb(239, 68, 68)") // red.500
+  })
 
   test("should stop polling when status is completed", async ({ page }) => {
-    let callCount = 0;
+    let callCount = 0
     const mockQuiz = {
       id: mockQuizId,
       title: "Completed Quiz",
@@ -203,32 +197,32 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
-    };
+    }
 
     await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
-      callCount++;
+      callCount++
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(mockQuiz),
-      });
-    });
+      })
+    })
 
-    await page.reload();
+    await page.reload()
 
     // Check that status light shows ready for review state
-    const statusLight = page.locator('[title="Ready for Review"]');
-    await expect(statusLight).toBeVisible();
+    const statusLight = page.locator('[title="Ready for Review"]')
+    await expect(statusLight).toBeVisible()
 
     // Wait to ensure no additional polling occurs
-    await page.waitForTimeout(6000);
+    await page.waitForTimeout(6000)
 
     // Should have been called at least once but no more than twice (initial + potential refetch)
-    expect(callCount).toBeGreaterThanOrEqual(1);
-  });
+    expect(callCount).toBeGreaterThanOrEqual(1)
+  })
 
   test("should stop polling when status is failed", async ({ page }) => {
-    let callCount = 0;
+    let callCount = 0
     const mockQuiz = {
       id: mockQuizId,
       title: "Failed Quiz",
@@ -247,30 +241,30 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
-    };
+    }
 
     await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
-      callCount++;
+      callCount++
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(mockQuiz),
-      });
-    });
+      })
+    })
 
-    await page.reload();
+    await page.reload()
 
     // Check that status light shows failed state
-    const statusLight = page.locator('[title="Failed"]');
-    await expect(statusLight).toBeVisible();
+    const statusLight = page.locator('[title="Failed"]')
+    await expect(statusLight).toBeVisible()
 
     // Wait to ensure no additional polling occurs
-    await page.waitForTimeout(6000);
+    await page.waitForTimeout(6000)
 
     // Should have been called at least once but no more than twice (initial + potential refetch)
-    expect(callCount).toBeGreaterThanOrEqual(1);
-    expect(callCount).toBeLessThanOrEqual(2);
-  });
+    expect(callCount).toBeGreaterThanOrEqual(1)
+    expect(callCount).toBeLessThanOrEqual(2)
+  })
 
   test("should handle missing content extraction fields gracefully", async ({
     page,
@@ -289,33 +283,30 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
-    };
+    }
 
     await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(mockQuiz),
-      });
-    });
+      })
+    })
 
-    await page.reload();
+    await page.reload()
 
     // Should default to created status (orange light)
-    const statusLight = page.locator('[title="Ready to Start"]');
-    await expect(statusLight).toBeVisible();
-    await expect(statusLight).toHaveCSS(
-      "background-color",
-      "rgb(249, 115, 22)"
-    ); // orange.500
+    const statusLight = page.locator('[title="Ready to Start"]')
+    await expect(statusLight).toBeVisible()
+    await expect(statusLight).toHaveCSS("background-color", "rgb(249, 115, 22)") // orange.500
 
     // Page should still display all other information correctly
     await expect(
-      page.getByText("Legacy Quiz Without Content Fields")
-    ).toBeVisible();
-    await expect(page.getByText("Test Course")).toBeVisible();
-    await expect(page.getByText("Module 1").first()).toBeVisible();
-  });
+      page.getByText("Legacy Quiz Without Content Fields"),
+    ).toBeVisible()
+    await expect(page.getByText("Test Course")).toBeVisible()
+    await expect(page.getByText("Module 1").first()).toBeVisible()
+  })
 
   test("should position status light correctly next to quiz title", async ({
     page,
@@ -335,42 +326,40 @@ test.describe("Quiz Detail Content Extraction Features", () => {
       created_at: "2024-01-15T10:30:00Z",
       updated_at: "2024-01-16T14:20:00Z",
       owner_id: "user123",
-    };
+    }
 
     await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
         body: JSON.stringify(mockQuiz),
-      });
-    });
+      })
+    })
 
-    await page.reload();
+    await page.reload()
 
     // Check that the title and status light are in the same horizontal container
     const titleContainer = page
       .locator('text="Status Light Position Test"')
-      .locator("..");
-    const statusLight = page.locator('[title="Ready to Start"]');
+      .locator("..")
+    const statusLight = page.locator('[title="Ready to Start"]')
 
-    await expect(titleContainer).toContainText("Status Light Position Test");
-    await expect(statusLight).toBeVisible();
+    await expect(titleContainer).toContainText("Status Light Position Test")
+    await expect(statusLight).toBeVisible()
 
     // Verify they are aligned in the same row (same parent container)
     const titleBounds = await page
       .getByText("Status Light Position Test")
-      .boundingBox();
-    const lightBounds = await statusLight.boundingBox();
+      .boundingBox()
+    const lightBounds = await statusLight.boundingBox()
 
-    expect(titleBounds).not.toBeNull();
-    expect(lightBounds).not.toBeNull();
+    expect(titleBounds).not.toBeNull()
+    expect(lightBounds).not.toBeNull()
 
     // They should be roughly on the same horizontal line (within 20 pixels for different line heights)
-    const verticalDiff = Math.abs(
-      (titleBounds?.y || 0) - (lightBounds?.y || 0)
-    );
-    expect(verticalDiff).toBeLessThan(20);
-  });
+    const verticalDiff = Math.abs((titleBounds?.y || 0) - (lightBounds?.y || 0))
+    expect(verticalDiff).toBeLessThan(20)
+  })
 
   test("should handle different status combinations correctly", async ({
     page,
@@ -418,7 +407,7 @@ test.describe("Quiz Detail Content Extraction Features", () => {
         expectedTitle: "Failed",
         expectedColor: "rgb(239, 68, 68)", // red.500
       },
-    ];
+    ]
 
     for (const testCase of testCases) {
       const mockQuiz = {
@@ -439,24 +428,24 @@ test.describe("Quiz Detail Content Extraction Features", () => {
         created_at: "2024-01-15T10:30:00Z",
         updated_at: "2024-01-16T14:20:00Z",
         owner_id: "user123",
-      };
+      }
 
       await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
         await route.fulfill({
           status: 200,
           contentType: "application/json",
           body: JSON.stringify(mockQuiz),
-        });
-      });
+        })
+      })
 
-      await page.reload();
+      await page.reload()
 
-      const statusLight = page.locator(`[title="${testCase.expectedTitle}"]`);
-      await expect(statusLight).toBeVisible();
+      const statusLight = page.locator(`[title="${testCase.expectedTitle}"]`)
+      await expect(statusLight).toBeVisible()
       await expect(statusLight).toHaveCSS(
         "background-color",
-        testCase.expectedColor
-      );
+        testCase.expectedColor,
+      )
     }
-  });
-});
+  })
+})

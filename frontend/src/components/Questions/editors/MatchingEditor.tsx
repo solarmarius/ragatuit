@@ -1,10 +1,10 @@
-import type { QuestionResponse, QuestionUpdateRequest } from "@/client";
-import { FormField, FormGroup } from "@/components/forms";
+import type { QuestionResponse, QuestionUpdateRequest } from "@/client"
+import { FormField, FormGroup } from "@/components/forms"
 import {
   type MatchingFormData,
   matchingSchema,
-} from "@/lib/validation/questionSchemas";
-import { extractQuestionData } from "@/types/questionTypes";
+} from "@/lib/validation/questionSchemas"
+import { extractQuestionData } from "@/types/questionTypes"
 import {
   Box,
   Button,
@@ -14,18 +14,18 @@ import {
   Text,
   Textarea,
   VStack,
-} from "@chakra-ui/react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { memo, useCallback } from "react";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
-import { MdAdd, MdDelete } from "react-icons/md";
-import { ErrorEditor } from "./ErrorEditor";
+} from "@chakra-ui/react"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { memo, useCallback } from "react"
+import { Controller, useFieldArray, useForm } from "react-hook-form"
+import { MdAdd, MdDelete } from "react-icons/md"
+import { ErrorEditor } from "./ErrorEditor"
 
 interface MatchingEditorProps {
-  question: QuestionResponse;
-  onSave: (updateData: QuestionUpdateRequest) => void;
-  onCancel: () => void;
-  isLoading: boolean;
+  question: QuestionResponse
+  onSave: (updateData: QuestionUpdateRequest) => void
+  onCancel: () => void
+  isLoading: boolean
 }
 
 export const MatchingEditor = memo(function MatchingEditor({
@@ -35,7 +35,7 @@ export const MatchingEditor = memo(function MatchingEditor({
   isLoading,
 }: MatchingEditorProps) {
   try {
-    const matchingData = extractQuestionData(question, "matching");
+    const matchingData = extractQuestionData(question, "matching")
 
     const {
       control,
@@ -51,7 +51,7 @@ export const MatchingEditor = memo(function MatchingEditor({
         distractors: matchingData.distractors || [],
         explanation: matchingData.explanation || "",
       },
-    });
+    })
 
     const {
       fields: pairFields,
@@ -60,43 +60,43 @@ export const MatchingEditor = memo(function MatchingEditor({
     } = useFieldArray({
       control,
       name: "pairs",
-    });
+    })
 
     // Handle distractors as array of strings
-    const distractors = watch("distractors") || [];
+    const distractors = watch("distractors") || []
 
     const handleDistractorChange = useCallback(
       (index: number, value: string) => {
-        const newDistractors = [...distractors];
-        newDistractors[index] = value;
+        const newDistractors = [...distractors]
+        newDistractors[index] = value
         setValue("distractors", newDistractors, {
           shouldValidate: true,
-          shouldDirty: true
-        });
+          shouldDirty: true,
+        })
       },
-      [distractors, setValue]
-    );
+      [distractors, setValue],
+    )
 
     const appendDistractor = useCallback(
       (value: string) => {
         setValue("distractors", [...distractors, value], {
           shouldValidate: true,
-          shouldDirty: true
-        });
+          shouldDirty: true,
+        })
       },
-      [distractors, setValue]
-    );
+      [distractors, setValue],
+    )
 
     const removeDistractor = useCallback(
       (index: number) => {
-        const newDistractors = distractors.filter((_, i) => i !== index);
+        const newDistractors = distractors.filter((_, i) => i !== index)
         setValue("distractors", newDistractors, {
           shouldValidate: true,
-          shouldDirty: true
-        });
+          shouldDirty: true,
+        })
       },
-      [distractors, setValue]
-    );
+      [distractors, setValue],
+    )
 
     const onSubmit = useCallback(
       (formData: MatchingFormData) => {
@@ -109,23 +109,23 @@ export const MatchingEditor = memo(function MatchingEditor({
               : null,
             explanation: formData.explanation || null,
           },
-        };
-        onSave(updateData);
+        }
+        onSave(updateData)
       },
-      [onSave]
-    );
+      [onSave],
+    )
 
     const handleAddPair = useCallback(() => {
       if (pairFields.length < 10) {
-        appendPair({ question: "", answer: "" });
+        appendPair({ question: "", answer: "" })
       }
-    }, [appendPair, pairFields.length]);
+    }, [appendPair, pairFields.length])
 
     const handleAddDistractor = useCallback(() => {
       if (distractors.length < 5) {
-        appendDistractor("");
+        appendDistractor("")
       }
-    }, [appendDistractor, distractors.length]);
+    }, [appendDistractor, distractors.length])
 
     return (
       <FormGroup>
@@ -253,7 +253,9 @@ export const MatchingEditor = memo(function MatchingEditor({
                   >
                     <Input
                       value={distractor}
-                      onChange={(e) => handleDistractorChange(index, e.target.value)}
+                      onChange={(e) =>
+                        handleDistractorChange(index, e.target.value)
+                      }
                       placeholder="Enter incorrect answer option..."
                     />
                   </FormField>
@@ -317,14 +319,14 @@ export const MatchingEditor = memo(function MatchingEditor({
           </Button>
         </HStack>
       </FormGroup>
-    );
+    )
   } catch (error) {
-    console.error("Error rendering matching question editor:", error);
+    console.error("Error rendering matching question editor:", error)
     return (
       <ErrorEditor
         error="Error loading question data for editing"
         onCancel={onCancel}
       />
-    );
+    )
   }
-});
+})

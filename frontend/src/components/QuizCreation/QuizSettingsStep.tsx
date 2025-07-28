@@ -1,29 +1,29 @@
-import type { QuizLanguage } from "@/client";
-import { FormField, FormGroup } from "@/components/forms";
-import { QUIZ_LANGUAGES } from "@/lib/constants";
-import { Box, Card, HStack, RadioGroup, Text, VStack } from "@chakra-ui/react";
+import type { QuizLanguage } from "@/client"
+import { FormField, FormGroup } from "@/components/forms"
+import { QUIZ_LANGUAGES } from "@/lib/constants"
+import { Box, Card, HStack, RadioGroup, Text, VStack } from "@chakra-ui/react"
 
 interface QuizSettings {
-  language: QuizLanguage;
+  language: QuizLanguage
 }
 
 interface QuizSettingsStepProps {
-  settings?: QuizSettings;
-  onSettingsChange: (settings: QuizSettings) => void;
+  settings?: QuizSettings
+  onSettingsChange: (settings: QuizSettings) => void
 }
 
 const DEFAULT_SETTINGS: QuizSettings = {
   language: QUIZ_LANGUAGES.ENGLISH,
-};
+}
 
 export function QuizSettingsStep({
   settings = DEFAULT_SETTINGS,
   onSettingsChange,
 }: QuizSettingsStepProps) {
   const updateSettings = (updates: Partial<QuizSettings>) => {
-    const newSettings = { ...settings, ...updates };
-    onSettingsChange(newSettings);
-  };
+    const newSettings = { ...settings, ...updates }
+    onSettingsChange(newSettings)
+  }
 
   const languageOptions = [
     {
@@ -36,7 +36,7 @@ export function QuizSettingsStep({
       label: "Norwegian",
       description: "Generate questions in Norwegian (Norsk)",
     },
-  ];
+  ]
 
   return (
     <FormGroup gap={6}>
@@ -83,5 +83,5 @@ export function QuizSettingsStep({
         </Box>
       </FormField>
     </FormGroup>
-  );
+  )
 }

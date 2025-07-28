@@ -47,12 +47,12 @@ function Login() {
         {/* App Title/Logo */}
         <VStack mb={4}>
           <Text fontSize="2xl" fontWeight="bold" textAlign="center">
-            Welcome to QuizCrafter
+            Welcome to Rag@UiT
           </Text>
           <Text fontSize="sm" color="gray.600" textAlign="center">
-            Turn your Canvas course material into high-quality multiple-choice
-            questions with LLMs. Build your question bank, approve with a click,
-            and generate exams in minutes.
+            Turn your Canvas course material into high-quality quizzes with
+            LLMs. Build your question bank, approve with a click, and generate
+            quizzes in minutes.
           </Text>
         </VStack>
 
@@ -91,9 +91,8 @@ function Login() {
             />
           </AspectRatio>
           <Text fontSize="xs" color="gray.600">
-            Watch how QuizCrafter seamlessly integrates with Canvas to analyze
-            your course materials and generate high-quality multiple-choice
-            questions.
+            Watch how Rag@UiT seamlessly integrates with Canvas to analyze your
+            course materials and generate high-quality quizzes.
           </Text>
         </Box>
       </VStack>

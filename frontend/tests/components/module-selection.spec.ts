@@ -221,10 +221,7 @@ test.describe("ModuleSelectionStep Component", () => {
 
     // Check progress bar (should be at 50% for step 2 of 4)
     const progressBar = page.locator('[role="progressbar"]')
-    await expect(progressBar).toHaveAttribute(
-      "aria-valuenow",
-      "50",
-    )
+    await expect(progressBar).toHaveAttribute("aria-valuenow", "50")
   })
 
   test("should allow checkbox interaction independent of card clicks", async ({

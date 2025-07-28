@@ -141,8 +141,7 @@ test.describe("Question Generation Components", () => {
       await page.goto(`/quiz/${mockQuizId}/questions`)
 
       // Check statistics are displayed
-      await expect(page.getByText("Question Review Progress")).toBeVisible()
-      await expect(page.getByText("Approved Questions")).toBeVisible()
+      await expect(page.getByText("Progress")).toBeVisible()
       await expect(page.getByText("20 of 50")).toBeVisible()
     })
 
@@ -345,7 +344,11 @@ test.describe("Question Generation Components", () => {
       await page.getByRole("tab", { name: "Questions" }).click()
 
       // Check zero state
-      await expect(page.getByText("Approved Questions")).toBeVisible()
+      await expect(
+        page.getByText(
+          "No questions generated yet. Questions will appear here once generation is complete.",
+        ),
+      ).toBeVisible()
       await expect(page.getByText("0 of 0")).toBeVisible()
     })
 

@@ -1,16 +1,6 @@
-import {
-  Badge,
-  Box,
-  Button,
-  Card,
-  HStack,
-  IconButton,
-  Text,
-  VStack,
-} from "@chakra-ui/react"
+import { Box, Button, Card, HStack, Text, VStack } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import { useCallback, useMemo, useState } from "react"
-import { MdCheck, MdDelete, MdEdit } from "react-icons/md"
 
 import {
   type QuestionResponse,
@@ -18,15 +8,10 @@ import {
   QuestionsService,
 } from "@/client"
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common"
-import {
-  useApiMutation,
-  useEditingState,
-  useFormattedDate,
-} from "@/hooks/common"
+import { useApiMutation, useEditingState } from "@/hooks/common"
 import { UI_SIZES } from "@/lib/constants"
 import { queryKeys, questionsQueryConfig } from "@/lib/queryConfig"
-import { QuestionDisplay } from "./display"
-import { QuestionEditor } from "./editors"
+import { VirtualQuestionList } from "./VirtualQuestionList"
 
 /**
  * Props for the QuestionReview component.
@@ -56,18 +41,6 @@ import { QuestionEditor } from "./editors"
 interface QuestionReviewProps {
   /** The ID of the quiz whose questions should be reviewed */
   quizId: string
-}
-
-function ApprovalTimestamp({ approvedAt }: { approvedAt: string }) {
-  const formattedDate = useFormattedDate(approvedAt, "short")
-
-  if (!formattedDate) return null
-
-  return (
-    <Text fontSize="sm" color="gray.600">
-      Approved on {formattedDate}
-    </Text>
-  )
 }
 
 export function QuestionReview({ quizId }: QuestionReviewProps) {
@@ -166,16 +139,15 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
     },
   )
 
-  const handleSaveQuestion = useCallback(
-    (updateData: QuestionUpdateRequest) => {
-      if (!editingId) return
-
+  // Create a callback that binds the question ID for the editor
+  const getSaveCallback = useCallback(
+    (id: string) => (updateData: QuestionUpdateRequest) => {
       updateQuestionMutation.mutate({
-        questionId: editingId,
+        questionId: id,
         data: updateData,
       })
     },
-    [editingId, updateQuestionMutation],
+    [updateQuestionMutation],
   )
 
   if (isLoading) {
@@ -261,84 +233,19 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
         </Card.Root>
       )}
 
-      {filteredQuestions.map((question, index) => (
-        <Card.Root key={question.id}>
-          <Card.Header>
-            <HStack justify="space-between" align="center">
-              <HStack gap={3}>
-                <Text fontSize="lg" fontWeight="semibold">
-                  Question {index + 1}
-                </Text>
-                {question.is_approved && (
-                  <Badge colorScheme="green" variant="subtle">
-                    Approved
-                  </Badge>
-                )}
-              </HStack>
-              <HStack gap={2}>
-                {isEditing(question) ? (
-                  <></>
-                ) : (
-                  <>
-                    <IconButton
-                      size="sm"
-                      colorScheme="blue"
-                      variant="outline"
-                      onClick={() => startEditing(question)}
-                      disabled={question.is_approved}
-                    >
-                      <MdEdit />
-                    </IconButton>
-                    <IconButton
-                      size="sm"
-                      colorScheme="green"
-                      variant="outline"
-                      onClick={() =>
-                        approveQuestionMutation.mutate(question.id)
-                      }
-                      loading={approveQuestionMutation.isPending}
-                      disabled={question.is_approved}
-                    >
-                      <MdCheck />
-                    </IconButton>
-                    <IconButton
-                      size="sm"
-                      colorScheme="red"
-                      variant="outline"
-                      onClick={() => deleteQuestionMutation.mutate(question.id)}
-                      loading={deleteQuestionMutation.isPending}
-                    >
-                      <MdDelete />
-                    </IconButton>
-                  </>
-                )}
-              </HStack>
-            </HStack>
-          </Card.Header>
-          <Card.Body>
-            {isEditing(question) ? (
-              <QuestionEditor
-                question={question}
-                onSave={handleSaveQuestion}
-                onCancel={cancelEditing}
-                isLoading={updateQuestionMutation.isPending}
-              />
-            ) : (
-              <VStack gap={4} align="stretch">
-                <QuestionDisplay
-                  question={question}
-                  showCorrectAnswer={true}
-                  showExplanation={false}
-                />
-
-                {question.approved_at && (
-                  <ApprovalTimestamp approvedAt={question.approved_at} />
-                )}
-              </VStack>
-            )}
-          </Card.Body>
-        </Card.Root>
-      ))}
+      <VirtualQuestionList
+        questions={filteredQuestions}
+        editingId={editingId}
+        startEditing={startEditing}
+        cancelEditing={cancelEditing}
+        isEditing={isEditing}
+        getSaveCallback={getSaveCallback}
+        onApproveQuestion={(id) => approveQuestionMutation.mutate(id)}
+        onDeleteQuestion={(id) => deleteQuestionMutation.mutate(id)}
+        isUpdateLoading={updateQuestionMutation.isPending}
+        isApproveLoading={approveQuestionMutation.isPending}
+        isDeleteLoading={deleteQuestionMutation.isPending}
+      />
     </VStack>
   )
 }

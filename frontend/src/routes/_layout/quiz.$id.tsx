@@ -94,20 +94,19 @@ function QuizLayout() {
                 <Button
                   colorPalette="blue"
                   size="sm"
-                  onClick={() => router.navigate({
-                    to: "/quiz/$id/questions",
-                    params: { id }
-                  })}
+                  onClick={() =>
+                    router.navigate({
+                      to: "/quiz/$id/questions",
+                      params: { id },
+                    })
+                  }
                 >
-                  Review Quiz
+                  Review
                 </Button>
               )}
               <DeleteQuizConfirmation quizId={id} quizTitle={quiz.title} />
             </HStack>
           </HStack>
-          <Text color="gray.600" fontSize="lg">
-            Quiz Details
-          </Text>
         </Box>
 
         {/* Tabs */}
@@ -115,19 +114,23 @@ function QuizLayout() {
           <Tabs.List>
             <Tabs.Trigger
               value="info"
-              onClick={() => router.navigate({
-                to: "/quiz/$id",
-                params: { id }
-              })}
+              onClick={() =>
+                router.navigate({
+                  to: "/quiz/$id",
+                  params: { id },
+                })
+              }
             >
               Quiz Information
             </Tabs.Trigger>
             <Tabs.Trigger
               value="questions"
-              onClick={() => router.navigate({
-                to: "/quiz/$id/questions",
-                params: { id }
-              })}
+              onClick={() =>
+                router.navigate({
+                  to: "/quiz/$id/questions",
+                  params: { id },
+                })
+              }
             >
               Questions
             </Tabs.Trigger>

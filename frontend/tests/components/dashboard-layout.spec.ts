@@ -49,7 +49,7 @@ test.describe("Dashboard Layout", () => {
     await expect(
       page.getByText("Quizzes Being Generated").first(),
     ).toBeVisible()
-    await expect(page.getByText("Help & Resources")).toBeVisible()
+    await expect(page.getByText("Help and Resources")).toBeVisible()
   })
 
   test("should handle empty quiz state correctly", async ({ page }) => {
@@ -64,7 +64,7 @@ test.describe("Dashboard Layout", () => {
     await expect(page.getByText("No quizzes being generated")).toBeVisible()
 
     // Help panel should still be visible
-    await expect(page.getByText("Help & Resources")).toBeVisible()
+    await expect(page.getByText("Help and Resources")).toBeVisible()
     await expect(page.getByText("About Rag@UiT")).toBeVisible()
   })
 
@@ -133,7 +133,7 @@ test.describe("Dashboard Layout", () => {
     await expect(
       page.getByText("Quizzes Being Generated").first(),
     ).toBeVisible()
-    await expect(page.getByText("Help & Resources")).toBeVisible()
+    await expect(page.getByText("Help and Resources")).toBeVisible()
 
     // Check responsive grid behavior (should have 2 columns on tablet)
     const gridContainer = page.locator('[data-testid="dashboard-grid"]')
@@ -154,7 +154,7 @@ test.describe("Dashboard Layout", () => {
     await expect(
       page.getByText("Quizzes Being Generated").first(),
     ).toBeVisible()
-    await expect(page.getByText("Help & Resources")).toBeVisible()
+    await expect(page.getByText("Help and Resources")).toBeVisible()
   })
 
   test("should display correct quiz counts in panel badges", async ({

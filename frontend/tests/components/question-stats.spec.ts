@@ -125,7 +125,7 @@ test.describe("QuestionStats Component", () => {
       // Check stats display
       await expect(page.getByText("8 of 20")).toBeAttached()
       await expect(page.getByText("40%")).toBeAttached()
-      await expect(page.getByText("Question Review Progress")).toBeAttached()
+      await expect(page.getByText("Progress")).toBeAttached()
     })
 
     test("should display correct percentage for various ratios", async ({

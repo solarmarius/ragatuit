@@ -18,7 +18,7 @@ test.describe("Sidebar Component", () => {
 
     const logo = logoLink.locator("img")
     await expect(logo).toBeVisible()
-    await expect(logo).toHaveAttribute("src", "/assets/images/logo.svg")
+    await expect(logo).toHaveAttribute("src", "/assets/images/raguitlogov4.svg")
   })
 
   test("should display all navigation items", async ({ page }) => {

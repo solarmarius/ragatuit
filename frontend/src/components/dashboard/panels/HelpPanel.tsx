@@ -15,7 +15,7 @@ export function HelpPanel() {
     <Card.Root>
       <Card.Header>
         <Text fontSize="lg" fontWeight="semibold">
-          Help & Resources
+          Help and Resources
         </Text>
         <Text fontSize="sm" color="gray.600">
           Learn how to use Rag@UiT effectively
@@ -29,9 +29,9 @@ export function HelpPanel() {
               About Rag@UiT
             </Text>
             <Text fontSize="sm" color="gray.600" lineHeight="relaxed">
-              Rag@UiT uses advanced AI to generate multiple-choice questions
-              from your Canvas course materials. The system analyzes your course
-              content and creates relevant questions that you can review,
+              Rag@UiT uses LLMs to generate multiple-choice questions from your
+              Canvas course materials. The system analyzes the modules from a
+              course and creates relevant questions that you can review,
               approve, and export directly to Canvas.
             </Text>
           </Box>
@@ -47,7 +47,7 @@ export function HelpPanel() {
                   1
                 </Badge>
                 <Text fontSize="sm" color="gray.600">
-                  Select course modules from Canvas
+                  Select course and modules from Canvas
                 </Text>
               </HStack>
               <HStack gap={3}>
@@ -55,7 +55,7 @@ export function HelpPanel() {
                   2
                 </Badge>
                 <Text fontSize="sm" color="gray.600">
-                  AI extracts and analyzes content
+                  The app extracts PDFs and pages from modules
                 </Text>
               </HStack>
               <HStack gap={3}>
@@ -63,7 +63,7 @@ export function HelpPanel() {
                   3
                 </Badge>
                 <Text fontSize="sm" color="gray.600">
-                  Multiple-choice questions are generated
+                  LLM generate questions per module
                 </Text>
               </HStack>
               <HStack gap={3}>
@@ -108,7 +108,7 @@ export function HelpPanel() {
                 color="blue.600"
                 _hover={{ textDecoration: "underline" }}
               >
-                Contact Support
+                Contact Developer
               </Link>
               <Link
                 href="https://github.com/uit-no/ragatuit"
@@ -135,13 +135,14 @@ export function HelpPanel() {
             </Text>
             <VStack gap={1} align="stretch">
               <Text fontSize="sm" color="blue.600">
-                • Use course materials with clear, factual content
+                • Adjust question count based on module content length
               </Text>
               <Text fontSize="sm" color="blue.600">
                 • Review all generated questions before approval
               </Text>
               <Text fontSize="sm" color="blue.600">
-                • Adjust question count based on content complexity
+                • Make sure diagrams and images in the course are explained with
+                text
               </Text>
             </VStack>
           </Box>

@@ -1,15 +1,15 @@
-import { Badge, HStack, Text, VStack } from "@chakra-ui/react";
-import { memo } from "react";
+import { Badge, HStack, Text, VStack } from "@chakra-ui/react"
+import { memo } from "react"
 
-import type { Quiz } from "@/client/types.gen";
+import type { Quiz } from "@/client/types.gen"
 import {
-  getModuleQuestionTypeBreakdown,
   formatQuestionTypeDisplay,
-} from "@/lib/utils";
+  getModuleQuestionTypeBreakdown,
+} from "@/lib/utils"
 
 interface QuestionTypeBreakdownProps {
-  quiz: Quiz;
-  variant?: "compact" | "detailed";
+  quiz: Quiz
+  variant?: "compact" | "detailed"
 }
 
 /**
@@ -22,26 +22,26 @@ export const QuestionTypeBreakdown = memo(function QuestionTypeBreakdown({
   quiz,
   variant = "detailed",
 }: QuestionTypeBreakdownProps) {
-  const breakdown = getModuleQuestionTypeBreakdown(quiz);
-  const moduleEntries = Object.entries(breakdown);
+  const breakdown = getModuleQuestionTypeBreakdown(quiz)
+  const moduleEntries = Object.entries(breakdown)
 
   if (moduleEntries.length === 0) {
     return (
       <Text fontSize="sm" color="gray.500">
         No question types configured
       </Text>
-    );
+    )
   }
 
   if (variant === "compact") {
     // Show aggregated counts across all modules
-    const aggregatedTypes: Record<string, number> = {};
+    const aggregatedTypes: Record<string, number> = {}
 
     moduleEntries.forEach(([_, moduleTypes]) => {
       Object.entries(moduleTypes).forEach(([type, count]) => {
-        aggregatedTypes[type] = (aggregatedTypes[type] || 0) + count;
-      });
-    });
+        aggregatedTypes[type] = (aggregatedTypes[type] || 0) + count
+      })
+    })
 
     return (
       <HStack gap={2} flexWrap="wrap">
@@ -51,7 +51,7 @@ export const QuestionTypeBreakdown = memo(function QuestionTypeBreakdown({
           </Badge>
         ))}
       </HStack>
-    );
+    )
   }
 
   return (
@@ -59,7 +59,7 @@ export const QuestionTypeBreakdown = memo(function QuestionTypeBreakdown({
       {moduleEntries.map(([moduleId, moduleTypes]) => {
         const moduleName =
           (quiz.selected_modules as any)?.[moduleId]?.name ||
-          `Module ${moduleId}`;
+          `Module ${moduleId}`
 
         return (
           <HStack key={moduleId} justify="space-between" align="flex-start">
@@ -74,8 +74,8 @@ export const QuestionTypeBreakdown = memo(function QuestionTypeBreakdown({
               ))}
             </VStack>
           </HStack>
-        );
+        )
       })}
     </VStack>
-  );
-});
+  )
+})

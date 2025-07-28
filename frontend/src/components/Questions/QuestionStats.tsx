@@ -126,41 +126,36 @@ export const QuestionStats = memo(function QuestionStats({
   return (
     <Card.Root>
       <Card.Header>
-        <Text fontSize="xl" fontWeight="semibold">
-          Question Review Progress
-        </Text>
+        <HStack justify="space-between" mb={2}>
+          {" "}
+          <Text fontSize="xl" fontWeight="semibold">
+            Progress
+          </Text>
+          <HStack justify="flex-end" mb={2}>
+            <Text fontSize="sm" color="gray.600">
+              {progressPercentage.toFixed(0)}%
+            </Text>
+            <HStack justify="center">
+              <Badge variant="outline" colorScheme="green" size="lg">
+                {stats.approved_questions} of {stats.total_questions}
+              </Badge>
+            </HStack>
+          </HStack>
+        </HStack>
+        <Box>
+          <Progress.Root
+            value={progressPercentage}
+            size="lg"
+            colorPalette="green"
+          >
+            <Progress.Track>
+              <Progress.Range />
+            </Progress.Track>
+          </Progress.Root>
+        </Box>
       </Card.Header>
       <Card.Body>
         <VStack gap={4} align="stretch">
-          <HStack justify="space-between">
-            <Text fontWeight="medium" color="gray.700">
-              Approved Questions
-            </Text>
-            <Badge variant="outline" colorScheme="green" size="lg">
-              {stats.approved_questions} of {stats.total_questions}
-            </Badge>
-          </HStack>
-
-          <Box>
-            <HStack justify="space-between" mb={2}>
-              <Text fontWeight="medium" color="gray.700">
-                Progress
-              </Text>
-              <Text fontSize="sm" color="gray.600">
-                {progressPercentage.toFixed(0)}%
-              </Text>
-            </HStack>
-            <Progress.Root
-              value={progressPercentage}
-              size="lg"
-              colorPalette="green"
-            >
-              <Progress.Track>
-                <Progress.Range />
-              </Progress.Track>
-            </Progress.Root>
-          </Box>
-
           {stats.total_questions > 0 &&
             stats.approved_questions === stats.total_questions && (
               <Box
