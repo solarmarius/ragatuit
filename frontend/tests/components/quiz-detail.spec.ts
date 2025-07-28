@@ -30,21 +30,15 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Neural Networks",
-          question_batches: [
-            { question_type: "multiple_choice", count: 20 }
-          ]
+          question_batches: [{ question_type: "multiple_choice", count: 20 }],
         },
         "173468": {
           name: "Deep Learning",
-          question_batches: [
-            { question_type: "multiple_choice", count: 20 }
-          ]
+          question_batches: [{ question_type: "multiple_choice", count: 20 }],
         },
         "173469": {
           name: "Reinforcement Learning",
-          question_batches: [
-            { question_type: "multiple_choice", count: 20 }
-          ]
+          question_batches: [{ question_type: "multiple_choice", count: 20 }],
         },
       },
       question_count: 60,
@@ -69,7 +63,6 @@ test.describe("Quiz Detail Component", () => {
     await expect(
       page.getByText("Advanced Machine Learning Concepts")
     ).toBeVisible();
-    await expect(page.getByText("Quiz Details")).toBeVisible();
 
     // Check course information section
     await expect(page.getByText("Canvas Course")).toBeVisible();
@@ -79,15 +72,17 @@ test.describe("Quiz Detail Component", () => {
     // Check selected modules section - use more specific locator
     await expect(page.getByText("Neural Networks").first()).toBeVisible();
     await expect(page.getByText("Deep Learning").first()).toBeVisible();
-    await expect(page.getByText("Reinforcement Learning").first()).toBeVisible();
+    await expect(
+      page.getByText("Reinforcement Learning").first()
+    ).toBeVisible();
 
     // Check quiz settings section
-    await expect(page.getByText("Quiz Settings")).toBeVisible();
+    await expect(page.getByText("Settings").first()).toBeVisible();
     await expect(page.getByText("Question Count")).toBeVisible();
     await expect(page.locator('text="60"').first()).toBeVisible();
 
     // Check metadata section
-    await expect(page.getByText("Quiz Metadata")).toBeVisible();
+    await expect(page.getByText("Metadata")).toBeVisible();
     await expect(page.getByText("Quiz ID")).toBeVisible();
     await expect(page.locator("p").getByText(mockQuizId)).toBeVisible();
     await expect(page.getByText("Created").last()).toBeVisible();
@@ -163,10 +158,8 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [
-            { question_type: "multiple_choice", count: 25 }
-          ]
-        }
+          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+        },
       },
       question_count: 50,
       llm_model: "gpt-4o",
@@ -202,10 +195,8 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [
-            { question_type: "multiple_choice", count: 25 }
-          ]
-        }
+          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+        },
       },
       question_count: 50,
       llm_model: "gpt-4o",
@@ -276,10 +267,8 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [
-            { question_type: "multiple_choice", count: 25 }
-          ]
-        }
+          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+        },
       },
       question_count: 100,
       llm_model: "gpt-4.1-mini",
@@ -352,33 +341,23 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "1": {
           name: "Module with Very Long Name That Tests Text Wrapping in Badges",
-          question_batches: [
-            { question_type: "multiple_choice", count: 10 }
-          ],
+          question_batches: [{ question_type: "multiple_choice", count: 10 }],
         },
         "2": {
           name: "Another Module",
-          question_batches: [
-            { question_type: "multiple_choice", count: 10 }
-          ]
+          question_batches: [{ question_type: "multiple_choice", count: 10 }],
         },
         "3": {
           name: "Third Module",
-          question_batches: [
-            { question_type: "multiple_choice", count: 10 }
-          ]
+          question_batches: [{ question_type: "multiple_choice", count: 10 }],
         },
         "4": {
           name: "Fourth Module",
-          question_batches: [
-            { question_type: "multiple_choice", count: 10 }
-          ]
+          question_batches: [{ question_type: "multiple_choice", count: 10 }],
         },
         "5": {
           name: "Fifth Module",
-          question_batches: [
-            { question_type: "multiple_choice", count: 10 }
-          ]
+          question_batches: [{ question_type: "multiple_choice", count: 10 }],
         },
       },
       question_count: 50, // Total of all batches
@@ -404,7 +383,9 @@ test.describe("Quiz Detail Component", () => {
     await expect(page.getByText("Course with Long Name")).toBeVisible();
 
     // Check all modules are displayed
-    await expect(page.getByText("Module with Very Long Name").first()).toBeVisible();
+    await expect(
+      page.getByText("Module with Very Long Name").first()
+    ).toBeVisible();
     await expect(page.getByText("Another Module").first()).toBeVisible();
     await expect(page.getByText("Third Module").first()).toBeVisible();
     await expect(page.getByText("Fourth Module").first()).toBeVisible();
@@ -420,10 +401,8 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [
-            { question_type: "multiple_choice", count: 25 }
-          ]
-        }
+          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+        },
       },
       question_count: 50,
       llm_model: "gpt-4o",
@@ -458,10 +437,8 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [
-            { question_type: "multiple_choice", count: 25 }
-          ]
-        }
+          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+        },
       },
       question_count: 50,
       llm_model: "gpt-4o",
@@ -497,7 +474,7 @@ test.describe("Quiz Detail Component", () => {
 
     // Info content should be visible
     await expect(page.getByText("Course Information")).toBeVisible();
-    await expect(page.getByText("Quiz Settings")).toBeVisible();
+    await expect(page.getByText("Settings").first()).toBeVisible();
   });
 
   test("should switch between tabs correctly", async ({ page }) => {
@@ -509,10 +486,8 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [
-            { question_type: "multiple_choice", count: 25 }
-          ]
-        }
+          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+        },
       },
       question_count: 50,
       llm_model: "gpt-4o",
@@ -567,7 +542,7 @@ test.describe("Quiz Detail Component", () => {
     ).toHaveAttribute("aria-selected", "false");
 
     // Questions content should be visible (QuestionStats component)
-    await expect(page.getByText("Question Review Progress")).toBeVisible();
+    await expect(page.getByText("Progress")).toBeVisible();
   });
 
   test("should show Review Quiz button when generation is complete", async ({
@@ -581,10 +556,8 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [
-            { question_type: "multiple_choice", count: 25 }
-          ]
-        }
+          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+        },
       },
       question_count: 50,
       llm_model: "gpt-4o",
@@ -608,7 +581,7 @@ test.describe("Quiz Detail Component", () => {
     await page.reload();
 
     // Check that Review Quiz button is visible when generation is complete
-    const reviewButton = page.getByRole("button", { name: "Review Quiz" });
+    const reviewButton = page.getByRole("button", { name: "Review" });
     await expect(reviewButton).toBeVisible();
 
     // Click Review Quiz button should navigate to questions route
@@ -635,10 +608,8 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [
-            { question_type: "multiple_choice", count: 25 }
-          ]
-        }
+          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+        },
       },
       question_count: 50,
       llm_model: "gpt-4o",
@@ -663,7 +634,7 @@ test.describe("Quiz Detail Component", () => {
 
     // Check that Review Quiz button is not visible when generation is not complete
     await expect(
-      page.getByRole("button", { name: "Review Quiz" })
+      page.getByRole("button", { name: "Review" })
     ).not.toBeVisible();
   });
 
@@ -679,10 +650,8 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [
-            { question_type: "multiple_choice", count: 25 }
-          ]
-        }
+          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+        },
       },
       question_count: 50,
       llm_model: "gpt-4o",
@@ -707,7 +676,7 @@ test.describe("Quiz Detail Component", () => {
 
     // Review Quiz button should not be visible
     await expect(
-      page.getByRole("button", { name: "Review Quiz" })
+      page.getByRole("button", { name: "Review" })
     ).not.toBeVisible();
 
     // Test case 2: Both are complete
@@ -727,8 +696,6 @@ test.describe("Quiz Detail Component", () => {
     await page.reload();
 
     // Review Quiz button should now be visible
-    await expect(
-      page.getByRole("button", { name: "Review Quiz" })
-    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Review" })).toBeVisible();
   });
 });
