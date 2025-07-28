@@ -433,6 +433,7 @@ async def delete_question(
             if success:
                 # Decrement question count
                 await _decrement_question_count(session, quiz_id)
+                await session.commit()
 
         if not success:
             raise HTTPException(status_code=404, detail="Question not found")
@@ -500,4 +501,3 @@ async def _decrement_question_count(session: AsyncSession, quiz_id: UUID) -> Non
 
     if quiz and quiz.question_count > 0:
         quiz.question_count = quiz.question_count - 1
-        await session.commit()
