@@ -7,20 +7,20 @@ import {
   Progress,
   Text,
   VStack,
-} from "@chakra-ui/react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { memo, useMemo } from "react";
-import { SiCanvas } from "react-icons/si";
+} from "@chakra-ui/react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { memo, useMemo } from "react"
+import { SiCanvas } from "react-icons/si"
 
-import { type Quiz, QuizService } from "@/client";
-import { ErrorState, LoadingSkeleton } from "@/components/Common";
-import { useCustomToast, useErrorHandler } from "@/hooks/common";
-import { QUIZ_STATUS, UI_SIZES } from "@/lib/constants";
-import { queryKeys, questionStatsQueryConfig } from "@/lib/queryConfig";
+import { type Quiz, QuizService } from "@/client"
+import { ErrorState, LoadingSkeleton } from "@/components/Common"
+import { useCustomToast, useErrorHandler } from "@/hooks/common"
+import { QUIZ_STATUS, UI_SIZES } from "@/lib/constants"
+import { queryKeys, questionStatsQueryConfig } from "@/lib/queryConfig"
 import {
   type QuestionStats as TypedQuestionStats,
   mergeLegacyStats,
-} from "@/types/questionStats";
+} from "@/types/questionStats"
 
 /**
  * Props for the QuestionStats component.
@@ -50,15 +50,15 @@ import {
  */
 interface QuestionStatsProps {
   /** The quiz object containing ID and export status information */
-  quiz: Quiz;
+  quiz: Quiz
 }
 
 export const QuestionStats = memo(function QuestionStats({
   quiz,
 }: QuestionStatsProps) {
-  const { showSuccessToast } = useCustomToast();
-  const { handleError } = useErrorHandler();
-  const queryClient = useQueryClient();
+  const { showSuccessToast } = useCustomToast()
+  const { handleError } = useErrorHandler()
+  const queryClient = useQueryClient()
 
   const {
     data: rawStats,
@@ -68,45 +68,45 @@ export const QuestionStats = memo(function QuestionStats({
     queryKey: queryKeys.quizQuestionStats(quiz.id!),
     queryFn: async () => {
       if (!quiz.id) {
-        throw new Error("Quiz ID is required");
+        throw new Error("Quiz ID is required")
       }
       return await QuizService.getQuizQuestionStats({
         quizId: quiz.id,
-      });
+      })
     },
     ...questionStatsQueryConfig,
     enabled: !!quiz.id, // Only run query if quiz.id exists
-  });
+  })
 
   // Convert legacy stats format to typed format
   const stats: TypedQuestionStats | null = rawStats
     ? mergeLegacyStats(rawStats)
-    : null;
+    : null
 
   // Calculate progress percentage with memoization
   const progressPercentage = useMemo(
     () => (stats?.approval_rate ? stats.approval_rate * 100 : 0),
-    [stats?.approval_rate]
-  );
+    [stats?.approval_rate],
+  )
 
   // Export quiz to Canvas mutation
   const exportMutation = useMutation({
     mutationFn: async () => {
       if (!quiz.id) {
-        throw new Error("Quiz ID is required");
+        throw new Error("Quiz ID is required")
       }
-      return await QuizService.exportQuizToCanvas({ quizId: quiz.id });
+      return await QuizService.exportQuizToCanvas({ quizId: quiz.id })
     },
     onSuccess: () => {
-      showSuccessToast("Quiz export to Canvas started successfully");
+      showSuccessToast("Quiz export to Canvas started successfully")
       // Invalidate quiz queries to trigger status updates and polling
-      queryClient.invalidateQueries({ queryKey: queryKeys.quiz(quiz.id!) });
+      queryClient.invalidateQueries({ queryKey: queryKeys.quiz(quiz.id!) })
     },
     onError: handleError,
-  });
+  })
 
   if (isLoading) {
-    return <QuestionStatsSkeleton />;
+    return <QuestionStatsSkeleton />
   }
 
   if (error || !stats) {
@@ -120,7 +120,7 @@ export const QuestionStats = memo(function QuestionStats({
           />
         </Card.Body>
       </Card.Root>
-    );
+    )
   }
 
   return (
@@ -176,11 +176,11 @@ export const QuestionStats = memo(function QuestionStats({
                 </Text>
 
                 {(() => {
-                  const isExported = quiz.status === QUIZ_STATUS.PUBLISHED;
+                  const isExported = quiz.status === QUIZ_STATUS.PUBLISHED
                   const isExporting =
                     exportMutation.isPending ||
-                    quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS;
-                  const canExport = !isExported;
+                    quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS
+                  const canExport = !isExported
 
                   if (canExport) {
                     return (
@@ -194,7 +194,7 @@ export const QuestionStats = memo(function QuestionStats({
                         <SiCanvas />
                         Post to Canvas
                       </Button>
-                    );
+                    )
                   }
 
                   if (isExported) {
@@ -223,15 +223,15 @@ export const QuestionStats = memo(function QuestionStats({
                                 day: "numeric",
                                 hour: "2-digit",
                                 minute: "2-digit",
-                              }
+                              },
                             )}
                           </Text>
                         )}
                       </VStack>
-                    );
+                    )
                   }
 
-                  return null;
+                  return null
                 })()}
               </Box>
             )}
@@ -253,8 +253,8 @@ export const QuestionStats = memo(function QuestionStats({
         </VStack>
       </Card.Body>
     </Card.Root>
-  );
-});
+  )
+})
 
 function QuestionStatsSkeleton() {
   return (
@@ -306,5 +306,5 @@ function QuestionStatsSkeleton() {
         </VStack>
       </Card.Body>
     </Card.Root>
-  );
+  )
 }

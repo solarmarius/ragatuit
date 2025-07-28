@@ -1,17 +1,17 @@
-import { Box, Button, Flex, Image } from "@chakra-ui/react";
-import { Link } from "@tanstack/react-router";
+import { Box, Button, Flex, Image } from "@chakra-ui/react"
+import { Link } from "@tanstack/react-router"
 
-import Logo from "/assets/images/raguitlogov4.svg";
+import Logo from "/assets/images/raguitlogov4.svg"
 
-import { useAuth } from "@/hooks/auth";
-import SidebarItems from "./SidebarItems";
+import { useAuth } from "@/hooks/auth"
+import SidebarItems from "./SidebarItems"
 
 const Sidebar = () => {
-  const { logout } = useAuth();
+  const { logout } = useAuth()
 
   const handleLogout = async () => {
-    logout();
-  };
+    logout()
+  }
 
   return (
     <>
@@ -37,7 +37,7 @@ const Sidebar = () => {
         </Flex>
       </Box>
     </>
-  );
-};
+  )
+}
 
-export default Sidebar;
+export default Sidebar

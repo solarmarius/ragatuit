@@ -1,9 +1,9 @@
-import { Box, Container, Heading, List, Text, VStack } from "@chakra-ui/react";
-import { createFileRoute } from "@tanstack/react-router";
+import { Box, Container, Heading, List, Text, VStack } from "@chakra-ui/react"
+import { createFileRoute } from "@tanstack/react-router"
 
 export const Route = createFileRoute("/_layout/privacy-policy")({
   component: PrivacyPolicy,
-});
+})
 
 function PrivacyPolicy() {
   return (
@@ -120,5 +120,5 @@ function PrivacyPolicy() {
         </Box>
       </VStack>
     </Container>
-  );
+  )
 }

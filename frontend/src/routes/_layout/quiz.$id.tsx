@@ -7,37 +7,37 @@ import {
   Tabs,
   Text,
   VStack,
-} from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
+} from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
 import {
   Outlet,
   createFileRoute,
   useRouter,
   useRouterState,
-} from "@tanstack/react-router";
+} from "@tanstack/react-router"
 
-import { QuizService } from "@/client";
-import { ErrorState, LoadingSkeleton } from "@/components/Common";
-import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirmation";
-import { StatusLight } from "@/components/ui/status-light";
-import { useQuizStatusPolling } from "@/hooks/common";
-import { QUIZ_STATUS, UI_SIZES } from "@/lib/constants";
-import { queryKeys, quizQueryConfig } from "@/lib/queryConfig";
+import { QuizService } from "@/client"
+import { ErrorState, LoadingSkeleton } from "@/components/Common"
+import DeleteQuizConfirmation from "@/components/QuizCreation/DeleteQuizConfirmation"
+import { StatusLight } from "@/components/ui/status-light"
+import { useQuizStatusPolling } from "@/hooks/common"
+import { QUIZ_STATUS, UI_SIZES } from "@/lib/constants"
+import { queryKeys, quizQueryConfig } from "@/lib/queryConfig"
 
 export const Route = createFileRoute("/_layout/quiz/$id")({
   component: QuizLayout,
-});
+})
 
 function QuizLayout() {
-  const { id } = Route.useParams();
-  const router = useRouter();
-  const pollingInterval = useQuizStatusPolling();
+  const { id } = Route.useParams()
+  const router = useRouter()
+  const pollingInterval = useQuizStatusPolling()
 
   // Use router state to detect current route more reliably
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
-  });
-  const isQuestionsRoute = pathname.endsWith("/questions");
+  })
+  const isQuestionsRoute = pathname.endsWith("/questions")
 
   const {
     data: quiz,
@@ -46,16 +46,16 @@ function QuizLayout() {
   } = useQuery({
     queryKey: queryKeys.quiz(id),
     queryFn: async () => {
-      const response = await QuizService.getQuiz({ quizId: id });
-      return response;
+      const response = await QuizService.getQuiz({ quizId: id })
+      return response
     },
     ...quizQueryConfig,
     refetchInterval: isQuestionsRoute ? false : pollingInterval, // No polling on questions page
     refetchIntervalInBackground: false,
-  });
+  })
 
   if (isLoading) {
-    return <QuizLayoutSkeleton />;
+    return <QuizLayoutSkeleton />
   }
 
   if (error || !quiz) {
@@ -71,11 +71,11 @@ function QuizLayout() {
           </Card.Body>
         </Card.Root>
       </Container>
-    );
+    )
   }
 
   // Check if quiz is ready for approval
-  const isQuizReadyForApproval = quiz.status === QUIZ_STATUS.READY_FOR_REVIEW;
+  const isQuizReadyForApproval = quiz.status === QUIZ_STATUS.READY_FOR_REVIEW
 
   return (
     <Container maxW="6xl" py={8}>
@@ -142,7 +142,7 @@ function QuizLayout() {
         </Tabs.Root>
       </VStack>
     </Container>
-  );
+  )
 }
 
 function QuizLayoutSkeleton() {
@@ -185,5 +185,5 @@ function QuizLayoutSkeleton() {
         ))}
       </VStack>
     </Container>
-  );
+  )
 }

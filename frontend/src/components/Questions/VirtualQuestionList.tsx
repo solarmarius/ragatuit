@@ -1,50 +1,43 @@
-import {
-  Badge,
-  Card,
-  HStack,
-  IconButton,
-  Text,
-  VStack,
-} from "@chakra-ui/react";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { Suspense, lazy, memo, useCallback, useEffect, useRef } from "react";
-import { MdCheck, MdDelete, MdEdit } from "react-icons/md";
+import { Badge, Card, HStack, IconButton, Text, VStack } from "@chakra-ui/react"
+import { useVirtualizer } from "@tanstack/react-virtual"
+import { Suspense, lazy, memo, useCallback, useEffect, useRef } from "react"
+import { MdCheck, MdDelete, MdEdit } from "react-icons/md"
 
-import type { QuestionResponse, QuestionUpdateRequest } from "@/client";
-import { LoadingSkeleton } from "../Common";
-import { QuestionDisplay } from "./display";
+import type { QuestionResponse, QuestionUpdateRequest } from "@/client"
+import { LoadingSkeleton } from "../Common"
+import { QuestionDisplay } from "./display"
 
 // Lazy load the editor to improve performance
 const QuestionEditor = lazy(() =>
-  import("./editors").then((module) => ({ default: module.QuestionEditor }))
-);
+  import("./editors").then((module) => ({ default: module.QuestionEditor })),
+)
 
 /**
  * Props for VirtualQuestionList component
  */
 interface VirtualQuestionListProps {
   /** Array of questions to display */
-  questions: QuestionResponse[];
+  questions: QuestionResponse[]
   /** ID of the currently editing question */
-  editingId: string | null;
+  editingId: string | null
   /** Function to start editing a question */
-  startEditing: (question: QuestionResponse) => void;
+  startEditing: (question: QuestionResponse) => void
   /** Function to cancel editing */
-  cancelEditing: () => void;
+  cancelEditing: () => void
   /** Function to check if a question is being edited */
-  isEditing: (question: QuestionResponse) => boolean;
+  isEditing: (question: QuestionResponse) => boolean
   /** Function to get save callback for a specific question */
-  getSaveCallback: (id: string) => (data: QuestionUpdateRequest) => void;
+  getSaveCallback: (id: string) => (data: QuestionUpdateRequest) => void
   /** Function to handle approving a question */
-  onApproveQuestion: (id: string) => void;
+  onApproveQuestion: (id: string) => void
   /** Function to handle deleting a question */
-  onDeleteQuestion: (id: string) => void;
+  onDeleteQuestion: (id: string) => void
   /** Loading state for update mutation */
-  isUpdateLoading: boolean;
+  isUpdateLoading: boolean
   /** Loading state for approve mutation */
-  isApproveLoading: boolean;
+  isApproveLoading: boolean
   /** Loading state for delete mutation */
-  isDeleteLoading: boolean;
+  isDeleteLoading: boolean
 }
 
 /**
@@ -65,26 +58,26 @@ const QUESTION_HEIGHT_ESTIMATES = {
     categorization: 1000,
     default: 800,
   },
-};
+}
 
 /**
  * Memoized component for rendering approval timestamp
  */
 const ApprovalTimestamp = memo(({ approvedAt }: { approvedAt: string }) => {
-  const date = new Date(approvedAt);
+  const date = new Date(approvedAt)
   const formattedDate = date.toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
-  });
+  })
 
   return (
     <Text fontSize="sm" color="gray.600">
       Approved on {formattedDate}
     </Text>
-  );
-});
-ApprovalTimestamp.displayName = "ApprovalTimestamp";
+  )
+})
+ApprovalTimestamp.displayName = "ApprovalTimestamp"
 
 /**
  * Virtual question list component that efficiently renders large lists of questions
@@ -104,50 +97,50 @@ export const VirtualQuestionList = memo(
     isApproveLoading,
     isDeleteLoading,
   }: VirtualQuestionListProps) => {
-    const parentRef = useRef<HTMLDivElement>(null);
-    const scrollElementRef = useRef<HTMLElement | null>(null);
+    const parentRef = useRef<HTMLDivElement>(null)
+    const scrollElementRef = useRef<HTMLElement | null>(null)
 
     // Find the scrollable parent element
     useEffect(() => {
       if (parentRef.current) {
         // Look for the parent with overflowY: auto (the layout container)
-        let element = parentRef.current.parentElement;
+        let element = parentRef.current.parentElement
         while (element) {
-          const style = window.getComputedStyle(element);
+          const style = window.getComputedStyle(element)
           if (
             style.overflowY === "auto" ||
             style.overflowY === "scroll" ||
             style.overflow === "auto"
           ) {
-            scrollElementRef.current = element;
-            break;
+            scrollElementRef.current = element
+            break
           }
-          element = element.parentElement;
+          element = element.parentElement
         }
       }
-    }, []);
+    }, [])
 
     // Estimate the size of each item based on question type and edit state
     const estimateSize = useCallback(
       (index: number) => {
-        const question = questions[index];
-        if (!question) return 300;
+        const question = questions[index]
+        if (!question) return 300
 
-        const isEditMode = question.id === editingId;
-        const type = question.question_type || "default";
+        const isEditMode = question.id === editingId
+        const type = question.question_type || "default"
         const heights = isEditMode
           ? QUESTION_HEIGHT_ESTIMATES.edit
-          : QUESTION_HEIGHT_ESTIMATES.display;
+          : QUESTION_HEIGHT_ESTIMATES.display
 
         // Get height for specific type or use default
         const baseHeight =
-          heights[type as keyof typeof heights] || heights.default;
+          heights[type as keyof typeof heights] || heights.default
 
         // Add gap (24px = gap-6)
-        return baseHeight + 24;
+        return baseHeight + 24
       },
-      [questions, editingId]
-    );
+      [questions, editingId],
+    )
 
     // Initialize virtualizer
     const virtualizer = useVirtualizer({
@@ -156,14 +149,14 @@ export const VirtualQuestionList = memo(
       estimateSize,
       overscan: 3,
       gap: 24,
-    });
+    })
 
     // Trigger remeasurement when editingId changes
     useEffect(() => {
-      virtualizer.measure();
-    }, [editingId, virtualizer]);
+      virtualizer.measure()
+    }, [editingId, virtualizer])
 
-    const virtualItems = virtualizer.getVirtualItems();
+    const virtualItems = virtualizer.getVirtualItems()
 
     return (
       <div ref={parentRef} style={{ width: "100%" }}>
@@ -175,15 +168,15 @@ export const VirtualQuestionList = memo(
           }}
         >
           {virtualItems.map((virtualItem) => {
-            const question = questions[virtualItem.index];
-            const questionIndex = virtualItem.index;
+            const question = questions[virtualItem.index]
+            const questionIndex = virtualItem.index
 
             // Custom ref callback to always re-measure element
             const setRef = (el: HTMLDivElement | null) => {
               if (el) {
-                virtualizer.measureElement(el);
+                virtualizer.measureElement(el)
               }
-            };
+            }
 
             return (
               <div
@@ -195,7 +188,9 @@ export const VirtualQuestionList = memo(
                   top: 0,
                   left: 0,
                   width: "100%",
-                  transform: `translateY(${virtualItem.start - virtualizer.options.scrollMargin}px)`,
+                  transform: `translateY(${
+                    virtualItem.start - virtualizer.options.scrollMargin
+                  }px)`,
                 }}
               >
                 <Card.Root>
@@ -285,12 +280,12 @@ export const VirtualQuestionList = memo(
                   </Card.Body>
                 </Card.Root>
               </div>
-            );
+            )
           })}
         </div>
       </div>
-    );
-  }
-);
+    )
+  },
+)
 
-VirtualQuestionList.displayName = "VirtualQuestionList";
+VirtualQuestionList.displayName = "VirtualQuestionList"

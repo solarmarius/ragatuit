@@ -245,7 +245,8 @@ export function validateBlankTextComprehensive(
     .sort((a, b) => a - b)
 
   // Check for gaps (only between consecutive positions, not requiring start from 1)
-  const hasPositionGaps = uniquePositions.length > 1 &&
+  const hasPositionGaps =
+    uniquePositions.length > 1 &&
     uniquePositions.some((pos, index) => {
       if (index === 0) return false
       return pos !== uniquePositions[index - 1] + 1
@@ -253,10 +254,10 @@ export function validateBlankTextComprehensive(
 
   // Compare with configured positions
   const missingConfigurations = uniquePositions.filter(
-    (pos) => !configuredPositions.includes(pos)
+    (pos) => !configuredPositions.includes(pos),
   )
   const extraConfigurations = configuredPositions.filter(
-    (pos) => !uniquePositions.includes(pos)
+    (pos) => !uniquePositions.includes(pos),
   )
 
   // Check synchronization

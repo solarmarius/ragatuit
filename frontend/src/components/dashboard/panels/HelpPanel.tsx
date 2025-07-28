@@ -7,8 +7,8 @@ import {
   Link,
   Text,
   VStack,
-} from "@chakra-ui/react";
-import { LuExternalLink } from "react-icons/lu";
+} from "@chakra-ui/react"
+import { LuExternalLink } from "react-icons/lu"
 
 export function HelpPanel() {
   return (
@@ -164,5 +164,5 @@ export function HelpPanel() {
         </VStack>
       </Card.Body>
     </Card.Root>
-  );
+  )
 }

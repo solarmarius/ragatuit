@@ -26,7 +26,12 @@ const SidebarItems = ({ onClose }: SidebarItemsProps) => {
         : location.pathname === path
 
     return (
-      <RouterLink key={title} to={path as any} params={{} as any} onClick={onClose}>
+      <RouterLink
+        key={title}
+        to={path as any}
+        params={{} as any}
+        onClick={onClose}
+      >
         <Flex
           direction="column"
           gap={2}

@@ -1,10 +1,10 @@
-import { Button, ButtonGroup, Text } from "@chakra-ui/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Button, ButtonGroup, Text } from "@chakra-ui/react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
+import { useNavigate } from "@tanstack/react-router"
+import { useState } from "react"
+import { useForm } from "react-hook-form"
 
-import { type ApiError, QuizService } from "@/client";
+import { type ApiError, QuizService } from "@/client"
 import {
   DialogActionTrigger,
   DialogBody,
@@ -15,45 +15,45 @@ import {
   DialogRoot,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { useCustomToast, useErrorHandler } from "@/hooks/common";
+} from "@/components/ui/dialog"
+import { useCustomToast, useErrorHandler } from "@/hooks/common"
 
 interface DeleteQuizConfirmationProps {
-  quizId: string;
-  quizTitle: string;
+  quizId: string
+  quizTitle: string
 }
 
 const DeleteQuizConfirmation = ({
   quizId,
   quizTitle,
 }: DeleteQuizConfirmationProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const navigate = useNavigate();
-  const { showSuccessToast } = useCustomToast();
-  const { handleError } = useErrorHandler();
+  const [isOpen, setIsOpen] = useState(false)
+  const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const { showSuccessToast } = useCustomToast()
+  const { handleError } = useErrorHandler()
   const {
     handleSubmit,
     formState: { isSubmitting },
-  } = useForm();
+  } = useForm()
 
   const mutation = useMutation({
     mutationFn: () => QuizService.deleteQuizEndpoint({ quizId }),
     onSuccess: () => {
-      showSuccessToast("Quiz deleted successfully");
-      setIsOpen(false);
+      showSuccessToast("Quiz deleted successfully")
+      setIsOpen(false)
       // Invalidate quizzes list and navigate back to quizzes page
-      queryClient.invalidateQueries({ queryKey: ["quizzes"] });
-      navigate({ to: "/quizzes" });
+      queryClient.invalidateQueries({ queryKey: ["quizzes"] })
+      navigate({ to: "/quizzes" })
     },
     onError: (err: ApiError) => {
-      handleError(err);
+      handleError(err)
     },
-  });
+  })
 
   const onSubmit = async () => {
-    mutation.mutate();
-  };
+    mutation.mutate()
+  }
 
   return (
     <>
@@ -112,7 +112,7 @@ const DeleteQuizConfirmation = ({
         </DialogContent>
       </DialogRoot>
     </>
-  );
-};
+  )
+}
 
-export default DeleteQuizConfirmation;
+export default DeleteQuizConfirmation

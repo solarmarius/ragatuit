@@ -51,15 +51,11 @@ test.describe("Quiz List Component", () => {
         selected_modules: {
           "173467": {
             name: "Neural Networks",
-            question_batches: [
-              { question_type: "multiple_choice", count: 25 }
-            ]
+            question_batches: [{ question_type: "multiple_choice", count: 25 }],
           },
           "173468": {
             name: "Deep Learning",
-            question_batches: [
-              { question_type: "multiple_choice", count: 25 }
-            ]
+            question_batches: [{ question_type: "multiple_choice", count: 25 }],
           },
         },
         question_count: 50,
@@ -77,21 +73,15 @@ test.describe("Quiz List Component", () => {
         selected_modules: {
           "173469": {
             name: "Variables",
-            question_batches: [
-              { question_type: "multiple_choice", count: 8 }
-            ]
+            question_batches: [{ question_type: "multiple_choice", count: 8 }],
           },
           "173470": {
             name: "Functions",
-            question_batches: [
-              { question_type: "multiple_choice", count: 9 }
-            ]
+            question_batches: [{ question_type: "multiple_choice", count: 9 }],
           },
           "173471": {
             name: "Classes",
-            question_batches: [
-              { question_type: "multiple_choice", count: 8 }
-            ]
+            question_batches: [{ question_type: "multiple_choice", count: 8 }],
           },
         },
         question_count: 25,
@@ -162,10 +152,8 @@ test.describe("Quiz List Component", () => {
         selected_modules: {
           "173467": {
             name: "Single Module",
-            question_batches: [
-              { question_type: "multiple_choice", count: 30 }
-            ]
-          }
+            question_batches: [{ question_type: "multiple_choice", count: 30 }],
+          },
         },
         question_count: 30,
         llm_model: "gpt-4o",
@@ -251,10 +239,8 @@ test.describe("Quiz List Component", () => {
         selected_modules: {
           "173467": {
             name: "Module 1",
-            question_batches: [
-              { question_type: "multiple_choice", count: 30 }
-            ]
-          }
+            question_batches: [{ question_type: "multiple_choice", count: 30 }],
+          },
         },
         question_count: 30,
         llm_model: "gpt-4o",
@@ -336,10 +322,8 @@ test.describe("Quiz List Component", () => {
         selected_modules: {
           "173467": {
             name: "Module 1",
-            question_batches: [
-              { question_type: "multiple_choice", count: 30 }
-            ]
-          }
+            question_batches: [{ question_type: "multiple_choice", count: 30 }],
+          },
         },
         question_count: 30,
         llm_model: "gpt-4o",
@@ -374,10 +358,8 @@ test.describe("Quiz List Component", () => {
         selected_modules: {
           "173467": {
             name: "Module 1",
-            question_batches: [
-              { question_type: "multiple_choice", count: 75 }
-            ]
-          }
+            question_batches: [{ question_type: "multiple_choice", count: 75 }],
+          },
         },
         question_count: 75,
         llm_model: "gpt-4.1-mini",

@@ -2,7 +2,10 @@ import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react"
 import { memo } from "react"
 
 import type { QuestionBatch } from "@/client/types.gen"
-import { formatQuestionTypeDisplay, calculateModuleQuestions } from "@/lib/utils"
+import {
+  calculateModuleQuestions,
+  formatQuestionTypeDisplay,
+} from "@/lib/utils"
 
 interface ModuleQuestionSummaryProps {
   moduleName: string
@@ -17,7 +20,7 @@ interface ModuleQuestionSummaryProps {
  */
 export const ModuleQuestionSummary = memo(function ModuleQuestionSummary({
   moduleName,
-  questionBatches = []
+  questionBatches = [],
 }: ModuleQuestionSummaryProps) {
   const totalQuestions = calculateModuleQuestions(questionBatches)
 
@@ -25,7 +28,9 @@ export const ModuleQuestionSummary = memo(function ModuleQuestionSummary({
     return (
       <Box>
         <Text fontWeight="medium">{moduleName}</Text>
-        <Text fontSize="sm" color="gray.500">No questions configured</Text>
+        <Text fontSize="sm" color="gray.500">
+          No questions configured
+        </Text>
       </Box>
     )
   }

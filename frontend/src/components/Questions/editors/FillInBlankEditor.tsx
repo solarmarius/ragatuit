@@ -1,7 +1,10 @@
 import type { QuestionResponse, QuestionUpdateRequest } from "@/client"
 import { FormField, FormGroup } from "@/components/forms"
 import { Checkbox } from "@/components/ui/checkbox"
-import { getNextBlankPosition, validateBlankTextComprehensive } from "@/lib/utils/fillInBlankUtils"
+import {
+  getNextBlankPosition,
+  validateBlankTextComprehensive,
+} from "@/lib/utils/fillInBlankUtils"
 import { type FillInBlankFormData, fillInBlankSchema } from "@/lib/validation"
 import type { BlankValidationError } from "@/types/fillInBlankValidation"
 import { BlankValidationErrorCode } from "@/types/fillInBlankValidation"
@@ -127,8 +130,12 @@ export const FillInBlankEditor = memo(function FillInBlankEditor({
     // Smart blank addition based on question text
     const addBlank = () => {
       if (watchedQuestionText) {
-        const configuredPositions = watchedBlanks?.map(blank => blank.position) || []
-        const validation = validateBlankTextComprehensive(watchedQuestionText, configuredPositions)
+        const configuredPositions =
+          watchedBlanks?.map((blank) => blank.position) || []
+        const validation = validateBlankTextComprehensive(
+          watchedQuestionText,
+          configuredPositions,
+        )
 
         // Find the first missing position using optimized validation
         const missingPosition = validation.missingConfigurations[0]
