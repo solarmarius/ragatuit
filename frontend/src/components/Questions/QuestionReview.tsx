@@ -135,6 +135,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       invalidateQueries: [
         queryKeys.quizQuestions(quizId),
         queryKeys.quizQuestionStats(quizId),
+        queryKeys.quiz(quizId), // Invalidate quiz cache to update question_count
       ],
     },
   )
