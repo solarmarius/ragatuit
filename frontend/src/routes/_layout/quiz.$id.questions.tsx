@@ -2,11 +2,11 @@ import { Card, VStack } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 
-import { QuizService } from "@/client"
+import { type Quiz, QuizService } from "@/client"
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common"
 import { QuestionReview } from "@/components/Questions/QuestionReview"
 import { QuestionStats } from "@/components/Questions/QuestionStats"
-import { useQuizStatusPolling } from "@/hooks/common"
+import { useConditionalPolling } from "@/hooks/common"
 import { FAILURE_REASON, QUIZ_STATUS, UI_TEXT } from "@/lib/constants"
 import { queryKeys, quizQueryConfig } from "@/lib/queryConfig"
 
@@ -41,6 +41,20 @@ function renderErrorForFailureReason(failureReason: string | null | undefined) {
 function QuizQuestions() {
   const { id } = Route.useParams()
 
+  // Custom polling for questions route - stops polling during review state
+  const questionsPolling = useConditionalPolling<Quiz>((data) => {
+    if (!data?.status) return true // Poll if no status yet
+
+    // Stop polling for stable states where user is actively working or quiz is complete
+    const stableReviewStates = [
+      QUIZ_STATUS.READY_FOR_REVIEW, // User is actively reviewing questions
+      QUIZ_STATUS.PUBLISHED,        // Quiz completed and exported
+      QUIZ_STATUS.FAILED           // Terminal error state
+    ] as const
+
+    return !stableReviewStates.includes(data.status as typeof stableReviewStates[number])
+  }, 5000) // Continue polling every 5 seconds for active processing states
+
   const { data: quiz, isLoading } = useQuery({
     queryKey: queryKeys.quiz(id),
     queryFn: async () => {
@@ -48,7 +62,7 @@ function QuizQuestions() {
       return response
     },
     ...quizQueryConfig,
-    refetchInterval: useQuizStatusPolling(), // Smart polling based on quiz status
+    refetchInterval: questionsPolling, // Use questions-specific polling logic
   })
 
   // Only show skeleton when loading and no cached data exists
