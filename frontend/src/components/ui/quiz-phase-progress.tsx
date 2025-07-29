@@ -32,7 +32,7 @@ interface QuizPhaseProgressProps {
 /**
  * Individual phase status derived from consolidated status
  */
-type PhaseStatus = "pending" | "processing" | "completed" | "failed"
+type PhaseStatus = "pending" | "processing" | "completed" | "failed" | "partial"
 
 /**
  * Phase information for display
@@ -108,6 +108,13 @@ function getPhaseStatuses(
         export: "pending",
       }
 
+    case QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL:
+      return {
+        extraction: "completed",
+        generation: "partial",
+        export: "pending",
+      }
+
     case QUIZ_STATUS.EXPORTING_TO_CANVAS:
       return {
         extraction: "completed",
@@ -138,6 +145,8 @@ function getPhaseIcon(status: PhaseStatus) {
       return <MdSchedule size={20} />
     case "failed":
       return <MdError size={20} />
+    case "partial":
+      return <MdSchedule size={20} />
     default:
       return <MdRadioButtonUnchecked size={20} />
   }
@@ -154,6 +163,8 @@ function getPhaseColor(status: PhaseStatus) {
       return "blue"
     case "failed":
       return "red"
+    case "partial":
+      return "yellow"
     default:
       return "gray"
   }
@@ -197,6 +208,8 @@ function getPhaseDescription(phase: string, status: PhaseStatus): string {
           return "AI is generating multiple-choice questions from extracted content..."
         case "completed":
           return "Questions generated successfully and ready for review"
+        case "partial":
+          return "Some questions generated successfully - retry available for remaining questions"
         default:
           return "Question generation"
       }
@@ -299,7 +312,9 @@ export function QuizPhaseProgress({
       status: phaseStatuses.generation,
       description: getPhaseDescription("generation", phaseStatuses.generation),
       timestamp:
-        showTimestamps && phaseStatuses.generation === "completed"
+        showTimestamps &&
+        (phaseStatuses.generation === "completed" ||
+          phaseStatuses.generation === "partial")
           ? lastStatusUpdate
           : null,
     },

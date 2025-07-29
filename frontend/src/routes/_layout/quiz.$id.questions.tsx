@@ -64,6 +64,7 @@ function QuizQuestions() {
     <VStack gap={6} align="stretch">
       {/* Question Statistics */}
       {(quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
+        quiz.status === QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL ||
         quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS ||
         quiz.status === QUIZ_STATUS.PUBLISHED ||
         (quiz.status === QUIZ_STATUS.FAILED &&
@@ -78,6 +79,7 @@ function QuizQuestions() {
 
       {/* Question Review */}
       {(quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
+        quiz.status === QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL ||
         quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS ||
         quiz.status === QUIZ_STATUS.PUBLISHED ||
         (quiz.status === QUIZ_STATUS.FAILED &&
@@ -92,6 +94,7 @@ function QuizQuestions() {
 
       {/* Message when questions aren't ready */}
       {quiz.status !== QUIZ_STATUS.READY_FOR_REVIEW &&
+        quiz.status !== QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL &&
         quiz.status !== QUIZ_STATUS.EXPORTING_TO_CANVAS &&
         quiz.status !== QUIZ_STATUS.PUBLISHED &&
         quiz.status !== QUIZ_STATUS.FAILED && (

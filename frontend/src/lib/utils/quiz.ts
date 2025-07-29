@@ -33,7 +33,10 @@ export function getQuizzesBeingGenerated(quizzes: Quiz[]): Quiz[] {
  */
 export function getQuizzesNeedingReview(quizzes: Quiz[]): Quiz[] {
   return quizzes.filter((quiz) => {
-    return quiz.status === QUIZ_STATUS.READY_FOR_REVIEW
+    return (
+      quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
+      quiz.status === QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL
+    )
   })
 }
 
@@ -78,6 +81,8 @@ export function getQuizStatusText(quiz: Quiz): string {
     [QUIZ_STATUS.EXTRACTING_CONTENT]: UI_TEXT.STATUS.EXTRACTING_CONTENT,
     [QUIZ_STATUS.GENERATING_QUESTIONS]: UI_TEXT.STATUS.GENERATING_QUESTIONS,
     [QUIZ_STATUS.READY_FOR_REVIEW]: UI_TEXT.STATUS.READY_FOR_REVIEW,
+    [QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL]:
+      UI_TEXT.STATUS.READY_FOR_REVIEW_PARTIAL,
     [QUIZ_STATUS.EXPORTING_TO_CANVAS]: UI_TEXT.STATUS.EXPORTING_TO_CANVAS,
     [QUIZ_STATUS.PUBLISHED]: UI_TEXT.STATUS.PUBLISHED,
     [QUIZ_STATUS.FAILED]: UI_TEXT.STATUS.FAILED,
@@ -99,6 +104,7 @@ export function getQuizStatusColor(quiz: Quiz): string {
     case QUIZ_STATUS.FAILED:
       return "red"
     case QUIZ_STATUS.READY_FOR_REVIEW:
+    case QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL:
       return "purple"
     case QUIZ_STATUS.EXPORTING_TO_CANVAS:
       return "yellow"
@@ -123,6 +129,7 @@ export function getQuizProgressPercentage(quiz: Quiz): number {
     case QUIZ_STATUS.GENERATING_QUESTIONS:
       return 50
     case QUIZ_STATUS.READY_FOR_REVIEW:
+    case QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL:
       return 75
     case QUIZ_STATUS.EXPORTING_TO_CANVAS:
       return 90
@@ -175,14 +182,20 @@ export function isQuizPending(quiz: Quiz): boolean {
  * Check if a quiz is ready for review
  */
 export function isQuizReadyForReview(quiz: Quiz): boolean {
-  return quiz.status === QUIZ_STATUS.READY_FOR_REVIEW
+  return (
+    quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
+    quiz.status === QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL
+  )
 }
 
 /**
  * Check if a quiz is ready for export
  */
 export function isQuizReadyForExport(quiz: Quiz): boolean {
-  return quiz.status === QUIZ_STATUS.READY_FOR_REVIEW
+  return (
+    quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
+    quiz.status === QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL
+  )
 }
 
 /**
@@ -241,6 +254,7 @@ export function sortQuizzesByStatus(quizzes: Quiz[]): Quiz[] {
         case QUIZ_STATUS.CREATED:
           return 4
         case QUIZ_STATUS.READY_FOR_REVIEW:
+        case QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL:
           return 5
         case QUIZ_STATUS.PUBLISHED:
           return 6

@@ -111,7 +111,9 @@ export const QuestionStats = memo(function QuestionStats({
           })
 
           // Force an immediate refetch to catch fast export completions
-          await queryClient.refetchQueries({ queryKey: queryKeys.quiz(quiz.id!) })
+          await queryClient.refetchQueries({
+            queryKey: queryKeys.quiz(quiz.id!),
+          })
         } catch (delayedError) {
           // If delayed polling fails, attempt immediate retry
           try {

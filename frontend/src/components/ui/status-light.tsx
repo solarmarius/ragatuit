@@ -10,7 +10,7 @@ import { Box } from "@chakra-ui/react"
  * - 🔴 Red: failed - Any process failed
  * - 🟠 Orange: created, extracting_content, generating_questions - Pending/In progress
  * - 🟡 Yellow: exporting_to_canvas - Exporting to Canvas
- * - 🟣 Purple: ready_for_review - Awaiting user review
+ * - 🟣 Purple: ready_for_review, ready_for_review_partial - Awaiting user review
  * - 🟢 Green: published - Published to Canvas
  *
  * @example
@@ -26,6 +26,7 @@ import { Box } from "@chakra-ui/react"
  * <StatusLight status="extracting_content" /> // Orange - Extracting content
  * <StatusLight status="generating_questions" /> // Orange - Generating questions
  * <StatusLight status="ready_for_review" />   // Purple - Ready for review
+ * <StatusLight status="ready_for_review_partial" /> // Purple - Partial success, ready for review
  * <StatusLight status="exporting_to_canvas" /> // Yellow - Exporting to Canvas
  * <StatusLight status="published" />          // Green - Published to Canvas
  * <StatusLight status="failed" />             // Red - Failed
@@ -42,6 +43,7 @@ export function StatusLight({ status }: StatusLightProps) {
       case QUIZ_STATUS.FAILED:
         return "red.500"
       case QUIZ_STATUS.READY_FOR_REVIEW:
+      case QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL:
         return "purple.500"
       case QUIZ_STATUS.EXPORTING_TO_CANVAS:
         return "yellow.500"
@@ -62,6 +64,8 @@ export function StatusLight({ status }: StatusLightProps) {
         return UI_TEXT.STATUS.GENERATING_QUESTIONS
       case QUIZ_STATUS.READY_FOR_REVIEW:
         return UI_TEXT.STATUS.READY_FOR_REVIEW
+      case QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL:
+        return UI_TEXT.STATUS.READY_FOR_REVIEW_PARTIAL
       case QUIZ_STATUS.EXPORTING_TO_CANVAS:
         return UI_TEXT.STATUS.EXPORTING_TO_CANVAS
       case QUIZ_STATUS.PUBLISHED:
