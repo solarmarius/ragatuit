@@ -6,12 +6,12 @@ import {
   Image,
   Text,
   VStack,
-} from "@chakra-ui/react"
-import { createFileRoute, redirect } from "@tanstack/react-router"
+} from "@chakra-ui/react";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import CanvasLoginButton from "@/components/ui/canvas-button"
-import { isLoggedIn } from "@/hooks/useCanvasAuth"
-import Illustration from "/assets/images/test-illustration.svg"
+import CanvasLoginButton from "@/components/ui/canvas-button";
+import { isLoggedIn } from "@/hooks/useCanvasAuth";
+import Illustration from "/assets/images/test-illustration.svg";
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -19,18 +19,18 @@ export const Route = createFileRoute("/login")({
     if (isLoggedIn()) {
       throw redirect({
         to: "/",
-      })
+      });
     }
   },
   validateSearch: (search: Record<string, unknown>) => {
     return {
       error: typeof search.error === "string" ? search.error : undefined,
-    }
+    };
   },
-})
+});
 
 function Login() {
-  const { error } = Route.useSearch()
+  const { error } = Route.useSearch();
 
   return (
     <Container
@@ -79,7 +79,7 @@ function Login() {
             <iframe
               width="560"
               height="315"
-              src="https://www.youtube.com/embed/jLdLfmT_rXM?si=Sro-STOkK5ZkGLRk"
+              src="https://www.youtube.com/embed/ob4atOgHn4U?si=n96Krt1CbTiDf3Rh"
               title="YouTube video player"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               referrerPolicy="strict-origin-when-cross-origin"
@@ -97,5 +97,5 @@ function Login() {
         </Box>
       </VStack>
     </Container>
-  )
+  );
 }

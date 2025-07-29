@@ -107,10 +107,10 @@ test.describe("Navigation", () => {
   test("should show correct page title for each route", async ({ page }) => {
     // Check dashboard title
     await page.goto("/")
-    await expect(page).toHaveTitle("Full Stack FastAPI Project")
+    await expect(page).toHaveTitle("Rag@UiT")
 
     // Check settings title
     await page.goto("/settings")
-    await expect(page).toHaveTitle("Full Stack FastAPI Project")
+    await expect(page).toHaveTitle("Rag@UiT")
   })
 })
