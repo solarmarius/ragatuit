@@ -100,28 +100,30 @@ export const QuestionStats = memo(function QuestionStats({
     onSuccess: async () => {
       showSuccessToast("Quiz export to Canvas started successfully")
 
-      try {
-        // Force immediate cache invalidation and refetch to ensure at least one poll
-        // This addresses the bug where exports faster than 3 seconds aren't detected
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.quiz(quiz.id!),
-        })
-
-        // Force an immediate refetch to catch fast export completions
-        await queryClient.refetchQueries({ queryKey: queryKeys.quiz(quiz.id!) })
-      } catch (error) {
-        // If immediate polling fails, silently attempt one retry
-        // The regular polling mechanism will still catch the status update
-        // We don't show user-facing errors since this is a background optimization
+      // Add small delay to ensure backend has processed the export request
+      // This improves the chances of catching the status update on first try
+      setTimeout(async () => {
         try {
-          await queryClient.refetchQueries({
+          // Force cache invalidation and refetch to ensure at least one poll
+          // This addresses the bug where exports faster than 3 seconds aren't detected
+          await queryClient.invalidateQueries({
             queryKey: queryKeys.quiz(quiz.id!),
           })
-        } catch (retryError) {
-          // Silent failure - regular polling will handle status updates
-          // In production, this could be sent to a logging service
+
+          // Force an immediate refetch to catch fast export completions
+          await queryClient.refetchQueries({ queryKey: queryKeys.quiz(quiz.id!) })
+        } catch (delayedError) {
+          // If delayed polling fails, attempt immediate retry
+          try {
+            await queryClient.refetchQueries({
+              queryKey: queryKeys.quiz(quiz.id!),
+            })
+          } catch (retryError) {
+            // Silent failure - regular polling will handle status updates
+            // In production, this could be sent to a logging service
+          }
         }
-      }
+      }, 500)
     },
     onError: handleError,
   })
