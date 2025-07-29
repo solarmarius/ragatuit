@@ -2,7 +2,7 @@ import { Card, VStack } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
 
-import { QuizService } from "@/client"
+import { type Quiz, QuizService } from "@/client"
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common"
 import { QuestionReview } from "@/components/Questions/QuestionReview"
 import { QuestionStats } from "@/components/Questions/QuestionStats"
@@ -42,8 +42,8 @@ function QuizQuestions() {
   const { id } = Route.useParams()
 
   // Poll only when quiz is exporting to Canvas
-  const pollWhileExporting = useConditionalPolling(
-    (data: any) => data?.status === QUIZ_STATUS.EXPORTING_TO_CANVAS,
+  const pollWhileExporting = useConditionalPolling<Quiz>(
+    (data) => data?.status === QUIZ_STATUS.EXPORTING_TO_CANVAS,
     3000 // Poll every 3 seconds while exporting
   )
 
