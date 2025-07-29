@@ -1,5 +1,7 @@
 import { Box, Card, Container, HStack, Text, VStack } from "@chakra-ui/react"
+import { useQueryClient } from "@tanstack/react-query"
 import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
+import { useEffect } from "react"
 
 import {
   EmptyState,
@@ -12,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { useUserQuizzes } from "@/hooks/api"
 import { useErrorHandler } from "@/hooks/common"
 import { UI_SIZES, UI_TEXT } from "@/lib/constants"
+import { queryKeys } from "@/lib/queryConfig"
 
 export const Route = createFileRoute("/_layout/quizzes")({
   component: QuizList,
@@ -19,6 +22,13 @@ export const Route = createFileRoute("/_layout/quizzes")({
 
 function QuizList() {
   const { handleError } = useErrorHandler()
+  const queryClient = useQueryClient()
+
+  // Force fresh data every time user visits this route
+  // This ensures quiz status updates are immediately visible
+  useEffect(() => {
+    queryClient.refetchQueries({ queryKey: queryKeys.userQuizzes() })
+  }, [queryClient])
 
   const { data: quizzes, isLoading, error } = useUserQuizzes()
 

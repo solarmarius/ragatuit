@@ -97,10 +97,38 @@ export const QuestionStats = memo(function QuestionStats({
       }
       return await QuizService.exportQuizToCanvas({ quizId: quiz.id })
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       showSuccessToast("Quiz export to Canvas started successfully")
-      // Invalidate quiz queries to trigger status updates and polling
-      queryClient.invalidateQueries({ queryKey: queryKeys.quiz(quiz.id!) })
+
+      try {
+        // Force immediate cache invalidation and refetch to ensure at least one poll
+        // This addresses the bug where exports faster than 3 seconds aren't detected
+        await queryClient.invalidateQueries({
+          queryKey: queryKeys.quiz(quiz.id!),
+        })
+
+        // Force an immediate refetch to catch fast export completions
+        await queryClient.refetchQueries({ queryKey: queryKeys.quiz(quiz.id!) })
+      } catch (error) {
+        // If immediate polling fails, log error but don't block the flow
+        // The regular polling mechanism will still catch the status update
+        console.warn(
+          "Failed to perform immediate status check after export:",
+          error,
+        )
+
+        // Show error toast and attempt one retry
+        try {
+          await queryClient.refetchQueries({
+            queryKey: queryKeys.quiz(quiz.id!),
+          })
+        } catch (retryError) {
+          console.error(
+            "Retry of immediate status check also failed:",
+            retryError,
+          )
+        }
+      }
     },
     onError: handleError,
   })
