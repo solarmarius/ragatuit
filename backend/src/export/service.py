@@ -120,18 +120,46 @@ async def export_quiz_to_qti_xml(
     # Get quiz and question data
     quiz_data = await _get_quiz_export_data(quiz_id)
 
-    # TODO: Format questions for QTI (with answers) - to be implemented in Phase 5
+    # Format questions for QTI (with answers)
     formatted_questions = []
-    for _question in quiz_data["questions"]:
-        # This will be implemented when we add the format_for_qti methods
-        qti_data = {"placeholder": "QTI formatting not yet implemented"}
-        formatted_questions.append(qti_data)
+    for question_data in quiz_data["questions"]:
+        try:
+            # The question_data already has the formatted export data
+            # We need to extract the question type and re-format for QTI
+            question_type_str = question_data.get("question_type")
+            if not question_type_str:
+                logger.warning("Question missing question_type field")
+                continue
 
-    # TODO: Generate QTI XML - to be implemented in Phase 5
-    # For now, return placeholder bytes
-    xml_bytes = (
-        b"<?xml version='1.0'?><placeholder>QTI XML not yet implemented</placeholder>"
-    )
+            # Import here to avoid circular imports
+            from src.question.types import QuestionType, get_question_type_registry
+
+            question_registry = get_question_type_registry()
+            question_type = QuestionType(question_type_str)
+            question_impl = question_registry.get_question_type(question_type)
+
+            # Create a data object from the exported data
+            typed_data = question_impl.validate_data(question_data)
+
+            # Use the format_for_qti method we added in Phase 3
+            qti_data = question_impl.format_for_qti(typed_data)
+            formatted_questions.append(qti_data)
+        except (KeyError, ValueError) as e:
+            logger.warning("Failed to format question for QTI: %s", e)
+            continue
+
+    if not formatted_questions:
+        raise ValueError("No questions could be formatted for QTI export")
+
+    # Generate QTI XML using lxml
+    from .qti_generator import QTIGenerator
+
+    generator = QTIGenerator(options)
+    try:
+        xml_bytes = generator.generate_qti_xml(quiz_data["title"], formatted_questions)
+    except Exception as e:
+        logger.error("QTI generation failed for quiz %s: %s", quiz_id, e)
+        raise RuntimeError(f"Failed to generate QTI XML: {e}") from e
 
     # Create metadata
     metadata = ExportMetadata(
