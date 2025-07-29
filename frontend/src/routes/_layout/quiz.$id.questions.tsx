@@ -6,6 +6,7 @@ import { QuizService } from "@/client"
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common"
 import { QuestionReview } from "@/components/Questions/QuestionReview"
 import { QuestionStats } from "@/components/Questions/QuestionStats"
+import { useConditionalPolling } from "@/hooks/common"
 import { FAILURE_REASON, QUIZ_STATUS, UI_TEXT } from "@/lib/constants"
 import { queryKeys, quizQueryConfig } from "@/lib/queryConfig"
 
@@ -40,6 +41,12 @@ function renderErrorForFailureReason(failureReason: string | null | undefined) {
 function QuizQuestions() {
   const { id } = Route.useParams()
 
+  // Poll only when quiz is exporting to Canvas
+  const pollWhileExporting = useConditionalPolling(
+    (data: any) => data?.status === QUIZ_STATUS.EXPORTING_TO_CANVAS,
+    3000 // Poll every 3 seconds while exporting
+  )
+
   const { data: quiz, isLoading } = useQuery({
     queryKey: queryKeys.quiz(id),
     queryFn: async () => {
@@ -47,7 +54,7 @@ function QuizQuestions() {
       return response
     },
     ...quizQueryConfig,
-    refetchInterval: false, // No polling on questions page as specified
+    refetchInterval: pollWhileExporting, // Poll only when exporting to Canvas
   })
 
   // Only show skeleton when loading and no cached data exists
