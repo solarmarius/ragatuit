@@ -100,6 +100,16 @@ class BaseQuestionType(ABC):
         """Format question data for generic export."""
         pass
 
+    @abstractmethod
+    def format_for_pdf(self, data: BaseQuestionData) -> dict[str, Any]:
+        """Format question data for PDF export (student version - no answers)."""
+        pass
+
+    @abstractmethod
+    def format_for_qti(self, data: BaseQuestionData) -> dict[str, Any]:
+        """Format question data for QTI XML export (with answers for LMS import)."""
+        pass
+
 
 def generate_canvas_title(question_text: str, max_length: int = 50) -> str:
     """Generate a Canvas-compatible title from question text.

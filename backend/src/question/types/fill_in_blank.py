@@ -322,3 +322,61 @@ class FillInBlankQuestionType(BaseQuestionType):
             "explanation": data.explanation,
             "question_type": self.question_type.value,
         }
+
+    def format_for_pdf(self, data: BaseQuestionData) -> dict[str, Any]:
+        """
+        Format fill-in-blank for PDF export (student version - no answers).
+
+        Args:
+            data: Validated fill-in-blank data
+
+        Returns:
+            Dictionary formatted for PDF generation without answers
+        """
+        if not isinstance(data, FillInBlankData):
+            raise ValueError("Expected FillInBlankData")
+
+        # Just provide the question text and blank positions for PDF
+        blank_positions = [blank.position for blank in data.blanks]
+
+        return {
+            "type": "fill_in_blank",
+            "question_text": data.question_text,
+            "blank_positions": blank_positions,
+            "blank_count": len(data.blanks),
+            # No answers for student version
+        }
+
+    def format_for_qti(self, data: BaseQuestionData) -> dict[str, Any]:
+        """
+        Format fill-in-blank for QTI XML export (with answers for LMS import).
+
+        Args:
+            data: Validated fill-in-blank data
+
+        Returns:
+            Dictionary formatted for QTI XML generation with answers
+        """
+        if not isinstance(data, FillInBlankData):
+            raise ValueError("Expected FillInBlankData")
+
+        # Convert blanks to QTI format with all answer variations
+        qti_blanks = []
+        for blank in data.blanks:
+            blank_data = {
+                "position": blank.position,
+                "correct_answer": blank.correct_answer,
+                "case_sensitive": blank.case_sensitive,
+            }
+            if blank.answer_variations:
+                blank_data["answer_variations"] = blank.answer_variations
+            qti_blanks.append(blank_data)
+
+        return {
+            "type": "fill_in_blank",
+            "question_text": data.question_text,
+            "blanks": qti_blanks,
+            # Additional QTI-specific metadata
+            "interaction_type": "text_entry",
+            "response_processing": "exact_match",
+        }

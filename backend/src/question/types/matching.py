@@ -274,3 +274,67 @@ class MatchingQuestionType(BaseQuestionType):
             result["distractors"] = data.distractors
 
         return result
+
+    def format_for_pdf(self, data: BaseQuestionData) -> dict[str, Any]:
+        """
+        Format matching for PDF export (student version - no answer pairings).
+
+        Args:
+            data: Validated matching data
+
+        Returns:
+            Dictionary formatted for PDF generation without answers
+        """
+        if not isinstance(data, MatchingData):
+            raise ValueError("Expected MatchingData")
+
+        # Extract left and right items for PDF display
+        left_items = [pair.question for pair in data.pairs]
+        right_items = [pair.answer for pair in data.pairs]
+
+        # Add distractors to right items if present
+        if data.distractors:
+            right_items.extend(data.distractors)
+
+        return {
+            "type": "matching",
+            "question_text": data.question_text,
+            "left_items": left_items,
+            "right_items": right_items,
+            # No correct matches for student version
+        }
+
+    def format_for_qti(self, data: BaseQuestionData) -> dict[str, Any]:
+        """
+        Format matching for QTI XML export (with answers for LMS import).
+
+        Args:
+            data: Validated matching data
+
+        Returns:
+            Dictionary formatted for QTI XML generation with answers
+        """
+        if not isinstance(data, MatchingData):
+            raise ValueError("Expected MatchingData")
+
+        # Extract items and create correct matches
+        left_items = [pair.question for pair in data.pairs]
+        right_items = [pair.answer for pair in data.pairs]
+        correct_matches = [
+            {"left": pair.question, "right": pair.answer} for pair in data.pairs
+        ]
+
+        # Add distractors if present
+        if data.distractors:
+            right_items.extend(data.distractors)
+
+        return {
+            "type": "matching",
+            "question_text": data.question_text,
+            "left_items": left_items,
+            "right_items": right_items,
+            "correct_matches": correct_matches,
+            # Additional QTI-specific metadata
+            "interaction_type": "associate",
+            "max_associations": len(data.pairs),
+        }
