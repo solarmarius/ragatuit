@@ -39,16 +39,46 @@ async def export_quiz_to_pdf(
     # Get quiz and question data
     quiz_data = await _get_quiz_export_data(quiz_id)
 
-    # TODO: Format questions for PDF (no answers) - to be implemented in Phase 4
+    # Format questions for PDF (no answers)
     formatted_questions = []
-    for _question in quiz_data["questions"]:
-        # This will be implemented when we add the format_for_pdf methods
-        pdf_data = {"placeholder": "PDF formatting not yet implemented"}
-        formatted_questions.append(pdf_data)
+    for question_data in quiz_data["questions"]:
+        try:
+            # The question_data already has the formatted export data
+            # We need to extract the question type and re-format for PDF
+            question_type_str = question_data.get("question_type")
+            if not question_type_str:
+                logger.warning("Question missing question_type field")
+                continue
 
-    # TODO: Generate PDF - to be implemented in Phase 4
-    # For now, return placeholder bytes
-    pdf_bytes = b"PDF content placeholder"
+            # Import here to avoid circular imports
+            from src.question.types import QuestionType, get_question_type_registry
+
+            question_registry = get_question_type_registry()
+            question_type = QuestionType(question_type_str)
+            question_impl = question_registry.get_question_type(question_type)
+
+            # Create a data object from the exported data
+            typed_data = question_impl.validate_data(question_data)
+
+            # Use the format_for_pdf method we added in Phase 3
+            pdf_data = question_impl.format_for_pdf(typed_data)
+            formatted_questions.append(pdf_data)
+        except (KeyError, ValueError) as e:
+            logger.warning("Failed to format question for PDF: %s", e)
+            continue
+
+    if not formatted_questions:
+        raise ValueError("No questions could be formatted for PDF export")
+
+    # Generate PDF using ReportLab
+    from .pdf_generator import QuizPDFGenerator
+
+    generator = QuizPDFGenerator(options)
+    try:
+        pdf_bytes = generator.generate_pdf(quiz_data["title"], formatted_questions)
+    except Exception as e:
+        logger.error("PDF generation failed for quiz %s: %s", quiz_id, e)
+        raise RuntimeError(f"Failed to generate PDF: {e}") from e
 
     # Create metadata
     metadata = ExportMetadata(
