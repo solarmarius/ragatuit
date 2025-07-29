@@ -1,12 +1,16 @@
+import io
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi.responses import StreamingResponse
 
 from src.auth.dependencies import CurrentUser
 from src.canvas.dependencies import CanvasToken
 from src.config import get_logger
 from src.database import SessionDep
 from src.exceptions import ServiceError
+from src.export import export_quiz_to_pdf, export_quiz_to_qti_xml
+from src.export.schemas import ExportFormat, PDFExportOptions, QTIExportOptions
 
 from .constants import ERROR_MESSAGES, SUCCESS_MESSAGES
 from .dependencies import (
@@ -712,4 +716,147 @@ async def export_quiz_to_canvas(
         )
         raise HTTPException(
             status_code=500, detail=ERROR_MESSAGES["export_trigger_failed"]
+        )
+
+
+@router.get("/{quiz_id}/export/{format}")
+async def export_quiz_file(
+    quiz: QuizOwnership,
+    format: ExportFormat,
+    current_user: CurrentUser,
+    session: SessionDep,
+) -> StreamingResponse:
+    """
+    Export quiz to specified file format.
+
+    Supports PDF export for student distribution (questions only) and
+    QTI XML export for LMS import (with answer keys). Files are generated
+    in memory and streamed directly to the client.
+
+    **Parameters:**
+        quiz_id (UUID): The UUID of the quiz to export
+        format (ExportFormat): Export format - 'pdf' or 'qti_xml'
+
+    **Returns:**
+        StreamingResponse: File download with appropriate headers
+
+    **Authentication:**
+        Requires valid JWT token in Authorization header
+
+    **Raises:**
+        HTTPException: 404 if quiz not found or user doesn't own it
+        HTTPException: 400 if quiz has no approved questions
+        HTTPException: 500 if file generation fails
+
+    **Export Formats:**
+        - PDF: Formatted document with questions only (for students)
+        - QTI_XML: QTI 2.1 compliant XML with answers (for LMS import)
+
+    **Usage:**
+        GET /api/v1/quiz/{quiz_id}/export/pdf
+        GET /api/v1/quiz/{quiz_id}/export/qti_xml
+        Authorization: Bearer <jwt_token>
+
+    **Example Response Headers:**
+        Content-Type: application/pdf
+        Content-Disposition: attachment; filename="Quiz_Title_questions.pdf"
+    """
+    logger.info(
+        "quiz_file_export_requested",
+        user_id=str(current_user.id),
+        quiz_id=str(quiz.id),
+        format=format.value,
+    )
+
+    try:
+        # Validate quiz has approved questions (reuse existing validation)
+        await validate_quiz_has_approved_questions(quiz, session)
+
+        if format == ExportFormat.PDF:
+            # Generate PDF
+            pdf_bytes, metadata = await export_quiz_to_pdf(
+                quiz.id,
+                PDFExportOptions(),
+            )
+
+            # Create streaming response
+            filename = f"{metadata.quiz_title.replace(' ', '_')}_questions.pdf"
+            headers = {
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Type": "application/pdf",
+            }
+
+            logger.info(
+                "pdf_export_completed",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz.id),
+                file_size=len(pdf_bytes),
+                question_count=metadata.question_count,
+            )
+
+            return StreamingResponse(
+                io.BytesIO(pdf_bytes),
+                media_type="application/pdf",
+                headers=headers,
+            )
+
+        elif format == ExportFormat.QTI_XML:
+            # Generate QTI XML
+            xml_bytes, metadata = await export_quiz_to_qti_xml(
+                quiz.id,
+                QTIExportOptions(),
+            )
+
+            # Create streaming response
+            filename = f"{metadata.quiz_title.replace(' ', '_')}_qti.xml"
+            headers = {
+                "Content-Disposition": f"attachment; filename={filename}",
+                "Content-Type": "application/xml",
+            }
+
+            logger.info(
+                "qti_xml_export_completed",
+                user_id=str(current_user.id),
+                quiz_id=str(quiz.id),
+                file_size=len(xml_bytes),
+                question_count=metadata.question_count,
+            )
+
+            return StreamingResponse(
+                io.BytesIO(xml_bytes),
+                media_type="application/xml",
+                headers=headers,
+            )
+
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported export format: {format}",
+            )
+
+    except ValueError as e:
+        logger.warning(
+            "quiz_file_export_validation_failed",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz.id),
+            format=format.value,
+            error=str(e),
+        )
+        raise HTTPException(status_code=400, detail=str(e))
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is (from validate_quiz_has_approved_questions)
+        raise
+    except Exception as e:
+        logger.error(
+            "quiz_file_export_failed",
+            user_id=str(current_user.id),
+            quiz_id=str(quiz.id),
+            format=format.value,
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate {format.value} export",
         )

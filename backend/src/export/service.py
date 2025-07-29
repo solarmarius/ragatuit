@@ -4,15 +4,12 @@ import logging
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from .schemas import ExportFormat, ExportMetadata, PDFExportOptions, QTIExportOptions
 
 logger = logging.getLogger(__name__)
 
 
 async def export_quiz_to_pdf(
-    session: AsyncSession,  # noqa: ARG001
     quiz_id: UUID,
     options: PDFExportOptions | None = None,
 ) -> tuple[bytes, ExportMetadata]:
@@ -20,7 +17,6 @@ async def export_quiz_to_pdf(
     Export quiz to PDF format for student distribution.
 
     Args:
-        session: Database session (unused for now, but kept for API consistency)
         quiz_id: Quiz UUID to export
         options: PDF generation options
 
@@ -93,7 +89,6 @@ async def export_quiz_to_pdf(
 
 
 async def export_quiz_to_qti_xml(
-    session: AsyncSession,  # noqa: ARG001
     quiz_id: UUID,
     options: QTIExportOptions | None = None,
 ) -> tuple[bytes, ExportMetadata]:
@@ -101,7 +96,6 @@ async def export_quiz_to_qti_xml(
     Export quiz to QTI XML format for LMS import.
 
     Args:
-        session: Database session (unused for now, but kept for API consistency)
         quiz_id: Quiz UUID to export
         options: QTI generation options
 
