@@ -398,3 +398,73 @@ class CategorizationQuestionType(BaseQuestionType):
             ]
 
         return result
+
+    def format_for_pdf(self, data: BaseQuestionData) -> dict[str, Any]:
+        """
+        Format categorization for PDF export (student version - no correct categories).
+
+        Args:
+            data: Validated categorization data
+
+        Returns:
+            Dictionary formatted for PDF generation without answers
+        """
+        if not isinstance(data, CategorizationData):
+            raise ValueError("Expected CategorizationData")
+
+        # Extract items to categorize and available categories
+        items_to_categorize = [item.text for item in data.items]
+        categories = [cat.name for cat in data.categories]
+
+        # Add distractors if present
+        if data.distractors:
+            items_to_categorize.extend([item.text for item in data.distractors])
+
+        return {
+            "type": "categorization",
+            "question_text": data.question_text,
+            "items_to_categorize": items_to_categorize,
+            "categories": categories,
+            # No correct categorizations for student version
+        }
+
+    def format_for_qti(self, data: BaseQuestionData) -> dict[str, Any]:
+        """
+        Format categorization for QTI XML export (with answers for LMS import).
+
+        Args:
+            data: Validated categorization data
+
+        Returns:
+            Dictionary formatted for QTI XML generation with answers
+        """
+        if not isinstance(data, CategorizationData):
+            raise ValueError("Expected CategorizationData")
+
+        # Extract items and categories with correct assignments
+        items_to_categorize = [item.text for item in data.items]
+        categories = [cat.name for cat in data.categories]
+
+        # Create correct categorizations mapping
+        correct_categorizations = {}
+        for category in data.categories:
+            for item_id in category.correct_items:
+                # Find the item text by ID
+                item = next((item for item in data.items if item.id == item_id), None)
+                if item:
+                    correct_categorizations[item.text] = category.name
+
+        # Add distractors if present
+        if data.distractors:
+            items_to_categorize.extend([item.text for item in data.distractors])
+
+        return {
+            "type": "categorization",
+            "question_text": data.question_text,
+            "items_to_categorize": items_to_categorize,
+            "categories": categories,
+            "correct_categorizations": correct_categorizations,
+            # Additional QTI-specific metadata
+            "interaction_type": "match",
+            "response_processing": "match_correct",
+        }

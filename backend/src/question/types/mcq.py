@@ -182,6 +182,56 @@ class MultipleChoiceQuestionType(BaseQuestionType):
             "question_type": self.question_type.value,
         }
 
+    def format_for_pdf(self, data: BaseQuestionData) -> dict[str, Any]:
+        """
+        Format MCQ for PDF export (student version - no correct answer).
+
+        Args:
+            data: Validated MCQ data
+
+        Returns:
+            Dictionary formatted for PDF generation without answers
+        """
+        if not isinstance(data, MultipleChoiceData):
+            raise ValueError("Expected MultipleChoiceData")
+
+        return {
+            "type": "multiple_choice",
+            "question_text": data.question_text,
+            "option_a": data.option_a,
+            "option_b": data.option_b,
+            "option_c": data.option_c,
+            "option_d": data.option_d,
+            # No correct_answer for student version
+        }
+
+    def format_for_qti(self, data: BaseQuestionData) -> dict[str, Any]:
+        """
+        Format MCQ for QTI XML export (with correct answer for LMS import).
+
+        Args:
+            data: Validated MCQ data
+
+        Returns:
+            Dictionary formatted for QTI XML generation with answers
+        """
+        if not isinstance(data, MultipleChoiceData):
+            raise ValueError("Expected MultipleChoiceData")
+
+        return {
+            "type": "multiple_choice",
+            "question_text": data.question_text,
+            "option_a": data.option_a,
+            "option_b": data.option_b,
+            "option_c": data.option_c,
+            "option_d": data.option_d,
+            "correct_answer": data.correct_answer,
+            # Additional QTI-specific metadata
+            "interaction_type": "choice",
+            "max_choices": 1,
+            "shuffle": False,
+        }
+
     def migrate_from_legacy(self, legacy_question: Any) -> MultipleChoiceData:
         """
         Migrate from legacy Question model to new MCQ data format.

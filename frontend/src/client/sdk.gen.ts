@@ -32,6 +32,8 @@ import type {
   QuizCreateNewQuizResponse,
   QuizDeleteQuizEndpointData,
   QuizDeleteQuizEndpointResponse,
+  QuizExportQuizFileData,
+  QuizExportQuizFileResponse,
   QuizExportQuizToCanvasData,
   QuizExportQuizToCanvasResponse,
   QuizGetQuizData,
@@ -1040,6 +1042,63 @@ export class QuizService {
       method: "POST",
       url: "/api/v1/quiz/{quiz_id}/export",
       path: {
+        quiz_id: data.quizId,
+      },
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Export Quiz File
+   * Export quiz to specified file format.
+   *
+   * Supports PDF export for student distribution (questions only) and
+   * QTI XML export for LMS import (with answer keys). Files are generated
+   * in memory and streamed directly to the client.
+   *
+   * **Parameters:**
+   * quiz_id (UUID): The UUID of the quiz to export
+   * format (ExportFormat): Export format - 'pdf' or 'qti_xml'
+   *
+   * **Returns:**
+   * StreamingResponse: File download with appropriate headers
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Raises:**
+   * HTTPException: 404 if quiz not found or user doesn't own it
+   * HTTPException: 400 if quiz has no approved questions
+   * HTTPException: 500 if file generation fails
+   *
+   * **Export Formats:**
+   * - PDF: Formatted document with questions only (for students)
+   * - QTI_XML: QTI 2.1 compliant XML with answers (for LMS import)
+   *
+   * **Usage:**
+   * GET /api/v1/quiz/{quiz_id}/export/pdf
+   * GET /api/v1/quiz/{quiz_id}/export/qti_xml
+   * Authorization: Bearer <jwt_token>
+   *
+   * **Example Response Headers:**
+   * Content-Type: application/pdf
+   * Content-Disposition: attachment; filename="Quiz_Title_questions.pdf"
+   * @param data The data for the request.
+   * @param data.format
+   * @param data.quizId
+   * @returns unknown Successful Response
+   * @throws ApiError
+   */
+  public static exportQuizFile(
+    data: QuizExportQuizFileData,
+  ): CancelablePromise<QuizExportQuizFileResponse> {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/quiz/{quiz_id}/export/{format}",
+      path: {
+        format: data.format,
         quiz_id: data.quizId,
       },
       errors: {

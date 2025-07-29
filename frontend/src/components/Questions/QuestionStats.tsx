@@ -10,9 +10,10 @@ import {
 } from "@chakra-ui/react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { memo, useMemo } from "react"
+import { HiCode, HiDocumentText } from "react-icons/hi"
 import { SiCanvas } from "react-icons/si"
 
-import { type Quiz, QuizService } from "@/client"
+import { type ExportFormat, type Quiz, QuizService } from "@/client"
 import { ErrorState, LoadingSkeleton } from "@/components/Common"
 import { useCustomToast, useErrorHandler } from "@/hooks/common"
 import { QUIZ_STATUS, UI_SIZES } from "@/lib/constants"
@@ -105,6 +106,50 @@ export const QuestionStats = memo(function QuestionStats({
     onError: handleError,
   })
 
+  // Export quiz to file mutation (PDF or QTI XML)
+  const exportFileMutation = useMutation({
+    mutationFn: async ({ format }: { format: ExportFormat }) => {
+      if (!quiz.id) {
+        throw new Error("Quiz ID is required")
+      }
+
+      // Call the API and get the response
+      const response = await QuizService.exportQuizFile({
+        quizId: quiz.id,
+        format: format,
+      })
+
+      // Create a blob from the response and trigger download
+      const blob = new Blob([response as any], {
+        type: format === "pdf" ? "application/pdf" : "application/xml",
+      })
+
+      // Generate filename based on quiz title and format
+      const quizTitle = (quiz.title || "Quiz").replace(/[^a-zA-Z0-9]/g, "_")
+      const filename =
+        format === "pdf" ? `${quizTitle}_questions.pdf` : `${quizTitle}_qti.xml`
+
+      // Create download link and trigger download
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+      return { format, filename }
+    },
+    onSuccess: ({ format, filename }) => {
+      const formatName = format === "pdf" ? "PDF" : "QTI XML"
+      showSuccessToast(
+        `${formatName} file "${filename}" downloaded successfully`,
+      )
+    },
+    onError: handleError,
+  })
+
   if (isLoading) {
     return <QuestionStatsSkeleton />
   }
@@ -175,64 +220,115 @@ export const QuestionStats = memo(function QuestionStats({
                   All questions have been reviewed and approved!
                 </Text>
 
-                {(() => {
-                  const isExported = quiz.status === QUIZ_STATUS.PUBLISHED
-                  const isExporting =
-                    exportMutation.isPending ||
-                    quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS
-                  const canExport = !isExported
+                <VStack gap={3}>
+                  {(() => {
+                    const isExported = quiz.status === QUIZ_STATUS.PUBLISHED
+                    const isExporting =
+                      exportMutation.isPending ||
+                      quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS
+                    const canExport = !isExported
 
-                  if (canExport) {
-                    return (
-                      <Button
-                        size="lg"
-                        colorPalette="green"
-                        onClick={() => exportMutation.mutate()}
-                        loading={isExporting}
-                        width="100%"
-                      >
-                        <SiCanvas />
-                        Post to Canvas
-                      </Button>
-                    )
-                  }
-
-                  if (isExported) {
-                    return (
-                      <VStack gap={1}>
-                        <Text
-                          fontSize="sm"
-                          fontWeight="medium"
-                          color="green.600"
-                          textAlign="center"
+                    if (canExport) {
+                      return (
+                        <Button
+                          size="lg"
+                          colorPalette="green"
+                          onClick={() => exportMutation.mutate()}
+                          loading={isExporting}
+                          width="100%"
                         >
-                          Quiz has been successfully exported to Canvas
-                        </Text>
-                        {quiz.exported_at && (
+                          <SiCanvas />
+                          Post to Canvas
+                        </Button>
+                      )
+                    }
+
+                    if (isExported) {
+                      return (
+                        <VStack gap={1}>
                           <Text
-                            fontSize="xs"
-                            color="green.500"
+                            fontSize="sm"
+                            fontWeight="medium"
+                            color="green.600"
                             textAlign="center"
                           >
-                            Exported on{" "}
-                            {new Date(quiz.exported_at).toLocaleDateString(
-                              "en-GB",
-                              {
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              },
-                            )}
+                            Quiz has been successfully exported to Canvas
                           </Text>
-                        )}
-                      </VStack>
-                    )
-                  }
+                          {quiz.exported_at && (
+                            <Text
+                              fontSize="xs"
+                              color="green.500"
+                              textAlign="center"
+                            >
+                              Exported on{" "}
+                              {new Date(quiz.exported_at).toLocaleDateString(
+                                "en-GB",
+                                {
+                                  year: "numeric",
+                                  month: "long",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                },
+                              )}
+                            </Text>
+                          )}
+                        </VStack>
+                      )
+                    }
 
-                  return null
-                })()}
+                    return null
+                  })()}
+
+                  {/* File Export Buttons - Always show when questions are approved */}
+                  <VStack gap={2} width="100%">
+                    <Text
+                      fontSize="sm"
+                      fontWeight="medium"
+                      color="gray.600"
+                      textAlign="center"
+                    >
+                      Export to file formats:
+                    </Text>
+                    <HStack gap={2} width="100%">
+                      <Button
+                        size="md"
+                        variant="outline"
+                        colorPalette="blue"
+                        onClick={() =>
+                          exportFileMutation.mutate({ format: "pdf" })
+                        }
+                        loading={exportFileMutation.isPending}
+                        flex={1}
+                      >
+                        <HiDocumentText />
+                        PDF
+                      </Button>
+                      <Button
+                        size="md"
+                        variant="outline"
+                        colorPalette="purple"
+                        onClick={() =>
+                          exportFileMutation.mutate({ format: "qti_xml" })
+                        }
+                        loading={exportFileMutation.isPending}
+                        flex={1}
+                      >
+                        <HiCode />
+                        QTI XML
+                      </Button>
+                    </HStack>
+                    <Text
+                      fontSize="xs"
+                      color="gray.500"
+                      textAlign="center"
+                      lineHeight="1.3"
+                    >
+                      PDF: Student distribution (questions only) • QTI XML: LMS
+                      import (with answers)
+                    </Text>
+                  </VStack>
+                </VStack>
               </Box>
             )}
 

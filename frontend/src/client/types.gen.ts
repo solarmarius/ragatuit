@@ -17,6 +17,11 @@ export type CanvasModule = {
 }
 
 /**
+ * Supported export formats for quiz files.
+ */
+export type ExportFormat = "pdf" | "qti_xml"
+
+/**
  * Specific failure reasons for detailed error tracking.
  */
 export type FailureReason =
@@ -399,6 +404,13 @@ export type QuizExportQuizToCanvasData = {
 export type QuizExportQuizToCanvasResponse = {
   [key: string]: string
 }
+
+export type QuizExportQuizFileData = {
+  format: ExportFormat
+  quizId: string
+}
+
+export type QuizExportQuizFileResponse = unknown
 
 export type UsersReadUserMeResponse = UserPublic
 
