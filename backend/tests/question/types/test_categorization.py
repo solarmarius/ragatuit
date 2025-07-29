@@ -972,7 +972,7 @@ def test_categorization_question_type_format_for_canvas():
     for category_score in scoring_data["value"]:
         assert "id" in category_score
         assert "scoring_data" in category_score
-        assert category_score["scoring_data"]["scoring_algorithm"] == "AllOrNothing"
+        assert category_score["scoring_algorithm"] == "AllOrNothing"
 
 
 def test_categorization_question_type_format_for_canvas_no_distractors():

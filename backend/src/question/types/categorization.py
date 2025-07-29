@@ -325,8 +325,8 @@ class CategorizationQuestionType(BaseQuestionType):
                     "id": category.id,
                     "scoring_data": {
                         "value": category.correct_items,
-                        "scoring_algorithm": CanvasScoringAlgorithm.ALL_OR_NOTHING,
                     },
+                    "scoring_algorithm": CanvasScoringAlgorithm.ALL_OR_NOTHING,
                 }
             )
 
