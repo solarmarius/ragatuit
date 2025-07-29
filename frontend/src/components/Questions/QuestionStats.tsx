@@ -110,23 +110,16 @@ export const QuestionStats = memo(function QuestionStats({
         // Force an immediate refetch to catch fast export completions
         await queryClient.refetchQueries({ queryKey: queryKeys.quiz(quiz.id!) })
       } catch (error) {
-        // If immediate polling fails, log error but don't block the flow
+        // If immediate polling fails, silently attempt one retry
         // The regular polling mechanism will still catch the status update
-        console.warn(
-          "Failed to perform immediate status check after export:",
-          error,
-        )
-
-        // Show error toast and attempt one retry
+        // We don't show user-facing errors since this is a background optimization
         try {
           await queryClient.refetchQueries({
             queryKey: queryKeys.quiz(quiz.id!),
           })
         } catch (retryError) {
-          console.error(
-            "Retry of immediate status check also failed:",
-            retryError,
-          )
+          // Silent failure - regular polling will handle status updates
+          // In production, this could be sent to a logging service
         }
       }
     },
