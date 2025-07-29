@@ -596,11 +596,28 @@ class ModuleBatchWorkflow:
         return state
 
     async def save_questions(self, state: ModuleBatchState) -> ModuleBatchState:
-        """Save questions only if batch achieved 100% validation success."""
+        """Save questions with proper truncation for over-generation."""
         # Combine preserved successful questions with newly generated ones
         all_questions = state.successful_questions_preserved + state.generated_questions
 
-        # Calculate success rate for this batch
+        # Get initial count before truncation
+        initial_count = len(all_questions)
+
+        # Truncate if we have too many questions
+        if len(all_questions) > state.target_question_count:
+            excess_count = len(all_questions) - state.target_question_count
+            logger.info(
+                "module_batch_truncating_excess_questions",
+                module_id=state.module_id,
+                initial_questions=initial_count,
+                target_questions=state.target_question_count,
+                excess_questions=excess_count,
+            )
+
+            # Truncate to exact target count (keep first N questions)
+            all_questions = all_questions[: state.target_question_count]
+
+        # Calculate success rate after truncation
         total_questions = len(all_questions)
         success_rate = (
             total_questions / state.target_question_count
@@ -608,15 +625,15 @@ class ModuleBatchWorkflow:
             else 0
         )
 
-        # Only save if we achieved 100% success (or very close due to rounding)
-        if success_rate < 0.99:  # Allow for tiny floating point errors
+        # Only save if we have sufficient questions (allow for tiny floating point errors)
+        if success_rate < 0.99:
             logger.warning(
                 "module_batch_not_saving_partial_success",
                 module_id=state.module_id,
                 questions_generated=total_questions,
                 target_questions=state.target_question_count,
                 success_rate=f"{success_rate*100:.1f}%",
-                reason="Batch did not achieve 100% success rate",
+                reason="Batch did not achieve minimum success rate",
             )
 
             # Don't save questions, but track this as a failed batch
@@ -881,7 +898,7 @@ class ParallelModuleProcessor:
                 )
                 failed_batches.append(batch_key)
             else:
-                questions, _metadata = result
+                questions, metadata = result
 
                 # Initialize module results if needed
                 if module_id not in final_results:
@@ -890,7 +907,10 @@ class ParallelModuleProcessor:
                 # Add questions from this batch
                 final_results[module_id].extend(questions)
 
-                if questions:
+                # Check if batch was successful based on metadata
+                batch_success = metadata.get("success", False)
+
+                if batch_success:
                     successful_batches.append(batch_key)
                     logger.info(
                         "parallel_batch_processing_batch_completed",
@@ -901,6 +921,15 @@ class ParallelModuleProcessor:
                     )
                 else:
                     failed_batches.append(batch_key)
+                    logger.warning(
+                        "parallel_batch_processing_batch_failed_partial",
+                        quiz_id=str(quiz_id),
+                        module_id=module_id,
+                        batch_key=batch_key,
+                        questions_generated=len(questions),
+                        target_count=metadata.get("target_count", 0),
+                        reason="Batch did not meet target question count",
+                    )
 
         # Update generation metadata
         await self._update_generation_metadata(
@@ -953,11 +982,15 @@ class ParallelModuleProcessor:
                 question_type=question_type,
             )
 
+            # Determine if batch was successful based on question count vs target
+            success = len(questions) >= target_count
+
             metadata = {
                 "batch_key": batch_key,
                 "questions_generated": len(questions),
                 "target_count": target_count,
                 "question_type": question_type.value,
+                "success": success,
             }
 
             return questions, metadata

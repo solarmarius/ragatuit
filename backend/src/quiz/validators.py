@@ -293,11 +293,16 @@ def validate_status_transition(current: QuizStatus, target: QuizStatus) -> bool:
         ],
         QuizStatus.GENERATING_QUESTIONS: [
             QuizStatus.READY_FOR_REVIEW,
+            QuizStatus.READY_FOR_REVIEW_PARTIAL,
             QuizStatus.FAILED,
         ],
         QuizStatus.READY_FOR_REVIEW: [
             QuizStatus.GENERATING_QUESTIONS,
             QuizStatus.EXPORTING_TO_CANVAS,
+            QuizStatus.FAILED,
+        ],
+        QuizStatus.READY_FOR_REVIEW_PARTIAL: [
+            QuizStatus.GENERATING_QUESTIONS,  # Allow retry to generate missing questions
             QuizStatus.FAILED,
         ],
         QuizStatus.EXPORTING_TO_CANVAS: [QuizStatus.PUBLISHED, QuizStatus.FAILED],
