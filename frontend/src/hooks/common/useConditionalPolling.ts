@@ -117,8 +117,12 @@ export function useQuizStatusPolling() {
 export function useUserQuizzesPolling() {
   return (query: { state: { data?: any[] } }) => {
     const quizzes = query?.state?.data;
-    if (!quizzes || !Array.isArray(quizzes) || quizzes.length === 0) {
-      return 2000; // Poll every 2 seconds when no data or empty array
+    if (!quizzes || !Array.isArray(quizzes)) {
+      return 2000; // Poll every 2 seconds when data is missing/loading
+    }
+
+    if (quizzes.length === 0) {
+      return false; // Stop polling when no quizzes exist - no need to check for updates
     }
 
     // Check if any quiz is in an active processing state
