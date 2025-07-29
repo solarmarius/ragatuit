@@ -1,60 +1,60 @@
-import { Badge, Box, Card, HStack, Text, VStack } from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { Badge, Box, Card, HStack, Text, VStack } from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
+import { createFileRoute } from "@tanstack/react-router"
 
-import { QuizService } from "@/client";
-import { QuestionTypeBreakdown } from "@/components/Common";
-import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenerationTrigger";
-import { QuizPhaseProgress } from "@/components/ui/quiz-phase-progress";
-import { useFormattedDate } from "@/hooks/common";
-import { QUIZ_LANGUAGE_LABELS } from "@/lib/constants";
-import { queryKeys, quizQueryConfig } from "@/lib/queryConfig";
+import { QuizService } from "@/client"
+import { QuestionTypeBreakdown } from "@/components/Common"
+import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenerationTrigger"
+import { QuizPhaseProgress } from "@/components/ui/quiz-phase-progress"
+import { useFormattedDate } from "@/hooks/common"
+import { QUIZ_LANGUAGE_LABELS } from "@/lib/constants"
+import { queryKeys, quizQueryConfig } from "@/lib/queryConfig"
 
 export const Route = createFileRoute("/_layout/quiz/$id/")({
   component: QuizInformation,
-});
+})
 
 function DateDisplay({ date }: { date: string | null | undefined }) {
-  const formattedDate = useFormattedDate(date, "default");
+  const formattedDate = useFormattedDate(date, "default")
 
-  if (!formattedDate) return <Text color="gray.500">Not available</Text>;
+  if (!formattedDate) return <Text color="gray.500">Not available</Text>
 
-  return <Text color="gray.600">{formattedDate}</Text>;
+  return <Text color="gray.600">{formattedDate}</Text>
 }
 
 function QuizInformation() {
-  const { id } = Route.useParams();
+  const { id } = Route.useParams()
 
   const { data: quiz } = useQuery({
     queryKey: queryKeys.quiz(id),
     queryFn: async () => {
-      const response = await QuizService.getQuiz({ quizId: id });
-      return response;
+      const response = await QuizService.getQuiz({ quizId: id })
+      return response
     },
     ...quizQueryConfig,
     // Polling is now handled by the layout component based on route
-  });
+  })
 
   // Get selected modules - parse JSON string if needed
   const selectedModules = (() => {
-    if (!quiz?.selected_modules) return {};
+    if (!quiz?.selected_modules) return {}
 
     // If it's already an object, use it directly
     if (typeof quiz.selected_modules === "object") {
-      return quiz.selected_modules;
+      return quiz.selected_modules
     }
 
     // If it's a string, parse it as JSON
     if (typeof quiz.selected_modules === "string") {
       try {
-        return JSON.parse(quiz.selected_modules);
+        return JSON.parse(quiz.selected_modules)
       } catch {
-        return {};
+        return {}
       }
     }
 
-    return {};
-  })();
+    return {}
+  })()
 
   const moduleNames = Object.values(selectedModules)
     .filter(
@@ -62,16 +62,16 @@ function QuizInformation() {
         typeof moduleData === "object" &&
         moduleData !== null &&
         "name" in moduleData &&
-        typeof moduleData.name === "string"
+        typeof moduleData.name === "string",
     )
-    .map((moduleData) => moduleData.name);
+    .map((moduleData) => moduleData.name)
 
   if (!quiz) {
     return (
       <VStack gap={6} align="stretch">
         <Text>Loading quiz information...</Text>
       </VStack>
-    );
+    )
   }
 
   return (
@@ -208,5 +208,5 @@ function QuizInformation() {
       {/* Question Generation Trigger */}
       <QuestionGenerationTrigger quiz={quiz} />
     </VStack>
-  );
+  )
 }

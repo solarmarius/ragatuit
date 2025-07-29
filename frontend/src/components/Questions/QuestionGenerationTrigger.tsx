@@ -1,12 +1,4 @@
-import {
-  Badge,
-  Box,
-  Button,
-  Card,
-  HStack,
-  Text,
-  VStack,
-} from "@chakra-ui/react"
+import { Box, Button, Card, HStack, Text, VStack } from "@chakra-ui/react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { MdAutoAwesome, MdRefresh } from "react-icons/md"
 
@@ -136,25 +128,6 @@ export function QuestionGenerationTrigger({
               borderColor="purple.200"
             >
               <VStack gap={3}>
-                <HStack justify="space-between" width="100%">
-                  <Text fontSize="sm" fontWeight="medium" color="purple.700">
-                    Progress
-                  </Text>
-                  <Badge colorScheme="purple" variant="subtle">
-                    {Math.round(progressInfo.successRate)}% Complete
-                  </Badge>
-                </HStack>
-
-                <HStack
-                  justify="space-between"
-                  width="100%"
-                  fontSize="sm"
-                  color="purple.600"
-                >
-                  <Text>{progressInfo.savedQuestions} saved</Text>
-                  <Text>{progressInfo.remainingQuestions} remaining</Text>
-                </HStack>
-
                 <HStack gap={4} fontSize="sm" color="purple.600">
                   <Text>
                     ✓ {progressInfo.successfulBatches} batches succeeded

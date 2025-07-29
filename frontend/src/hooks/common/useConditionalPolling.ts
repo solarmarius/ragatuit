@@ -36,19 +36,19 @@
  */
 export function useConditionalPolling<T>(
   shouldPoll: (data: T | undefined) => boolean,
-  interval = 5000
+  interval = 5000,
 ) {
   return (query: { state: { data?: T } }) => {
-    const data = query?.state?.data;
-    return shouldPoll(data) ? interval : false;
-  };
+    const data = query?.state?.data
+    return shouldPoll(data) ? interval : false
+  }
 }
 
 /**
  * Smart polling for quiz status based on consolidated status system.
  * Uses different polling intervals based on current status:
- * - Active processing: 2000ms (extracting, generating, exporting)
- * - Ready for review: 10000ms (slower polling)
+ * - Active processing: 5000ms (extracting, generating, exporting)
+ * - Stable review states: no polling (ready_for_review, ready_for_review_partial)
  * - Terminal states: no polling (published, failed)
  * - Default: 5000ms
  *
@@ -66,34 +66,37 @@ export function useConditionalPolling<T>(
  */
 export function useQuizStatusPolling() {
   return (query: { state: { data?: any } }) => {
-    const data = query?.state?.data;
-    if (!data) return 2000; // Poll every 2 seconds when no data
+    const data = query?.state?.data
+    if (!data) return 2000 // Poll every 2 seconds when no data
 
-    const status = data.status;
-    if (!status) return 5000; // Default polling if no status
+    const status = data.status
+    if (!status) return 5000 // Default polling if no status
 
     // Different polling intervals based on status
     const activeStatuses = [
       "extracting_content",
       "generating_questions",
       "exporting_to_canvas",
-    ];
+    ]
 
     if (activeStatuses.includes(status)) {
-      return 5000; // Poll every 5 seconds for active processes
+      return 5000 // Poll every 5 seconds for active processes
     }
 
-    if (status === "ready_for_review") {
-      return 10000; // Poll every 10 seconds for review state
+    if (
+      status === "ready_for_review" ||
+      status === "ready_for_review_partial"
+    ) {
+      return false // No polling for stable review states - user action required
     }
 
     // No polling for terminal states
     if (status === "published" || status === "failed") {
-      return false;
+      return false
     }
 
-    return 5000; // Default polling interval for other states
-  };
+    return 5000 // Default polling interval for other states
+  }
 }
 
 /**
@@ -116,13 +119,13 @@ export function useQuizStatusPolling() {
  */
 export function useUserQuizzesPolling() {
   return (query: { state: { data?: any[] } }) => {
-    const quizzes = query?.state?.data;
+    const quizzes = query?.state?.data
     if (!quizzes || !Array.isArray(quizzes)) {
-      return 2000; // Poll every 2 seconds when data is missing/loading
+      return 2000 // Poll every 2 seconds when data is missing/loading
     }
 
     if (quizzes.length === 0) {
-      return false; // Stop polling when no quizzes exist - no need to check for updates
+      return false // Stop polling when no quizzes exist - no need to check for updates
     }
 
     // Check if any quiz is in an active processing state
@@ -130,17 +133,17 @@ export function useUserQuizzesPolling() {
       "extracting_content",
       "generating_questions",
       "exporting_to_canvas",
-    ];
+    ]
 
     const hasActiveQuizzes = quizzes.some(
-      (quiz) => quiz?.status && activeStatuses.includes(quiz.status)
-    );
+      (quiz) => quiz?.status && activeStatuses.includes(quiz.status),
+    )
 
     if (hasActiveQuizzes) {
-      return 5000; // Poll every 5 seconds if any quiz is actively processing
+      return 5000 // Poll every 5 seconds if any quiz is actively processing
     }
 
     // All quizzes are in stable/terminal states - stop polling to save resources
-    return false;
-  };
+    return false
+  }
 }
