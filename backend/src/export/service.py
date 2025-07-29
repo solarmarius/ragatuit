@@ -53,8 +53,15 @@ async def export_quiz_to_pdf(
             question_type = QuestionType(question_type_str)
             question_impl = question_registry.get_question_type(question_type)
 
-            # Create a data object from the exported data
-            typed_data = question_impl.validate_data(question_data)
+            # Remove metadata fields that are not part of the question data model
+            clean_question_data = {
+                k: v
+                for k, v in question_data.items()
+                if k not in ("question_type", "id")
+            }
+
+            # Create a data object from the clean exported data
+            typed_data = question_impl.validate_data(clean_question_data)
 
             # Use the format_for_pdf method we added in Phase 3
             pdf_data = question_impl.format_for_pdf(typed_data)
@@ -132,8 +139,15 @@ async def export_quiz_to_qti_xml(
             question_type = QuestionType(question_type_str)
             question_impl = question_registry.get_question_type(question_type)
 
-            # Create a data object from the exported data
-            typed_data = question_impl.validate_data(question_data)
+            # Remove metadata fields that are not part of the question data model
+            clean_question_data = {
+                k: v
+                for k, v in question_data.items()
+                if k not in ("question_type", "id")
+            }
+
+            # Create a data object from the clean exported data
+            typed_data = question_impl.validate_data(clean_question_data)
 
             # Use the format_for_qti method we added in Phase 3
             qti_data = question_impl.format_for_qti(typed_data)
@@ -178,20 +192,25 @@ async def _get_quiz_export_data(quiz_id: UUID) -> dict[str, Any]:
         Dictionary with quiz title and approved questions
 
     Raises:
-        ValueError: If no approved questions found
+        ValueError: If quiz not found or no approved questions found
     """
-    # Import question service to get approved questions
+    # Import dependencies
+    from src.database import get_async_session
     from src.question import service as question_service
+    from src.quiz.models import Quiz
+
+    # Get quiz title from database
+    async with get_async_session() as session:
+        quiz = await session.get(Quiz, quiz_id)
+        if not quiz:
+            raise ValueError(f"Quiz {quiz_id} not found")
+        quiz_title = quiz.title
 
     # Get approved questions using existing service
     questions_data = await question_service.prepare_questions_for_export(quiz_id)
 
     if not questions_data:
         raise ValueError("No approved questions found for export")
-
-    # For now, use a placeholder title - we'll get the actual title from quiz later
-    # In a full implementation, we'd need to get the quiz title from the database
-    quiz_title = f"Quiz {quiz_id}"
 
     return {
         "title": quiz_title,

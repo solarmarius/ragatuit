@@ -50,7 +50,9 @@ class QuizPDFGenerator:
                 name="QuestionText",
                 parent=self.styles["Normal"],
                 fontSize=self.options.font_size,
-                spaceAfter=10,
+                leading=self.options.font_size
+                * 2,  # 1.4x line height for better readability
+                spaceAfter=0,
                 leftIndent=0,
             )
         )
@@ -61,8 +63,22 @@ class QuizPDFGenerator:
                 name="OptionText",
                 parent=self.styles["Normal"],
                 fontSize=self.options.font_size - 1,
+                leading=(self.options.font_size - 1)
+                * 1.3,  # 1.3x line height for options
                 leftIndent=20,
                 spaceAfter=5,
+            )
+        )
+
+        # Table text style (no indentation for table cells)
+        self.styles.add(
+            ParagraphStyle(
+                name="TableText",
+                parent=self.styles["Normal"],
+                fontSize=self.options.font_size - 1,
+                leading=(self.options.font_size - 1) * 1.3,  # 1.3x line height
+                leftIndent=0,  # No left indent for table text
+                spaceAfter=3,
             )
         )
 
@@ -159,6 +175,8 @@ class QuizPDFGenerator:
             if option_key in question_data:
                 option_text = f"{option_letter}. {question_data[option_key]}"
                 options.append(Paragraph(option_text, self.styles["OptionText"]))
+        instruction_text = "Select one option [A, B, C, D]"
+        options.append(Paragraph(instruction_text, self.styles["Normal"]))
         return options
 
     def _format_fill_blank(self, question_data: dict[str, Any]) -> list[Any]:
@@ -168,7 +186,7 @@ class QuizPDFGenerator:
             elements.append(Spacer(1, 10))
             blank_count = question_data["blank_count"]
             instruction_text = (
-                f"Fill in the {blank_count} blank{'s' if blank_count > 1 else ''} "
+                f"Fill in {blank_count} blank{'s' if blank_count > 1 else ''} "
                 "with appropriate answers."
             )
             elements.append(Paragraph(instruction_text, self.styles["Normal"]))
@@ -183,14 +201,36 @@ class QuizPDFGenerator:
             left_items = question_data["left_items"]
             right_items = question_data["right_items"]
 
-            table_data = [["Match items from Column A with Column B", ""]]
-            table_data.append(["Column A", "Column B"])
+            # Create table with Paragraph objects for proper text wrapping
+            table_data = []
 
+            # Header row
+            header_left = Paragraph(
+                "Match items from Column A with Column B", self.styles["Normal"]
+            )
+            table_data.append([header_left, ""])
+
+            # Column headers
+            col_a_header = Paragraph("<b>Column A</b>", self.styles["Normal"])
+            col_b_header = Paragraph("<b>Column B</b>", self.styles["Normal"])
+            table_data.append([col_a_header, col_b_header])
+
+            # Data rows with Paragraph objects for text wrapping
             max_items = max(len(left_items), len(right_items))
             for i in range(max_items):
-                left = left_items[i] if i < len(left_items) else ""
-                right = right_items[i] if i < len(right_items) else ""
-                table_data.append([left, right])
+                left_text = left_items[i] if i < len(left_items) else ""
+                right_text = right_items[i] if i < len(right_items) else ""
+
+                left_para = (
+                    Paragraph(left_text, self.styles["TableText"]) if left_text else ""
+                )
+                right_para = (
+                    Paragraph(right_text, self.styles["TableText"])
+                    if right_text
+                    else ""
+                )
+
+                table_data.append([left_para, right_para])
 
             table = Table(table_data, colWidths=[3 * inch, 3 * inch])
             table.setStyle(
@@ -199,6 +239,7 @@ class QuizPDFGenerator:
                         ("GRID", (0, 0), (-1, -1), 1, colors.black),
                         ("BACKGROUND", (0, 0), (-1, 1), colors.lightgrey),
                         ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                        ("SPAN", (0, 0), (1, 0)),  # Span header across both columns
                     ]
                 )
             )
@@ -225,8 +266,10 @@ class QuizPDFGenerator:
 
             # List categories
             categories = question_data["categories"]
-            elements.append(Paragraph("Categories:", self.styles["Normal"]))
-            for category in categories:
-                elements.append(Paragraph(f"• {category}", self.styles["OptionText"]))
+            elements.append(Paragraph("To categories:", self.styles["Normal"]))
+            for i, category in enumerate(categories):
+                elements.append(
+                    Paragraph(f"{i+1}. {category}", self.styles["OptionText"])
+                )
 
         return elements

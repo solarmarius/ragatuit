@@ -336,12 +336,21 @@ class FillInBlankQuestionType(BaseQuestionType):
         if not isinstance(data, FillInBlankData):
             raise ValueError("Expected FillInBlankData")
 
+        # Replace [blank_N] tags with underscores for student version
+        import re
+
+        question_text_with_blanks = re.sub(
+            r"\[blank_\d+\]",
+            "_" * 10,  # Use 10 underscores to provide space for answers
+            data.question_text,
+        )
+
         # Just provide the question text and blank positions for PDF
         blank_positions = [blank.position for blank in data.blanks]
 
         return {
             "type": "fill_in_blank",
-            "question_text": data.question_text,
+            "question_text": question_text_with_blanks,
             "blank_positions": blank_positions,
             "blank_count": len(data.blanks),
             # No answers for student version
