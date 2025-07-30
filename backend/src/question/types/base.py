@@ -36,6 +36,7 @@ class QuestionType(str, Enum):
     FILL_IN_BLANK = "fill_in_blank"
     MATCHING = "matching"
     CATEGORIZATION = "categorization"
+    TRUE_FALSE = "true_false"
 
 
 class QuestionDifficulty(str, Enum):

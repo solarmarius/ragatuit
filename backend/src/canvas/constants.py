@@ -55,3 +55,4 @@ class CanvasInteractionType:
     RICH_FILL_BLANK = "rich-fill-blank"  # Fill-in-blank questions
     MATCHING = "matching"  # Matching questions
     CATEGORIZATION = "categorization"  # Categorization questions
+    TRUE_FALSE = "true-false"  # True/False questions

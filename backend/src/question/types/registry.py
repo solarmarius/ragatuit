@@ -129,6 +129,7 @@ class QuestionTypeRegistry:
             from .fill_in_blank import FillInBlankQuestionType
             from .matching import MatchingQuestionType
             from .mcq import MultipleChoiceQuestionType
+            from .true_false import TrueFalseQuestionType
 
             self.register_question_type(
                 QuestionType.MULTIPLE_CHOICE, MultipleChoiceQuestionType()
@@ -139,6 +140,9 @@ class QuestionTypeRegistry:
             self.register_question_type(QuestionType.MATCHING, MatchingQuestionType())
             self.register_question_type(
                 QuestionType.CATEGORIZATION, CategorizationQuestionType()
+            )
+            self.register_question_type(
+                QuestionType.TRUE_FALSE, TrueFalseQuestionType()
             )
 
             logger.info(
