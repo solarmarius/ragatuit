@@ -145,7 +145,7 @@ class ModuleBatchWorkflow:
             },
         )
 
-        workflow.add_edge("retry_generation", "generate_batch")
+        workflow.add_edge("retry_generation", "prepare_prompt")
         workflow.add_edge("save_questions", END)
 
         return workflow.compile()
