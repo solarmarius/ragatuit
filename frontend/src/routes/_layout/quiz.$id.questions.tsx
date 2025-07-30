@@ -1,9 +1,11 @@
-import { Card, VStack } from "@chakra-ui/react"
+import { Button, Card, HStack, VStack } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import { createFileRoute } from "@tanstack/react-router"
+import { useState } from "react"
 
 import { type Quiz, QuizService } from "@/client"
 import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common"
+import { ManualQuestionDialog } from "@/components/Questions/ManualQuestionDialog"
 import { QuestionReview } from "@/components/Questions/QuestionReview"
 import { QuestionStats } from "@/components/Questions/QuestionStats"
 import { useConditionalPolling } from "@/hooks/common"
@@ -40,6 +42,9 @@ function renderErrorForFailureReason(failureReason: string | null | undefined) {
 
 function QuizQuestions() {
   const { id } = Route.useParams()
+
+  // Add dialog state management
+  const [isManualQuestionDialogOpen, setIsManualQuestionDialogOpen] = useState(false)
 
   // Custom polling for questions route - stops polling during review state
   const questionsPolling = useConditionalPolling<Quiz>((data) => {
@@ -91,6 +96,21 @@ function QuizQuestions() {
         quiz.failure_reason === FAILURE_REASON.CANVAS_EXPORT_ERROR &&
         renderErrorForFailureReason(quiz.failure_reason)}
 
+      {/* Add Question Button - Only show in review states */}
+      {(quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
+        quiz.status === QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL) && (
+        <HStack gap={3} justify="flex-start">
+          <Button
+            variant="solid"
+            colorPalette="green"
+            size="sm"
+            onClick={() => setIsManualQuestionDialogOpen(true)}
+          >
+            Add Question
+          </Button>
+        </HStack>
+      )}
+
       {/* Question Review */}
       {(quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
         quiz.status === QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL ||
@@ -121,6 +141,14 @@ function QuizQuestions() {
             </Card.Body>
           </Card.Root>
         )}
+
+      {/* Manual Question Dialog */}
+      <ManualQuestionDialog
+        quizId={id}
+        quiz={{ status: quiz.status || "" }}
+        isOpen={isManualQuestionDialogOpen}
+        onOpenChange={setIsManualQuestionDialogOpen}
+      />
     </VStack>
   )
 }
