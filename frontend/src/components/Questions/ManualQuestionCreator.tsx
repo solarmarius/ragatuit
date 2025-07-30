@@ -134,41 +134,32 @@ function getDefaultQuestionData(questionType: string): Record<string, any> {
         explanation: null,
       };
 
-    case QUESTION_TYPES.CATEGORIZATION: {
-      // Create item IDs first so we can reference them in categories
-      const item1Id = crypto.randomUUID();
-      const item2Id = crypto.randomUUID();
-      const item3Id = crypto.randomUUID();
-      const item4Id = crypto.randomUUID();
-      const item5Id = crypto.randomUUID();
-      const item6Id = crypto.randomUUID();
-
+    case QUESTION_TYPES.CATEGORIZATION:
       return {
         question_text: "",
         categories: [
           {
-            id: crypto.randomUUID(),
+            id: "cat_1",
             name: "",
-            correct_items: [item1Id, item2Id, item3Id],
+            correct_items: ["item_1", "item_2", "item_3"],
           },
           {
-            id: crypto.randomUUID(),
+            id: "cat_2",
             name: "",
-            correct_items: [item4Id, item5Id, item6Id],
+            correct_items: ["item_4", "item_5", "item_6"],
           },
         ],
         items: [
-          { id: item1Id, text: "" },
-          { id: item2Id, text: "" },
-          { id: item3Id, text: "" },
-          { id: item4Id, text: "" },
-          { id: item5Id, text: "" },
-          { id: item6Id, text: "" },
+          { id: "item_1", text: "" },
+          { id: "item_2", text: "" },
+          { id: "item_3", text: "" },
+          { id: "item_4", text: "" },
+          { id: "item_5", text: "" },
+          { id: "item_6", text: "" },
         ],
         distractors: [],
         explanation: null,
       };
-    }
 
     default:
       return {

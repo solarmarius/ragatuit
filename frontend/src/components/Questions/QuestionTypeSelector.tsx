@@ -1,5 +1,5 @@
 import { Box, Card, SimpleGrid, Text, VStack } from "@chakra-ui/react";
-import { memo } from "react";
+import { memo, useCallback } from "react";
 
 import { QUESTION_TYPES, QUESTION_TYPE_LABELS } from "@/lib/constants";
 
@@ -26,6 +26,19 @@ export const QuestionTypeSelector = memo(function QuestionTypeSelector({
   onSelectType,
   isLoading = false,
 }: QuestionTypeSelectorProps) {
+  // Handle keyboard navigation for accessibility
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent, questionType: string) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        if (!isLoading) {
+          onSelectType(questionType);
+        }
+      }
+    },
+    [onSelectType, isLoading]
+  );
+
   // Define question types with descriptions for better UX
   const questionTypeOptions = [
     {
@@ -78,12 +91,24 @@ export const QuestionTypeSelector = memo(function QuestionTypeSelector({
             variant="outline"
             cursor="pointer"
             transition="all 0.2s"
+            tabIndex={0}
+            role="button"
+            aria-label={`Select ${option.label} question type`}
             _hover={{
               borderColor: "blue.300",
               shadow: "md",
             }}
+            _focus={{
+              borderColor: "blue.500",
+              shadow: "outline",
+              outline: "2px solid",
+              outlineColor: "blue.500",
+              outlineOffset: "2px",
+            }}
             onClick={() => !isLoading && onSelectType(option.type)}
+            onKeyDown={(e) => handleKeyDown(e, option.type)}
             opacity={isLoading ? 0.6 : 1}
+            aria-disabled={isLoading}
           >
             <Card.Body p={4}>
               <VStack gap={3} align="center" textAlign="center">

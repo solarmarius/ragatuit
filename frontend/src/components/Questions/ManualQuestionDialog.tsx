@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useApiMutation } from "@/hooks/common";
-import { QUIZ_STATUS } from "@/lib/constants";
+import { QUIZ_STATUS, QUESTION_TYPE_LABELS } from "@/lib/constants";
 import { queryKeys } from "@/lib/queryConfig";
 import { ManualQuestionCreator } from "./ManualQuestionCreator";
 import { QuestionTypeSelector } from "./QuestionTypeSelector";
@@ -130,9 +130,7 @@ export const ManualQuestionDialog = memo(function ManualQuestionDialog({
           <DialogTitle>
             {currentStep === "type-selection"
               ? "Add Question"
-              : `Create ${selectedQuestionType
-                  .replace(/_/g, " ")
-                  .replace(/\b\w/g, (l) => l.toUpperCase())} Question`}
+              : `Create ${QUESTION_TYPE_LABELS[selectedQuestionType as keyof typeof QUESTION_TYPE_LABELS]} Question`}
           </DialogTitle>
         </DialogHeader>
 
