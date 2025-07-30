@@ -129,6 +129,21 @@ export const MatchingEditor = memo(function MatchingEditor({
 
     return (
       <FormGroup>
+        {/* Form-level validation errors */}
+        {errors.root?.message && (
+          <Box
+            p={3}
+            bg="red.50"
+            border="1px"
+            borderColor="red.200"
+            borderRadius="md"
+            mb={4}
+          >
+            <Text color="red.600" fontSize="sm" fontWeight="medium">
+              {errors.root.message}
+            </Text>
+          </Box>
+        )}
         <Controller
           name="questionText"
           control={control}
@@ -152,9 +167,14 @@ export const MatchingEditor = memo(function MatchingEditor({
             Matching Pairs ({pairFields.length}/10)
           </Fieldset.Legend>
           <VStack gap={4} align="stretch">
-            {errors.pairs && (
+            {errors.pairs?.message && (
               <Text color="red.500" fontSize="sm">
                 {errors.pairs.message}
+              </Text>
+            )}
+            {errors.pairs?.root?.message && (
+              <Text color="red.500" fontSize="sm">
+                {errors.pairs.root.message}
               </Text>
             )}
 
@@ -238,9 +258,14 @@ export const MatchingEditor = memo(function MatchingEditor({
             Distractors ({distractors.length}/5)
           </Fieldset.Legend>
           <VStack gap={3} align="stretch">
-            {errors.distractors && (
+            {errors.distractors?.message && (
               <Text color="red.500" fontSize="sm">
                 {errors.distractors.message}
+              </Text>
+            )}
+            {errors.distractors?.root?.message && (
+              <Text color="red.500" fontSize="sm">
+                {errors.distractors.root.message}
               </Text>
             )}
 
