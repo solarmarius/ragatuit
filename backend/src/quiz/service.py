@@ -438,7 +438,8 @@ async def reserve_quiz_job(
             )
             return None
 
-        # Only set status if not already generating questions (avoid self-transition)
+        # Only update status fields if not already generating questions
+        # This avoids unnecessary status transitions and preserves existing timestamps
         if quiz.status != QuizStatus.GENERATING_QUESTIONS:
             if not validate_status_transition(
                 quiz.status, QuizStatus.GENERATING_QUESTIONS

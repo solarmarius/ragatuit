@@ -615,6 +615,9 @@ class ModuleBatchWorkflow:
             )
 
             # Truncate to exact target count (keep first N questions)
+            # We use first-N strategy for deterministic behavior and simplicity.
+            # Alternative approaches (random selection, quality-based) would require
+            # additional complexity and metadata that isn't currently available.
             all_questions = all_questions[: state.target_question_count]
 
         # Calculate success rate after truncation

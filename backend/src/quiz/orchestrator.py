@@ -780,8 +780,8 @@ async def orchestrate_quiz_question_generation(
 
         # Update failed batches (remove any that succeeded)
         existing_failed = set(quiz.generation_metadata.get("failed_batches", []))
-        existing_failed.update(failed_batches)
-        existing_failed -= existing_successful
+        existing_failed.update(failed_batches)  # Add new failures from current run
+        existing_failed -= existing_successful  # Remove batches that succeeded in any run (current + historical)
 
         # Create completely new metadata object
         new_metadata = {
