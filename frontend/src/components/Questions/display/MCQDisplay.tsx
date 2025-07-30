@@ -1,13 +1,13 @@
-import type { QuestionResponse } from "@/client";
-import { extractQuestionData } from "@/types/questionTypes";
-import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
-import { memo } from "react";
-import { ExplanationBox } from "../shared/ExplanationBox";
-import { ErrorDisplay } from "./ErrorDisplay";
+import type { QuestionResponse } from "@/client"
+import { extractQuestionData } from "@/types/questionTypes"
+import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react"
+import { memo } from "react"
+import { ExplanationBox } from "../shared/ExplanationBox"
+import { ErrorDisplay } from "./ErrorDisplay"
 
 interface MCQDisplayProps {
-  question: QuestionResponse;
-  showCorrectAnswer: boolean;
+  question: QuestionResponse
+  showCorrectAnswer: boolean
 }
 
 export const MCQDisplay = memo(function MCQDisplay({
@@ -15,7 +15,7 @@ export const MCQDisplay = memo(function MCQDisplay({
   showCorrectAnswer,
 }: MCQDisplayProps) {
   try {
-    const mcqData = extractQuestionData(question, "multiple_choice");
+    const mcqData = extractQuestionData(question, "multiple_choice")
 
     return (
       <VStack gap={4} align="stretch">
@@ -77,8 +77,8 @@ export const MCQDisplay = memo(function MCQDisplay({
           <ExplanationBox explanation={mcqData.explanation} />
         )}
       </VStack>
-    );
+    )
   } catch (error) {
-    return <ErrorDisplay error="Error loading MCQ question data" />;
+    return <ErrorDisplay error="Error loading MCQ question data" />
   }
-});
+})

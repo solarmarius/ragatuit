@@ -41,7 +41,7 @@ async def save_questions(
     logger.info(
         "questions_save_started",
         quiz_id=str(quiz_id),
-        question_type=question_type.value,
+        question_type=question_type,
         question_count=len(questions_data),
     )
 
@@ -51,17 +51,32 @@ async def save_questions(
 
     for i, question_data in enumerate(questions_data):
         try:
+            # Extract metadata fields that are not part of question-type-specific validation
+            difficulty = question_data.get("difficulty")
+            tags = question_data.get("tags")
+
+            # Normalize empty tags array to None for consistency with AI-generated questions
+            if tags is not None and len(tags) == 0:
+                tags = None
+
+            # Create a copy of question_data without metadata fields for validation
+            question_specific_data = {
+                k: v
+                for k, v in question_data.items()
+                if k not in ["difficulty", "tags"]
+            }
+
             # Validate question data using question type implementation
             question_impl = question_registry.get_question_type(question_type)
-            validated_data = question_impl.validate_data(question_data)
+            validated_data = question_impl.validate_data(question_specific_data)
 
             # Create question with polymorphic data
             question = Question(
                 quiz_id=quiz_id,
                 question_type=question_type,
                 question_data=validated_data.dict(),
-                difficulty=question_data.get("difficulty"),
-                tags=question_data.get("tags"),
+                difficulty=difficulty,
+                tags=tags,
                 is_approved=False,
             )
 

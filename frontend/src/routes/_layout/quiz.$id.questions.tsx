@@ -1,29 +1,32 @@
-import { Card, VStack } from "@chakra-ui/react"
-import { useQuery } from "@tanstack/react-query"
-import { createFileRoute } from "@tanstack/react-router"
+import { Box, Button, Card, HStack, Text, VStack } from "@chakra-ui/react";
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
+import { LuPlus } from "react-icons/lu";
 
-import { type Quiz, QuizService } from "@/client"
-import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common"
-import { QuestionReview } from "@/components/Questions/QuestionReview"
-import { QuestionStats } from "@/components/Questions/QuestionStats"
-import { useConditionalPolling } from "@/hooks/common"
-import { FAILURE_REASON, QUIZ_STATUS, UI_TEXT } from "@/lib/constants"
-import { queryKeys, quizQueryConfig } from "@/lib/queryConfig"
+import { type Quiz, QuizService } from "@/client";
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common";
+import { ManualQuestionDialog } from "@/components/Questions/ManualQuestionDialog";
+import { QuestionReview } from "@/components/Questions/QuestionReview";
+import { QuestionStats } from "@/components/Questions/QuestionStats";
+import { useConditionalPolling } from "@/hooks/common";
+import { FAILURE_REASON, QUIZ_STATUS, UI_TEXT } from "@/lib/constants";
+import { queryKeys, quizQueryConfig } from "@/lib/queryConfig";
 
 export const Route = createFileRoute("/_layout/quiz/$id/questions")({
   component: QuizQuestions,
-})
+});
 
 function renderErrorForFailureReason(failureReason: string | null | undefined) {
   if (!failureReason) {
-    return null
+    return null;
   }
 
   // Get the error message from constants or use generic fallback
   const errorMessage =
     UI_TEXT.FAILURE_MESSAGES[
       failureReason as keyof typeof UI_TEXT.FAILURE_MESSAGES
-    ] || UI_TEXT.FAILURE_MESSAGES.GENERIC
+    ] || UI_TEXT.FAILURE_MESSAGES.GENERIC;
 
   return (
     <Card.Root>
@@ -35,43 +38,49 @@ function renderErrorForFailureReason(failureReason: string | null | undefined) {
         />
       </Card.Body>
     </Card.Root>
-  )
+  );
 }
 
 function QuizQuestions() {
-  const { id } = Route.useParams()
+  const { id } = Route.useParams();
+
+  // Add dialog state management
+  const [isManualQuestionDialogOpen, setIsManualQuestionDialogOpen] =
+    useState(false);
 
   // Custom polling for questions route - stops polling during review state
   const questionsPolling = useConditionalPolling<Quiz>((data) => {
-    if (!data?.status) return true // Poll if no status yet
+    if (!data?.status) return true; // Poll if no status yet
 
     // Stop polling for stable states where user is actively working or quiz is complete
     const stableReviewStates = [
       QUIZ_STATUS.READY_FOR_REVIEW, // User is actively reviewing questions
-      QUIZ_STATUS.PUBLISHED,        // Quiz completed and exported
-      QUIZ_STATUS.FAILED           // Terminal error state
-    ] as const
+      QUIZ_STATUS.PUBLISHED, // Quiz completed and exported
+      QUIZ_STATUS.FAILED, // Terminal error state
+    ] as const;
 
-    return !stableReviewStates.includes(data.status as typeof stableReviewStates[number])
-  }, 5000) // Continue polling every 5 seconds for active processing states
+    return !stableReviewStates.includes(
+      data.status as (typeof stableReviewStates)[number]
+    );
+  }, 5000); // Continue polling every 5 seconds for active processing states
 
   const { data: quiz, isLoading } = useQuery({
     queryKey: queryKeys.quiz(id),
     queryFn: async () => {
-      const response = await QuizService.getQuiz({ quizId: id })
-      return response
+      const response = await QuizService.getQuiz({ quizId: id });
+      return response;
     },
     ...quizQueryConfig,
     refetchInterval: questionsPolling, // Use questions-specific polling logic
-  })
+  });
 
   // Only show skeleton when loading and no cached data exists
   if (isLoading && !quiz) {
-    return <QuizQuestionsSkeleton />
+    return <QuizQuestionsSkeleton />;
   }
 
   if (!quiz) {
-    return <QuizQuestionsSkeleton />
+    return <QuizQuestionsSkeleton />;
   }
 
   return (
@@ -90,6 +99,41 @@ function QuizQuestions() {
       {quiz.status === QUIZ_STATUS.FAILED &&
         quiz.failure_reason === FAILURE_REASON.CANVAS_EXPORT_ERROR &&
         renderErrorForFailureReason(quiz.failure_reason)}
+
+      {/* Review Questions Header with Add Question Button */}
+      {(quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
+        quiz.status === QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL ||
+        quiz.status === QUIZ_STATUS.EXPORTING_TO_CANVAS ||
+        quiz.status === QUIZ_STATUS.PUBLISHED ||
+        (quiz.status === QUIZ_STATUS.FAILED &&
+          quiz.failure_reason === FAILURE_REASON.CANVAS_EXPORT_ERROR)) && (
+        <HStack justify="space-between" align="flex-start">
+          <Box>
+            <Text fontSize="2xl" fontWeight="bold" mb={2}>
+              Review Questions
+            </Text>
+            <Text color="gray.600">
+              Review and approve each question individually. You can edit any
+              question before approving it.
+            </Text>
+          </Box>
+
+          {/* Add Question Button - Only show in review states */}
+          {(quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
+            quiz.status === QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL) && (
+            <Button
+              variant="solid"
+              colorPalette="green"
+              size="sm"
+              onClick={() => setIsManualQuestionDialogOpen(true)}
+              flexShrink={0}
+            >
+              <LuPlus />
+              Add Question
+            </Button>
+          )}
+        </HStack>
+      )}
 
       {/* Question Review */}
       {(quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
@@ -121,8 +165,16 @@ function QuizQuestions() {
             </Card.Body>
           </Card.Root>
         )}
+
+      {/* Manual Question Dialog */}
+      <ManualQuestionDialog
+        quizId={id}
+        quiz={{ status: quiz.status || "" }}
+        isOpen={isManualQuestionDialogOpen}
+        onOpenChange={setIsManualQuestionDialogOpen}
+      />
     </VStack>
-  )
+  );
 }
 
 function QuizQuestionsSkeleton() {
@@ -167,5 +219,5 @@ function QuizQuestionsSkeleton() {
         </Card.Body>
       </Card.Root>
     </VStack>
-  )
+  );
 }

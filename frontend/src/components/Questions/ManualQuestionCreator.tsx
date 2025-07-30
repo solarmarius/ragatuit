@@ -1,0 +1,170 @@
+import { memo, useCallback } from "react";
+
+import type {
+  QuestionCreateRequest,
+  QuestionResponse,
+  QuestionType,
+  QuestionUpdateRequest,
+} from "@/client";
+import { QuestionEditor } from "@/components/Questions/editors/QuestionEditor";
+import { QUESTION_TYPES } from "@/lib/constants";
+
+interface ManualQuestionCreatorProps {
+  /** The selected question type */
+  questionType: string;
+  /** Quiz ID for the question */
+  quizId: string;
+  /** Callback when question is saved */
+  onSave: (questionData: QuestionCreateRequest) => void;
+  /** Callback when creation is canceled */
+  onCancel: () => void;
+  /** Whether the save operation is loading */
+  isLoading?: boolean;
+}
+
+/**
+ * Wrapper component that adapts existing question editors for manual question creation.
+ * This component hides tags and difficulty fields, setting appropriate defaults,
+ * and transforms the form data for API submission.
+ *
+ * @example
+ * ```tsx
+ * <ManualQuestionCreator
+ *   questionType={QUESTION_TYPES.MULTIPLE_CHOICE}
+ *   quizId="quiz-123"
+ *   onSave={(data) => createQuestion(data)}
+ *   onCancel={() => setStep('type-selection')}
+ *   isLoading={mutation.isPending}
+ * />
+ * ```
+ */
+export const ManualQuestionCreator = memo(function ManualQuestionCreator({
+  questionType,
+  quizId,
+  onSave,
+  onCancel,
+  isLoading = false,
+}: ManualQuestionCreatorProps) {
+  // Transform the update request to a create request
+  const handleSave = useCallback(
+    (updateData: QuestionUpdateRequest) => {
+      if (!updateData.question_data) {
+        console.error("No question data provided");
+        return;
+      }
+
+      // Transform to create request format with defaults
+      const createData: QuestionCreateRequest = {
+        quiz_id: quizId,
+        question_type: questionType as any, // Type assertion needed for polymorphic types
+        question_data: updateData.question_data,
+        difficulty: "medium", // Default difficulty as specified in requirements
+        tags: [], // Empty tags array as specified in requirements
+      };
+
+      onSave(createData);
+    },
+    [questionType, quizId, onSave]
+  );
+
+  // Create a mock question response object for the editor
+  // This allows us to reuse existing editor components without modification
+  const mockQuestion: QuestionResponse = {
+    id: "temp-id", // Temporary ID for editor compatibility
+    quiz_id: quizId,
+    question_type: questionType as QuestionType,
+    question_data: getDefaultQuestionData(questionType),
+    difficulty: "medium",
+    tags: [],
+    is_approved: false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  return (
+    <QuestionEditor
+      question={mockQuestion}
+      onSave={handleSave}
+      onCancel={onCancel}
+      isLoading={isLoading}
+    />
+  );
+});
+
+/**
+ * Provides default question data based on question type.
+ * This ensures the editor has valid initial state.
+ */
+function getDefaultQuestionData(questionType: string): Record<string, any> {
+  switch (questionType) {
+    case QUESTION_TYPES.MULTIPLE_CHOICE:
+      return {
+        question_text: "",
+        option_a: "",
+        option_b: "",
+        option_c: "",
+        option_d: "",
+        correct_answer: "A",
+        explanation: null,
+      };
+
+    case QUESTION_TYPES.TRUE_FALSE:
+      return {
+        question_text: "",
+        correct_answer: true,
+        explanation: null,
+      };
+
+    case QUESTION_TYPES.FILL_IN_BLANK:
+      return {
+        question_text: "",
+        blanks: [],
+        explanation: null,
+      };
+
+    case QUESTION_TYPES.MATCHING:
+      return {
+        question_text: "",
+        pairs: [
+          { question: "", answer: "" },
+          { question: "", answer: "" },
+          { question: "", answer: "" },
+        ],
+        distractors: [],
+        explanation: null,
+      };
+
+    case QUESTION_TYPES.CATEGORIZATION:
+      return {
+        question_text: "",
+        categories: [
+          {
+            id: "cat_1",
+            name: "",
+            correct_items: ["item_1", "item_2", "item_3"],
+          },
+          {
+            id: "cat_2",
+            name: "",
+            correct_items: ["item_4", "item_5", "item_6"],
+          },
+        ],
+        items: [
+          { id: "item_1", text: "" },
+          { id: "item_2", text: "" },
+          { id: "item_3", text: "" },
+          { id: "item_4", text: "" },
+          { id: "item_5", text: "" },
+          { id: "item_6", text: "" },
+        ],
+        distractors: [],
+        explanation: null,
+      };
+
+    default:
+      return {
+        question_text: "",
+        explanation: null,
+      };
+  }
+}
