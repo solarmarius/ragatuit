@@ -41,7 +41,7 @@ class Category(BaseModel):
     )
     correct_items: list[str] = Field(
         min_length=1,
-        max_length=10,
+        max_length=20,
         description="List of item IDs that belong in this category",
     )
 

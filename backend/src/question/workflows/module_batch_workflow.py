@@ -805,7 +805,7 @@ class ParallelModuleProcessor:
         self,
         quiz_id: UUID,
         modules_data: dict[str, dict[str, Any]],
-    ) -> dict[str, list[Question]]:
+    ) -> tuple[dict[str, list[Question]], dict[str, list[str]]]:
         """
         Process all modules with their batches in parallel.
 
@@ -944,7 +944,11 @@ class ParallelModuleProcessor:
             total_questions=sum(len(q) for q in final_results.values()),
         )
 
-        return final_results
+        # Return results with batch tracking information
+        return final_results, {
+            "successful_batches": successful_batches,
+            "failed_batches": failed_batches,
+        }
 
     async def _process_single_batch(
         self,

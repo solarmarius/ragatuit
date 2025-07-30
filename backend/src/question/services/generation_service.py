@@ -27,7 +27,7 @@ class QuestionGenerationService:
         quiz_id: UUID,
         extracted_content: dict[str, str],
         provider_name: str = "openai",
-    ) -> dict[str, list[Any]]:
+    ) -> tuple[dict[str, list[Any]], dict[str, list[str]]]:
         """
         Generate questions for quiz with batch-level tracking and selective retry support.
 
@@ -158,7 +158,7 @@ class QuestionGenerationService:
                         quiz_id=str(quiz_id),
                         reason="all_batches_already_successful_or_no_content",
                     )
-                    return {}
+                    return {}, {"successful_batches": [], "failed_batches": []}
 
                 # Convert language string to enum
                 language = (
@@ -174,7 +174,10 @@ class QuestionGenerationService:
                     language=language,
                 )
 
-                results = await processor.process_all_modules_with_batches(
+                (
+                    results,
+                    batch_status,
+                ) = await processor.process_all_modules_with_batches(
                     quiz_id, modules_to_process
                 )
 
@@ -189,7 +192,7 @@ class QuestionGenerationService:
                     ),
                 )
 
-                return results
+                return results, batch_status
 
         except Exception as e:
             logger.error(

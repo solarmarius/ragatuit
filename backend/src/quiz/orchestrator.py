@@ -327,12 +327,13 @@ async def _execute_generation_workflow(
 
         # Generate questions using module-based service with batch tracking
         provider_name = "openai"  # Use default provider
-        batch_results = (
-            await generation_service.generate_questions_for_quiz_with_batch_tracking(
-                quiz_id=quiz_id,
-                extracted_content=extracted_content,
-                provider_name=provider_name,
-            )
+        (
+            batch_results,
+            batch_status,
+        ) = await generation_service.generate_questions_for_quiz_with_batch_tracking(
+            quiz_id=quiz_id,
+            extracted_content=extracted_content,
+            provider_name=provider_name,
         )
 
         # Analyze batch-level results using the new batch structure
@@ -356,40 +357,74 @@ async def _execute_generation_workflow(
             if not quiz:
                 raise ValueError(f"Quiz {quiz_id} not found")
 
-            # Get successful and failed batches from metadata (updated by generation service)
+            # Refresh to get latest metadata
+            await session.refresh(quiz)
+
+            # Calculate total expected batches from quiz configuration
+            total_expected_batches = 0
+            for module_id, module_data in quiz.selected_modules.items():
+                # Only count modules that have content
+                if module_id in extracted_content:
+                    total_expected_batches += len(
+                        module_data.get("question_batches", [])
+                    )
+
+            # Get batch status from generation service (current batches processed)
+            current_successful_batches = batch_status.get("successful_batches", [])
+            current_failed_batches = batch_status.get("failed_batches", [])
+
+            # Get previously successful batches from metadata to calculate total
             generation_metadata = quiz.generation_metadata or {}
-            successful_batch_keys = generation_metadata.get("successful_batches", [])
-            failed_batch_keys = generation_metadata.get("failed_batches", [])
+            previous_successful_batches = generation_metadata.get(
+                "successful_batches", []
+            )
+
+            # Total successful = previous + current successful (removing duplicates)
+            all_successful_batches = set(
+                previous_successful_batches + current_successful_batches
+            )
+            total_successful_batches = len(all_successful_batches)
+
+            logger.info(
+                "generation_workflow_batch_status_check",
+                quiz_id=str(quiz_id),
+                total_expected_batches=total_expected_batches,
+                total_successful_batches=total_successful_batches,
+                current_successful_batches=len(current_successful_batches),
+                current_failed_batches=len(current_failed_batches),
+            )
 
         # Determine overall status based on batch results
-        if len(successful_batch_keys) == 0:
+        if total_successful_batches == 0:
             # Complete failure - no batches succeeded
             logger.error(
                 "generation_workflow_complete_failure",
                 quiz_id=str(quiz_id),
                 total_generated=total_generated,
-                failed_batches=len(failed_batch_keys),
+                failed_batches=len(current_failed_batches),
             )
             return "failed", "No questions were generated from any module", None
 
-        elif len(failed_batch_keys) == 0:
-            # Complete success - all batches succeeded
+        elif total_successful_batches >= total_expected_batches:
+            # Complete success - all expected batches succeeded
             logger.info(
                 "generation_workflow_complete_success",
                 quiz_id=str(quiz_id),
                 total_generated=total_generated,
-                successful_batches=len(successful_batch_keys),
+                successful_batches=total_successful_batches,
+                total_expected_batches=total_expected_batches,
             )
             return "completed", None, None
 
         else:
-            # Partial success - some batches succeeded, some failed
+            # Partial success - some batches succeeded, but not all
             logger.info(
                 "generation_workflow_partial_success",
                 quiz_id=str(quiz_id),
                 total_generated=total_generated,
-                successful_batches=len(successful_batch_keys),
-                failed_batches=len(failed_batch_keys),
+                successful_batches=total_successful_batches,
+                failed_batches=len(current_failed_batches),
+                total_expected_batches=total_expected_batches,
             )
             return "partial_success", None, None
 
