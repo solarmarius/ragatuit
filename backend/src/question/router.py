@@ -191,18 +191,18 @@ async def create_question(
 
         # Save question
         async with get_async_session() as session:
+            # Prepare question data with metadata separate from question-specific data
+            question_data_with_metadata = {
+                "difficulty": question_request.difficulty,
+                "tags": question_request.tags,
+                **question_request.question_data,
+            }
+
             result = await service.save_questions(
                 session=session,
                 quiz_id=quiz_id,
                 question_type=question_request.question_type,
-                questions_data=[
-                    {
-                        "quiz_id": quiz_id,
-                        "difficulty": question_request.difficulty,
-                        "tags": question_request.tags,
-                        **question_request.question_data,
-                    }
-                ],
+                questions_data=[question_data_with_metadata],
             )
 
         if result["saved_count"] == 0:
