@@ -109,6 +109,7 @@ export type QuestionType =
   | "fill_in_blank"
   | "matching"
   | "categorization"
+  | "true_false"
 
 /**
  * Schema for updating a question.

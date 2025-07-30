@@ -34,6 +34,7 @@ export const QUESTION_TYPES = {
   FILL_IN_BLANK: "fill_in_blank",
   MATCHING: "matching",
   CATEGORIZATION: "categorization",
+  TRUE_FALSE: "true_false",
 } as const
 
 export const QUESTION_TYPE_LABELS = {
@@ -41,6 +42,7 @@ export const QUESTION_TYPE_LABELS = {
   fill_in_blank: "Fill in the Blank",
   matching: "Matching",
   categorization: "Categorization",
+  true_false: "True/False",
 } as const
 
 export const QUIZ_LANGUAGES = {

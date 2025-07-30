@@ -4,67 +4,67 @@
  * with proper type-safe interfaces for question statistics.
  */
 
-import type { QuestionType } from "@/client"
+import type { QuestionType } from "@/client";
 
 // Question type-specific statistics
 export interface QuestionTypeStats {
-  total: number
-  approved: number
-  approval_rate: number
+  total: number;
+  approved: number;
+  approval_rate: number;
 }
 
 // Comprehensive question statistics
 export interface QuestionStats {
-  total_questions: number
-  approved_questions: number
-  approval_rate: number
-  by_question_type: Record<QuestionType, QuestionTypeStats>
+  total_questions: number;
+  approved_questions: number;
+  approval_rate: number;
+  by_question_type: Record<QuestionType, QuestionTypeStats>;
   by_difficulty?: {
-    easy: QuestionTypeStats
-    medium: QuestionTypeStats
-    hard: QuestionTypeStats
-  }
-  by_tags?: Record<string, QuestionTypeStats>
+    easy: QuestionTypeStats;
+    medium: QuestionTypeStats;
+    hard: QuestionTypeStats;
+  };
+  by_tags?: Record<string, QuestionTypeStats>;
   generation_stats?: {
-    total_generated: number
-    successful_generations: number
-    failed_generations: number
-    average_questions_per_generation: number
-  }
+    total_generated: number;
+    successful_generations: number;
+    failed_generations: number;
+    average_questions_per_generation: number;
+  };
 }
 
 // Lightweight stats for summary views
 export interface QuestionStatsSummary {
-  total_questions: number
-  approved_questions: number
-  approval_rate: number
-  pending_questions: number
+  total_questions: number;
+  approved_questions: number;
+  approval_rate: number;
+  pending_questions: number;
 }
 
 // Stats for individual question types
 export interface MCQStats extends QuestionTypeStats {
-  average_options_count: number
-  most_common_correct_answer: "A" | "B" | "C" | "D"
-  questions_with_explanation: number
+  average_options_count: number;
+  most_common_correct_answer: "A" | "B" | "C" | "D";
+  questions_with_explanation: number;
 }
 
 export interface FillInBlankStats extends QuestionTypeStats {
-  average_blanks_per_question: number
-  questions_with_variations: number
-  case_sensitive_questions: number
+  average_blanks_per_question: number;
+  questions_with_variations: number;
+  case_sensitive_questions: number;
 }
 
 export interface MatchingStats extends QuestionTypeStats {
-  average_pairs_per_question: number
-  questions_with_distractors: number
-  most_complex_question_pairs: number
+  average_pairs_per_question: number;
+  questions_with_distractors: number;
+  most_complex_question_pairs: number;
 }
 
 export interface CategorizationStats extends QuestionTypeStats {
-  average_categories_per_question: number
-  average_items_per_question: number
-  questions_with_distractors: number
-  most_complex_question_categories: number
+  average_categories_per_question: number;
+  average_items_per_question: number;
+  questions_with_distractors: number;
+  most_complex_question_categories: number;
 }
 
 // Type guard for question stats
@@ -76,12 +76,12 @@ export function isQuestionStats(data: any): data is QuestionStats {
     typeof data.approved_questions === "number" &&
     typeof data.approval_rate === "number" &&
     typeof data.by_question_type === "object"
-  )
+  );
 }
 
 // Helper function to calculate approval rate
 export function calculateApprovalRate(total: number, approved: number): number {
-  return total > 0 ? approved / total : 0
+  return total > 0 ? approved / total : 0;
 }
 
 // Helper function to create empty stats
@@ -95,17 +95,18 @@ export function createEmptyStats(): QuestionStats {
       fill_in_blank: { total: 0, approved: 0, approval_rate: 0 },
       matching: { total: 0, approved: 0, approval_rate: 0 },
       categorization: { total: 0, approved: 0, approval_rate: 0 },
+      true_false: { total: 0, approved: 0, approval_rate: 0 },
     },
-  }
+  };
 }
 
 // Helper function to merge stats from legacy format
 export function mergeLegacyStats(
-  legacyStats: Record<string, number>,
+  legacyStats: Record<string, number>
 ): QuestionStats {
-  const total = legacyStats.total || 0
-  const approved = legacyStats.approved || 0
-  const approval_rate = calculateApprovalRate(total, approved)
+  const total = legacyStats.total || 0;
+  const approved = legacyStats.approved || 0;
+  const approval_rate = calculateApprovalRate(total, approved);
 
   return {
     total_questions: total,
@@ -117,12 +118,13 @@ export function mergeLegacyStats(
         approved: legacyStats.multiple_choice_approved || approved,
         approval_rate: calculateApprovalRate(
           legacyStats.multiple_choice_total || total,
-          legacyStats.multiple_choice_approved || approved,
+          legacyStats.multiple_choice_approved || approved
         ),
       },
       fill_in_blank: { total: 0, approved: 0, approval_rate: 0 },
       matching: { total: 0, approved: 0, approval_rate: 0 },
       categorization: { total: 0, approved: 0, approval_rate: 0 },
+      true_false: { total: 0, approved: 0, approval_rate: 0 },
     },
-  }
+  };
 }

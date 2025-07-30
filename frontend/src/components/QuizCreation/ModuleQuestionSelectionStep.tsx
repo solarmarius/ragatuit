@@ -53,6 +53,10 @@ const questionTypeCollection = createListCollection({
       value: "categorization" as QuestionType,
       label: "Categorization",
     },
+    {
+      value: "true_false" as QuestionType,
+      label: "True/False",
+    },
   ],
 })
 

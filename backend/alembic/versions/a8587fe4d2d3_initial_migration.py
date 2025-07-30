@@ -67,7 +67,7 @@ def upgrade():
     op.create_table('question',
     sa.Column('id', sa.Uuid(), nullable=False),
     sa.Column('quiz_id', sa.Uuid(), nullable=False),
-    sa.Column('question_type', sa.Enum('MULTIPLE_CHOICE', 'FILL_IN_BLANK', 'MATCHING', 'CATEGORIZATION', name='questiontype'), nullable=False),
+    sa.Column('question_type', sa.Enum('MULTIPLE_CHOICE', 'FILL_IN_BLANK', 'MATCHING', 'CATEGORIZATION', "TRUE_FALSE", name='questiontype'), nullable=False),
     sa.Column('question_data', postgresql.JSONB(astext_type=sa.Text()), nullable=False),
     sa.Column('difficulty', sa.Enum('EASY', 'MEDIUM', 'HARD', name='questiondifficulty'), nullable=True),
     sa.Column('tags', postgresql.JSONB(astext_type=sa.Text()), nullable=True),
