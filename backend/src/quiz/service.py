@@ -409,7 +409,6 @@ async def reserve_quiz_job(
 
     elif job_type == "generation":
         if quiz.status in [
-            QuizStatus.GENERATING_QUESTIONS,
             QuizStatus.READY_FOR_REVIEW,
             QuizStatus.EXPORTING_TO_CANVAS,
             QuizStatus.PUBLISHED,
@@ -423,10 +422,15 @@ async def reserve_quiz_job(
             return None
 
         # Check if content extraction completed first
-        if quiz.status not in [
-            QuizStatus.EXTRACTING_CONTENT,
-            QuizStatus.FAILED,
-        ]:  # Must have completed extraction
+        if (
+            quiz.status
+            not in [
+                QuizStatus.EXTRACTING_CONTENT,
+                QuizStatus.FAILED,
+                QuizStatus.READY_FOR_REVIEW_PARTIAL,  # Allow retry from partial success
+                QuizStatus.GENERATING_QUESTIONS,  # Allow retry when already in generating state
+            ]
+        ):  # Must have completed extraction
             logger.warning(
                 "generation_requires_extracted_content",
                 quiz_id=str(quiz_id),
@@ -434,18 +438,24 @@ async def reserve_quiz_job(
             )
             return None
 
-        if not validate_status_transition(quiz.status, QuizStatus.GENERATING_QUESTIONS):
-            logger.warning(
-                "invalid_status_transition",
-                quiz_id=str(quiz_id),
-                from_status=quiz.status,
-                to_status=QuizStatus.GENERATING_QUESTIONS,
-            )
-            return None
+        # Only update status fields if not already generating questions
+        # This avoids unnecessary status transitions and preserves existing timestamps
+        if quiz.status != QuizStatus.GENERATING_QUESTIONS:
+            if not validate_status_transition(
+                quiz.status, QuizStatus.GENERATING_QUESTIONS
+            ):
+                logger.warning(
+                    "invalid_status_transition",
+                    quiz_id=str(quiz_id),
+                    from_status=quiz.status,
+                    to_status=QuizStatus.GENERATING_QUESTIONS,
+                )
+                return None
 
-        quiz.status = QuizStatus.GENERATING_QUESTIONS
-        quiz.failure_reason = None
-        quiz.last_status_update = datetime.now(timezone.utc)
+            quiz.status = QuizStatus.GENERATING_QUESTIONS
+            quiz.failure_reason = None
+            quiz.last_status_update = datetime.now(timezone.utc)
+
         settings = {}
 
     elif job_type == "export":

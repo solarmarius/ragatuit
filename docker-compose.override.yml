@@ -84,6 +84,9 @@ services:
       SMTP_PORT: "1025"
       SMTP_TLS: "false"
       EMAILS_FROM_EMAIL: "noreply@example.com"
+    # Disable health check in development
+    healthcheck:
+      disable: true
 
   frontend:
     restart: "no"
