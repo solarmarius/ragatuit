@@ -123,17 +123,27 @@ async def test_generate_questions_for_quiz_with_batch_tracking_success(
         # Mock parallel processor
         mock_processor = MagicMock()
         mock_processor.process_all_modules_with_batches = AsyncMock(
-            return_value={
-                "module_1": [mock_questions[0]],
-                "module_2": [mock_questions[1]],
-            }
+            return_value=(
+                {
+                    "module_1": [mock_questions[0]],
+                    "module_2": [mock_questions[1]],
+                },
+                {
+                    "successful_batches": [
+                        "module_1_multiple_choice_5",
+                        "module_2_multiple_choice_10",
+                    ],
+                    "failed_batches": [],
+                },
+            )
         )
         mock_processor_class.return_value = mock_processor
 
-        result = (
-            await generation_service.generate_questions_for_quiz_with_batch_tracking(
-                quiz_id, extracted_content
-            )
+        (
+            result,
+            batch_status,
+        ) = await generation_service.generate_questions_for_quiz_with_batch_tracking(
+            quiz_id, extracted_content
         )
 
     assert len(result) == 2
@@ -141,6 +151,13 @@ async def test_generate_questions_for_quiz_with_batch_tracking_success(
     assert "module_2" in result
     assert len(result["module_1"]) == 1
     assert len(result["module_2"]) == 1
+
+    # Check batch status
+    assert batch_status["successful_batches"] == [
+        "module_1_multiple_choice_5",
+        "module_2_multiple_choice_10",
+    ]
+    assert batch_status["failed_batches"] == []
 
     # Verify provider was called correctly
     from src.question.providers import LLMProvider
@@ -194,12 +211,14 @@ async def test_generate_questions_for_quiz_with_batch_tracking_no_content(
         mock_session_ctx.return_value.__aenter__.return_value = mock_session
 
         # With batch tracking, empty content should return empty results rather than raise
-        result = (
-            await generation_service.generate_questions_for_quiz_with_batch_tracking(
-                quiz_id, extracted_content
-            )
+        (
+            result,
+            batch_status,
+        ) = await generation_service.generate_questions_for_quiz_with_batch_tracking(
+            quiz_id, extracted_content
         )
         assert result == {}
+        assert batch_status == {"successful_batches": [], "failed_batches": []}
 
 
 @pytest.mark.asyncio
@@ -228,11 +247,20 @@ async def test_generate_questions_for_quiz_with_batch_tracking_missing_module_co
 
         mock_processor = MagicMock()
         mock_processor.process_all_modules_with_batches = AsyncMock(
-            return_value={"module_1": []}
+            return_value=(
+                {"module_1": []},
+                {
+                    "successful_batches": [],
+                    "failed_batches": ["module_1_multiple_choice_5"],
+                },
+            )
         )
         mock_processor_class.return_value = mock_processor
 
-        await generation_service.generate_questions_for_quiz_with_batch_tracking(
+        (
+            result,
+            batch_status,
+        ) = await generation_service.generate_questions_for_quiz_with_batch_tracking(
             quiz_id, partial_content
         )
 
@@ -267,10 +295,15 @@ async def test_generate_questions_for_quiz_with_batch_tracking_norwegian_languag
         generation_service.provider_registry.get_provider.return_value = mock_provider
 
         mock_processor = MagicMock()
-        mock_processor.process_all_modules_with_batches = AsyncMock(return_value={})
+        mock_processor.process_all_modules_with_batches = AsyncMock(
+            return_value=({}, {"successful_batches": [], "failed_batches": []})
+        )
         mock_processor_class.return_value = mock_processor
 
-        await generation_service.generate_questions_for_quiz_with_batch_tracking(
+        (
+            result,
+            batch_status,
+        ) = await generation_service.generate_questions_for_quiz_with_batch_tracking(
             quiz_id, extracted_content
         )
 
@@ -309,14 +342,26 @@ async def test_generate_questions_for_quiz_with_batch_tracking_preserves_questio
 
         mock_processor = MagicMock()
         mock_processor.process_all_modules_with_batches = AsyncMock(
-            return_value={
-                "module_1": [mock_questions[0]],
-                "module_2": [mock_questions[1]],
-            }
+            return_value=(
+                {
+                    "module_1": [mock_questions[0]],
+                    "module_2": [mock_questions[1]],
+                },
+                {
+                    "successful_batches": [
+                        "module_1_multiple_choice_5",
+                        "module_2_multiple_choice_10",
+                    ],
+                    "failed_batches": [],
+                },
+            )
         )
         mock_processor_class.return_value = mock_processor
 
-        await generation_service.generate_questions_for_quiz_with_batch_tracking(
+        (
+            result,
+            batch_status,
+        ) = await generation_service.generate_questions_for_quiz_with_batch_tracking(
             quiz_id, extracted_content
         )
 
@@ -375,10 +420,15 @@ async def test_generate_questions_for_quiz_with_batch_tracking_custom_provider(
         generation_service.provider_registry.get_provider.return_value = mock_provider
 
         mock_processor = MagicMock()
-        mock_processor.process_all_modules_with_batches = AsyncMock(return_value={})
+        mock_processor.process_all_modules_with_batches = AsyncMock(
+            return_value=({}, {"successful_batches": [], "failed_batches": []})
+        )
         mock_processor_class.return_value = mock_processor
 
-        await generation_service.generate_questions_for_quiz_with_batch_tracking(
+        (
+            result,
+            batch_status,
+        ) = await generation_service.generate_questions_for_quiz_with_batch_tracking(
             quiz_id, extracted_content, provider_name="anthropic"
         )
 
@@ -423,12 +473,18 @@ async def test_generate_uses_quiz_question_type(generation_service, mock_quiz):
         ) as MockProcessor:
             mock_processor_instance = MagicMock()
             mock_processor_instance.process_all_modules_with_batches = AsyncMock(
-                return_value={"module_1": [], "module_2": []}
+                return_value=(
+                    {"module_1": [], "module_2": []},
+                    {"successful_batches": [], "failed_batches": []},
+                )
             )
             MockProcessor.return_value = mock_processor_instance
 
             # Call the method
-            await generation_service.generate_questions_for_quiz_with_batch_tracking(
+            (
+                result,
+                batch_status,
+            ) = await generation_service.generate_questions_for_quiz_with_batch_tracking(
                 quiz_id=mock_quiz.id, extracted_content=extracted_content
             )
 

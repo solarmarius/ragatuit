@@ -113,10 +113,10 @@ def test_category_too_many_correct_items_validation():
 
     from src.question.types.categorization import Category
 
-    many_items = [f"item{i}" for i in range(11)]
+    many_items = [f"item{i}" for i in range(21)]
     with pytest.raises(ValidationError) as exc_info:
         Category(name="Mammals", correct_items=many_items)
-    assert "List should have at most 10 items" in str(exc_info.value)
+    assert "List should have at most 20 items" in str(exc_info.value)
 
 
 def test_categorization_data_creation():

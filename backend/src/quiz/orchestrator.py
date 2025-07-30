@@ -282,14 +282,14 @@ async def _execute_generation_workflow(
     _llm_temperature: float,
     language: QuizLanguage,
     generation_service: Any = None,
-) -> tuple[str, str | None, Exception | None]:
+) -> tuple[str, str | None, Exception | None, dict[str, list[str]] | None]:
     """
     Execute the module-based question generation workflow with batch-level tracking.
 
     Now processes multiple question types per module based on quiz configuration.
 
     Returns:
-        Tuple of (final_status, error_message, failure_exception)
+        Tuple of (final_status, error_message, failure_exception, batch_status)
     """
     try:
         # Use injected generation service or create default
@@ -314,7 +314,12 @@ async def _execute_generation_workflow(
                 "generation_workflow_no_content_found",
                 quiz_id=str(quiz_id),
             )
-            return "failed", "No valid content found for question generation", None
+            return (
+                "failed",
+                "No valid content found for question generation",
+                None,
+                None,
+            )
 
         logger.info(
             "generation_workflow_content_prepared",
@@ -403,7 +408,7 @@ async def _execute_generation_workflow(
                 total_generated=total_generated,
                 failed_batches=len(current_failed_batches),
             )
-            return "failed", "No questions were generated from any module", None
+            return "failed", "No questions were generated from any module", None, None
 
         elif total_successful_batches >= total_expected_batches:
             # Complete success - all expected batches succeeded
@@ -414,7 +419,7 @@ async def _execute_generation_workflow(
                 successful_batches=total_successful_batches,
                 total_expected_batches=total_expected_batches,
             )
-            return "completed", None, None
+            return "completed", None, None, batch_status
 
         else:
             # Partial success - some batches succeeded, but not all
@@ -426,7 +431,7 @@ async def _execute_generation_workflow(
                 failed_batches=len(current_failed_batches),
                 total_expected_batches=total_expected_batches,
             )
-            return "partial_success", None, None
+            return "partial_success", None, None, batch_status
 
     except Exception as e:
         logger.error(
@@ -436,7 +441,7 @@ async def _execute_generation_workflow(
             error_type=type(e).__name__,
             exc_info=True,
         )
-        return "failed", str(e), e
+        return "failed", str(e), e, None
 
 
 async def _execute_export_workflow(
@@ -732,7 +737,12 @@ async def orchestrate_quiz_question_generation(
         return
 
     # === Question Generation (outside transaction) ===
-    final_status, error_message, failure_exception = await _execute_generation_workflow(
+    (
+        final_status,
+        error_message,
+        failure_exception,
+        batch_status,
+    ) = await _execute_generation_workflow(
         quiz_id,
         target_question_count,
         llm_model,
@@ -741,6 +751,47 @@ async def orchestrate_quiz_question_generation(
         generation_service,
     )
 
+    # === Helper: Update Generation Metadata ===
+    async def _update_generation_metadata_in_session(
+        session: Any,
+        quiz_id: UUID,
+        batch_status: dict[str, list[str]],
+    ) -> None:
+        """Update quiz generation metadata with batch results within existing session."""
+        from .service import get_quiz_for_update
+
+        # Use get_quiz_for_update to ensure proper tracking (same as update_quiz_status)
+        quiz = await get_quiz_for_update(session, quiz_id)
+        if not quiz:
+            return
+
+        successful_batches = batch_status.get("successful_batches", [])
+        failed_batches = batch_status.get("failed_batches", [])
+
+        # Initialize metadata if needed
+        if not quiz.generation_metadata:
+            quiz.generation_metadata = {}
+
+        # Update successful batches
+        existing_successful = set(
+            quiz.generation_metadata.get("successful_batches", [])
+        )
+        existing_successful.update(successful_batches)
+
+        # Update failed batches (remove any that succeeded)
+        existing_failed = set(quiz.generation_metadata.get("failed_batches", []))
+        existing_failed.update(failed_batches)
+        existing_failed -= existing_successful
+
+        # Create completely new metadata object
+        new_metadata = {
+            "successful_batches": list(existing_successful),
+            "failed_batches": list(existing_failed),
+        }
+
+        # Assign the new metadata object
+        quiz.generation_metadata = new_metadata
+
     # === Transaction 2: Save the Result ===
     async def _save_generation_result(
         session: Any,
@@ -748,8 +799,9 @@ async def orchestrate_quiz_question_generation(
         status: str,
         error_message: str | None = None,
         exception: Exception | None = None,
+        batch_status: dict[str, list[str]] | None = None,
     ) -> None:
-        """Save the generation result to the quiz with batch-level status support."""
+        """Save the generation result to the quiz with batch-level status support and metadata update."""
         from .service import update_quiz_status
 
         if status == "completed":
@@ -769,12 +821,17 @@ async def orchestrate_quiz_question_generation(
                 session, quiz_id, QuizStatus.FAILED, failure_reason
             )
 
+        # Update generation metadata if batch_status is provided
+        if batch_status:
+            await _update_generation_metadata_in_session(session, quiz_id, batch_status)
+
     await execute_in_transaction(
         _save_generation_result,
         quiz_id,
         final_status,
         error_message,
         failure_exception,
+        batch_status,
         isolation_level="REPEATABLE READ",
         retries=3,
     )

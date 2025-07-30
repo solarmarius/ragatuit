@@ -931,10 +931,8 @@ class ParallelModuleProcessor:
                         reason="Batch did not meet target question count",
                     )
 
-        # Update generation metadata
-        await self._update_generation_metadata(
-            quiz_id, successful_batches, failed_batches
-        )
+        # Note: Metadata update moved to orchestrator's transaction context
+        # to ensure atomicity with quiz status updates
 
         logger.info(
             "parallel_batch_processing_completed",
@@ -1009,51 +1007,3 @@ class ParallelModuleProcessor:
                 exc_info=True,
             )
             raise
-
-    async def _update_generation_metadata(
-        self,
-        quiz_id: UUID,
-        successful_batches: list[str],
-        failed_batches: list[str],
-    ) -> None:
-        """Update quiz generation metadata with batch results."""
-        try:
-            from src.quiz.models import Quiz
-
-            async with get_async_session() as session:
-                quiz = await session.get(Quiz, quiz_id)
-                if quiz:
-                    # Initialize metadata if needed
-                    if not quiz.generation_metadata:
-                        quiz.generation_metadata = {}
-
-                    # Update successful batches
-                    existing_successful = set(
-                        quiz.generation_metadata.get("successful_batches", [])
-                    )
-                    existing_successful.update(successful_batches)
-                    quiz.generation_metadata["successful_batches"] = list(
-                        existing_successful
-                    )
-
-                    # Update failed batches (remove any that succeeded)
-                    existing_failed = set(
-                        quiz.generation_metadata.get("failed_batches", [])
-                    )
-                    existing_failed.update(failed_batches)
-                    existing_failed -= existing_successful
-                    quiz.generation_metadata["failed_batches"] = list(existing_failed)
-
-                    # Force update of JSONB column
-                    quiz.generation_metadata = {**quiz.generation_metadata}
-
-                    session.add(quiz)
-                    await session.commit()
-
-        except Exception as e:
-            logger.error(
-                "metadata_update_failed",
-                quiz_id=str(quiz_id),
-                error=str(e),
-                exc_info=True,
-            )
