@@ -2378,6 +2378,55 @@ def validate_categorization_question(entry: dict):
         )
 
 
+def validate_true_false_question(entry: dict):
+    """Validate true/false question specific fields."""
+    interaction_data = entry["interaction_data"]
+    scoring_data = entry["scoring_data"]
+
+    # Validate interaction_data structure
+    required_interaction_fields = ["true_choice", "false_choice"]
+    for field in required_interaction_fields:
+        if field not in interaction_data:
+            raise HTTPException(
+                status_code=400,
+                detail=f"item[entry][interaction_data][{field}] is required",
+            )
+
+    # Validate choice values
+    if interaction_data["true_choice"] != "True":
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][interaction_data][true_choice] must be 'True'",
+        )
+
+    if interaction_data["false_choice"] != "False":
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][interaction_data][false_choice] must be 'False'",
+        )
+
+    # Validate scoring_data structure
+    if "value" not in scoring_data:
+        raise HTTPException(
+            status_code=400, detail="item[entry][scoring_data][value] is required"
+        )
+
+    # Validate scoring value is boolean
+    scoring_value = scoring_data["value"]
+    if not isinstance(scoring_value, bool):
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][scoring_data][value] must be a boolean (true or false)",
+        )
+
+    # Validate scoring algorithm
+    if entry["scoring_algorithm"] != "Equivalence":
+        raise HTTPException(
+            status_code=400,
+            detail="item[entry][scoring_algorithm] must be 'Equivalence' for true/false questions",
+        )
+
+
 @app.post("/api/quiz/v1/courses/{course_id}/quizzes/{quiz_id}/items")
 async def create_quiz_item(
     course_id: int,
@@ -2409,10 +2458,12 @@ async def create_quiz_item(
         validate_matching_question(entry)
     elif interaction_type == "categorization":
         validate_categorization_question(entry)
+    elif interaction_type == "true-false":
+        validate_true_false_question(entry)
     else:
         raise HTTPException(
             status_code=400,
-            detail=f"Unsupported interaction_type_slug: {interaction_type}. Supported types: 'choice', 'rich-fill-blank', 'matching', 'categorization'",
+            detail=f"Unsupported interaction_type_slug: {interaction_type}. Supported types: 'choice', 'rich-fill-blank', 'matching', 'categorization', 'true-false'",
         )
 
     # Create the quiz item with complete Canvas structure

@@ -63,12 +63,20 @@ export interface CategorizationData {
   explanation?: string | null
 }
 
+// True/False Question Data
+export interface TrueFalseData {
+  question_text: string
+  correct_answer: boolean
+  explanation?: string | null
+}
+
 // Discriminated union for all question data types
 export type QuestionData =
   | ({ type: "multiple_choice" } & MCQData)
   | ({ type: "fill_in_blank" } & FillInBlankData)
   | ({ type: "matching" } & MatchingData)
   | ({ type: "categorization" } & CategorizationData)
+  | ({ type: "true_false" } & TrueFalseData)
 
 // Strongly typed question response
 export interface TypedQuestionResponse<T extends QuestionType = QuestionType> {
@@ -83,7 +91,9 @@ export interface TypedQuestionResponse<T extends QuestionType = QuestionType> {
         ? MatchingData
         : T extends "categorization"
           ? CategorizationData
-          : never
+          : T extends "true_false"
+            ? TrueFalseData
+            : never
   difficulty?: QuestionDifficulty | null
   tags?: string[] | null
   is_approved: boolean
@@ -99,6 +109,7 @@ export type FillInBlankQuestionResponse = TypedQuestionResponse<"fill_in_blank">
 export type MatchingQuestionResponse = TypedQuestionResponse<"matching">
 export type CategorizationQuestionResponse =
   TypedQuestionResponse<"categorization">
+export type TrueFalseQuestionResponse = TypedQuestionResponse<"true_false">
 
 // Type guards for question data
 export function isMCQData(data: unknown): data is MCQData {
@@ -279,6 +290,32 @@ export function isCategorizationData(
   return true
 }
 
+export function isTrueFalseData(data: unknown): data is TrueFalseData {
+  if (typeof data !== "object" || data === null) {
+    return false
+  }
+
+  const obj = data as Record<string, unknown>
+
+  // Validate required fields
+  if (typeof obj.question_text !== "string") {
+    return false
+  }
+
+  if (typeof obj.correct_answer !== "boolean") {
+    return false
+  }
+
+  // Validate optional explanation
+  if (obj.explanation !== undefined && obj.explanation !== null) {
+    if (typeof obj.explanation !== "string") {
+      return false
+    }
+  }
+
+  return true
+}
+
 // Type guard for question responses
 export function isQuestionType<T extends QuestionType>(
   question: QuestionResponse,
@@ -317,6 +354,11 @@ export function extractQuestionData<T extends QuestionType>(
     case "categorization":
       if (!isCategorizationData(data)) {
         throw new Error("Invalid Categorization question data structure")
+      }
+      return data as unknown as TypedQuestionResponse<T>["question_data"]
+    case "true_false":
+      if (!isTrueFalseData(data)) {
+        throw new Error("Invalid True/False question data structure")
       }
       return data as unknown as TypedQuestionResponse<T>["question_data"]
     default: {

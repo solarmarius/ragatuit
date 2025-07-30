@@ -388,6 +388,17 @@ export type CategorizationFormDataInferred = z.infer<
   typeof categorizationSchema
 >
 
+// True/False Question Schema
+export const trueFalseSchema = z.object({
+  questionText: nonEmptyString,
+  correctAnswer: z.boolean({
+    required_error: "Please select the correct answer",
+  }),
+  explanation: optionalString,
+})
+
+export type TrueFalseFormData = z.infer<typeof trueFalseSchema>
+
 // Helper function to get schema by question type
 export function getSchemaByType(questionType: QuestionType): z.ZodSchema<any> {
   switch (questionType) {
@@ -399,6 +410,8 @@ export function getSchemaByType(questionType: QuestionType): z.ZodSchema<any> {
       return matchingSchema
     case QUESTION_TYPES.CATEGORIZATION:
       return categorizationSchema
+    case QUESTION_TYPES.TRUE_FALSE:
+      return trueFalseSchema
     default:
       throw new Error(`No schema defined for question type: ${questionType}`)
   }
@@ -414,7 +427,9 @@ export type FormDataByType<T extends QuestionType> =
         ? MatchingFormData
         : T extends typeof QUESTION_TYPES.CATEGORIZATION
           ? CategorizationFormData
-          : never
+          : T extends typeof QUESTION_TYPES.TRUE_FALSE
+            ? TrueFalseFormData
+            : never
 
 // Common validation messages
 export const validationMessages = {
