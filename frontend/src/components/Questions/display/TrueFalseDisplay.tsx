@@ -8,13 +8,11 @@ import { ErrorDisplay } from "./ErrorDisplay";
 interface TrueFalseDisplayProps {
   question: QuestionResponse;
   showCorrectAnswer: boolean;
-  showExplanation: boolean;
 }
 
 export const TrueFalseDisplay = memo(function TrueFalseDisplay({
   question,
   showCorrectAnswer,
-  showExplanation,
 }: TrueFalseDisplayProps) {
   try {
     const trueFalseData = extractQuestionData(question, "true_false");

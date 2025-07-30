@@ -18,12 +18,10 @@ interface QuestionDisplayProps {
 export const QuestionDisplay = memo(function QuestionDisplay({
   question,
   showCorrectAnswer = false,
-  showExplanation = false,
 }: QuestionDisplayProps) {
   const commonProps = {
     question,
     showCorrectAnswer,
-    showExplanation,
   };
 
   switch (question.question_type) {

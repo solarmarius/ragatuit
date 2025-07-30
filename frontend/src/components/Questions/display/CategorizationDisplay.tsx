@@ -1,14 +1,13 @@
-import type { QuestionResponse } from "@/client"
-import { extractQuestionData } from "@/types/questionTypes"
-import { Badge, Box, Card, SimpleGrid, Text, VStack } from "@chakra-ui/react"
-import { memo } from "react"
-import { ExplanationBox } from "../shared/ExplanationBox"
-import { ErrorDisplay } from "./ErrorDisplay"
+import type { QuestionResponse } from "@/client";
+import { extractQuestionData } from "@/types/questionTypes";
+import { Badge, Box, Card, SimpleGrid, Text, VStack } from "@chakra-ui/react";
+import { memo } from "react";
+import { ExplanationBox } from "../shared/ExplanationBox";
+import { ErrorDisplay } from "./ErrorDisplay";
 
 interface CategorizationDisplayProps {
-  question: QuestionResponse
-  showCorrectAnswer?: boolean
-  showExplanation?: boolean
+  question: QuestionResponse;
+  showCorrectAnswer?: boolean;
 }
 
 /**
@@ -18,11 +17,10 @@ interface CategorizationDisplayProps {
 function CategorizationDisplayComponent({
   question,
   showCorrectAnswer: _showCorrectAnswer = false, // Always show answers in teacher-facing view
-  showExplanation = false,
 }: CategorizationDisplayProps) {
   // Note: showCorrectAnswer is kept for API consistency but we always show answers for teachers
   try {
-    const categorizationData = extractQuestionData(question, "categorization")
+    const categorizationData = extractQuestionData(question, "categorization");
 
     return (
       <VStack gap={6} align="stretch">
@@ -47,8 +45,8 @@ function CategorizationDisplayComponent({
                   <VStack gap={2} align="stretch">
                     {category.correct_items.map((itemId) => {
                       const item = categorizationData.items.find(
-                        (i) => i.id === itemId,
-                      )
+                        (i) => i.id === itemId
+                      );
                       return item ? (
                         <Box
                           key={itemId}
@@ -61,7 +59,7 @@ function CategorizationDisplayComponent({
                         >
                           <Text fontSize="sm">{item.text}</Text>
                         </Box>
-                      ) : null
+                      ) : null;
                     })}
                   </VStack>
                 </Card.Body>
@@ -102,19 +100,19 @@ function CategorizationDisplayComponent({
           )}
 
         {/* Explanation */}
-        {showExplanation && categorizationData.explanation && (
+        {categorizationData.explanation && (
           <ExplanationBox explanation={categorizationData.explanation} />
         )}
       </VStack>
-    )
+    );
   } catch (error) {
-    console.error("Error rendering categorization question:", error)
-    return <ErrorDisplay error="Error loading categorization question data" />
+    console.error("Error rendering categorization question:", error);
+    return <ErrorDisplay error="Error loading categorization question data" />;
   }
 }
 
 /**
  * Memoized categorization display component for performance optimization.
  */
-export const CategorizationDisplay = memo(CategorizationDisplayComponent)
-CategorizationDisplay.displayName = "CategorizationDisplay"
+export const CategorizationDisplay = memo(CategorizationDisplayComponent);
+CategorizationDisplay.displayName = "CategorizationDisplay";
