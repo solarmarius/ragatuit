@@ -134,17 +134,29 @@ function getDefaultQuestionData(questionType: string): Record<string, any> {
         explanation: null,
       }
 
-    case QUESTION_TYPES.CATEGORIZATION:
+    case QUESTION_TYPES.CATEGORIZATION: {
+      // Create item IDs first so we can reference them in categories
+      const item1Id = crypto.randomUUID()
+      const item2Id = crypto.randomUUID()
+      const item3Id = crypto.randomUUID()
+      const item4Id = crypto.randomUUID()
+
       return {
         question_text: "",
         categories: [
-          { id: crypto.randomUUID(), name: "", correct_items: [] },
-          { id: crypto.randomUUID(), name: "", correct_items: [] },
+          { id: crypto.randomUUID(), name: "", correct_items: [item1Id, item2Id] },
+          { id: crypto.randomUUID(), name: "", correct_items: [item3Id, item4Id] },
         ],
-        items: [],
+        items: [
+          { id: item1Id, text: "" },
+          { id: item2Id, text: "" },
+          { id: item3Id, text: "" },
+          { id: item4Id, text: "" },
+        ],
         distractors: [],
         explanation: null,
       }
+    }
 
     default:
       return {
