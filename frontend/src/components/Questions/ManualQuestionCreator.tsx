@@ -1,6 +1,11 @@
 import { memo, useCallback } from "react"
 
-import type { QuestionCreateRequest, QuestionUpdateRequest, QuestionResponse, QuestionType } from "@/client"
+import type {
+  QuestionCreateRequest,
+  QuestionResponse,
+  QuestionType,
+  QuestionUpdateRequest,
+} from "@/client"
 import { QuestionEditor } from "@/components/Questions/editors/QuestionEditor"
 import { QUESTION_TYPES } from "@/lib/constants"
 
@@ -59,7 +64,7 @@ export const ManualQuestionCreator = memo(function ManualQuestionCreator({
 
       onSave(createData)
     },
-    [questionType, quizId, onSave]
+    [questionType, quizId, onSave],
   )
 
   // Create a mock question response object for the editor

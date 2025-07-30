@@ -88,7 +88,7 @@ export const ManualQuestionDialog = memo(function ManualQuestionDialog({
         // Auto-close dialog on successful creation as specified in requirements
         handleOpenChange(false)
       },
-    }
+    },
   )
 
   // Handle question type selection and navigation to next step
@@ -130,7 +130,9 @@ export const ManualQuestionDialog = memo(function ManualQuestionDialog({
           <DialogTitle>
             {currentStep === "type-selection"
               ? "Add Question"
-              : `Create ${selectedQuestionType.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())} Question`}
+              : `Create ${selectedQuestionType
+                  .replace(/_/g, " ")
+                  .replace(/\b\w/g, (l) => l.toUpperCase())} Question`}
           </DialogTitle>
         </DialogHeader>
 

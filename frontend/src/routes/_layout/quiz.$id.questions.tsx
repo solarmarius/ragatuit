@@ -44,7 +44,8 @@ function QuizQuestions() {
   const { id } = Route.useParams()
 
   // Add dialog state management
-  const [isManualQuestionDialogOpen, setIsManualQuestionDialogOpen] = useState(false)
+  const [isManualQuestionDialogOpen, setIsManualQuestionDialogOpen] =
+    useState(false)
 
   // Custom polling for questions route - stops polling during review state
   const questionsPolling = useConditionalPolling<Quiz>((data) => {
@@ -53,11 +54,13 @@ function QuizQuestions() {
     // Stop polling for stable states where user is actively working or quiz is complete
     const stableReviewStates = [
       QUIZ_STATUS.READY_FOR_REVIEW, // User is actively reviewing questions
-      QUIZ_STATUS.PUBLISHED,        // Quiz completed and exported
-      QUIZ_STATUS.FAILED           // Terminal error state
+      QUIZ_STATUS.PUBLISHED, // Quiz completed and exported
+      QUIZ_STATUS.FAILED, // Terminal error state
     ] as const
 
-    return !stableReviewStates.includes(data.status as typeof stableReviewStates[number])
+    return !stableReviewStates.includes(
+      data.status as (typeof stableReviewStates)[number],
+    )
   }, 5000) // Continue polling every 5 seconds for active processing states
 
   const { data: quiz, isLoading } = useQuery({

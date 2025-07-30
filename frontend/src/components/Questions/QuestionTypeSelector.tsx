@@ -104,8 +104,8 @@ export const QuestionTypeSelector = memo(function QuestionTypeSelector({
 
       <Box>
         <Text fontSize="sm" color="gray.500" textAlign="center">
-          All question types support real-time validation and will be added to your quiz
-          in pending status for review.
+          All question types support real-time validation and will be added to
+          your quiz in pending status for review.
         </Text>
       </Box>
     </VStack>

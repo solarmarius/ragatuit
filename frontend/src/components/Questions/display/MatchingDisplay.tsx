@@ -1,13 +1,13 @@
-import type { QuestionResponse } from "@/client";
-import { extractQuestionData } from "@/types/questionTypes";
-import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react";
-import { memo } from "react";
-import { ExplanationBox } from "../shared/ExplanationBox";
-import { ErrorDisplay } from "./ErrorDisplay";
+import type { QuestionResponse } from "@/client"
+import { extractQuestionData } from "@/types/questionTypes"
+import { Badge, Box, HStack, Text, VStack } from "@chakra-ui/react"
+import { memo } from "react"
+import { ExplanationBox } from "../shared/ExplanationBox"
+import { ErrorDisplay } from "./ErrorDisplay"
 
 interface MatchingDisplayProps {
-  question: QuestionResponse;
-  showCorrectAnswer: boolean;
+  question: QuestionResponse
+  showCorrectAnswer: boolean
 }
 
 export const MatchingDisplay = memo(function MatchingDisplay({
@@ -15,7 +15,7 @@ export const MatchingDisplay = memo(function MatchingDisplay({
   showCorrectAnswer,
 }: MatchingDisplayProps) {
   try {
-    const matchingData = extractQuestionData(question, "matching");
+    const matchingData = extractQuestionData(question, "matching")
 
     return (
       <VStack gap={4} align="stretch">
@@ -94,8 +94,8 @@ export const MatchingDisplay = memo(function MatchingDisplay({
           <ExplanationBox explanation={matchingData.explanation} />
         )}
       </VStack>
-    );
+    )
   } catch (error) {
-    return <ErrorDisplay error="Error loading matching question data" />;
+    return <ErrorDisplay error="Error loading matching question data" />
   }
-});
+})
