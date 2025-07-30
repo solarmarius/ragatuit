@@ -1,13 +1,13 @@
-import { Box, Card, SimpleGrid, Text, VStack } from "@chakra-ui/react"
-import { memo } from "react"
+import { Box, Card, SimpleGrid, Text, VStack } from "@chakra-ui/react";
+import { memo } from "react";
 
-import { QUESTION_TYPES, QUESTION_TYPE_LABELS } from "@/lib/constants"
+import { QUESTION_TYPES, QUESTION_TYPE_LABELS } from "@/lib/constants";
 
 interface QuestionTypeSelectorProps {
   /** Callback when a question type is selected */
-  onSelectType: (questionType: string) => void
+  onSelectType: (questionType: string) => void;
   /** Whether the selection process is loading */
-  isLoading?: boolean
+  isLoading?: boolean;
 }
 
 /**
@@ -58,7 +58,7 @@ export const QuestionTypeSelector = memo(function QuestionTypeSelector({
       description: "Group items into appropriate categories",
       icon: "📊",
     },
-  ]
+  ];
 
   return (
     <VStack gap={6} align="stretch">
@@ -101,13 +101,6 @@ export const QuestionTypeSelector = memo(function QuestionTypeSelector({
           </Card.Root>
         ))}
       </SimpleGrid>
-
-      <Box>
-        <Text fontSize="sm" color="gray.500" textAlign="center">
-          All question types support real-time validation and will be added to
-          your quiz in pending status for review.
-        </Text>
-      </Box>
     </VStack>
-  )
-})
+  );
+});

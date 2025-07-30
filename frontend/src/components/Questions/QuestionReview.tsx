@@ -1,4 +1,4 @@
-import { Box, Button, Card, HStack, Text, VStack } from "@chakra-ui/react"
+import { Box, Button, Card, HStack, VStack } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import { useCallback, useMemo, useState } from "react"
 
@@ -184,16 +184,6 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
 
   return (
     <VStack gap={6} align="stretch">
-      <Box>
-        <Text fontSize="2xl" fontWeight="bold" mb={2}>
-          Review Questions
-        </Text>
-        <Text color="gray.600">
-          Review and approve each question individually. You can edit any
-          question before approving it.
-        </Text>
-      </Box>
-
       {/* Filter Toggle Buttons */}
       <HStack gap={3}>
         <Button
