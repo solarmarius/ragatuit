@@ -1,25 +1,25 @@
-import { memo, useCallback } from "react"
+import { memo, useCallback } from "react";
 
 import type {
   QuestionCreateRequest,
   QuestionResponse,
   QuestionType,
   QuestionUpdateRequest,
-} from "@/client"
-import { QuestionEditor } from "@/components/Questions/editors/QuestionEditor"
-import { QUESTION_TYPES } from "@/lib/constants"
+} from "@/client";
+import { QuestionEditor } from "@/components/Questions/editors/QuestionEditor";
+import { QUESTION_TYPES } from "@/lib/constants";
 
 interface ManualQuestionCreatorProps {
   /** The selected question type */
-  questionType: string
+  questionType: string;
   /** Quiz ID for the question */
-  quizId: string
+  quizId: string;
   /** Callback when question is saved */
-  onSave: (questionData: QuestionCreateRequest) => void
+  onSave: (questionData: QuestionCreateRequest) => void;
   /** Callback when creation is canceled */
-  onCancel: () => void
+  onCancel: () => void;
   /** Whether the save operation is loading */
-  isLoading?: boolean
+  isLoading?: boolean;
 }
 
 /**
@@ -49,8 +49,8 @@ export const ManualQuestionCreator = memo(function ManualQuestionCreator({
   const handleSave = useCallback(
     (updateData: QuestionUpdateRequest) => {
       if (!updateData.question_data) {
-        console.error("No question data provided")
-        return
+        console.error("No question data provided");
+        return;
       }
 
       // Transform to create request format with defaults
@@ -60,12 +60,12 @@ export const ManualQuestionCreator = memo(function ManualQuestionCreator({
         question_data: updateData.question_data,
         difficulty: "medium", // Default difficulty as specified in requirements
         tags: [], // Empty tags array as specified in requirements
-      }
+      };
 
-      onSave(createData)
+      onSave(createData);
     },
-    [questionType, quizId, onSave],
-  )
+    [questionType, quizId, onSave]
+  );
 
   // Create a mock question response object for the editor
   // This allows us to reuse existing editor components without modification
@@ -79,7 +79,7 @@ export const ManualQuestionCreator = memo(function ManualQuestionCreator({
     is_approved: false,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-  }
+  };
 
   return (
     <QuestionEditor
@@ -88,8 +88,8 @@ export const ManualQuestionCreator = memo(function ManualQuestionCreator({
       onCancel={onCancel}
       isLoading={isLoading}
     />
-  )
-})
+  );
+});
 
 /**
  * Provides default question data based on question type.
@@ -106,21 +106,21 @@ function getDefaultQuestionData(questionType: string): Record<string, any> {
         option_d: "",
         correct_answer: "A",
         explanation: null,
-      }
+      };
 
     case QUESTION_TYPES.TRUE_FALSE:
       return {
         question_text: "",
         correct_answer: true,
         explanation: null,
-      }
+      };
 
     case QUESTION_TYPES.FILL_IN_BLANK:
       return {
         question_text: "",
         blanks: [],
         explanation: null,
-      }
+      };
 
     case QUESTION_TYPES.MATCHING:
       return {
@@ -132,36 +132,48 @@ function getDefaultQuestionData(questionType: string): Record<string, any> {
         ],
         distractors: [],
         explanation: null,
-      }
+      };
 
     case QUESTION_TYPES.CATEGORIZATION: {
       // Create item IDs first so we can reference them in categories
-      const item1Id = crypto.randomUUID()
-      const item2Id = crypto.randomUUID()
-      const item3Id = crypto.randomUUID()
-      const item4Id = crypto.randomUUID()
+      const item1Id = crypto.randomUUID();
+      const item2Id = crypto.randomUUID();
+      const item3Id = crypto.randomUUID();
+      const item4Id = crypto.randomUUID();
+      const item5Id = crypto.randomUUID();
+      const item6Id = crypto.randomUUID();
 
       return {
         question_text: "",
         categories: [
-          { id: crypto.randomUUID(), name: "", correct_items: [item1Id, item2Id] },
-          { id: crypto.randomUUID(), name: "", correct_items: [item3Id, item4Id] },
+          {
+            id: crypto.randomUUID(),
+            name: "",
+            correct_items: [item1Id, item2Id, item3Id],
+          },
+          {
+            id: crypto.randomUUID(),
+            name: "",
+            correct_items: [item4Id, item5Id, item6Id],
+          },
         ],
         items: [
           { id: item1Id, text: "" },
           { id: item2Id, text: "" },
           { id: item3Id, text: "" },
           { id: item4Id, text: "" },
+          { id: item5Id, text: "" },
+          { id: item6Id, text: "" },
         ],
         distractors: [],
         explanation: null,
-      }
+      };
     }
 
     default:
       return {
         question_text: "",
         explanation: null,
-      }
+      };
   }
 }

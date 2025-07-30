@@ -188,6 +188,20 @@ function CategorizationEditorComponent({
     return (
       <Box as="form" onSubmit={handleSubmit(onSubmit)}>
         <VStack gap={8} align="stretch">
+          {/* Form-level validation errors */}
+          {errors.root?.message && (
+            <Box
+              p={3}
+              bg="red.50"
+              border="1px"
+              borderColor="red.200"
+              borderRadius="md"
+            >
+              <Text color="red.600" fontSize="sm" fontWeight="medium">
+                {errors.root.message}
+              </Text>
+            </Box>
+          )}
           {/* Question Text */}
           <FormField
             label="Question Text"
@@ -225,9 +239,14 @@ function CategorizationEditorComponent({
               </Button>
             </HStack>
 
-            {errors.categories && (
+            {errors.categories?.message && (
               <Text color="red.500" fontSize="sm" mb={3}>
                 {errors.categories.message}
+              </Text>
+            )}
+            {errors.categories?.root?.message && (
+              <Text color="red.500" fontSize="sm" mb={3}>
+                {errors.categories.root.message}
               </Text>
             )}
 
@@ -267,9 +286,14 @@ function CategorizationEditorComponent({
               </Button>
             </HStack>
 
-            {errors.distractors && (
+            {errors.distractors?.message && (
               <Text color="red.500" fontSize="sm" mb={3}>
                 {errors.distractors.message}
+              </Text>
+            )}
+            {errors.distractors?.root?.message && (
+              <Text color="red.500" fontSize="sm" mb={3}>
+                {errors.distractors.root.message}
               </Text>
             )}
 
@@ -463,13 +487,26 @@ function CategoryEditor({
                       name={`categories.${categoryIndex}.items.${itemIndex}.text`}
                       control={control}
                       render={({ field: inputField }) => (
-                        <Input
-                          {...inputField}
-                          placeholder="Enter item text..."
-                          size="sm"
-                          bg="green.50"
-                          borderColor="green.300"
-                        />
+                        <Box>
+                          <Input
+                            {...inputField}
+                            placeholder="Enter item text..."
+                            size="sm"
+                            bg="green.50"
+                            borderColor="green.300"
+                          />
+                          {errors.categories?.[categoryIndex]?.items?.[
+                            itemIndex
+                          ]?.text?.message && (
+                            <Text color="red.500" fontSize="xs" mt={1}>
+                              {
+                                errors.categories[categoryIndex]?.items?.[
+                                  itemIndex
+                                ]?.text?.message
+                              }
+                            </Text>
+                          )}
+                        </Box>
                       )}
                     />
                   </Box>
