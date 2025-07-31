@@ -8,8 +8,8 @@ from uuid import UUID
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
-# Import QuizLanguage and QuestionType from question types to avoid circular dependency
-from src.question.types import QuestionType, QuizLanguage
+# Import QuizLanguage, QuestionType, and QuestionDifficulty from question types to avoid circular dependency
+from src.question.types import QuestionDifficulty, QuestionType, QuizLanguage
 
 
 class QuizStatus(str, Enum):
@@ -47,10 +47,13 @@ class QuizTone(str, Enum):
 
 
 class QuestionBatch(SQLModel):
-    """Schema for a batch of questions of a specific type."""
+    """Schema for a batch of questions of a specific type and difficulty."""
 
     question_type: QuestionType
     count: int = Field(ge=1, le=20, description="Number of questions (1-20)")
+    difficulty: QuestionDifficulty = Field(
+        default=QuestionDifficulty.MEDIUM, description="Question difficulty level"
+    )
 
 
 class ModuleSelection(SQLModel):

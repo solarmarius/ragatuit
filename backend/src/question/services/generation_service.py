@@ -102,9 +102,12 @@ class QuestionGenerationService:
                     for batch in module_info.get("question_batches", []):
                         question_type = batch["question_type"]
                         count = batch["count"]
+                        difficulty = batch.get(
+                            "difficulty", "medium"
+                        )  # Default to medium for backward compatibility
 
                         # Create batch key
-                        batch_key = f"{module_id}_{question_type}_{count}"
+                        batch_key = f"{module_id}_{question_type}_{count}_{difficulty}"
 
                         if batch_key in successful_batch_keys:
                             # Skip this batch - already successful
@@ -115,6 +118,7 @@ class QuestionGenerationService:
                                     "batch_key": batch_key,
                                     "question_type": question_type,
                                     "count": count,
+                                    "difficulty": difficulty,
                                     "reason": "already_successful",
                                 }
                             )
@@ -129,6 +133,7 @@ class QuestionGenerationService:
                                 {
                                     "question_type": QuestionType(question_type),
                                     "count": count,
+                                    "difficulty": difficulty,
                                     "batch_key": batch_key,
                                 }
                             )
