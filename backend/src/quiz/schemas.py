@@ -37,6 +37,15 @@ class FailureReason(str, Enum):
     VALIDATION_ERROR = "validation_error"
 
 
+class QuizTone(str, Enum):
+    """Tone of voice options for quiz question generation."""
+
+    ACADEMIC = "academic"
+    CASUAL = "casual"
+    ENCOURAGING = "encouraging"
+    PROFESSIONAL = "professional"
+
+
 class QuestionBatch(SQLModel):
     """Schema for a batch of questions of a specific type."""
 
