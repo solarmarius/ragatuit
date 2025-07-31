@@ -1,6 +1,6 @@
 import type { QuizLanguage, QuizTone } from "@/client"
 import { FormField, FormGroup } from "@/components/forms"
-import { QUIZ_LANGUAGES, QUIZ_TONES } from "@/lib/constants"
+import { QUIZ_LANGUAGES, QUIZ_TONES, QUIZ_TONE_LABELS } from "@/lib/constants"
 import { Box, Card, HStack, RadioGroup, Text, VStack } from "@chakra-ui/react"
 
 interface QuizSettings {
@@ -43,22 +43,22 @@ export function QuizSettingsStep({
   const toneOptions = [
     {
       value: QUIZ_TONES.ACADEMIC,
-      label: "Formal/Academic",
+      label: QUIZ_TONE_LABELS.academic,
       description: "Use formal academic language with precise terminology",
     },
     {
       value: QUIZ_TONES.CASUAL,
-      label: "Casual/Conversational",
+      label: QUIZ_TONE_LABELS.casual,
       description: "Use everyday conversational language that feels approachable",
     },
     {
       value: QUIZ_TONES.ENCOURAGING,
-      label: "Friendly/Encouraging",
-      description: "Use warm, supportive language that motivates learning",
+      label: QUIZ_TONE_LABELS.encouraging,
+      description: "Use warm, supportive language with helpful hints embedded in questions",
     },
     {
       value: QUIZ_TONES.PROFESSIONAL,
-      label: "Professional/Business",
+      label: QUIZ_TONE_LABELS.professional,
       description: "Use clear, direct business language for workplace training",
     },
   ]
