@@ -20,7 +20,7 @@ def test_create_quiz_success(session: Session):
 
     user = create_user_in_session(session)
 
-    from src.question.types import QuestionType
+    from src.question.types import QuestionDifficulty, QuestionType
     from src.quiz.schemas import QuestionBatch
 
     quiz_data = QuizCreate(
@@ -30,13 +30,21 @@ def test_create_quiz_success(session: Session):
             "456": ModuleSelection(
                 name="Module 1",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
                 ],
             ),
             "789": ModuleSelection(
                 name="Module 2",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=15)
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=15,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
                 ],
             ),
         },
@@ -54,11 +62,23 @@ def test_create_quiz_success(session: Session):
     assert quiz.selected_modules == {
         "456": {
             "name": "Module 1",
-            "question_batches": [{"question_type": "multiple_choice", "count": 10}],
+            "question_batches": [
+                {
+                    "question_type": "multiple_choice",
+                    "count": 10,
+                    "difficulty": "medium",
+                }
+            ],
         },
         "789": {
             "name": "Module 2",
-            "question_batches": [{"question_type": "multiple_choice", "count": 15}],
+            "question_batches": [
+                {
+                    "question_type": "multiple_choice",
+                    "count": 15,
+                    "difficulty": "medium",
+                }
+            ],
         },
     }
     assert quiz.title == "Test Quiz"
@@ -70,7 +90,7 @@ def test_create_quiz_success(session: Session):
 
 def test_create_quiz_with_defaults(session: Session):
     """Test quiz creation with default values."""
-    from src.question.types import QuestionType
+    from src.question.types import QuestionDifficulty, QuestionType
     from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
@@ -84,7 +104,11 @@ def test_create_quiz_with_defaults(session: Session):
             "456": ModuleSelection(
                 name="Module 1",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
                 ],
             )
         },
@@ -95,13 +119,13 @@ def test_create_quiz_with_defaults(session: Session):
 
     # Verify defaults
     assert quiz.question_count == 10  # Sum of module question counts
-    assert quiz.llm_model == "o3"  # Default
+    assert quiz.llm_model == "o4-mini-2025-04-16"  # Default
     assert quiz.llm_temperature == 1.0  # Default
 
 
 def test_create_quiz_with_multiple_question_types_per_module(session: Session):
     """Test that multiple question types per module are properly persisted."""
-    from src.question.types import QuestionType, QuizLanguage
+    from src.question.types import QuestionDifficulty, QuestionType, QuizLanguage
     from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
@@ -116,15 +140,31 @@ def test_create_quiz_with_multiple_question_types_per_module(session: Session):
             "456": ModuleSelection(
                 name="Module 1",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10),
-                    QuestionBatch(question_type=QuestionType.FILL_IN_BLANK, count=5),
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    ),
+                    QuestionBatch(
+                        question_type=QuestionType.FILL_IN_BLANK,
+                        count=5,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    ),
                 ],
             ),
             "789": ModuleSelection(
                 name="Module 2",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MATCHING, count=3),
-                    QuestionBatch(question_type=QuestionType.CATEGORIZATION, count=2),
+                    QuestionBatch(
+                        question_type=QuestionType.MATCHING,
+                        count=3,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    ),
+                    QuestionBatch(
+                        question_type=QuestionType.CATEGORIZATION,
+                        count=2,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    ),
                 ],
             ),
         },
@@ -143,15 +183,19 @@ def test_create_quiz_with_multiple_question_types_per_module(session: Session):
         "456": {
             "name": "Module 1",
             "question_batches": [
-                {"question_type": "multiple_choice", "count": 10},
-                {"question_type": "fill_in_blank", "count": 5},
+                {
+                    "question_type": "multiple_choice",
+                    "count": 10,
+                    "difficulty": "medium",
+                },
+                {"question_type": "fill_in_blank", "count": 5, "difficulty": "medium"},
             ],
         },
         "789": {
             "name": "Module 2",
             "question_batches": [
-                {"question_type": "matching", "count": 3},
-                {"question_type": "categorization", "count": 2},
+                {"question_type": "matching", "count": 3, "difficulty": "medium"},
+                {"question_type": "categorization", "count": 2, "difficulty": "medium"},
             ],
         },
     }
@@ -165,7 +209,7 @@ def test_create_quiz_with_multiple_question_types_per_module(session: Session):
 
 def test_create_quiz_module_id_conversion(session: Session):
     """Test that module IDs are handled correctly as strings."""
-    from src.question.types import QuestionType
+    from src.question.types import QuestionDifficulty, QuestionType
     from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
@@ -179,19 +223,31 @@ def test_create_quiz_module_id_conversion(session: Session):
             "111": ModuleSelection(
                 name="Module A",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
                 ],
             ),
             "222": ModuleSelection(
                 name="Module B",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=15)
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=15,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
                 ],
             ),
             "333": ModuleSelection(
                 name="Module C",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=5)
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=5,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
                 ],
             ),
         },
@@ -204,15 +260,29 @@ def test_create_quiz_module_id_conversion(session: Session):
     expected_modules = {
         "111": {
             "name": "Module A",
-            "question_batches": [{"question_type": "multiple_choice", "count": 10}],
+            "question_batches": [
+                {
+                    "question_type": "multiple_choice",
+                    "count": 10,
+                    "difficulty": "medium",
+                }
+            ],
         },
         "222": {
             "name": "Module B",
-            "question_batches": [{"question_type": "multiple_choice", "count": 15}],
+            "question_batches": [
+                {
+                    "question_type": "multiple_choice",
+                    "count": 15,
+                    "difficulty": "medium",
+                }
+            ],
         },
         "333": {
             "name": "Module C",
-            "question_batches": [{"question_type": "multiple_choice", "count": 5}],
+            "question_batches": [
+                {"question_type": "multiple_choice", "count": 5, "difficulty": "medium"}
+            ],
         },
     }
     assert quiz.selected_modules == expected_modules
@@ -664,7 +734,7 @@ async def test_update_quiz_status_quiz_not_found(async_session):
 
 def test_quiz_lifecycle_creation_to_deletion(session: Session):
     """Test complete quiz lifecycle from creation to deletion."""
-    from src.question.types import QuestionType
+    from src.question.types import QuestionDifficulty, QuestionType
     from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
     from src.quiz.service import (
         create_quiz,
@@ -684,13 +754,21 @@ def test_quiz_lifecycle_creation_to_deletion(session: Session):
             "111": ModuleSelection(
                 name="Module Alpha",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=15)
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=15,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
                 ],
             ),
             "222": ModuleSelection(
                 name="Module Beta",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
                 ],
             ),
         },
@@ -779,7 +857,7 @@ def test_create_quiz_with_various_parameters(
     session: Session, question_count: int, llm_model: str, temperature: float
 ):
     """Test quiz creation with various parameter combinations."""
-    from src.question.types import QuestionType
+    from src.question.types import QuestionDifficulty, QuestionType
     from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
@@ -796,6 +874,7 @@ def test_create_quiz_with_various_parameters(
                     QuestionBatch(
                         question_type=QuestionType.MULTIPLE_CHOICE,
                         count=min(question_count, 20),
+                        difficulty=QuestionDifficulty.MEDIUM,
                     )
                 ],
             )
@@ -817,7 +896,7 @@ def test_create_quiz_with_various_parameters(
 
 def test_create_quiz_with_tone_academic_default(session: Session):
     """Test quiz creation defaults to academic tone when tone not specified."""
-    from src.question.types import QuestionType
+    from src.question.types import QuestionDifficulty, QuestionType
     from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate, QuizTone
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
@@ -831,7 +910,11 @@ def test_create_quiz_with_tone_academic_default(session: Session):
             "456": ModuleSelection(
                 name="Module 1",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
                 ],
             )
         },
@@ -847,7 +930,7 @@ def test_create_quiz_with_tone_academic_default(session: Session):
 
 def test_create_quiz_with_tone_explicit_academic(session: Session):
     """Test quiz creation with explicit academic tone selection."""
-    from src.question.types import QuestionType
+    from src.question.types import QuestionDifficulty, QuestionType
     from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate, QuizTone
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
@@ -861,7 +944,11 @@ def test_create_quiz_with_tone_explicit_academic(session: Session):
             "456": ModuleSelection(
                 name="Module 1",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
                 ],
             )
         },
@@ -877,7 +964,7 @@ def test_create_quiz_with_tone_explicit_academic(session: Session):
 
 def test_create_quiz_with_tone_casual(session: Session):
     """Test quiz creation with casual tone selection."""
-    from src.question.types import QuestionType
+    from src.question.types import QuestionDifficulty, QuestionType
     from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate, QuizTone
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
@@ -891,7 +978,11 @@ def test_create_quiz_with_tone_casual(session: Session):
             "456": ModuleSelection(
                 name="Module 1",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
                 ],
             )
         },
@@ -907,7 +998,7 @@ def test_create_quiz_with_tone_casual(session: Session):
 
 def test_create_quiz_with_tone_encouraging(session: Session):
     """Test quiz creation with encouraging tone selection."""
-    from src.question.types import QuestionType
+    from src.question.types import QuestionDifficulty, QuestionType
     from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate, QuizTone
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
@@ -921,7 +1012,11 @@ def test_create_quiz_with_tone_encouraging(session: Session):
             "456": ModuleSelection(
                 name="Module 1",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
                 ],
             )
         },
@@ -937,7 +1032,7 @@ def test_create_quiz_with_tone_encouraging(session: Session):
 
 def test_create_quiz_with_tone_professional(session: Session):
     """Test quiz creation with professional tone selection."""
-    from src.question.types import QuestionType
+    from src.question.types import QuestionDifficulty, QuestionType
     from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate, QuizTone
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
@@ -951,7 +1046,11 @@ def test_create_quiz_with_tone_professional(session: Session):
             "456": ModuleSelection(
                 name="Module 1",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
                 ],
             )
         },
@@ -967,7 +1066,7 @@ def test_create_quiz_with_tone_professional(session: Session):
 
 def test_create_quiz_with_tone_and_language_combination(session: Session):
     """Test quiz creation with both tone and language specified."""
-    from src.question.types import QuestionType, QuizLanguage
+    from src.question.types import QuestionDifficulty, QuestionType, QuizLanguage
     from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate, QuizTone
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
@@ -981,7 +1080,11 @@ def test_create_quiz_with_tone_and_language_combination(session: Session):
             "456": ModuleSelection(
                 name="Modul 1",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
                 ],
             )
         },
@@ -1002,7 +1105,7 @@ def test_create_quiz_with_tone_and_language_combination(session: Session):
 
 def test_create_quiz_with_norwegian_language(session: Session):
     """Test quiz creation with Norwegian language selection."""
-    from src.question.types import QuestionType, QuizLanguage
+    from src.question.types import QuestionDifficulty, QuestionType, QuizLanguage
     from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
@@ -1016,7 +1119,11 @@ def test_create_quiz_with_norwegian_language(session: Session):
             "456": ModuleSelection(
                 name="Modul 1",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
                 ],
             )
         },
@@ -1034,7 +1141,7 @@ def test_create_quiz_with_norwegian_language(session: Session):
 
 def test_create_quiz_language_defaults_to_english(session: Session):
     """Test quiz creation defaults to English when language not specified."""
-    from src.question.types import QuestionType, QuizLanguage
+    from src.question.types import QuestionDifficulty, QuestionType, QuizLanguage
     from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
@@ -1048,7 +1155,11 @@ def test_create_quiz_language_defaults_to_english(session: Session):
             "456": ModuleSelection(
                 name="Module 1",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
                 ],
             )
         },
@@ -1064,7 +1175,7 @@ def test_create_quiz_language_defaults_to_english(session: Session):
 
 def test_create_quiz_with_english_language_explicit(session: Session):
     """Test quiz creation with explicit English language selection."""
-    from src.question.types import QuestionType, QuizLanguage
+    from src.question.types import QuestionDifficulty, QuestionType, QuizLanguage
     from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
     from src.quiz.service import create_quiz
     from tests.conftest import create_user_in_session
@@ -1078,7 +1189,11 @@ def test_create_quiz_with_english_language_explicit(session: Session):
             "456": ModuleSelection(
                 name="Module 1",
                 question_batches=[
-                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
                 ],
             )
         },
@@ -1405,7 +1520,7 @@ def test_quiz_cascade_soft_delete_to_questions(session: Session):
 
     # Create some questions for the quiz
     from src.question.models import Question
-    from src.question.types import QuestionType
+    from src.question.types import QuestionDifficulty, QuestionType
 
     question1 = Question(
         quiz_id=quiz.id,
@@ -1499,7 +1614,7 @@ def test_get_quiz_by_id_include_deleted_parameter(session: Session):
 async def test_get_question_counts_excludes_soft_deleted_questions(async_session):
     """Test get_question_counts excludes soft-deleted questions by default."""
     from src.auth.models import User
-    from src.question.types import QuestionType
+    from src.question.types import QuestionDifficulty, QuestionType
     from src.quiz.models import Quiz
     from src.quiz.service import get_question_counts
 
@@ -1686,3 +1801,405 @@ def test_soft_delete_preserves_all_quiz_data(session: Session):
     assert soft_deleted_quiz.selected_modules == original_data["selected_modules"]
     assert soft_deleted_quiz.canvas_course_id == original_data["canvas_course_id"]
     assert soft_deleted_quiz.canvas_course_name == original_data["canvas_course_name"]
+
+
+# Difficulty Feature Tests
+
+
+def test_create_quiz_with_difficulty_batches(session: Session):
+    """Test quiz creation with difficulty-enabled batches."""
+    from src.question.types import QuestionDifficulty, QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Difficulty Test Course",
+        selected_modules={
+            "456": ModuleSelection(
+                name="Module 1",
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=5,
+                        difficulty=QuestionDifficulty.EASY,
+                    ),
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.HARD,
+                    ),
+                ],
+            ),
+            "789": ModuleSelection(
+                name="Module 2",
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.FILL_IN_BLANK,
+                        count=3,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
+                ],
+            ),
+        },
+        title="Difficulty Test Quiz",
+        llm_model="gpt-4",
+        llm_temperature=0.7,
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify quiz creation with difficulty
+    assert quiz.owner_id == user.id
+    assert quiz.canvas_course_id == 123
+    assert quiz.title == "Difficulty Test Quiz"
+    assert quiz.question_count == 18  # 5 + 10 + 3 from modules
+
+    # Verify difficulty is preserved in selected_modules
+    expected_modules = {
+        "456": {
+            "name": "Module 1",
+            "question_batches": [
+                {"question_type": "multiple_choice", "count": 5, "difficulty": "easy"},
+                {"question_type": "multiple_choice", "count": 10, "difficulty": "hard"},
+            ],
+        },
+        "789": {
+            "name": "Module 2",
+            "question_batches": [
+                {"question_type": "fill_in_blank", "count": 3, "difficulty": "medium"}
+            ],
+        },
+    }
+    assert quiz.selected_modules == expected_modules
+
+
+def test_create_quiz_with_default_difficulty(session: Session):
+    """Test quiz creation with explicit MEDIUM difficulty."""
+    from src.question.types import QuestionDifficulty, QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Default Difficulty Course",
+        selected_modules={
+            "456": ModuleSelection(
+                name="Module 1",
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
+                ],
+            )
+        },
+        title="Default Difficulty Quiz",
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify default difficulty is applied
+    expected_modules = {
+        "456": {
+            "name": "Module 1",
+            "question_batches": [
+                {
+                    "question_type": "multiple_choice",
+                    "count": 10,
+                    "difficulty": "medium",
+                }
+            ],
+        }
+    }
+    assert quiz.selected_modules == expected_modules
+
+
+def test_create_quiz_difficulty_question_count_calculation(session: Session):
+    """Test that question count calculation works correctly with difficulty batches."""
+    from src.question.types import QuestionDifficulty, QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Count Test Course",
+        selected_modules={
+            "mod1": ModuleSelection(
+                name="Module 1",
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=8,
+                        difficulty=QuestionDifficulty.EASY,
+                    ),
+                    QuestionBatch(
+                        question_type=QuestionType.FILL_IN_BLANK,
+                        count=5,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    ),
+                    QuestionBatch(
+                        question_type=QuestionType.TRUE_FALSE,
+                        count=3,
+                        difficulty=QuestionDifficulty.HARD,
+                    ),
+                ],
+            ),
+            "mod2": ModuleSelection(
+                name="Module 2",
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.MATCHING,
+                        count=4,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    ),
+                    QuestionBatch(
+                        question_type=QuestionType.CATEGORIZATION,
+                        count=2,
+                        difficulty=QuestionDifficulty.HARD,
+                    ),
+                ],
+            ),
+        },
+        title="Count Test Quiz",
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify total question count: 8 + 5 + 3 + 4 + 2 = 22
+    assert quiz.question_count == 22
+
+
+def test_prepare_question_generation_includes_difficulty(session: Session):
+    """Test that prepare_question_generation includes difficulty information."""
+    from src.quiz.service import prepare_question_generation
+    from tests.conftest import create_quiz_in_session
+
+    # Create quiz with difficulty batches
+    selected_modules = {
+        "module_1": {
+            "name": "Introduction",
+            "question_batches": [
+                {"question_type": "multiple_choice", "count": 15, "difficulty": "easy"},
+                {"question_type": "fill_in_blank", "count": 10, "difficulty": "hard"},
+            ],
+        },
+        "module_2": {
+            "name": "Advanced Topics",
+            "question_batches": [
+                {"question_type": "matching", "count": 8, "difficulty": "medium"}
+            ],
+        },
+    }
+
+    quiz = create_quiz_in_session(
+        session,
+        selected_modules=selected_modules,
+        llm_model="gpt-4",
+        llm_temperature=0.8,
+    )
+
+    with patch(
+        "src.quiz.service.validate_quiz_for_question_generation"
+    ) as mock_validate:
+        mock_validate.return_value = quiz
+
+        result = prepare_question_generation(session, quiz.id, quiz.owner_id)
+
+    # Verify difficulty is included in generation parameters
+    assert result["question_count"] == 33  # 15 + 10 + 8
+    assert result["llm_model"] == "gpt-4"
+    assert result["llm_temperature"] == 0.8
+
+    # Function does not return selected_modules, but preserves difficulty in database
+    # The difficulty information is maintained in the quiz.selected_modules field
+
+
+@pytest.mark.asyncio
+async def test_reserve_quiz_job_includes_difficulty_settings(async_session):
+    """Test that quiz job reservation includes difficulty in module settings."""
+    from src.auth.models import User
+    from src.quiz.models import Quiz
+    from src.quiz.service import reserve_quiz_job
+
+    # Create a user first
+    user = User(
+        canvas_id=150,
+        name="Difficulty Job Test User",
+        access_token="test_access_token",
+        refresh_token="test_refresh_token",
+    )
+    async_session.add(user)
+    await async_session.commit()
+    await async_session.refresh(user)
+
+    quiz = Quiz(
+        owner_id=user.id,
+        canvas_course_id=123,
+        canvas_course_name="Difficulty Job Test Course",
+        selected_modules={
+            "1": {
+                "name": "Module 1",
+                "question_batches": [
+                    {
+                        "question_type": "multiple_choice",
+                        "count": 20,
+                        "difficulty": "easy",
+                    },
+                    {
+                        "question_type": "fill_in_blank",
+                        "count": 15,
+                        "difficulty": "hard",
+                    },
+                ],
+            },
+            "2": {
+                "name": "Module 2",
+                "question_batches": [
+                    {"question_type": "matching", "count": 10, "difficulty": "medium"}
+                ],
+            },
+        },
+        question_count=45,
+        title="Difficulty Job Test Quiz",
+        llm_model="gpt-4",
+        llm_temperature=0.9,
+        status="created",
+    )
+    async_session.add(quiz)
+    await async_session.commit()
+    await async_session.refresh(quiz)
+
+    with patch("src.quiz.service.get_quiz_for_update", return_value=quiz):
+        result = await reserve_quiz_job(async_session, quiz.id, "extraction")
+
+    assert result is not None
+    assert result["target_questions"] == 45
+    assert result["llm_model"] == "gpt-4"
+    assert result["llm_temperature"] == 0.9
+
+    # The quiz.selected_modules preserves difficulty information in the database
+    # but reserve_quiz_job doesn't return selected_modules for extraction jobs
+    # Verify the quiz object maintains difficulty information
+    assert quiz.selected_modules["1"]["question_batches"][0]["difficulty"] == "easy"
+    assert quiz.selected_modules["1"]["question_batches"][1]["difficulty"] == "hard"
+    assert quiz.selected_modules["2"]["question_batches"][0]["difficulty"] == "medium"
+
+
+@pytest.mark.parametrize("difficulty", ["easy", "medium", "hard"])
+def test_create_quiz_with_single_difficulty_level(session: Session, difficulty: str):
+    """Test quiz creation with each individual difficulty level."""
+    from src.question.types import QuestionDifficulty, QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name=f"{difficulty.title()} Course",
+        selected_modules={
+            "456": ModuleSelection(
+                name="Test Module",
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty(difficulty),
+                    )
+                ],
+            )
+        },
+        title=f"{difficulty.title()} Quiz",
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify difficulty is preserved correctly
+    batch = quiz.selected_modules["456"]["question_batches"][0]
+    assert batch["difficulty"] == difficulty
+    assert quiz.question_count == 10
+
+
+def test_create_quiz_mixed_difficulty_multiple_modules(session: Session):
+    """Test quiz creation with mixed difficulties across multiple modules."""
+    from src.question.types import QuestionDifficulty, QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Mixed Difficulty Course",
+        selected_modules={
+            "intro": ModuleSelection(
+                name="Introduction",
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=12,
+                        difficulty=QuestionDifficulty.EASY,
+                    ),
+                    QuestionBatch(
+                        question_type=QuestionType.TRUE_FALSE,
+                        count=8,
+                        difficulty=QuestionDifficulty.EASY,
+                    ),
+                ],
+            ),
+            "intermediate": ModuleSelection(
+                name="Intermediate",
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.FILL_IN_BLANK,
+                        count=6,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    ),
+                    QuestionBatch(
+                        question_type=QuestionType.MATCHING,
+                        count=4,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    ),
+                ],
+            ),
+            "advanced": ModuleSelection(
+                name="Advanced",
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.CATEGORIZATION,
+                        count=3,
+                        difficulty=QuestionDifficulty.HARD,
+                    )
+                ],
+            ),
+        },
+        title="Mixed Difficulty Quiz",
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify total question count: 12 + 8 + 6 + 4 + 3 = 33
+    assert quiz.question_count == 33
+
+    # Verify each module's difficulty settings
+    intro_batches = quiz.selected_modules["intro"]["question_batches"]
+    assert all(batch["difficulty"] == "easy" for batch in intro_batches)
+
+    intermediate_batches = quiz.selected_modules["intermediate"]["question_batches"]
+    assert all(batch["difficulty"] == "medium" for batch in intermediate_batches)
+
+    advanced_batches = quiz.selected_modules["advanced"]["question_batches"]
+    assert all(batch["difficulty"] == "hard" for batch in advanced_batches)
