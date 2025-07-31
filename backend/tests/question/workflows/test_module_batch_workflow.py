@@ -163,6 +163,24 @@ def test_workflow_initialization(test_llm_provider, test_template_manager):
     assert workflow.graph is not None
 
 
+def test_workflow_initialization_with_tone(test_llm_provider, test_template_manager):
+    """Test workflow initialization with tone parameter."""
+    from src.question.workflows.module_batch_workflow import ModuleBatchWorkflow
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        language=QuizLanguage.ENGLISH,
+        tone="professional",
+    )
+
+    assert workflow.llm_provider == test_llm_provider
+    assert workflow.template_manager == test_template_manager
+    assert workflow.language == QuizLanguage.ENGLISH
+    assert workflow.tone == "professional"
+    assert workflow.graph is not None
+
+
 def test_parse_batch_response_valid_json(
     test_llm_provider, test_template_manager, valid_mcq_response
 ):
@@ -324,6 +342,23 @@ def test_processor_initialization(test_llm_provider, test_template_manager):
     assert processor.language == QuizLanguage.ENGLISH
 
 
+def test_processor_initialization_with_tone(test_llm_provider, test_template_manager):
+    """Test processor initialization with tone parameter."""
+    from src.question.workflows.module_batch_workflow import ParallelModuleProcessor
+
+    processor = ParallelModuleProcessor(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        language=QuizLanguage.ENGLISH,
+        tone="encouraging",
+    )
+
+    assert processor.llm_provider == test_llm_provider
+    assert processor.template_manager == test_template_manager
+    assert processor.language == QuizLanguage.ENGLISH
+    assert processor.tone == "encouraging"
+
+
 # Integration Tests - Workflow Components
 
 
@@ -350,6 +385,62 @@ async def test_state_creation_with_valid_providers(
     assert state.module_name == "Test Module"
     assert state.target_question_count == 5
     assert state.language == QuizLanguage.ENGLISH
+    assert len(state.generated_questions) == 0
+    assert state.retry_count == 0
+
+
+@pytest.mark.asyncio
+async def test_state_creation_with_tone(test_llm_provider, test_template_manager):
+    """Test ModuleBatchState creation with tone parameter."""
+    from src.question.workflows.module_batch_workflow import ModuleBatchState
+
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test-module",
+        module_name="Test Module",
+        module_content="Test content for generating questions",
+        target_question_count=8,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        language=QuizLanguage.ENGLISH,
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        tone="casual",
+    )
+
+    assert state.module_id == "test-module"
+    assert state.module_name == "Test Module"
+    assert state.target_question_count == 8
+    assert state.language == QuizLanguage.ENGLISH
+    assert state.tone == "casual"
+    assert len(state.generated_questions) == 0
+    assert state.retry_count == 0
+
+
+@pytest.mark.asyncio
+async def test_state_creation_with_tone_and_norwegian(
+    test_llm_provider, test_template_manager
+):
+    """Test ModuleBatchState creation with tone and Norwegian language."""
+    from src.question.workflows.module_batch_workflow import ModuleBatchState
+
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="norsk-modul",
+        module_name="Norsk Modul",
+        module_content="Norsk innhold for spørsmålsgenerering",
+        target_question_count=6,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        language=QuizLanguage.NORWEGIAN,
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        tone="encouraging",
+    )
+
+    assert state.module_id == "norsk-modul"
+    assert state.module_name == "Norsk Modul"
+    assert state.target_question_count == 6
+    assert state.language == QuizLanguage.NORWEGIAN
+    assert state.tone == "encouraging"
     assert len(state.generated_questions) == 0
     assert state.retry_count == 0
 
@@ -382,6 +473,82 @@ async def test_prepare_prompt_workflow_node(test_llm_provider, test_template_man
     result = await workflow.prepare_prompt(state)
 
     assert result.error_message is None
+    assert "Test system prompt" in result.system_prompt
+    assert "Generate questions from:" in result.user_prompt
+
+
+@pytest.mark.asyncio
+async def test_prepare_prompt_workflow_node_with_tone(
+    test_llm_provider, test_template_manager
+):
+    """Test prepare_prompt workflow node with tone parameter."""
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        tone="academic",
+    )
+
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test-module",
+        module_name="Test Module",
+        module_content="Test content for generating questions",
+        target_question_count=7,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        language=QuizLanguage.ENGLISH,
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        tone="academic",
+    )
+
+    result = await workflow.prepare_prompt(state)
+
+    assert result.error_message is None
+    assert result.tone == "academic"
+    assert "Test system prompt" in result.system_prompt
+    assert "Generate questions from:" in result.user_prompt
+
+
+@pytest.mark.asyncio
+async def test_prepare_prompt_workflow_node_with_tone_and_norwegian(
+    test_llm_provider, test_template_manager
+):
+    """Test prepare_prompt workflow node with tone and Norwegian language."""
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        language=QuizLanguage.NORWEGIAN,
+        tone="professional",
+    )
+
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="norsk-modul",
+        module_name="Norsk Modul",
+        module_content="Norsk innhold for spørsmålsgenerering",
+        target_question_count=4,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        language=QuizLanguage.NORWEGIAN,
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        tone="professional",
+    )
+
+    result = await workflow.prepare_prompt(state)
+
+    assert result.error_message is None
+    assert result.tone == "professional"
+    assert result.language == QuizLanguage.NORWEGIAN
     assert "Test system prompt" in result.system_prompt
     assert "Generate questions from:" in result.user_prompt
 

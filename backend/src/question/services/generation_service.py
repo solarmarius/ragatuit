@@ -172,6 +172,7 @@ class QuestionGenerationService:
                     llm_provider=provider,
                     template_manager=self.template_manager,
                     language=language,
+                    tone=quiz.tone.value if quiz.tone else None,
                 )
 
                 (

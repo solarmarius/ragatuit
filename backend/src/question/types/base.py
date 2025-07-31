@@ -207,6 +207,9 @@ class GenerationParameters(BaseModel):
     language: QuizLanguage = Field(
         default=QuizLanguage.ENGLISH, description="Language for question generation"
     )
+    tone: str | None = Field(
+        default=None, description="Tone of voice for question generation"
+    )
 
     class Config:
         """Pydantic configuration."""

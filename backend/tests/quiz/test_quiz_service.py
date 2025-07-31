@@ -812,6 +812,191 @@ def test_create_quiz_with_various_parameters(
     assert quiz.llm_temperature == temperature
 
 
+# Tone of Voice Feature Tests
+
+
+def test_create_quiz_with_tone_academic_default(session: Session):
+    """Test quiz creation defaults to academic tone when tone not specified."""
+    from src.question.types import QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate, QuizTone
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Default Tone Course",
+        selected_modules={
+            "456": ModuleSelection(
+                name="Module 1",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                ],
+            )
+        },
+        title="Default Tone Quiz",
+        # tone not specified - should default to ACADEMIC
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify default tone is ACADEMIC
+    assert quiz.tone == QuizTone.ACADEMIC
+
+
+def test_create_quiz_with_tone_explicit_academic(session: Session):
+    """Test quiz creation with explicit academic tone selection."""
+    from src.question.types import QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate, QuizTone
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Academic Tone Course",
+        selected_modules={
+            "456": ModuleSelection(
+                name="Module 1",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                ],
+            )
+        },
+        title="Academic Tone Quiz",
+        tone=QuizTone.ACADEMIC,
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify academic tone is set
+    assert quiz.tone == QuizTone.ACADEMIC
+
+
+def test_create_quiz_with_tone_casual(session: Session):
+    """Test quiz creation with casual tone selection."""
+    from src.question.types import QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate, QuizTone
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Casual Tone Course",
+        selected_modules={
+            "456": ModuleSelection(
+                name="Module 1",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                ],
+            )
+        },
+        title="Casual Tone Quiz",
+        tone=QuizTone.CASUAL,
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify casual tone is set
+    assert quiz.tone == QuizTone.CASUAL
+
+
+def test_create_quiz_with_tone_encouraging(session: Session):
+    """Test quiz creation with encouraging tone selection."""
+    from src.question.types import QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate, QuizTone
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Encouraging Tone Course",
+        selected_modules={
+            "456": ModuleSelection(
+                name="Module 1",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                ],
+            )
+        },
+        title="Encouraging Tone Quiz",
+        tone=QuizTone.ENCOURAGING,
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify encouraging tone is set
+    assert quiz.tone == QuizTone.ENCOURAGING
+
+
+def test_create_quiz_with_tone_professional(session: Session):
+    """Test quiz creation with professional tone selection."""
+    from src.question.types import QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate, QuizTone
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Professional Tone Course",
+        selected_modules={
+            "456": ModuleSelection(
+                name="Module 1",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                ],
+            )
+        },
+        title="Professional Tone Quiz",
+        tone=QuizTone.PROFESSIONAL,
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify professional tone is set
+    assert quiz.tone == QuizTone.PROFESSIONAL
+
+
+def test_create_quiz_with_tone_and_language_combination(session: Session):
+    """Test quiz creation with both tone and language specified."""
+    from src.question.types import QuestionType, QuizLanguage
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate, QuizTone
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Combination Course",
+        selected_modules={
+            "456": ModuleSelection(
+                name="Modul 1",
+                question_batches=[
+                    QuestionBatch(question_type=QuestionType.MULTIPLE_CHOICE, count=10)
+                ],
+            )
+        },
+        title="Kombinasjon Quiz",
+        language=QuizLanguage.NORWEGIAN,
+        tone=QuizTone.ENCOURAGING,
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify both language and tone are set
+    assert quiz.language == QuizLanguage.NORWEGIAN
+    assert quiz.tone == QuizTone.ENCOURAGING
+
+
 # Norwegian Language Feature Tests
 
 
@@ -907,6 +1092,89 @@ def test_create_quiz_with_english_language_explicit(session: Session):
     assert quiz.language == QuizLanguage.ENGLISH
 
 
+def test_prepare_question_generation_includes_tone(session: Session):
+    """Test that prepare_question_generation includes tone in results."""
+    from src.quiz.schemas import QuizTone
+    from src.quiz.service import prepare_question_generation
+    from tests.conftest import create_quiz_in_session
+
+    # Create quiz with encouraging tone and selected_modules that total 50 questions
+    selected_modules = {
+        "module_1": {
+            "name": "Introduction",
+            "question_batches": [{"question_type": "multiple_choice", "count": 30}],
+        },
+        "module_2": {
+            "name": "Advanced Topics",
+            "question_batches": [{"question_type": "fill_in_blank", "count": 20}],
+        },
+    }
+
+    quiz = create_quiz_in_session(
+        session,
+        selected_modules=selected_modules,
+        llm_model="gpt-4",
+        llm_temperature=0.8,
+        tone=QuizTone.ENCOURAGING,
+    )
+
+    with patch(
+        "src.quiz.service.validate_quiz_for_question_generation"
+    ) as mock_validate:
+        mock_validate.return_value = quiz
+
+        result = prepare_question_generation(session, quiz.id, quiz.owner_id)
+
+    # Verify tone is included in generation parameters
+    assert result["tone"] == QuizTone.ENCOURAGING
+    assert result["question_count"] == 50
+    assert result["llm_model"] == "gpt-4"
+    assert result["llm_temperature"] == 0.8
+
+
+def test_prepare_question_generation_includes_tone_and_language(session: Session):
+    """Test that prepare_question_generation includes both tone and language."""
+    from src.question.types import QuizLanguage
+    from src.quiz.schemas import QuizTone
+    from src.quiz.service import prepare_question_generation
+    from tests.conftest import create_quiz_in_session
+
+    # Create quiz with both tone and language specified
+    selected_modules = {
+        "module_1": {
+            "name": "Introduksjon",
+            "question_batches": [{"question_type": "multiple_choice", "count": 25}],
+        },
+        "module_2": {
+            "name": "Avanserte Temaer",
+            "question_batches": [{"question_type": "fill_in_blank", "count": 25}],
+        },
+    }
+
+    quiz = create_quiz_in_session(
+        session,
+        selected_modules=selected_modules,
+        llm_model="gpt-4",
+        llm_temperature=0.9,
+        language=QuizLanguage.NORWEGIAN,
+        tone=QuizTone.CASUAL,
+    )
+
+    with patch(
+        "src.quiz.service.validate_quiz_for_question_generation"
+    ) as mock_validate:
+        mock_validate.return_value = quiz
+
+        result = prepare_question_generation(session, quiz.id, quiz.owner_id)
+
+    # Verify both tone and language are included
+    assert result["tone"] == QuizTone.CASUAL
+    assert result["language"] == QuizLanguage.NORWEGIAN
+    assert result["question_count"] == 50
+    assert result["llm_model"] == "gpt-4"
+    assert result["llm_temperature"] == 0.9
+
+
 def test_prepare_question_generation_includes_language(session: Session):
     """Test that prepare_question_generation includes language in results."""
     from src.question.types import QuizLanguage
@@ -945,6 +1213,109 @@ def test_prepare_question_generation_includes_language(session: Session):
     assert result["question_count"] == 75
     assert result["llm_model"] == "gpt-4"
     assert result["llm_temperature"] == 0.8
+
+
+@pytest.mark.asyncio
+async def test_reserve_quiz_job_includes_tone_setting(async_session):
+    """Test that quiz job reservation includes tone in settings."""
+    from src.auth.models import User
+    from src.quiz.models import Quiz
+    from src.quiz.schemas import QuizTone
+    from src.quiz.service import reserve_quiz_job
+
+    # Create a user first
+    user = User(
+        canvas_id=129,
+        name="Tone Test User",
+        access_token="test_access_token",
+        refresh_token="test_refresh_token",
+    )
+    async_session.add(user)
+    await async_session.commit()
+    await async_session.refresh(user)
+
+    quiz = Quiz(
+        owner_id=user.id,
+        canvas_course_id=123,
+        canvas_course_name="Professional Tone Test Course",
+        selected_modules={
+            "1": {
+                "name": "Module 1",
+                "question_batches": [{"question_type": "multiple_choice", "count": 30}],
+            }
+        },
+        question_count=30,
+        title="Professional Test Quiz",
+        llm_model="gpt-4",
+        llm_temperature=0.8,
+        tone=QuizTone.PROFESSIONAL,
+        status="created",
+    )
+    async_session.add(quiz)
+    await async_session.commit()
+    await async_session.refresh(quiz)
+
+    with patch("src.quiz.service.get_quiz_for_update", return_value=quiz):
+        result = await reserve_quiz_job(async_session, quiz.id, "extraction")
+
+    assert result is not None
+    assert result["tone"] == QuizTone.PROFESSIONAL
+    assert result["target_questions"] == 30
+    assert result["llm_model"] == "gpt-4"
+    assert result["llm_temperature"] == 0.8
+
+
+@pytest.mark.asyncio
+async def test_reserve_quiz_job_includes_tone_and_language_settings(async_session):
+    """Test that quiz job reservation includes both tone and language in settings."""
+    from src.auth.models import User
+    from src.question.types import QuizLanguage
+    from src.quiz.models import Quiz
+    from src.quiz.schemas import QuizTone
+    from src.quiz.service import reserve_quiz_job
+
+    # Create a user first
+    user = User(
+        canvas_id=130,
+        name="Combination Test User",
+        access_token="test_access_token",
+        refresh_token="test_refresh_token",
+    )
+    async_session.add(user)
+    await async_session.commit()
+    await async_session.refresh(user)
+
+    quiz = Quiz(
+        owner_id=user.id,
+        canvas_course_id=123,
+        canvas_course_name="Norsk Oppmuntrende Kurs",
+        selected_modules={
+            "1": {
+                "name": "Modul 1",
+                "question_batches": [{"question_type": "multiple_choice", "count": 40}],
+            }
+        },
+        question_count=40,
+        title="Norsk Oppmuntrende Quiz",
+        llm_model="gpt-4",
+        llm_temperature=0.9,
+        language=QuizLanguage.NORWEGIAN,
+        tone=QuizTone.ENCOURAGING,
+        status="created",
+    )
+    async_session.add(quiz)
+    await async_session.commit()
+    await async_session.refresh(quiz)
+
+    with patch("src.quiz.service.get_quiz_for_update", return_value=quiz):
+        result = await reserve_quiz_job(async_session, quiz.id, "extraction")
+
+    assert result is not None
+    assert result["tone"] == QuizTone.ENCOURAGING
+    assert result["language"] == QuizLanguage.NORWEGIAN
+    assert result["target_questions"] == 40
+    assert result["llm_model"] == "gpt-4"
+    assert result["llm_temperature"] == 0.9
 
 
 @pytest.mark.asyncio

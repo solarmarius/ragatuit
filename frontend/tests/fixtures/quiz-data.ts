@@ -17,6 +17,8 @@ const baseQuiz = {
   question_count: 50,
   llm_model: "gpt-4o",
   llm_temperature: 0.7,
+  language: "en" as const,
+  tone: "academic" as const,
   created_at: "2024-01-15T10:30:00Z",
   updated_at: "2024-01-16T14:20:00Z",
 }
@@ -188,6 +190,76 @@ export const allMockQuizzes = [
 
 export const emptyQuizList: Quiz[] = []
 
+// Tone-specific quiz fixtures for testing different tone combinations
+export const quizWithCasualTone: Quiz = {
+  ...baseQuiz,
+  id: "quiz-casual-tone",
+  title: "Casual Learning Quiz",
+  canvas_course_name: "Informal Learning",
+  tone: "casual",
+  language: "en",
+  status: "ready_for_review",
+  last_status_update: "2024-01-15T19:00:00Z",
+  question_count: 15,
+}
+
+export const quizWithEncouragingTone: Quiz = {
+  ...baseQuiz,
+  id: "quiz-encouraging-tone",
+  title: "Encouraging Study Quiz",
+  canvas_course_name: "Supportive Learning",
+  tone: "encouraging",
+  language: "en",
+  status: "ready_for_review",
+  last_status_update: "2024-01-15T20:00:00Z",
+  question_count: 20,
+}
+
+export const quizWithProfessionalTone: Quiz = {
+  ...baseQuiz,
+  id: "quiz-professional-tone",
+  title: "Professional Training Quiz",
+  canvas_course_name: "Business Training",
+  tone: "professional",
+  language: "en",
+  status: "ready_for_review",
+  last_status_update: "2024-01-15T21:00:00Z",
+  question_count: 25,
+}
+
+export const quizWithNorwegianAndCasualTone: Quiz = {
+  ...baseQuiz,
+  id: "quiz-norwegian-casual",
+  title: "Norsk Uformell Quiz",
+  canvas_course_name: "Norsk Kurs",
+  tone: "casual",
+  language: "no",
+  status: "ready_for_review",
+  last_status_update: "2024-01-15T22:00:00Z",
+  question_count: 30,
+}
+
+export const quizWithNorwegianAndAcademicTone: Quiz = {
+  ...baseQuiz,
+  id: "quiz-norwegian-academic",
+  title: "Norsk Akademisk Quiz",
+  canvas_course_name: "Universitet Kurs",
+  tone: "academic",
+  language: "no",
+  status: "ready_for_review",
+  last_status_update: "2024-01-15T23:00:00Z",
+  question_count: 35,
+}
+
+// Collection of tone-diverse quizzes for testing
+export const toneVariedQuizzes = [
+  quizWithCasualTone,
+  quizWithEncouragingTone,
+  quizWithProfessionalTone,
+  quizWithNorwegianAndCasualTone,
+  quizWithNorwegianAndAcademicTone,
+] as Quiz[]
+
 // Long quiz title for testing truncation
 export const quizWithLongTitle: Quiz = {
   ...baseQuiz,
@@ -220,3 +292,15 @@ export const createErrorResponse = (
   contentType: "application/json",
   body: JSON.stringify({ detail: message }),
 })
+
+// Helper function to create quiz with specific tone and language
+export const createQuizWithToneAndLanguage = (
+  baseQuizData: Partial<Quiz>,
+  tone: "academic" | "casual" | "encouraging" | "professional" = "academic",
+  language: "en" | "no" = "en"
+): Quiz => ({
+  ...baseQuiz,
+  ...baseQuizData,
+  tone,
+  language,
+} as Quiz)

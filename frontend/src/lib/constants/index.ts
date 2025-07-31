@@ -55,6 +55,20 @@ export const QUIZ_LANGUAGE_LABELS = {
   no: "Norwegian",
 } as const
 
+export const QUIZ_TONES = {
+  ACADEMIC: "academic",
+  CASUAL: "casual",
+  ENCOURAGING: "encouraging",
+  PROFESSIONAL: "professional",
+} as const
+
+export const QUIZ_TONE_LABELS = {
+  academic: "Formal/Academic",
+  casual: "Casual/Conversational",
+  encouraging: "Friendly/Encouraging",
+  professional: "Professional/Business",
+} as const
+
 export const QUIZ_STATUS = {
   CREATED: "created",
   EXTRACTING_CONTENT: "extracting_content",

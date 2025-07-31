@@ -37,6 +37,15 @@ class FailureReason(str, Enum):
     VALIDATION_ERROR = "validation_error"
 
 
+class QuizTone(str, Enum):
+    """Tone of voice options for quiz question generation."""
+
+    ACADEMIC = "academic"
+    CASUAL = "casual"
+    ENCOURAGING = "encouraging"
+    PROFESSIONAL = "professional"
+
+
 class QuestionBatch(SQLModel):
     """Schema for a batch of questions of a specific type."""
 
@@ -68,7 +77,7 @@ class QuizCreate(SQLModel):
     llm_model: str = Field(default="o3")
     llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
     language: QuizLanguage = Field(default=QuizLanguage.ENGLISH)
-    # Removed: question_type field
+    tone: QuizTone = Field(default=QuizTone.ACADEMIC)
 
     @field_validator("selected_modules")
     def validate_modules(cls, v: dict[str, Any]) -> dict[str, Any]:
@@ -128,7 +137,7 @@ class QuizPublic(SQLModel):
     llm_model: str
     llm_temperature: float
     language: QuizLanguage
-    # Removed: question_type field (now per batch)
+    tone: QuizTone
     status: QuizStatus
     failure_reason: FailureReason | None = None
     last_status_update: datetime

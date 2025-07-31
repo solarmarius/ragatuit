@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 from src.question.types import QuizLanguage
 
-from .schemas import FailureReason, QuizStatus
+from .schemas import FailureReason, QuizStatus, QuizTone
 
 
 class Quiz(SQLModel, table=True):
@@ -38,6 +38,10 @@ class Quiz(SQLModel, table=True):
     language: QuizLanguage = Field(
         default=QuizLanguage.ENGLISH,
         description="Language for question generation",
+    )
+    tone: QuizTone = Field(
+        default=QuizTone.ACADEMIC,
+        description="Tone of voice for question generation",
     )
     # Removed: question_type field (now per batch)
     status: QuizStatus = Field(
