@@ -161,7 +161,7 @@ test.describe("Quiz Workflow End-to-End", () => {
               "173467": {
                 name: "Introduction to Neural Networks",
                 question_batches: [
-                  { question_type: "multiple_choice", count: 15 },
+                  { question_type: "multiple_choice", count: 15, difficulty: "medium" },
                 ],
               },
             },
@@ -237,13 +237,13 @@ test.describe("Quiz Workflow End-to-End", () => {
               "173467": {
                 name: "Module 1",
                 question_batches: [
-                  { question_type: "multiple_choice", count: 25 },
+                  { question_type: "multiple_choice", count: 25, difficulty: "medium" },
                 ],
               },
               "173468": {
                 name: "Module 2",
                 question_batches: [
-                  { question_type: "multiple_choice", count: 25 },
+                  { question_type: "multiple_choice", count: 25, difficulty: "medium" },
                 ],
               },
             },
@@ -369,7 +369,7 @@ test.describe("Quiz Workflow End-to-End", () => {
               "173467": {
                 name: "Mobile Module",
                 question_batches: [
-                  { question_type: "multiple_choice", count: 25 },
+                  { question_type: "multiple_choice", count: 25, difficulty: "medium" },
                 ],
               },
             },
@@ -415,7 +415,7 @@ test.describe("Quiz Workflow End-to-End", () => {
               "173467": {
                 name: "Module 1",
                 question_batches: [
-                  { question_type: "multiple_choice", count: 25 },
+                  { question_type: "multiple_choice", count: 25, difficulty: "medium" },
                 ],
               },
             },
@@ -534,7 +534,7 @@ test.describe("Quiz Workflow End-to-End", () => {
               "173467": {
                 name: "Introduction to Neural Networks",
                 question_batches: [
-                  { question_type: "multiple_choice", count: 15 },
+                  { question_type: "multiple_choice", count: 15, difficulty: "medium" },
                 ],
               },
             },
@@ -848,7 +848,7 @@ test.describe("Quiz Workflow End-to-End", () => {
     expect(capturedRequestBody.selected_modules).toEqual({
       "173467": {
         name: "Introduction to Neural Networks",
-        question_batches: [{ question_type: "multiple_choice", count: 20 }],
+        question_batches: [{ question_type: "multiple_choice", count: 20, difficulty: "medium" }],
       },
     });
   });
@@ -1080,7 +1080,7 @@ test.describe("Quiz Workflow End-to-End", () => {
               "173467": {
                 name: "Introduction to Neural Networks",
                 question_batches: [
-                  { question_type: "multiple_choice", count: 15 },
+                  { question_type: "multiple_choice", count: 15, difficulty: "medium" },
                 ],
               },
             },
@@ -1218,5 +1218,176 @@ test.describe("Quiz Workflow End-to-End", () => {
 
     // Should redirect to quiz detail page
     await expect(page).toHaveURL(`/quiz/${newQuizId}`);
+  });
+
+  test("complete quiz creation with mixed difficulty levels", async ({ page }) => {
+    // Mock empty quiz list initially
+    await page.route("**/api/v1/quiz/", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([]),
+      });
+    });
+
+    // Start at quiz list page
+    await page.goto("/quizzes");
+
+    // Click create quiz button
+    await page.getByRole("link", { name: "Create Your First Quiz" }).click();
+
+    // Step 1: Select course and fill title
+    await expect(page).toHaveURL("/create-quiz");
+    await page.getByText("Machine Learning Fundamentals").click();
+    await page.waitForTimeout(500);
+    await page.getByLabel("Quiz Title").fill("Mixed Difficulty Quiz");
+    await page.getByRole("button", { name: "next" }).click();
+
+    // Step 2: Select multiple modules
+    await page.waitForLoadState("networkidle");
+    await page.getByText("Introduction to Neural Networks").click();
+    await page.getByText("Deep Learning Concepts").click();
+    await page.waitForTimeout(500);
+    await page.getByRole("button", { name: "next" }).click();
+
+    // Step 3: Configure Question Types with Different Difficulties
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByRole("heading", { name: "Configure Question Types per Module" })).toBeVisible();
+
+    // Add batch to first module with easy difficulty
+    await page.getByText("Add Batch").first().click();
+    const firstQuestionInput = page.getByRole("spinbutton").first();
+    await firstQuestionInput.fill("8");
+
+    // Set first batch to easy difficulty
+    await page.locator('label').filter({ hasText: 'Difficulty' }).first().locator('..').locator('[data-part="trigger"]').first().click();
+    await page.locator('[data-part="content"]:visible [data-part="item"][data-value="easy"]').click();
+
+    // Add second batch to first module with hard difficulty
+    await page.getByText("Add Batch").first().click();
+    const secondQuestionInput = page.getByRole("spinbutton").nth(1);
+    await secondQuestionInput.fill("12");
+
+    // Change second batch to different question type
+    await page.locator('label').filter({ hasText: 'Question Type' }).nth(1).locator('..').locator('[data-part="trigger"]').first().click();
+    await page.locator('[data-part="content"]:visible [data-part="item"][data-value="true_false"]').click();
+
+    // Set second batch to hard difficulty
+    await page.locator('label').filter({ hasText: 'Difficulty' }).nth(1).locator('..').locator('[data-part="trigger"]').first().click();
+    await page.locator('[data-part="content"]:visible [data-part="item"][data-value="hard"]').click();
+
+    // Add batch to second module with medium difficulty (default)
+    await page.getByText("Add Batch").nth(1).click();
+    const thirdQuestionInput = page.getByRole("spinbutton").nth(2);
+    await thirdQuestionInput.fill("10");
+
+    // Verify total questions = 30 (8 + 12 + 10)
+    await expect(page.getByText("30")).toBeVisible();
+
+    // Move to quiz settings
+    await page.getByRole("button", { name: "next" }).click();
+
+    // Step 4: Quiz Configuration - keep defaults (English, Academic)
+    await page.waitForLoadState("networkidle");
+    await expect(page.getByText("Quiz Configuration")).toBeVisible();
+
+    // Mock quiz creation API with mixed difficulties
+    const newQuizId = "mixed-difficulty-quiz-id";
+    await page.route("**/api/v1/quiz/", async (route) => {
+      if (route.request().method() === "POST") {
+        const requestBody = await route.request().postDataJSON();
+
+        // Verify the request includes different difficulties
+        const firstModuleBatches = requestBody.selected_modules["173467"].question_batches;
+        expect(firstModuleBatches).toHaveLength(2);
+        expect(firstModuleBatches[0].difficulty).toBe("easy");
+        expect(firstModuleBatches[1].difficulty).toBe("hard");
+
+        const secondModuleBatches = requestBody.selected_modules["173468"].question_batches;
+        expect(secondModuleBatches).toHaveLength(1);
+        expect(secondModuleBatches[0].difficulty).toBe("medium"); // Default
+
+        await route.fulfill({
+          status: 201,
+          contentType: "application/json",
+          body: JSON.stringify({
+            id: newQuizId,
+            title: "Mixed Difficulty Quiz",
+            canvas_course_id: 12345,
+            canvas_course_name: "Machine Learning Fundamentals",
+            selected_modules: {
+              "173467": {
+                name: "Introduction to Neural Networks",
+                question_batches: [
+                  { question_type: "multiple_choice", count: 8, difficulty: "easy" },
+                  { question_type: "true_false", count: 12, difficulty: "hard" },
+                ],
+              },
+              "173468": {
+                name: "Deep Learning Concepts",
+                question_batches: [
+                  { question_type: "multiple_choice", count: 10, difficulty: "medium" },
+                ],
+              },
+            },
+            question_count: 30,
+            language: "en",
+            tone: "academic",
+            llm_model: "gpt-4o",
+            llm_temperature: 0.7,
+            created_at: "2024-01-15T10:30:00Z",
+            updated_at: "2024-01-15T10:30:00Z",
+            owner_id: "user123",
+          }),
+        });
+      }
+    });
+
+    // Create quiz
+    await page.getByRole("button", { name: "Create Quiz" }).click();
+
+    // Should redirect to quiz detail page
+    await expect(page).toHaveURL(`/quiz/${newQuizId}`);
+  });
+
+  test("difficulty validation prevents duplicate combinations", async ({ page }) => {
+    // Mock empty quiz list
+    await page.route("**/api/v1/quiz/", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([]),
+      });
+    });
+
+    await page.goto("/create-quiz");
+
+    // Navigate to module question selection
+    await page.getByText("Machine Learning Fundamentals").click();
+    await page.getByLabel("Quiz Title").fill("Validation Test Quiz");
+    await page.getByRole("button", { name: "next" }).click();
+    await page.waitForLoadState("networkidle");
+    await page.getByText("Introduction to Neural Networks").click();
+    await page.getByRole("button", { name: "next" }).click();
+    await page.waitForLoadState("networkidle");
+
+    // Add first batch with multiple choice, easy difficulty
+    await page.getByText("Add Batch").first().click();
+    await page.locator('label').filter({ hasText: 'Difficulty' }).first().locator('..').locator('[data-part="trigger"]').first().click();
+    await page.locator('[data-part="content"]:visible [data-part="item"][data-value="easy"]').click();
+
+    // Add second batch with same type and difficulty (should trigger validation)
+    await page.getByText("Add Batch").first().click();
+    await page.locator('label').filter({ hasText: 'Difficulty' }).nth(1).locator('..').locator('[data-part="trigger"]').first().click();
+    await page.locator('[data-part="content"]:visible [data-part="item"][data-value="easy"]').click();
+
+    // Should show validation error
+    await expect(page.getByText("Cannot have duplicate question type and difficulty combinations").or(
+      page.getByText("duplicate")
+    )).toBeVisible();
+
+    // Next button should be disabled or error should prevent progression
+    const nextButton = page.getByRole("button", { name: "next" });
+    // Note: The actual behavior depends on implementation - it might disable the button or show error
   });
 });

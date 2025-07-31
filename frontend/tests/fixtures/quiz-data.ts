@@ -11,8 +11,14 @@ const baseQuiz = {
   canvas_course_id: 12345,
   canvas_course_name: "Test Course",
   selected_modules: {
-    "173467": { name: "Module 1", question_count: 20 },
-    "173468": { name: "Module 2", question_count: 20 },
+    "173467": {
+      name: "Module 1",
+      question_batches: [{ question_type: "multiple_choice", count: 20, difficulty: "medium" }]
+    },
+    "173468": {
+      name: "Module 2",
+      question_batches: [{ question_type: "multiple_choice", count: 20, difficulty: "medium" }]
+    },
   },
   question_count: 50,
   llm_model: "gpt-4o",
@@ -304,3 +310,94 @@ export const createQuizWithToneAndLanguage = (
   tone,
   language,
 } as Quiz)
+
+// Difficulty-specific quiz fixtures for testing difficulty feature
+export const quizWithEasyDifficulty: Quiz = {
+  ...baseQuiz,
+  id: "quiz-easy-difficulty",
+  title: "Easy Difficulty Quiz",
+  canvas_course_name: "Beginner Course",
+  selected_modules: {
+    "173467": {
+      name: "Basic Concepts",
+      question_batches: [
+        { question_type: "multiple_choice", count: 10, difficulty: "easy" },
+        { question_type: "true_false", count: 5, difficulty: "easy" }
+      ]
+    }
+  },
+  question_count: 15,
+  status: "ready_for_review",
+  last_status_update: "2024-01-15T19:00:00Z",
+}
+
+export const quizWithHardDifficulty: Quiz = {
+  ...baseQuiz,
+  id: "quiz-hard-difficulty",
+  title: "Advanced Concepts Quiz",
+  canvas_course_name: "Advanced Course",
+  selected_modules: {
+    "173467": {
+      name: "Complex Topics",
+      question_batches: [
+        { question_type: "multiple_choice", count: 15, difficulty: "hard" },
+        { question_type: "matching", count: 10, difficulty: "hard" }
+      ]
+    }
+  },
+  question_count: 25,
+  status: "ready_for_review",
+  last_status_update: "2024-01-15T20:00:00Z",
+}
+
+export const quizWithMixedDifficulties: Quiz = {
+  ...baseQuiz,
+  id: "quiz-mixed-difficulties",
+  title: "Progressive Learning Quiz",
+  canvas_course_name: "Comprehensive Course",
+  selected_modules: {
+    "173467": {
+      name: "Introduction Module",
+      question_batches: [
+        { question_type: "multiple_choice", count: 10, difficulty: "easy" },
+        { question_type: "multiple_choice", count: 10, difficulty: "medium" }
+      ]
+    },
+    "173468": {
+      name: "Advanced Module",
+      question_batches: [
+        { question_type: "fill_in_blank", count: 8, difficulty: "medium" },
+        { question_type: "categorization", count: 12, difficulty: "hard" }
+      ]
+    }
+  },
+  question_count: 40,
+  status: "ready_for_review",
+  last_status_update: "2024-01-15T21:00:00Z",
+}
+
+export const quizWithoutDifficulty: Quiz = {
+  ...baseQuiz,
+  id: "quiz-no-difficulty",
+  title: "Legacy Quiz Without Difficulty",
+  canvas_course_name: "Legacy Course",
+  selected_modules: {
+    "173467": {
+      name: "Legacy Module",
+      question_batches: [
+        { question_type: "multiple_choice", count: 20 } // No difficulty field for backward compatibility testing
+      ]
+    }
+  },
+  question_count: 20,
+  status: "ready_for_review",
+  last_status_update: "2024-01-15T22:00:00Z",
+}
+
+// Collection of difficulty-varied quizzes for testing
+export const difficultyVariedQuizzes = [
+  quizWithEasyDifficulty,
+  quizWithHardDifficulty,
+  quizWithMixedDifficulties,
+  quizWithoutDifficulty,
+] as Quiz[]

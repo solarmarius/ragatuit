@@ -30,15 +30,15 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Neural Networks",
-          question_batches: [{ question_type: "multiple_choice", count: 20 }],
+          question_batches: [{ question_type: "multiple_choice", count: 20, difficulty: "medium" }],
         },
         "173468": {
           name: "Deep Learning",
-          question_batches: [{ question_type: "multiple_choice", count: 20 }],
+          question_batches: [{ question_type: "multiple_choice", count: 20, difficulty: "hard" }],
         },
         "173469": {
           name: "Reinforcement Learning",
-          question_batches: [{ question_type: "multiple_choice", count: 20 }],
+          question_batches: [{ question_type: "multiple_choice", count: 20, difficulty: "easy" }],
         },
       },
       question_count: 60,
@@ -162,7 +162,7 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
         },
       },
       question_count: 50,
@@ -201,7 +201,7 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
         },
       },
       question_count: 50,
@@ -277,7 +277,7 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
         },
       },
       question_count: 100,
@@ -417,7 +417,7 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
         },
       },
       question_count: 50,
@@ -455,7 +455,7 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
         },
       },
       question_count: 50,
@@ -506,7 +506,7 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
         },
       },
       question_count: 50,
@@ -576,7 +576,7 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
         },
       },
       question_count: 50,
@@ -628,7 +628,7 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
         },
       },
       question_count: 50,
@@ -668,7 +668,7 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25 }],
+          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
         },
       },
       question_count: 50,
@@ -713,5 +713,138 @@ test.describe("Quiz Detail Component", () => {
 
     // Review Quiz button should now be visible
     await expect(page.getByRole("button", { name: "Review" })).toBeVisible()
+  })
+
+  test("should display difficulty information in quiz details", async ({ page }) => {
+    const mockQuiz = {
+      id: mockQuizId,
+      title: "Difficulty Display Test Quiz",
+      canvas_course_id: 12345,
+      canvas_course_name: "Test Course",
+      selected_modules: {
+        "173467": {
+          name: "Easy Module",
+          question_batches: [
+            { question_type: "multiple_choice", count: 10, difficulty: "easy" },
+            { question_type: "true_false", count: 5, difficulty: "easy" }
+          ],
+        },
+        "173468": {
+          name: "Mixed Difficulty Module",
+          question_batches: [
+            { question_type: "multiple_choice", count: 15, difficulty: "medium" },
+            { question_type: "fill_in_blank", count: 8, difficulty: "hard" }
+          ],
+        },
+      },
+      question_count: 38,
+      llm_model: "gpt-4o",
+      llm_temperature: 0.7,
+      language: "en",
+      tone: "academic",
+      created_at: "2024-01-15T10:30:00Z",
+      updated_at: "2024-01-20T16:45:00Z",
+      owner_id: "user123",
+    }
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mockQuiz),
+      })
+    })
+
+    await page.reload()
+
+    // Check that modules are displayed
+    await expect(page.getByText("Easy Module").first()).toBeVisible()
+    await expect(page.getByText("Mixed Difficulty Module").first()).toBeVisible()
+
+    // Check that the total question count reflects all batches
+    await expect(page.locator('text="38"').first()).toBeVisible()
+  })
+
+  test("should display quiz with legacy format (no difficulty field)", async ({ page }) => {
+    const mockQuiz = {
+      id: mockQuizId,
+      title: "Legacy Quiz Without Difficulty",
+      canvas_course_id: 12345,
+      canvas_course_name: "Legacy Course",
+      selected_modules: {
+        "173467": {
+          name: "Legacy Module",
+          question_batches: [
+            { question_type: "multiple_choice", count: 20 } // No difficulty field
+          ],
+        },
+      },
+      question_count: 20,
+      llm_model: "gpt-4o",
+      llm_temperature: 0.5,
+      language: "en",
+      tone: "academic",
+      created_at: "2024-01-15T10:30:00Z",
+      updated_at: "2024-01-16T14:20:00Z",
+      owner_id: "user123",
+    }
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mockQuiz),
+      })
+    })
+
+    await page.reload()
+
+    // Should still display quiz information correctly even without difficulty
+    await expect(page.getByText("Legacy Quiz Without Difficulty")).toBeVisible()
+    await expect(page.getByText("Legacy Module").first()).toBeVisible()
+    await expect(page.locator('text="20"').first()).toBeVisible()
+  })
+
+  test("should display quiz with multiple batches of different difficulties", async ({ page }) => {
+    const mockQuiz = {
+      id: mockQuizId,
+      title: "Progressive Difficulty Quiz",
+      canvas_course_id: 12345,
+      canvas_course_name: "Progressive Learning Course",
+      selected_modules: {
+        "173467": {
+          name: "Comprehensive Module",
+          question_batches: [
+            { question_type: "multiple_choice", count: 5, difficulty: "easy" },
+            { question_type: "multiple_choice", count: 10, difficulty: "medium" },
+            { question_type: "multiple_choice", count: 5, difficulty: "hard" },
+            { question_type: "true_false", count: 8, difficulty: "easy" }
+          ],
+        },
+      },
+      question_count: 28,
+      llm_model: "gpt-4o",
+      llm_temperature: 0.7,
+      language: "en",
+      tone: "academic",
+      created_at: "2024-01-15T10:30:00Z",
+      updated_at: "2024-01-20T16:45:00Z",
+      owner_id: "user123",
+    }
+
+    await page.route(`**/api/v1/quiz/${mockQuizId}`, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(mockQuiz),
+      })
+    })
+
+    await page.reload()
+
+    // Check that quiz displays correctly with multiple batches
+    await expect(page.getByText("Progressive Difficulty Quiz")).toBeVisible()
+    await expect(page.getByText("Comprehensive Module").first()).toBeVisible()
+    await expect(page.locator('text="28"').first()).toBeVisible()
   })
 })
