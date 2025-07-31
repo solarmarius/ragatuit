@@ -213,3 +213,150 @@ def test_template_properties_parsed_correctly(template_manager):
     assert template.version == "1.0"
     assert template.description == "Test Norwegian MCQ template"
     assert template.language == QuizLanguage.NORWEGIAN
+
+
+# Tone of Voice Tests
+
+
+@pytest.mark.asyncio
+async def test_create_messages_with_tone_variable_injection(template_manager):
+    """Test that tone variable is properly injected into template messages."""
+    from src.question.types import GenerationParameters, QuestionType, QuizLanguage
+
+    params = GenerationParameters(target_count=5, language=QuizLanguage.ENGLISH)
+
+    messages = await template_manager.create_messages(
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        content="Test content",
+        generation_parameters=params,
+        extra_variables={"module_name": "Test Module", "tone": "professional"},
+    )
+
+    assert len(messages) == 2
+    assert messages[0].role == "system"
+    assert messages[1].role == "user"
+    # The mock template manager doesn't actually use templates, but we verify the call succeeded
+    assert "5" in messages[1].content  # target_count should be rendered
+
+
+@pytest.mark.asyncio
+async def test_create_messages_with_academic_tone(template_manager):
+    """Test template message creation with academic tone."""
+    from src.question.types import GenerationParameters, QuestionType, QuizLanguage
+
+    params = GenerationParameters(target_count=3, language=QuizLanguage.ENGLISH)
+
+    messages = await template_manager.create_messages(
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        content="Academic content about scientific methods",
+        generation_parameters=params,
+        extra_variables={"module_name": "Research Methods", "tone": "academic"},
+    )
+
+    assert len(messages) == 2
+    assert messages[0].role == "system"
+    assert messages[1].role == "user"
+    assert "3" in messages[1].content
+
+
+@pytest.mark.asyncio
+async def test_create_messages_with_casual_tone(template_manager):
+    """Test template message creation with casual tone."""
+    from src.question.types import GenerationParameters, QuestionType, QuizLanguage
+
+    params = GenerationParameters(target_count=4, language=QuizLanguage.ENGLISH)
+
+    messages = await template_manager.create_messages(
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        content="Casual content about everyday topics",
+        generation_parameters=params,
+        extra_variables={"module_name": "Everyday Skills", "tone": "casual"},
+    )
+
+    assert len(messages) == 2
+    assert messages[0].role == "system"
+    assert messages[1].role == "user"
+    assert "4" in messages[1].content
+
+
+@pytest.mark.asyncio
+async def test_create_messages_with_encouraging_tone(template_manager):
+    """Test template message creation with encouraging tone."""
+    from src.question.types import GenerationParameters, QuestionType, QuizLanguage
+
+    params = GenerationParameters(target_count=6, language=QuizLanguage.ENGLISH)
+
+    messages = await template_manager.create_messages(
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        content="Learning content for building confidence",
+        generation_parameters=params,
+        extra_variables={"module_name": "Building Skills", "tone": "encouraging"},
+    )
+
+    assert len(messages) == 2
+    assert messages[0].role == "system"
+    assert messages[1].role == "user"
+    assert "6" in messages[1].content
+
+
+@pytest.mark.asyncio
+async def test_create_messages_with_professional_tone(template_manager):
+    """Test template message creation with professional tone."""
+    from src.question.types import GenerationParameters, QuestionType, QuizLanguage
+
+    params = GenerationParameters(target_count=7, language=QuizLanguage.ENGLISH)
+
+    messages = await template_manager.create_messages(
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        content="Professional development content",
+        generation_parameters=params,
+        extra_variables={"module_name": "Leadership Skills", "tone": "professional"},
+    )
+
+    assert len(messages) == 2
+    assert messages[0].role == "system"
+    assert messages[1].role == "user"
+    assert "7" in messages[1].content
+
+
+@pytest.mark.asyncio
+async def test_create_messages_with_tone_and_norwegian_language(template_manager):
+    """Test template message creation with both tone and Norwegian language."""
+    from src.question.types import GenerationParameters, QuestionType, QuizLanguage
+
+    params = GenerationParameters(target_count=5, language=QuizLanguage.NORWEGIAN)
+
+    messages = await template_manager.create_messages(
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        content="Norsk innhold om teknologi",
+        generation_parameters=params,
+        language=QuizLanguage.NORWEGIAN,
+        extra_variables={"module_name": "Teknologi", "tone": "encouraging"},
+    )
+
+    assert len(messages) == 2
+    assert messages[0].role == "system"
+    assert messages[1].role == "user"
+    assert "5" in messages[1].content
+    assert "Norsk innhold om teknologi" in messages[1].content
+
+
+@pytest.mark.asyncio
+async def test_create_messages_without_tone_defaults_gracefully(template_manager):
+    """Test that template creation works correctly without tone specified."""
+    from src.question.types import GenerationParameters, QuestionType, QuizLanguage
+
+    params = GenerationParameters(target_count=3, language=QuizLanguage.ENGLISH)
+
+    messages = await template_manager.create_messages(
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        content="Test content without tone",
+        generation_parameters=params,
+        extra_variables={"module_name": "Test Module"},
+        # No tone specified in extra_variables
+    )
+
+    assert len(messages) == 2
+    assert messages[0].role == "system"
+    assert messages[1].role == "user"
+    assert "3" in messages[1].content

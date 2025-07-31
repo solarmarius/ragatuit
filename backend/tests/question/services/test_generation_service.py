@@ -31,12 +31,13 @@ def generation_service():
 def mock_quiz():
     """Create mock quiz with module structure."""
     from src.quiz.models import Quiz
-    from src.quiz.schemas import QuizStatus
+    from src.quiz.schemas import QuizStatus, QuizTone
 
     quiz = MagicMock(spec=Quiz)
     quiz.id = UUID("12345678-1234-5678-1234-567812345678")
     quiz.status = QuizStatus.GENERATING_QUESTIONS
     quiz.language = "en"
+    quiz.tone = QuizTone.ACADEMIC  # Default tone
     quiz.selected_modules = {
         "module_1": {
             "name": "Introduction",
@@ -49,6 +50,32 @@ def mock_quiz():
     }
     quiz.question_count = 15
     quiz.generation_metadata = None  # No existing metadata by default
+    return quiz
+
+
+@pytest.fixture
+def mock_quiz_with_tone():
+    """Create mock quiz with specific tone."""
+    from src.quiz.models import Quiz
+    from src.quiz.schemas import QuizStatus, QuizTone
+
+    quiz = MagicMock(spec=Quiz)
+    quiz.id = UUID("87654321-4321-8765-4321-876543218765")
+    quiz.status = QuizStatus.GENERATING_QUESTIONS
+    quiz.language = "en"
+    quiz.tone = QuizTone.PROFESSIONAL  # Professional tone
+    quiz.selected_modules = {
+        "module_1": {
+            "name": "Business Strategy",
+            "question_batches": [{"question_type": "multiple_choice", "count": 8}],
+        },
+        "module_2": {
+            "name": "Leadership",
+            "question_batches": [{"question_type": "multiple_choice", "count": 12}],
+        },
+    }
+    quiz.question_count = 20
+    quiz.generation_metadata = None
     return quiz
 
 
@@ -272,6 +299,153 @@ async def test_generate_questions_for_quiz_with_batch_tracking_missing_module_co
 
 
 @pytest.mark.asyncio
+async def test_generate_questions_for_quiz_with_batch_tracking_with_tone(
+    generation_service, mock_quiz_with_tone, extracted_content
+):
+    """Test generation with specific tone."""
+    quiz_id = mock_quiz_with_tone.id
+
+    with (
+        patch(
+            "src.question.services.generation_service.get_async_session"
+        ) as mock_session_ctx,
+        patch(
+            "src.question.services.generation_service.ParallelModuleProcessor"
+        ) as mock_processor_class,
+    ):
+        mock_session = AsyncMock()
+        mock_session.get.return_value = mock_quiz_with_tone
+        mock_session_ctx.return_value.__aenter__.return_value = mock_session
+
+        mock_provider = MagicMock()
+        generation_service.provider_registry.get_provider.return_value = mock_provider
+
+        mock_processor = MagicMock()
+        mock_processor.process_all_modules_with_batches = AsyncMock(
+            return_value=({}, {"successful_batches": [], "failed_batches": []})
+        )
+        mock_processor_class.return_value = mock_processor
+
+        (
+            result,
+            batch_status,
+        ) = await generation_service.generate_questions_for_quiz_with_batch_tracking(
+            quiz_id, extracted_content
+        )
+
+        # Verify processor was created with professional tone
+        from src.question.types import QuizLanguage
+        from src.quiz.schemas import QuizTone
+
+        mock_processor_class.assert_called_once_with(
+            llm_provider=mock_provider,
+            template_manager=generation_service.template_manager,
+            language=QuizLanguage.ENGLISH,
+            tone=QuizTone.PROFESSIONAL.value,
+        )
+
+
+@pytest.mark.asyncio
+async def test_generate_questions_for_quiz_with_batch_tracking_tone_extraction(
+    generation_service, mock_quiz, extracted_content
+):
+    """Test that tone is extracted from quiz model correctly."""
+    from src.quiz.schemas import QuizTone
+
+    # Set encouraging tone on the quiz
+    mock_quiz.tone = QuizTone.ENCOURAGING
+    quiz_id = mock_quiz.id
+
+    with (
+        patch(
+            "src.question.services.generation_service.get_async_session"
+        ) as mock_session_ctx,
+        patch(
+            "src.question.services.generation_service.ParallelModuleProcessor"
+        ) as mock_processor_class,
+    ):
+        mock_session = AsyncMock()
+        mock_session.get.return_value = mock_quiz
+        mock_session_ctx.return_value.__aenter__.return_value = mock_session
+
+        mock_provider = MagicMock()
+        generation_service.provider_registry.get_provider.return_value = mock_provider
+
+        mock_processor = MagicMock()
+        mock_processor.process_all_modules_with_batches = AsyncMock(
+            return_value=({}, {"successful_batches": [], "failed_batches": []})
+        )
+        mock_processor_class.return_value = mock_processor
+
+        (
+            result,
+            batch_status,
+        ) = await generation_service.generate_questions_for_quiz_with_batch_tracking(
+            quiz_id, extracted_content
+        )
+
+        # Verify processor was created with encouraging tone
+        from src.question.types import QuizLanguage
+
+        mock_processor_class.assert_called_once_with(
+            llm_provider=mock_provider,
+            template_manager=generation_service.template_manager,
+            language=QuizLanguage.ENGLISH,
+            tone=QuizTone.ENCOURAGING.value,
+        )
+
+
+@pytest.mark.asyncio
+async def test_generate_questions_for_quiz_with_batch_tracking_tone_and_language(
+    generation_service, mock_quiz, extracted_content
+):
+    """Test generation with both tone and language."""
+    from src.question.types import QuizLanguage
+    from src.quiz.schemas import QuizTone
+
+    # Set Norwegian language and casual tone
+    mock_quiz.language = "no"
+    mock_quiz.tone = QuizTone.CASUAL
+    quiz_id = mock_quiz.id
+
+    with (
+        patch(
+            "src.question.services.generation_service.get_async_session"
+        ) as mock_session_ctx,
+        patch(
+            "src.question.services.generation_service.ParallelModuleProcessor"
+        ) as mock_processor_class,
+    ):
+        mock_session = AsyncMock()
+        mock_session.get.return_value = mock_quiz
+        mock_session_ctx.return_value.__aenter__.return_value = mock_session
+
+        mock_provider = MagicMock()
+        generation_service.provider_registry.get_provider.return_value = mock_provider
+
+        mock_processor = MagicMock()
+        mock_processor.process_all_modules_with_batches = AsyncMock(
+            return_value=({}, {"successful_batches": [], "failed_batches": []})
+        )
+        mock_processor_class.return_value = mock_processor
+
+        (
+            result,
+            batch_status,
+        ) = await generation_service.generate_questions_for_quiz_with_batch_tracking(
+            quiz_id, extracted_content
+        )
+
+        # Verify processor was created with both Norwegian language and casual tone
+        mock_processor_class.assert_called_once_with(
+            llm_provider=mock_provider,
+            template_manager=generation_service.template_manager,
+            language=QuizLanguage.NORWEGIAN,
+            tone=QuizTone.CASUAL.value,
+        )
+
+
+@pytest.mark.asyncio
 async def test_generate_questions_for_quiz_with_batch_tracking_norwegian_language(
     generation_service, mock_quiz, extracted_content
 ):
@@ -309,12 +483,13 @@ async def test_generate_questions_for_quiz_with_batch_tracking_norwegian_languag
 
         # Verify processor was created with Norwegian language
         from src.question.types import QuizLanguage
+        from src.quiz.schemas import QuizTone
 
         mock_processor_class.assert_called_once_with(
             llm_provider=mock_provider,
             template_manager=generation_service.template_manager,
             language=QuizLanguage.NORWEGIAN,
-            # Note: question_type is now specified per batch, not globally
+            tone=QuizTone.ACADEMIC.value,  # Default tone
         )
 
 
@@ -490,12 +665,13 @@ async def test_generate_uses_quiz_question_type(generation_service, mock_quiz):
 
             # Verify ParallelModuleProcessor was called with correct parameters
             from src.question.types import QuizLanguage
+            from src.quiz.schemas import QuizTone
 
             MockProcessor.assert_called_once_with(
                 llm_provider=mock_provider,
                 template_manager=generation_service.template_manager,
                 language=QuizLanguage.ENGLISH,
-                # Note: question_type is now specified per batch, not globally
+                tone=QuizTone.ACADEMIC.value,  # Default tone from mock quiz
             )
 
 

@@ -344,6 +344,7 @@ def prepare_question_generation(
         "llm_model": quiz.llm_model,
         "llm_temperature": quiz.llm_temperature,
         "language": quiz.language,
+        "tone": quiz.tone,
     }
 
 
@@ -406,6 +407,7 @@ async def reserve_quiz_job(
             "llm_model": quiz.llm_model,
             "llm_temperature": quiz.llm_temperature,
             "language": quiz.language,
+            "tone": quiz.tone,
         }
 
     elif job_type == "generation":

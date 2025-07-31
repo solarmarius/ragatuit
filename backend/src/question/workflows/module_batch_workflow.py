@@ -29,6 +29,7 @@ class ModuleBatchState(BaseModel):
     target_question_count: int
     language: QuizLanguage = QuizLanguage.ENGLISH
     question_type: QuestionType  # Now passed per batch, not at init
+    tone: str | None = None
 
     # Provider configuration
     llm_provider: BaseLLMProvider
@@ -191,7 +192,7 @@ class ModuleBatchWorkflow:
                 extra_variables={
                     "module_name": state.module_name,
                     "question_count": remaining_questions,
-                    "tone": self.tone,
+                    "tone": state.tone or self.tone,
                 },
             )
 
@@ -742,6 +743,7 @@ class ModuleBatchWorkflow:
             target_question_count=question_count,
             language=self.language,
             question_type=question_type,  # Set from parameter
+            tone=self.tone,
             llm_provider=self.llm_provider,
             template_manager=self.template_manager,
         )
