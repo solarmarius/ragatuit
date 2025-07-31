@@ -74,7 +74,7 @@ class QuizCreate(SQLModel):
     canvas_course_name: str
     selected_modules: dict[str, ModuleSelection]
     title: str = Field(min_length=1, max_length=255)
-    llm_model: str = Field(default="o3")
+    llm_model: str = Field(default="o4-mini-2025-04-16")
     llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
     language: QuizLanguage = Field(default=QuizLanguage.ENGLISH)
     tone: QuizTone = Field(default=QuizTone.ACADEMIC)
