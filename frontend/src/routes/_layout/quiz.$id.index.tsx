@@ -7,7 +7,7 @@ import { QuestionTypeBreakdown } from "@/components/Common"
 import { QuestionGenerationTrigger } from "@/components/Questions/QuestionGenerationTrigger"
 import { QuizPhaseProgress } from "@/components/ui/quiz-phase-progress"
 import { useFormattedDate } from "@/hooks/common"
-import { QUIZ_LANGUAGE_LABELS } from "@/lib/constants"
+import { QUIZ_LANGUAGE_LABELS, QUIZ_TONE_LABELS } from "@/lib/constants"
 import { queryKeys, quizQueryConfig } from "@/lib/queryConfig"
 
 export const Route = createFileRoute("/_layout/quiz/$id/")({
@@ -141,6 +141,14 @@ function QuizInformation() {
               </Text>
               <Badge variant="outline">
                 {QUIZ_LANGUAGE_LABELS[quiz.language!]}
+              </Badge>
+            </HStack>
+            <HStack justify="space-between">
+              <Text fontWeight="medium" color="gray.700">
+                Tone
+              </Text>
+              <Badge variant="outline">
+                {QUIZ_TONE_LABELS[quiz.tone!]}
               </Badge>
             </HStack>
           </VStack>

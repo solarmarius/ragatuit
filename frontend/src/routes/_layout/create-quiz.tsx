@@ -11,13 +11,13 @@ import {
 import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useCallback, useState } from "react"
 
-import { type QuestionBatch, type QuizLanguage, QuizService } from "@/client"
+import { type QuestionBatch, type QuizLanguage, type QuizTone, QuizService } from "@/client"
 import { CourseSelectionStep } from "@/components/QuizCreation/CourseSelectionStep"
 import { ModuleQuestionSelectionStep } from "@/components/QuizCreation/ModuleQuestionSelectionStep"
 import { ModuleSelectionStep } from "@/components/QuizCreation/ModuleSelectionStep"
 import { QuizSettingsStep } from "@/components/QuizCreation/QuizSettingsStep"
 import { useCustomToast, useErrorHandler } from "@/hooks/common"
-import { QUIZ_LANGUAGES } from "@/lib/constants"
+import { QUIZ_LANGUAGES, QUIZ_TONES } from "@/lib/constants"
 
 export const Route = createFileRoute("/_layout/create-quiz")({
   component: CreateQuiz,
@@ -32,6 +32,7 @@ interface QuizFormData {
   moduleQuestions?: { [id: string]: QuestionBatch[] }
   title?: string
   language?: QuizLanguage
+  tone?: QuizTone
 }
 
 const TOTAL_STEPS = 4 // Course selection, Module selection, Questions per module, Quiz settings
@@ -136,6 +137,7 @@ function CreateQuiz() {
         selected_modules: selectedModulesWithBatches,
         title: formData.title,
         language: formData.language || QUIZ_LANGUAGES.ENGLISH,
+        tone: formData.tone || QUIZ_TONES.ACADEMIC,
       }
 
       const response = await QuizService.createNewQuiz({
@@ -211,10 +213,12 @@ function CreateQuiz() {
           <QuizSettingsStep
             settings={{
               language: formData.language || QUIZ_LANGUAGES.ENGLISH,
+              tone: formData.tone || QUIZ_TONES.ACADEMIC,
             }}
             onSettingsChange={(settings) =>
               updateFormData({
                 language: settings.language,
+                tone: settings.tone,
               })
             }
           />

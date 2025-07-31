@@ -150,6 +150,10 @@ export type Quiz = {
    */
   language?: QuizLanguage
   /**
+   * Tone of voice for question generation
+   */
+  tone?: QuizTone
+  /**
    * Consolidated quiz status
    */
   status?: QuizStatus
@@ -204,6 +208,7 @@ export type QuizCreate = {
   llm_model?: string
   llm_temperature?: number
   language?: QuizLanguage
+  tone?: QuizTone
 }
 
 /**
@@ -223,6 +228,11 @@ export type QuizStatus =
   | "exporting_to_canvas"
   | "published"
   | "failed"
+
+/**
+ * Tone of voice options for quiz question generation.
+ */
+export type QuizTone = "academic" | "casual" | "encouraging" | "professional"
 
 /**
  * Public user information schema.
