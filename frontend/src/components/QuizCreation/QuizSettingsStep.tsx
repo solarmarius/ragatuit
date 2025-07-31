@@ -49,12 +49,14 @@ export function QuizSettingsStep({
     {
       value: QUIZ_TONES.CASUAL,
       label: QUIZ_TONE_LABELS.casual,
-      description: "Use everyday conversational language that feels approachable",
+      description:
+        "Use everyday conversational language that feels approachable",
     },
     {
       value: QUIZ_TONES.ENCOURAGING,
       label: QUIZ_TONE_LABELS.encouraging,
-      description: "Use warm, supportive language with helpful hints embedded in questions",
+      description:
+        "Use warm, supportive language with helpful hints embedded in questions",
     },
     {
       value: QUIZ_TONES.PROFESSIONAL,

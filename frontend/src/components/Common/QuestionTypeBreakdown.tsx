@@ -1,15 +1,17 @@
-import { Badge, HStack, Text, VStack } from "@chakra-ui/react";
-import { memo } from "react";
+import { Badge, HStack, Text, VStack } from "@chakra-ui/react"
+import { memo } from "react"
 
-import type { Quiz } from "@/client/types.gen";
+import type { Quiz } from "@/client/types.gen"
+import { QUESTION_DIFFICULTY_LABELS } from "@/lib/constants"
 import {
   formatQuestionTypeDisplay,
+  getModuleQuestionBatchBreakdown,
   getModuleQuestionTypeBreakdown,
-} from "@/lib/utils";
+} from "@/lib/utils"
 
 interface QuestionTypeBreakdownProps {
-  quiz: Quiz;
-  variant?: "compact" | "detailed";
+  quiz: Quiz
+  variant?: "compact" | "detailed"
 }
 
 /**
@@ -22,26 +24,27 @@ export const QuestionTypeBreakdown = memo(function QuestionTypeBreakdown({
   quiz,
   variant = "detailed",
 }: QuestionTypeBreakdownProps) {
-  const breakdown = getModuleQuestionTypeBreakdown(quiz);
-  const moduleEntries = Object.entries(breakdown);
+  const breakdown = getModuleQuestionTypeBreakdown(quiz)
+  const batchBreakdown = getModuleQuestionBatchBreakdown(quiz)
+  const moduleEntries = Object.entries(breakdown)
 
   if (moduleEntries.length === 0) {
     return (
       <Text fontSize="sm" color="gray.500">
         No question types configured
       </Text>
-    );
+    )
   }
 
   if (variant === "compact") {
     // Show aggregated counts across all modules
-    const aggregatedTypes: Record<string, number> = {};
+    const aggregatedTypes: Record<string, number> = {}
 
     moduleEntries.forEach(([_, moduleTypes]) => {
       Object.entries(moduleTypes).forEach(([type, count]) => {
-        aggregatedTypes[type] = (aggregatedTypes[type] || 0) + count;
-      });
-    });
+        aggregatedTypes[type] = (aggregatedTypes[type] || 0) + count
+      })
+    })
 
     return (
       <>
@@ -63,7 +66,7 @@ export const QuestionTypeBreakdown = memo(function QuestionTypeBreakdown({
           ))}
         </HStack>
       </>
-    );
+    )
   }
 
   return (
@@ -79,10 +82,10 @@ export const QuestionTypeBreakdown = memo(function QuestionTypeBreakdown({
         borderRadius="md"
         p={2}
       >
-        {moduleEntries.map(([moduleId, moduleTypes]) => {
+        {Object.entries(batchBreakdown).map(([moduleId, batches]) => {
           const moduleName =
             (quiz.selected_modules as any)?.[moduleId]?.name ||
-            `Module ${moduleId}`;
+            `Module ${moduleId}`
 
           return (
             <HStack key={moduleId} justify="space-between" align="flex-start">
@@ -90,16 +93,25 @@ export const QuestionTypeBreakdown = memo(function QuestionTypeBreakdown({
                 {moduleName}:
               </Text>
               <VStack align="flex-end" gap={1}>
-                {Object.entries(moduleTypes).map(([type, count]) => (
-                  <Badge key={type} variant="outline" size="sm">
-                    {formatQuestionTypeDisplay(type)}: {count}
+                {batches.map((batch, index) => (
+                  <Badge
+                    key={`${batch.questionType}-${batch.difficulty}-${index}`}
+                    variant="outline"
+                    size="sm"
+                  >
+                    {formatQuestionTypeDisplay(batch.questionType)}:{" "}
+                    {batch.count} (
+                    {QUESTION_DIFFICULTY_LABELS[
+                      batch.difficulty as keyof typeof QUESTION_DIFFICULTY_LABELS
+                    ] || batch.difficulty}
+                    )
                   </Badge>
                 ))}
               </VStack>
             </HStack>
-          );
+          )
         })}
       </VStack>
     </>
-  );
-});
+  )
+})

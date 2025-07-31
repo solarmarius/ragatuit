@@ -8,8 +8,8 @@ from uuid import UUID
 from pydantic import field_validator
 from sqlmodel import Field, SQLModel
 
-# Import QuizLanguage and QuestionType from question types to avoid circular dependency
-from src.question.types import QuestionType, QuizLanguage
+# Import QuizLanguage, QuestionType, and QuestionDifficulty from question types to avoid circular dependency
+from src.question.types import QuestionDifficulty, QuestionType, QuizLanguage
 
 
 class QuizStatus(str, Enum):
@@ -47,10 +47,11 @@ class QuizTone(str, Enum):
 
 
 class QuestionBatch(SQLModel):
-    """Schema for a batch of questions of a specific type."""
+    """Schema for a batch of questions of a specific type and difficulty."""
 
     question_type: QuestionType
     count: int = Field(ge=1, le=20, description="Number of questions (1-20)")
+    difficulty: QuestionDifficulty
 
 
 class ModuleSelection(SQLModel):
@@ -104,12 +105,15 @@ class QuizCreate(SQLModel):
                     f"Module {module_id} cannot have more than 4 question batches"
                 )
 
-            # Validate no duplicate question types in same module
-            question_types = [
-                batch.question_type for batch in module_selection.question_batches
+            # Validate no duplicate question type + difficulty combinations in same module
+            batch_combinations = [
+                (batch.question_type, batch.difficulty)
+                for batch in module_selection.question_batches
             ]
-            if len(question_types) != len(set(question_types)):
-                raise ValueError(f"Module {module_id} has duplicate question types")
+            if len(batch_combinations) != len(set(batch_combinations)):
+                raise ValueError(
+                    f"Module {module_id} has duplicate question type and difficulty combinations"
+                )
 
         return v
 

@@ -1,8 +1,8 @@
-import { Button, VStack } from "@chakra-ui/react";
-import { memo, useState } from "react";
+import { Button, VStack } from "@chakra-ui/react"
+import { memo, useState } from "react"
 
-import type { QuestionCreateRequest } from "@/client";
-import { QuestionsService } from "@/client";
+import type { QuestionCreateRequest } from "@/client"
+import { QuestionsService } from "@/client"
 import {
   DialogBody,
   DialogCloseTrigger,
@@ -10,24 +10,24 @@ import {
   DialogHeader,
   DialogRoot,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { useApiMutation } from "@/hooks/common";
-import { QUIZ_STATUS, QUESTION_TYPE_LABELS } from "@/lib/constants";
-import { queryKeys } from "@/lib/queryConfig";
-import { ManualQuestionCreator } from "./ManualQuestionCreator";
-import { QuestionTypeSelector } from "./QuestionTypeSelector";
+} from "@/components/ui/dialog"
+import { useApiMutation } from "@/hooks/common"
+import { QUESTION_TYPE_LABELS, QUIZ_STATUS } from "@/lib/constants"
+import { queryKeys } from "@/lib/queryConfig"
+import { ManualQuestionCreator } from "./ManualQuestionCreator"
+import { QuestionTypeSelector } from "./QuestionTypeSelector"
 
-type DialogStep = "type-selection" | "question-creation";
+type DialogStep = "type-selection" | "question-creation"
 
 interface ManualQuestionDialogProps {
   /** Quiz ID for creating questions */
-  quizId: string;
+  quizId: string
   /** Quiz object to check status permissions */
-  quiz: { status: string };
+  quiz: { status: string }
   /** Whether the dialog is open */
-  isOpen: boolean;
+  isOpen: boolean
   /** Callback when dialog open state changes */
-  onOpenChange: (isOpen: boolean) => void;
+  onOpenChange: (isOpen: boolean) => void
 }
 
 /**
@@ -57,17 +57,17 @@ export const ManualQuestionDialog = memo(function ManualQuestionDialog({
   isOpen,
   onOpenChange,
 }: ManualQuestionDialogProps) {
-  const [currentStep, setCurrentStep] = useState<DialogStep>("type-selection");
-  const [selectedQuestionType, setSelectedQuestionType] = useState<string>("");
+  const [currentStep, setCurrentStep] = useState<DialogStep>("type-selection")
+  const [selectedQuestionType, setSelectedQuestionType] = useState<string>("")
 
   // Reset dialog state when it closes
   const handleOpenChange = (open: boolean) => {
     if (!open) {
-      setCurrentStep("type-selection");
-      setSelectedQuestionType("");
+      setCurrentStep("type-selection")
+      setSelectedQuestionType("")
     }
-    onOpenChange(open);
-  };
+    onOpenChange(open)
+  }
 
   // Create question mutation with proper error handling and query invalidation
   const createQuestionMutation = useApiMutation(
@@ -75,7 +75,7 @@ export const ManualQuestionDialog = memo(function ManualQuestionDialog({
       return await QuestionsService.createQuestion({
         quizId,
         requestBody: questionData,
-      });
+      })
     },
     {
       successMessage: "Question created successfully",
@@ -86,35 +86,35 @@ export const ManualQuestionDialog = memo(function ManualQuestionDialog({
       ],
       onSuccess: () => {
         // Auto-close dialog on successful creation as specified in requirements
-        handleOpenChange(false);
+        handleOpenChange(false)
       },
-    }
-  );
+    },
+  )
 
   // Handle question type selection and navigation to next step
   const handleSelectType = (questionType: string) => {
-    setSelectedQuestionType(questionType);
-    setCurrentStep("question-creation");
-  };
+    setSelectedQuestionType(questionType)
+    setCurrentStep("question-creation")
+  }
 
   // Handle back navigation to type selection
   const handleBackToTypeSelection = () => {
-    setCurrentStep("type-selection");
-    setSelectedQuestionType("");
-  };
+    setCurrentStep("type-selection")
+    setSelectedQuestionType("")
+  }
 
   // Handle question creation
   const handleCreateQuestion = (questionData: QuestionCreateRequest) => {
-    createQuestionMutation.mutate(questionData);
-  };
+    createQuestionMutation.mutate(questionData)
+  }
 
   // Check if manual question creation is allowed based on quiz status
   const canCreateQuestions =
     quiz.status === QUIZ_STATUS.READY_FOR_REVIEW ||
-    quiz.status === QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL;
+    quiz.status === QUIZ_STATUS.READY_FOR_REVIEW_PARTIAL
 
   if (!canCreateQuestions) {
-    return null; // Don't render dialog if not allowed
+    return null // Don't render dialog if not allowed
   }
 
   return (
@@ -130,7 +130,11 @@ export const ManualQuestionDialog = memo(function ManualQuestionDialog({
           <DialogTitle>
             {currentStep === "type-selection"
               ? "Add Question"
-              : `Create ${QUESTION_TYPE_LABELS[selectedQuestionType as keyof typeof QUESTION_TYPE_LABELS]} Question`}
+              : `Create ${
+                  QUESTION_TYPE_LABELS[
+                    selectedQuestionType as keyof typeof QUESTION_TYPE_LABELS
+                  ]
+                } Question`}
           </DialogTitle>
         </DialogHeader>
 
@@ -171,5 +175,5 @@ export const ManualQuestionDialog = memo(function ManualQuestionDialog({
         </DialogBody>
       </DialogContent>
     </DialogRoot>
-  );
-});
+  )
+})

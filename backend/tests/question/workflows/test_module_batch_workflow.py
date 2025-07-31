@@ -19,6 +19,7 @@ from src.question.templates.manager import TemplateManager
 from src.question.types import (
     GenerationParameters,
     Question,
+    QuestionDifficulty,
     QuestionType,
     QuizLanguage,
 )
@@ -1780,3 +1781,409 @@ async def test_all_questions_fail_validation(
             "Items not assigned to any category"
             in result_state.failed_questions_errors[i]
         )
+
+
+# Difficulty Feature Tests
+
+
+def test_workflow_initialization_with_difficulty(
+    test_llm_provider, test_template_manager
+):
+    """Test workflow initialization with difficulty parameter."""
+    from src.question.types import QuestionDifficulty
+    from src.question.workflows.module_batch_workflow import ModuleBatchWorkflow
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        language=QuizLanguage.ENGLISH,
+    )
+
+    assert workflow.llm_provider == test_llm_provider
+    assert workflow.template_manager == test_template_manager
+    assert workflow.language == QuizLanguage.ENGLISH
+    assert workflow.graph is not None
+
+
+@pytest.mark.asyncio
+async def test_state_creation_with_difficulty(test_llm_provider, test_template_manager):
+    """Test ModuleBatchState creation with difficulty parameter."""
+    from src.question.types import QuestionDifficulty
+    from src.question.workflows.module_batch_workflow import ModuleBatchState
+
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test-module",
+        module_name="Test Module",
+        module_content="Test content for generating questions",
+        target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        language=QuizLanguage.ENGLISH,
+        difficulty=QuestionDifficulty.HARD,
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+    )
+
+    assert state.module_id == "test-module"
+    assert state.module_name == "Test Module"
+    assert state.target_question_count == 5
+    assert state.language == QuizLanguage.ENGLISH
+    assert state.difficulty == QuestionDifficulty.HARD
+    assert len(state.generated_questions) == 0
+    assert state.retry_count == 0
+
+
+@pytest.mark.asyncio
+async def test_state_creation_with_difficulty_and_tone(
+    test_llm_provider, test_template_manager
+):
+    """Test ModuleBatchState creation with both difficulty and tone."""
+    from src.question.types import QuestionDifficulty
+    from src.question.workflows.module_batch_workflow import ModuleBatchState
+
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test-module",
+        module_name="Test Module",
+        module_content="Test content for generating questions",
+        target_question_count=8,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        language=QuizLanguage.ENGLISH,
+        difficulty=QuestionDifficulty.EASY,
+        tone="professional",
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+    )
+
+    assert state.module_id == "test-module"
+    assert state.module_name == "Test Module"
+    assert state.target_question_count == 8
+    assert state.language == QuizLanguage.ENGLISH
+    assert state.difficulty == QuestionDifficulty.EASY
+    assert state.tone == "professional"
+    assert len(state.generated_questions) == 0
+    assert state.retry_count == 0
+
+
+@pytest.mark.asyncio
+async def test_prepare_prompt_workflow_node_with_difficulty(
+    test_llm_provider, test_template_manager
+):
+    """Test prepare_prompt workflow node with difficulty parameter."""
+    from src.question.types import QuestionDifficulty
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+    )
+
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test-module",
+        module_name="Test Module",
+        module_content="Test content for generating questions",
+        target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        language=QuizLanguage.ENGLISH,
+        difficulty=QuestionDifficulty.HARD,
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+    )
+
+    result = await workflow.prepare_prompt(state)
+
+    assert result.error_message is None
+    assert result.difficulty == QuestionDifficulty.HARD
+    assert "Test system prompt" in result.system_prompt
+    assert "Generate questions from:" in result.user_prompt
+
+
+@pytest.mark.asyncio
+async def test_prepare_prompt_workflow_node_with_difficulty_and_tone(
+    test_llm_provider, test_template_manager
+):
+    """Test prepare_prompt workflow node with both difficulty and tone."""
+    from src.question.types import QuestionDifficulty
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        tone="academic",
+    )
+
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test-module",
+        module_name="Test Module",
+        module_content="Test content for generating questions",
+        target_question_count=7,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        language=QuizLanguage.ENGLISH,
+        difficulty=QuestionDifficulty.MEDIUM,
+        tone="academic",
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+    )
+
+    result = await workflow.prepare_prompt(state)
+
+    assert result.error_message is None
+    assert result.difficulty == QuestionDifficulty.MEDIUM
+    assert result.tone == "academic"
+    assert "Test system prompt" in result.system_prompt
+    assert "Generate questions from:" in result.user_prompt
+
+
+@pytest.mark.asyncio
+async def test_validate_batch_applies_difficulty_to_questions(
+    test_llm_provider, test_template_manager, valid_mcq_response
+):
+    """Test that validate_batch applies difficulty from state to generated questions."""
+    from src.question.types import QuestionDifficulty
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+    )
+
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test-module",
+        module_name="Test Module",
+        module_content="Test content",
+        target_question_count=5,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        language=QuizLanguage.ENGLISH,
+        difficulty=QuestionDifficulty.HARD,
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        raw_response=valid_mcq_response,
+    )
+
+    result = await workflow.validate_batch(state)
+
+    assert result.error_message is None
+    assert len(result.generated_questions) == 2
+
+    # Check that both questions have the difficulty from the state
+    for question in result.generated_questions:
+        assert isinstance(question, Question)
+        assert question.question_type == QuestionType.MULTIPLE_CHOICE
+        assert (
+            question.difficulty == QuestionDifficulty.HARD
+        )  # Should use state difficulty
+        assert question.is_approved is False
+
+
+@pytest.mark.parametrize(
+    "difficulty",
+    [QuestionDifficulty.EASY, QuestionDifficulty.MEDIUM, QuestionDifficulty.HARD],
+)
+@pytest.mark.asyncio
+async def test_validate_batch_with_all_difficulty_levels(
+    test_llm_provider, test_template_manager, valid_mcq_response, difficulty
+):
+    """Test validate_batch with each difficulty level."""
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+    )
+
+    state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="test-module",
+        module_name="Test Module",
+        module_content="Test content",
+        target_question_count=2,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        language=QuizLanguage.ENGLISH,
+        difficulty=difficulty,
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        raw_response=valid_mcq_response,
+    )
+
+    result = await workflow.validate_batch(state)
+
+    assert result.error_message is None
+    assert len(result.generated_questions) == 2
+
+    # Verify all questions get the specified difficulty
+    for question in result.generated_questions:
+        assert question.difficulty == difficulty
+
+
+@pytest.mark.asyncio
+async def test_process_module_with_difficulty_success(
+    test_llm_provider, test_template_manager
+):
+    """Test successful module processing with difficulty parameter."""
+    from src.question.types import QuestionDifficulty
+    from src.question.workflows.module_batch_workflow import ModuleBatchWorkflow
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+    )
+
+    # Mock database operations
+    with patch(
+        "src.question.workflows.module_batch_workflow.get_async_session"
+    ) as mock_session_factory:
+        # Create a mock async context manager for the session
+        mock_session = AsyncMock()
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=None)
+        mock_session_factory.return_value = mock_session
+
+        questions = await workflow.process_module(
+            quiz_id=uuid4(),
+            module_id="123",
+            module_name="Test Module",
+            module_content="Test content for question generation",
+            question_count=1,  # Should match the single question in test provider
+            question_type=QuestionType.MULTIPLE_CHOICE,
+            difficulty=QuestionDifficulty.EASY,
+        )
+
+    assert len(questions) == 1
+    assert all(isinstance(q, Question) for q in questions)
+    assert questions[0].difficulty == QuestionDifficulty.EASY
+    assert (
+        questions[0].question_data["question_text"] == "What is the capital of France?"
+    )
+
+
+@pytest.mark.asyncio
+async def test_process_module_ignores_llm_difficulty(
+    test_llm_provider, test_template_manager
+):
+    """Test that process_module ignores LLM-provided difficulty and uses batch difficulty."""
+    from src.question.types import QuestionDifficulty
+    from src.question.workflows.module_batch_workflow import ModuleBatchWorkflow
+
+    # Create response with LLM-provided difficulty (should be ignored)
+    llm_response_with_difficulty = json.dumps(
+        [
+            {
+                "question_text": "What is the capital of France?",
+                "option_a": "London",
+                "option_b": "Berlin",
+                "option_c": "Paris",
+                "option_d": "Madrid",
+                "correct_answer": "C",
+                "explanation": "Paris is the capital of France.",
+                "difficulty": "hard",  # LLM provided difficulty - should be ignored
+            }
+        ]
+    )
+
+    test_provider = MockLLMProvider(llm_response_with_difficulty)
+    workflow = ModuleBatchWorkflow(
+        llm_provider=test_provider,
+        template_manager=test_template_manager,
+    )
+
+    # Mock database operations
+    with patch("src.question.workflows.module_batch_workflow.get_async_session"):
+        questions = await workflow.process_module(
+            quiz_id=uuid4(),
+            module_id="123",
+            module_name="Test Module",
+            module_content="Test content",
+            question_count=1,
+            question_type=QuestionType.MULTIPLE_CHOICE,
+            difficulty=QuestionDifficulty.EASY,  # Batch difficulty should override LLM
+        )
+
+    assert len(questions) == 1
+    # Should use batch difficulty (EASY), not LLM difficulty (hard)
+    assert questions[0].difficulty == QuestionDifficulty.EASY
+
+
+def test_processor_initialization_with_difficulty(
+    test_llm_provider, test_template_manager
+):
+    """Test processor initialization can handle difficulty parameter."""
+    from src.question.workflows.module_batch_workflow import ParallelModuleProcessor
+
+    processor = ParallelModuleProcessor(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+        language=QuizLanguage.ENGLISH,
+        tone="encouraging",
+    )
+
+    assert processor.llm_provider == test_llm_provider
+    assert processor.template_manager == test_template_manager
+    assert processor.language == QuizLanguage.ENGLISH
+    assert processor.tone == "encouraging"
+
+
+@pytest.mark.asyncio
+async def test_difficulty_flows_through_workflow_pipeline(
+    test_llm_provider, test_template_manager
+):
+    """Test that difficulty flows correctly through the entire workflow pipeline."""
+    from src.question.types import QuestionDifficulty
+    from src.question.workflows.module_batch_workflow import (
+        ModuleBatchState,
+        ModuleBatchWorkflow,
+    )
+
+    workflow = ModuleBatchWorkflow(
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+    )
+
+    # Test the complete pipeline: prepare_prompt -> generate_batch -> validate_batch
+    initial_state = ModuleBatchState(
+        quiz_id=uuid4(),
+        module_id="pipeline-test",
+        module_name="Pipeline Test Module",
+        module_content="Test content for pipeline",
+        target_question_count=1,
+        question_type=QuestionType.MULTIPLE_CHOICE,
+        language=QuizLanguage.ENGLISH,
+        difficulty=QuestionDifficulty.MEDIUM,
+        llm_provider=test_llm_provider,
+        template_manager=test_template_manager,
+    )
+
+    # Step 1: Prepare prompt
+    prompt_state = await workflow.prepare_prompt(initial_state)
+    assert prompt_state.difficulty == QuestionDifficulty.MEDIUM
+    assert prompt_state.error_message is None
+
+    # Step 2: Generate batch
+    generate_state = await workflow.generate_batch(prompt_state)
+    assert generate_state.difficulty == QuestionDifficulty.MEDIUM
+    assert generate_state.error_message is None
+    assert generate_state.raw_response is not None
+
+    # Step 3: Validate batch
+    final_state = await workflow.validate_batch(generate_state)
+    assert final_state.difficulty == QuestionDifficulty.MEDIUM
+    assert final_state.error_message is None
+    assert len(final_state.generated_questions) == 1
+
+    # Verify final question has correct difficulty
+    question = final_state.generated_questions[0]
+    assert question.difficulty == QuestionDifficulty.MEDIUM

@@ -13,7 +13,13 @@ from src.database import get_async_session
 
 from ..providers import BaseLLMProvider, LLMMessage
 from ..templates.manager import TemplateManager, get_template_manager
-from ..types import GenerationParameters, Question, QuestionType, QuizLanguage
+from ..types import (
+    GenerationParameters,
+    Question,
+    QuestionDifficulty,
+    QuestionType,
+    QuizLanguage,
+)
 
 logger = get_logger("module_batch_workflow")
 
@@ -29,6 +35,7 @@ class ModuleBatchState(BaseModel):
     target_question_count: int
     language: QuizLanguage = QuizLanguage.ENGLISH
     question_type: QuestionType  # Now passed per batch, not at init
+    difficulty: QuestionDifficulty | None = None  # Difficulty level for this batch
     tone: str | None = None
 
     # Provider configuration
@@ -165,6 +172,7 @@ class ModuleBatchWorkflow:
             # Create generation parameters
             generation_parameters = GenerationParameters(
                 target_count=remaining_questions,
+                difficulty=state.difficulty,
                 language=self.language,
             )
 
@@ -283,20 +291,8 @@ class ModuleBatchWorkflow:
             # Validate and create question objects
             for q_data in questions_data:
                 try:
-                    # Extract difficulty from question data (if present) before validation
-                    difficulty_str = q_data.pop("difficulty", None)
-                    difficulty = None
-                    if difficulty_str:
-                        try:
-                            from ..types.base import QuestionDifficulty
-
-                            difficulty = QuestionDifficulty(difficulty_str.lower())
-                        except (ValueError, AttributeError):
-                            logger.warning(
-                                "module_batch_invalid_difficulty",
-                                module_id=state.module_id,
-                                difficulty_value=difficulty_str,
-                            )
+                    # Remove difficulty from question data if LLM provided it (we use batch difficulty instead)
+                    q_data.pop("difficulty", None)
 
                     # Use dynamic validation based on question type
                     from ..types.registry import get_question_type_registry
@@ -306,11 +302,12 @@ class ModuleBatchWorkflow:
                     validated_data = question_type_impl.validate_data(q_data)
 
                     # Create question object with validated data
+                    # Always use batch difficulty (manually set, not from LLM)
                     question = Question(
                         quiz_id=state.quiz_id,
                         question_type=state.question_type,
                         question_data=validated_data.model_dump(),
-                        difficulty=difficulty,
+                        difficulty=state.difficulty,
                         is_approved=False,
                     )
                     state.generated_questions.append(question)
@@ -733,6 +730,7 @@ class ModuleBatchWorkflow:
         module_content: str,
         question_count: int,
         question_type: QuestionType,  # Now passed as parameter
+        difficulty: QuestionDifficulty | None = None,  # Difficulty for this batch
     ) -> list[Question]:
         """Process a single module to generate questions."""
         initial_state = ModuleBatchState(
@@ -743,6 +741,7 @@ class ModuleBatchWorkflow:
             target_question_count=question_count,
             language=self.language,
             question_type=question_type,  # Set from parameter
+            difficulty=difficulty,  # Difficulty level for this batch
             tone=self.tone,
             llm_provider=self.llm_provider,
             template_manager=self.template_manager,
@@ -845,6 +844,7 @@ class ParallelModuleProcessor:
             for batch in module_info["batches"]:
                 question_type = batch["question_type"]
                 count = batch["count"]
+                difficulty = batch["difficulty"]
                 batch_key = batch["batch_key"]
 
                 # Create workflow for this specific batch
@@ -865,6 +865,7 @@ class ParallelModuleProcessor:
                         quiz_id,
                         count,
                         question_type,
+                        difficulty,
                         batch_key,
                     )
                 )
@@ -966,6 +967,7 @@ class ParallelModuleProcessor:
         quiz_id: UUID,
         target_count: int,
         question_type: QuestionType,
+        difficulty: QuestionDifficulty,
         batch_key: str,
     ) -> tuple[list[Question], dict[str, Any]]:
         """
@@ -991,6 +993,7 @@ class ParallelModuleProcessor:
                 quiz_id=quiz_id,
                 question_count=target_count,
                 question_type=question_type,
+                difficulty=difficulty,
             )
 
             # Determine if batch was successful based on question count vs target
