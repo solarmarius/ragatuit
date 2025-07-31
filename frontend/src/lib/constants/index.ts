@@ -284,7 +284,8 @@ export const VALIDATION_RULES = {
 export const VALIDATION_MESSAGES = {
   MAX_BATCHES: "Maximum 4 question batches per module",
   DUPLICATE_TYPES: "Cannot have duplicate question types in the same module",
-  DUPLICATE_COMBINATIONS: "Cannot have duplicate question type and difficulty combinations",
+  DUPLICATE_COMBINATIONS:
+    "Cannot have duplicate question type and difficulty combinations",
   INVALID_COUNT: "Question count must be between 1 and 20",
   NO_BATCHES: "Each module must have at least one question batch",
 } as const

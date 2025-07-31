@@ -1,13 +1,13 @@
-import { Box, Card, SimpleGrid, Text, VStack } from "@chakra-ui/react";
-import { memo, useCallback } from "react";
+import { Box, Card, SimpleGrid, Text, VStack } from "@chakra-ui/react"
+import { memo, useCallback } from "react"
 
-import { QUESTION_TYPES, QUESTION_TYPE_LABELS } from "@/lib/constants";
+import { QUESTION_TYPES, QUESTION_TYPE_LABELS } from "@/lib/constants"
 
 interface QuestionTypeSelectorProps {
   /** Callback when a question type is selected */
-  onSelectType: (questionType: string) => void;
+  onSelectType: (questionType: string) => void
   /** Whether the selection process is loading */
-  isLoading?: boolean;
+  isLoading?: boolean
 }
 
 /**
@@ -30,14 +30,14 @@ export const QuestionTypeSelector = memo(function QuestionTypeSelector({
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent, questionType: string) => {
       if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
+        event.preventDefault()
         if (!isLoading) {
-          onSelectType(questionType);
+          onSelectType(questionType)
         }
       }
     },
-    [onSelectType, isLoading]
-  );
+    [onSelectType, isLoading],
+  )
 
   // Define question types with descriptions for better UX
   const questionTypeOptions = [
@@ -71,7 +71,7 @@ export const QuestionTypeSelector = memo(function QuestionTypeSelector({
       description: "Group items into appropriate categories",
       icon: "📊",
     },
-  ];
+  ]
 
   return (
     <VStack gap={6} align="stretch">
@@ -127,5 +127,5 @@ export const QuestionTypeSelector = memo(function QuestionTypeSelector({
         ))}
       </SimpleGrid>
     </VStack>
-  );
-});
+  )
+})

@@ -13,11 +13,15 @@ const baseQuiz = {
   selected_modules: {
     "173467": {
       name: "Module 1",
-      question_batches: [{ question_type: "multiple_choice", count: 20, difficulty: "medium" }]
+      question_batches: [
+        { question_type: "multiple_choice", count: 20, difficulty: "medium" },
+      ],
     },
     "173468": {
       name: "Module 2",
-      question_batches: [{ question_type: "multiple_choice", count: 20, difficulty: "medium" }]
+      question_batches: [
+        { question_type: "multiple_choice", count: 20, difficulty: "medium" },
+      ],
     },
   },
   question_count: 50,
@@ -303,13 +307,14 @@ export const createErrorResponse = (
 export const createQuizWithToneAndLanguage = (
   baseQuizData: Partial<Quiz>,
   tone: "academic" | "casual" | "encouraging" | "professional" = "academic",
-  language: "en" | "no" = "en"
-): Quiz => ({
-  ...baseQuiz,
-  ...baseQuizData,
-  tone,
-  language,
-} as Quiz)
+  language: "en" | "no" = "en",
+): Quiz =>
+  ({
+    ...baseQuiz,
+    ...baseQuizData,
+    tone,
+    language,
+  }) as Quiz
 
 // Difficulty-specific quiz fixtures for testing difficulty feature
 export const quizWithEasyDifficulty: Quiz = {
@@ -322,9 +327,9 @@ export const quizWithEasyDifficulty: Quiz = {
       name: "Basic Concepts",
       question_batches: [
         { question_type: "multiple_choice", count: 10, difficulty: "easy" },
-        { question_type: "true_false", count: 5, difficulty: "easy" }
-      ]
-    }
+        { question_type: "true_false", count: 5, difficulty: "easy" },
+      ],
+    },
   },
   question_count: 15,
   status: "ready_for_review",
@@ -341,9 +346,9 @@ export const quizWithHardDifficulty: Quiz = {
       name: "Complex Topics",
       question_batches: [
         { question_type: "multiple_choice", count: 15, difficulty: "hard" },
-        { question_type: "matching", count: 10, difficulty: "hard" }
-      ]
-    }
+        { question_type: "matching", count: 10, difficulty: "hard" },
+      ],
+    },
   },
   question_count: 25,
   status: "ready_for_review",
@@ -360,16 +365,16 @@ export const quizWithMixedDifficulties: Quiz = {
       name: "Introduction Module",
       question_batches: [
         { question_type: "multiple_choice", count: 10, difficulty: "easy" },
-        { question_type: "multiple_choice", count: 10, difficulty: "medium" }
-      ]
+        { question_type: "multiple_choice", count: 10, difficulty: "medium" },
+      ],
     },
     "173468": {
       name: "Advanced Module",
       question_batches: [
         { question_type: "fill_in_blank", count: 8, difficulty: "medium" },
-        { question_type: "categorization", count: 12, difficulty: "hard" }
-      ]
-    }
+        { question_type: "categorization", count: 12, difficulty: "hard" },
+      ],
+    },
   },
   question_count: 40,
   status: "ready_for_review",
@@ -385,9 +390,9 @@ export const quizWithoutDifficulty: Quiz = {
     "173467": {
       name: "Legacy Module",
       question_batches: [
-        { question_type: "multiple_choice", count: 20 } // No difficulty field for backward compatibility testing
-      ]
-    }
+        { question_type: "multiple_choice", count: 20 }, // No difficulty field for backward compatibility testing
+      ],
+    },
   },
   question_count: 20,
   status: "ready_for_review",

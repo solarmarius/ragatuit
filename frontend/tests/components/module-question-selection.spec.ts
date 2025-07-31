@@ -56,9 +56,19 @@ test.describe("ModuleQuestionSelectionStep Component", () => {
     await page.waitForLoadState("networkidle")
   })
 
-  test("should display the correct step title and description", async ({ page }) => {
-    await expect(page.getByRole("heading", { name: "Configure Question Types per Module" })).toBeVisible()
-    await expect(page.getByText("Add question batches for each module. Each batch can have a different question type, count (1-20 questions), and difficulty level (max 4 batches per module).")).toBeVisible()
+  test("should display the correct step title and description", async ({
+    page,
+  }) => {
+    await expect(
+      page.getByRole("heading", {
+        name: "Configure Question Types per Module",
+      }),
+    ).toBeVisible()
+    await expect(
+      page.getByText(
+        "Add question batches for each module. Each batch can have a different question type, count (1-20 questions), and difficulty level (max 4 batches per module).",
+      ),
+    ).toBeVisible()
   })
 
   test("should display selected modules", async ({ page }) => {
@@ -73,31 +83,51 @@ test.describe("ModuleQuestionSelectionStep Component", () => {
     await expect(page.getByText("Across 2 modules")).toBeVisible()
   })
 
-  test("should add batch with 3-column layout including difficulty", async ({ page }) => {
+  test("should add batch with 3-column layout including difficulty", async ({
+    page,
+  }) => {
     // Add batch to first module
     await page.getByText("Add Batch").first().click()
 
     // Verify 3-column layout exists: Question Type, Questions, Difficulty
-    await expect(page.locator('label').filter({ hasText: 'Question Type' })).toBeVisible()
-    await expect(page.locator('label').filter({ hasText: 'Questions' })).toBeVisible()
-    await expect(page.locator('label').filter({ hasText: 'Difficulty' })).toBeVisible()
+    await expect(
+      page.locator("label").filter({ hasText: "Question Type" }),
+    ).toBeVisible()
+    await expect(
+      page.locator("label").filter({ hasText: "Questions" }),
+    ).toBeVisible()
+    await expect(
+      page.locator("label").filter({ hasText: "Difficulty" }),
+    ).toBeVisible()
 
     // Check that all three controls are present in the batch
-    const batchContainer = page.locator('[data-testid="batch-container"]').first().or(
-      page.locator('div').filter({ has: page.getByText("Question Type") }).first()
-    )
+    const batchContainer = page
+      .locator('[data-testid="batch-container"]')
+      .first()
+      .or(
+        page
+          .locator("div")
+          .filter({ has: page.getByText("Question Type") })
+          .first(),
+      )
 
     // Verify question type selector
-    await expect(batchContainer.locator('select, [role="combobox"]').first()).toBeVisible()
+    await expect(
+      batchContainer.locator('select, [role="combobox"]').first(),
+    ).toBeVisible()
 
     // Verify question count input
     await expect(batchContainer.locator('input[type="number"]')).toBeVisible()
 
     // Verify difficulty selector
-    await expect(batchContainer.locator('select, [role="combobox"]').nth(1)).toBeVisible()
+    await expect(
+      batchContainer.locator('select, [role="combobox"]').nth(1),
+    ).toBeVisible()
   })
 
-  test("should have default values: multiple choice, 10 questions, medium difficulty", async ({ page }) => {
+  test("should have default values: multiple choice, 10 questions, medium difficulty", async ({
+    page,
+  }) => {
     // Add batch to first module
     await page.getByText("Add Batch").first().click()
 
@@ -108,7 +138,9 @@ test.describe("ModuleQuestionSelectionStep Component", () => {
     // Check difficulty dropdown has medium selected (by default)
     // Note: We can't easily check select values in Playwright without custom data-testid
     // but we can verify the difficulty selector is there and functional
-    await expect(page.locator('label').filter({ hasText: 'Difficulty' })).toBeVisible()
+    await expect(
+      page.locator("label").filter({ hasText: "Difficulty" }),
+    ).toBeVisible()
   })
 
   test("should allow changing question count", async ({ page }) => {
@@ -133,10 +165,21 @@ test.describe("ModuleQuestionSelectionStep Component", () => {
 
     // Try to interact with question type selector
     // Since it's a custom Select component, we need to find the trigger
-    await page.locator('label').filter({ hasText: 'Question Type' }).first().locator('..').locator('[data-part="trigger"]').first().click()
+    await page
+      .locator("label")
+      .filter({ hasText: "Question Type" })
+      .first()
+      .locator("..")
+      .locator('[data-part="trigger"]')
+      .first()
+      .click()
 
     // Check if dropdown options appear
-    await expect(page.locator('[data-part="content"]:visible [data-part="item"][data-value="fill_in_blank"]')).toBeVisible()
+    await expect(
+      page.locator(
+        '[data-part="content"]:visible [data-part="item"][data-value="fill_in_blank"]',
+      ),
+    ).toBeVisible()
   })
 
   test("should allow changing difficulty level", async ({ page }) => {
@@ -144,10 +187,21 @@ test.describe("ModuleQuestionSelectionStep Component", () => {
     await page.getByText("Add Batch").first().click()
 
     // Try to interact with difficulty selector
-    await page.locator('label').filter({ hasText: 'Difficulty' }).first().locator('..').locator('[data-part="trigger"]').first().click()
+    await page
+      .locator("label")
+      .filter({ hasText: "Difficulty" })
+      .first()
+      .locator("..")
+      .locator('[data-part="trigger"]')
+      .first()
+      .click()
 
     // Check if difficulty options appear
-    await expect(page.locator('[data-part="content"]:visible [data-part="item"][data-value="easy"]')).toBeVisible()
+    await expect(
+      page.locator(
+        '[data-part="content"]:visible [data-part="item"][data-value="easy"]',
+      ),
+    ).toBeVisible()
   })
 
   test("should allow multiple batches per module", async ({ page }) => {
@@ -173,7 +227,11 @@ test.describe("ModuleQuestionSelectionStep Component", () => {
     await expect(page.getByText("1 batches").first()).toBeVisible()
 
     // Remove batch using close button (red ghost button with IoClose icon)
-    await page.locator('button').filter({ has: page.locator('svg') }).first().click()
+    await page
+      .locator("button")
+      .filter({ has: page.locator("svg") })
+      .first()
+      .click()
 
     // Verify batch was removed
     await page.waitForTimeout(500) // Wait for UI update
@@ -280,9 +338,12 @@ test.describe("ModuleQuestionSelectionStep Component", () => {
       })
     })
 
-    await page.route("**/api/v1/canvas/courses/37823/modules", async (route) => {
-      await route.fulfill({ json: [{ id: 173467, name: "Test Module" }] })
-    })
+    await page.route(
+      "**/api/v1/canvas/courses/37823/modules",
+      async (route) => {
+        await route.fulfill({ json: [{ id: 173467, name: "Test Module" }] })
+      },
+    )
 
     await page.waitForSelector('[data-testid="course-card-37823"]')
     await page.click('[data-testid="course-card-37823"]')

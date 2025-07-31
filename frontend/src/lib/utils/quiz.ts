@@ -342,10 +342,16 @@ export function getModuleQuestionTypeBreakdown(
  */
 export function getModuleQuestionBatchBreakdown(
   quiz: Quiz,
-): Record<string, Array<{ questionType: string; count: number; difficulty: string }>> {
+): Record<
+  string,
+  Array<{ questionType: string; count: number; difficulty: string }>
+> {
   if (!quiz.selected_modules) return {}
 
-  const breakdown: Record<string, Array<{ questionType: string; count: number; difficulty: string }>> = {}
+  const breakdown: Record<
+    string,
+    Array<{ questionType: string; count: number; difficulty: string }>
+  > = {}
 
   Object.entries(quiz.selected_modules).forEach(
     ([moduleId, module]: [string, any]) => {
@@ -356,7 +362,7 @@ export function getModuleQuestionBatchBreakdown(
           breakdown[moduleId].push({
             questionType: batch.question_type,
             count: batch.count,
-            difficulty: batch.difficulty || 'medium', // Default to medium for backward compatibility
+            difficulty: batch.difficulty || "medium", // Default to medium for backward compatibility
           })
         })
       }
@@ -379,7 +385,9 @@ export function validateModuleBatches(batches: QuestionBatch[]): string[] {
   }
 
   // Check for duplicate question type + difficulty combinations
-  const combinations = batches.map((batch) => `${batch.question_type}_${batch.difficulty || 'medium'}`)
+  const combinations = batches.map(
+    (batch) => `${batch.question_type}_${batch.difficulty || "medium"}`,
+  )
   const uniqueCombinations = new Set(combinations)
   if (combinations.length !== uniqueCombinations.size) {
     errors.push(VALIDATION_MESSAGES.DUPLICATE_COMBINATIONS)

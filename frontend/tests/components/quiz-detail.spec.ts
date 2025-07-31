@@ -30,15 +30,25 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Neural Networks",
-          question_batches: [{ question_type: "multiple_choice", count: 20, difficulty: "medium" }],
+          question_batches: [
+            {
+              question_type: "multiple_choice",
+              count: 20,
+              difficulty: "medium",
+            },
+          ],
         },
         "173468": {
           name: "Deep Learning",
-          question_batches: [{ question_type: "multiple_choice", count: 20, difficulty: "hard" }],
+          question_batches: [
+            { question_type: "multiple_choice", count: 20, difficulty: "hard" },
+          ],
         },
         "173469": {
           name: "Reinforcement Learning",
-          question_batches: [{ question_type: "multiple_choice", count: 20, difficulty: "easy" }],
+          question_batches: [
+            { question_type: "multiple_choice", count: 20, difficulty: "easy" },
+          ],
         },
       },
       question_count: 60,
@@ -162,7 +172,13 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
+          question_batches: [
+            {
+              question_type: "multiple_choice",
+              count: 25,
+              difficulty: "medium",
+            },
+          ],
         },
       },
       question_count: 50,
@@ -201,7 +217,13 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
+          question_batches: [
+            {
+              question_type: "multiple_choice",
+              count: 25,
+              difficulty: "medium",
+            },
+          ],
         },
       },
       question_count: 50,
@@ -277,7 +299,13 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
+          question_batches: [
+            {
+              question_type: "multiple_choice",
+              count: 25,
+              difficulty: "medium",
+            },
+          ],
         },
       },
       question_count: 100,
@@ -417,7 +445,13 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
+          question_batches: [
+            {
+              question_type: "multiple_choice",
+              count: 25,
+              difficulty: "medium",
+            },
+          ],
         },
       },
       question_count: 50,
@@ -455,7 +489,13 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
+          question_batches: [
+            {
+              question_type: "multiple_choice",
+              count: 25,
+              difficulty: "medium",
+            },
+          ],
         },
       },
       question_count: 50,
@@ -506,7 +546,13 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
+          question_batches: [
+            {
+              question_type: "multiple_choice",
+              count: 25,
+              difficulty: "medium",
+            },
+          ],
         },
       },
       question_count: 50,
@@ -576,7 +622,13 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
+          question_batches: [
+            {
+              question_type: "multiple_choice",
+              count: 25,
+              difficulty: "medium",
+            },
+          ],
         },
       },
       question_count: 50,
@@ -628,7 +680,13 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
+          question_batches: [
+            {
+              question_type: "multiple_choice",
+              count: 25,
+              difficulty: "medium",
+            },
+          ],
         },
       },
       question_count: 50,
@@ -668,7 +726,13 @@ test.describe("Quiz Detail Component", () => {
       selected_modules: {
         "173467": {
           name: "Module 1",
-          question_batches: [{ question_type: "multiple_choice", count: 25, difficulty: "medium" }],
+          question_batches: [
+            {
+              question_type: "multiple_choice",
+              count: 25,
+              difficulty: "medium",
+            },
+          ],
         },
       },
       question_count: 50,
@@ -715,7 +779,9 @@ test.describe("Quiz Detail Component", () => {
     await expect(page.getByRole("button", { name: "Review" })).toBeVisible()
   })
 
-  test("should display difficulty information in quiz details", async ({ page }) => {
+  test("should display difficulty information in quiz details", async ({
+    page,
+  }) => {
     const mockQuiz = {
       id: mockQuizId,
       title: "Difficulty Display Test Quiz",
@@ -726,14 +792,18 @@ test.describe("Quiz Detail Component", () => {
           name: "Easy Module",
           question_batches: [
             { question_type: "multiple_choice", count: 10, difficulty: "easy" },
-            { question_type: "true_false", count: 5, difficulty: "easy" }
+            { question_type: "true_false", count: 5, difficulty: "easy" },
           ],
         },
         "173468": {
           name: "Mixed Difficulty Module",
           question_batches: [
-            { question_type: "multiple_choice", count: 15, difficulty: "medium" },
-            { question_type: "fill_in_blank", count: 8, difficulty: "hard" }
+            {
+              question_type: "multiple_choice",
+              count: 15,
+              difficulty: "medium",
+            },
+            { question_type: "fill_in_blank", count: 8, difficulty: "hard" },
           ],
         },
       },
@@ -759,13 +829,17 @@ test.describe("Quiz Detail Component", () => {
 
     // Check that modules are displayed
     await expect(page.getByText("Easy Module").first()).toBeVisible()
-    await expect(page.getByText("Mixed Difficulty Module").first()).toBeVisible()
+    await expect(
+      page.getByText("Mixed Difficulty Module").first(),
+    ).toBeVisible()
 
     // Check that the total question count reflects all batches
     await expect(page.locator('text="38"').first()).toBeVisible()
   })
 
-  test("should display quiz with legacy format (no difficulty field)", async ({ page }) => {
+  test("should display quiz with legacy format (no difficulty field)", async ({
+    page,
+  }) => {
     const mockQuiz = {
       id: mockQuizId,
       title: "Legacy Quiz Without Difficulty",
@@ -775,7 +849,7 @@ test.describe("Quiz Detail Component", () => {
         "173467": {
           name: "Legacy Module",
           question_batches: [
-            { question_type: "multiple_choice", count: 20 } // No difficulty field
+            { question_type: "multiple_choice", count: 20 }, // No difficulty field
           ],
         },
       },
@@ -805,7 +879,9 @@ test.describe("Quiz Detail Component", () => {
     await expect(page.locator('text="20"').first()).toBeVisible()
   })
 
-  test("should display quiz with multiple batches of different difficulties", async ({ page }) => {
+  test("should display quiz with multiple batches of different difficulties", async ({
+    page,
+  }) => {
     const mockQuiz = {
       id: mockQuizId,
       title: "Progressive Difficulty Quiz",
@@ -816,9 +892,13 @@ test.describe("Quiz Detail Component", () => {
           name: "Comprehensive Module",
           question_batches: [
             { question_type: "multiple_choice", count: 5, difficulty: "easy" },
-            { question_type: "multiple_choice", count: 10, difficulty: "medium" },
+            {
+              question_type: "multiple_choice",
+              count: 10,
+              difficulty: "medium",
+            },
             { question_type: "multiple_choice", count: 5, difficulty: "hard" },
-            { question_type: "true_false", count: 8, difficulty: "easy" }
+            { question_type: "true_false", count: 8, difficulty: "easy" },
           ],
         },
       },

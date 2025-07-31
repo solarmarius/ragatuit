@@ -147,9 +147,7 @@ function QuizInformation() {
               <Text fontWeight="medium" color="gray.700">
                 Tone
               </Text>
-              <Badge variant="outline">
-                {QUIZ_TONE_LABELS[quiz.tone!]}
-              </Badge>
+              <Badge variant="outline">{QUIZ_TONE_LABELS[quiz.tone!]}</Badge>
             </HStack>
           </VStack>
         </Card.Body>

@@ -16,7 +16,7 @@ import type React from "react"
 import { useMemo, useState } from "react"
 import { IoAdd, IoClose } from "react-icons/io5"
 
-import type { QuestionBatch, QuestionType } from "@/client"
+import type { QuestionBatch, QuestionDifficulty, QuestionType } from "@/client"
 import {
   QUESTION_BATCH_DEFAULTS,
   QUESTION_DIFFICULTIES,
@@ -187,8 +187,8 @@ export const ModuleQuestionSelectionStep: React.FC<
           </Heading>
           <Text color="gray.600">
             Add question batches for each module. Each batch can have a
-            different question type, count (1-20 questions), and difficulty level
-            (max 4 batches per module).
+            different question type, count (1-20 questions), and difficulty
+            level (max 4 batches per module).
           </Text>
         </Box>
 
@@ -357,10 +357,14 @@ export const ModuleQuestionSelectionStep: React.FC<
                                 <Field label="Difficulty">
                                   <Select.Root
                                     collection={difficultyCollection}
-                                    value={[batch.difficulty || QUESTION_DIFFICULTIES.MEDIUM]}
+                                    value={[
+                                      batch.difficulty ||
+                                        QUESTION_DIFFICULTIES.MEDIUM,
+                                    ]}
                                     onValueChange={(details) =>
                                       updateBatch(moduleId, batchIndex, {
-                                        difficulty: details.value[0],
+                                        difficulty: details
+                                          .value[0] as QuestionDifficulty,
                                       })
                                     }
                                     size="sm"
@@ -433,9 +437,9 @@ export const ModuleQuestionSelectionStep: React.FC<
 
         <Box mt={4}>
           <Text fontSize="sm" color="gray.600">
-            <strong>Tip:</strong> Mix different question types and difficulty levels to create
-            comprehensive assessments. Each module can have up to 4 different
-            question batches with 1-20 questions each.
+            <strong>Tip:</strong> Mix different question types and difficulty
+            levels to create comprehensive assessments. Each module can have up
+            to 4 different question batches with 1-20 questions each.
           </Text>
         </Box>
       </VStack>

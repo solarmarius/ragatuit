@@ -19,26 +19,29 @@ test.describe("Difficulty Feature Validation Tests", () => {
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify([
-          { id: 12345, name: "Validation Test Course" },
-        ]),
+        body: JSON.stringify([{ id: 12345, name: "Validation Test Course" }]),
       })
     })
 
     // Mock Canvas modules API
-    await page.route("**/api/v1/canvas/courses/12345/modules", async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify([
-          { id: 173467, name: "Test Module A" },
-          { id: 173468, name: "Test Module B" },
-        ]),
-      })
-    })
+    await page.route(
+      "**/api/v1/canvas/courses/12345/modules",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify([
+            { id: 173467, name: "Test Module A" },
+            { id: 173468, name: "Test Module B" },
+          ]),
+        })
+      },
+    )
   })
 
-  test("should prevent duplicate question type and difficulty combinations within same module", async ({ page }) => {
+  test("should prevent duplicate question type and difficulty combinations within same module", async ({
+    page,
+  }) => {
     await page.goto("/create-quiz")
 
     // Navigate to module question selection
@@ -54,27 +57,55 @@ test.describe("Difficulty Feature Validation Tests", () => {
     await page.getByText("Add Batch").first().click()
 
     // Find the first difficulty select trigger and click it
-    await page.locator('label').filter({ hasText: 'Difficulty' }).first().locator('..').locator('[data-part="trigger"]').first().click()
+    await page
+      .locator("label")
+      .filter({ hasText: "Difficulty" })
+      .first()
+      .locator("..")
+      .locator('[data-part="trigger"]')
+      .first()
+      .click()
 
     // Wait for dropdown to be visible and click Easy option
-    await page.locator('[data-part="content"]:visible [data-part="item"][data-value="easy"]').click()
+    await page
+      .locator(
+        '[data-part="content"]:visible [data-part="item"][data-value="easy"]',
+      )
+      .click()
 
     // Add second batch: Multiple Choice + Easy (duplicate!)
     await page.getByText("Add Batch").first().click()
 
     // Find the second difficulty select trigger and click it
-    await page.locator('label').filter({ hasText: 'Difficulty' }).nth(1).locator('..').locator('[data-part="trigger"]').first().click()
+    await page
+      .locator("label")
+      .filter({ hasText: "Difficulty" })
+      .nth(1)
+      .locator("..")
+      .locator('[data-part="trigger"]')
+      .first()
+      .click()
 
     // Wait for dropdown to be visible and click Easy option
-    await page.locator('[data-part="content"]:visible [data-part="item"][data-value="easy"]').click()
+    await page
+      .locator(
+        '[data-part="content"]:visible [data-part="item"][data-value="easy"]',
+      )
+      .click()
 
     // Should show validation error
-    await expect(page.getByText("Cannot have duplicate question type and difficulty combinations").or(
-      page.getByText("duplicate")
-    )).toBeVisible()
+    await expect(
+      page
+        .getByText(
+          "Cannot have duplicate question type and difficulty combinations",
+        )
+        .or(page.getByText("duplicate")),
+    ).toBeVisible()
   })
 
-  test("should allow same question type with different difficulties", async ({ page }) => {
+  test("should allow same question type with different difficulties", async ({
+    page,
+  }) => {
     await page.goto("/create-quiz")
 
     // Navigate to module question selection
@@ -90,27 +121,51 @@ test.describe("Difficulty Feature Validation Tests", () => {
     await page.getByText("Add Batch").first().click()
 
     // Find the first difficulty select trigger and click it
-    await page.locator('label').filter({ hasText: 'Difficulty' }).first().locator('..').locator('[data-part="trigger"]').first().click()
+    await page
+      .locator("label")
+      .filter({ hasText: "Difficulty" })
+      .first()
+      .locator("..")
+      .locator('[data-part="trigger"]')
+      .first()
+      .click()
 
     // Wait for dropdown to be visible and click Easy option
-    await page.locator('[data-part="content"]:visible [data-part="item"][data-value="easy"]').click()
+    await page
+      .locator(
+        '[data-part="content"]:visible [data-part="item"][data-value="easy"]',
+      )
+      .click()
 
     // Add second batch: Multiple Choice + Hard (different difficulty, should be allowed)
     await page.getByText("Add Batch").first().click()
 
     // Find the second difficulty select trigger and click it
-    await page.locator('label').filter({ hasText: 'Difficulty' }).nth(1).locator('..').locator('[data-part="trigger"]').first().click()
+    await page
+      .locator("label")
+      .filter({ hasText: "Difficulty" })
+      .nth(1)
+      .locator("..")
+      .locator('[data-part="trigger"]')
+      .first()
+      .click()
 
     // Wait for dropdown to be visible and click Hard option
-    await page.locator('[data-part="content"]:visible [data-part="item"][data-value="hard"]').click()
+    await page
+      .locator(
+        '[data-part="content"]:visible [data-part="item"][data-value="hard"]',
+      )
+      .click()
 
     // Should NOT show validation error
-    await expect(page.getByText("duplicate").or(
-      page.getByText("Cannot have duplicate")
-    )).not.toBeVisible()
+    await expect(
+      page.getByText("duplicate").or(page.getByText("Cannot have duplicate")),
+    ).not.toBeVisible()
   })
 
-  test("should allow different question types with same difficulty", async ({ page }) => {
+  test("should allow different question types with same difficulty", async ({
+    page,
+  }) => {
     await page.goto("/create-quiz")
 
     // Navigate to module question selection
@@ -129,18 +184,31 @@ test.describe("Difficulty Feature Validation Tests", () => {
     await page.getByText("Add Batch").first().click()
 
     // Find the second question type select trigger and click it
-    await page.locator('label').filter({ hasText: 'Question Type' }).nth(1).locator('..').locator('[data-part="trigger"]').first().click()
+    await page
+      .locator("label")
+      .filter({ hasText: "Question Type" })
+      .nth(1)
+      .locator("..")
+      .locator('[data-part="trigger"]')
+      .first()
+      .click()
 
     // Wait for dropdown to be visible and click True/False option
-    await page.locator('[data-part="content"]:visible [data-part="item"][data-value="true_false"]').click()
+    await page
+      .locator(
+        '[data-part="content"]:visible [data-part="item"][data-value="true_false"]',
+      )
+      .click()
 
     // Should NOT show validation error
-    await expect(page.getByText("duplicate").or(
-      page.getByText("Cannot have duplicate")
-    )).not.toBeVisible()
+    await expect(
+      page.getByText("duplicate").or(page.getByText("Cannot have duplicate")),
+    ).not.toBeVisible()
   })
 
-  test("should allow duplicate combinations across different modules", async ({ page }) => {
+  test("should allow duplicate combinations across different modules", async ({
+    page,
+  }) => {
     await page.goto("/create-quiz")
 
     // Navigate to module question selection with multiple modules
@@ -159,24 +227,46 @@ test.describe("Difficulty Feature Validation Tests", () => {
     await page.getByText("Add Batch").first().click()
 
     // Find the first difficulty select trigger and click it
-    await page.locator('label').filter({ hasText: 'Difficulty' }).first().locator('..').locator('[data-part="trigger"]').first().click()
+    await page
+      .locator("label")
+      .filter({ hasText: "Difficulty" })
+      .first()
+      .locator("..")
+      .locator('[data-part="trigger"]')
+      .first()
+      .click()
 
     // Wait for dropdown to be visible and click Easy option
-    await page.locator('[data-part="content"]:visible [data-part="item"][data-value="easy"]').click()
+    await page
+      .locator(
+        '[data-part="content"]:visible [data-part="item"][data-value="easy"]',
+      )
+      .click()
 
     // Add batch to second module: Multiple Choice + Easy (same combination, different module - should be allowed)
     await page.getByText("Add Batch").nth(1).click()
 
     // Find the second difficulty select trigger and click it
-    await page.locator('label').filter({ hasText: 'Difficulty' }).nth(1).locator('..').locator('[data-part="trigger"]').first().click()
+    await page
+      .locator("label")
+      .filter({ hasText: "Difficulty" })
+      .nth(1)
+      .locator("..")
+      .locator('[data-part="trigger"]')
+      .first()
+      .click()
 
     // Wait for dropdown to be visible and click Easy option
-    await page.locator('[data-part="content"]:visible [data-part="item"][data-value="easy"]').click()
+    await page
+      .locator(
+        '[data-part="content"]:visible [data-part="item"][data-value="easy"]',
+      )
+      .click()
 
     // Should NOT show validation error (duplicates are only prevented within same module)
-    await expect(page.getByText("duplicate").or(
-      page.getByText("Cannot have duplicate")
-    )).not.toBeVisible()
+    await expect(
+      page.getByText("duplicate").or(page.getByText("Cannot have duplicate")),
+    ).not.toBeVisible()
   })
 
   test("should validate maximum 4 batches per module", async ({ page }) => {
@@ -196,7 +286,7 @@ test.describe("Difficulty Feature Validation Tests", () => {
       { type: "Multiple Choice", difficulty: "Easy" },
       { type: "True/False", difficulty: "Easy" },
       { type: "Multiple Choice", difficulty: "Medium" },
-      { type: "Fill in the Blank", difficulty: "Easy" }
+      { type: "Fill in the Blank", difficulty: "Easy" },
     ]
 
     for (let i = 0; i < 4; i++) {
@@ -205,29 +295,56 @@ test.describe("Difficulty Feature Validation Tests", () => {
       // Set question type if not Multiple Choice (default)
       if (combinations[i].type !== "Multiple Choice") {
         // Find the question type select trigger and click it
-        await page.locator('label').filter({ hasText: 'Question Type' }).nth(i).locator('..').locator('[data-part="trigger"]').first().click()
+        await page
+          .locator("label")
+          .filter({ hasText: "Question Type" })
+          .nth(i)
+          .locator("..")
+          .locator('[data-part="trigger"]')
+          .first()
+          .click()
 
         // Map the display name to the actual value
-        const typeValue = combinations[i].type === "True/False" ? "true_false" :
-                         combinations[i].type === "Fill in the Blank" ? "fill_in_blank" :
-                         combinations[i].type === "Matching" ? "matching" :
-                         combinations[i].type === "Categorization" ? "categorization" :
-                         "multiple_choice"
+        const typeValue =
+          combinations[i].type === "True/False"
+            ? "true_false"
+            : combinations[i].type === "Fill in the Blank"
+              ? "fill_in_blank"
+              : combinations[i].type === "Matching"
+                ? "matching"
+                : combinations[i].type === "Categorization"
+                  ? "categorization"
+                  : "multiple_choice"
 
         // Wait for dropdown to be visible and click the option
-        await page.locator(`[data-part="content"]:visible [data-part="item"][data-value="${typeValue}"]`).click()
+        await page
+          .locator(
+            `[data-part="content"]:visible [data-part="item"][data-value="${typeValue}"]`,
+          )
+          .click()
       }
 
       // Set difficulty if not Medium (default)
       if (combinations[i].difficulty !== "Medium") {
         // Find the difficulty select trigger and click it
-        await page.locator('label').filter({ hasText: 'Difficulty' }).nth(i).locator('..').locator('[data-part="trigger"]').first().click()
+        await page
+          .locator("label")
+          .filter({ hasText: "Difficulty" })
+          .nth(i)
+          .locator("..")
+          .locator('[data-part="trigger"]')
+          .first()
+          .click()
 
         // Map the display name to the actual value
         const difficultyValue = combinations[i].difficulty.toLowerCase()
 
         // Wait for dropdown to be visible and click the option
-        await page.locator(`[data-part="content"]:visible [data-part="item"][data-value="${difficultyValue}"]`).click()
+        await page
+          .locator(
+            `[data-part="content"]:visible [data-part="item"][data-value="${difficultyValue}"]`,
+          )
+          .click()
       }
     }
 
@@ -240,7 +357,9 @@ test.describe("Difficulty Feature Validation Tests", () => {
     await expect(addButton).toBeDisabled()
   })
 
-  test("should enforce question count limits (1-20 per batch)", async ({ page }) => {
+  test("should enforce question count limits (1-20 per batch)", async ({
+    page,
+  }) => {
     await page.goto("/create-quiz")
 
     // Navigate to module question selection
@@ -270,7 +389,9 @@ test.describe("Difficulty Feature Validation Tests", () => {
     await expect(questionInput).toHaveValue("15")
   })
 
-  test("should clear validation errors when issues are resolved", async ({ page }) => {
+  test("should clear validation errors when issues are resolved", async ({
+    page,
+  }) => {
     await page.goto("/create-quiz")
 
     // Navigate to module question selection
@@ -286,37 +407,72 @@ test.describe("Difficulty Feature Validation Tests", () => {
     await page.getByText("Add Batch").first().click()
 
     // Find the first difficulty select trigger and click it
-    await page.locator('label').filter({ hasText: 'Difficulty' }).first().locator('..').locator('[data-part="trigger"]').first().click()
+    await page
+      .locator("label")
+      .filter({ hasText: "Difficulty" })
+      .first()
+      .locator("..")
+      .locator('[data-part="trigger"]')
+      .first()
+      .click()
 
     // Wait for dropdown to be visible and click Easy option
-    await page.locator('[data-part="content"]:visible [data-part="item"][data-value="easy"]').click()
+    await page
+      .locator(
+        '[data-part="content"]:visible [data-part="item"][data-value="easy"]',
+      )
+      .click()
 
     await page.getByText("Add Batch").first().click()
 
     // Find the second difficulty select trigger and click it
-    await page.locator('label').filter({ hasText: 'Difficulty' }).nth(1).locator('..').locator('[data-part="trigger"]').first().click()
+    await page
+      .locator("label")
+      .filter({ hasText: "Difficulty" })
+      .nth(1)
+      .locator("..")
+      .locator('[data-part="trigger"]')
+      .first()
+      .click()
 
     // Wait for dropdown to be visible and click Easy option
-    await page.locator('[data-part="content"]:visible [data-part="item"][data-value="easy"]').click()
+    await page
+      .locator(
+        '[data-part="content"]:visible [data-part="item"][data-value="easy"]',
+      )
+      .click()
 
     // Should show validation error
-    await expect(page.getByText("duplicate").or(
-      page.getByText("Cannot have duplicate")
-    )).toBeVisible()
+    await expect(
+      page.getByText("duplicate").or(page.getByText("Cannot have duplicate")),
+    ).toBeVisible()
 
     // Fix the issue by changing the second batch's difficulty
-    await page.locator('label').filter({ hasText: 'Difficulty' }).nth(1).locator('..').locator('[data-part="trigger"]').first().click()
+    await page
+      .locator("label")
+      .filter({ hasText: "Difficulty" })
+      .nth(1)
+      .locator("..")
+      .locator('[data-part="trigger"]')
+      .first()
+      .click()
 
     // Wait for dropdown to be visible and click Hard option
-    await page.locator('[data-part="content"]:visible [data-part="item"][data-value="hard"]').click()
+    await page
+      .locator(
+        '[data-part="content"]:visible [data-part="item"][data-value="hard"]',
+      )
+      .click()
 
     // Error should disappear
-    await expect(page.getByText("duplicate").or(
-      page.getByText("Cannot have duplicate")
-    )).not.toBeVisible()
+    await expect(
+      page.getByText("duplicate").or(page.getByText("Cannot have duplicate")),
+    ).not.toBeVisible()
   })
 
-  test("should handle all difficulty combinations systematically", async ({ page }) => {
+  test("should handle all difficulty combinations systematically", async ({
+    page,
+  }) => {
     await page.goto("/create-quiz")
 
     // Navigate to module question selection
@@ -334,37 +490,60 @@ test.describe("Difficulty Feature Validation Tests", () => {
     for (let i = 0; i < difficulties.length; i++) {
       await page.getByText("Add Batch").first().click()
 
-      if (difficulties[i] !== "Medium") { // Medium is default
+      if (difficulties[i] !== "Medium") {
+        // Medium is default
         // Find the difficulty select trigger and click it
-        await page.locator('label').filter({ hasText: 'Difficulty' }).nth(i).locator('..').locator('[data-part="trigger"]').first().click()
+        await page
+          .locator("label")
+          .filter({ hasText: "Difficulty" })
+          .nth(i)
+          .locator("..")
+          .locator('[data-part="trigger"]')
+          .first()
+          .click()
 
         // Map the display name to the actual value
         const difficultyValue = difficulties[i].toLowerCase()
 
         // Wait for dropdown to be visible and click the option
-        await page.locator(`[data-part="content"]:visible [data-part="item"][data-value="${difficultyValue}"]`).click()
+        await page
+          .locator(
+            `[data-part="content"]:visible [data-part="item"][data-value="${difficultyValue}"]`,
+          )
+          .click()
       }
     }
 
     // Should have 3 batches without errors - wait for the UI to update
     await page.waitForTimeout(1000)
     await expect(page.getByText(/3 batches/).first()).toBeVisible()
-    await expect(page.getByText("duplicate").or(
-      page.getByText("Cannot have duplicate")
-    )).not.toBeVisible()
+    await expect(
+      page.getByText("duplicate").or(page.getByText("Cannot have duplicate")),
+    ).not.toBeVisible()
 
     // Try to add 4th batch with duplicate Easy (should trigger error)
     await page.getByText("Add Batch").first().click()
 
     // Find the fourth difficulty select trigger and click it
-    await page.locator('label').filter({ hasText: 'Difficulty' }).nth(3).locator('..').locator('[data-part="trigger"]').first().click()
+    await page
+      .locator("label")
+      .filter({ hasText: "Difficulty" })
+      .nth(3)
+      .locator("..")
+      .locator('[data-part="trigger"]')
+      .first()
+      .click()
 
     // Wait for dropdown to be visible and click Easy option
-    await page.locator('[data-part="content"]:visible [data-part="item"][data-value="easy"]').click()
+    await page
+      .locator(
+        '[data-part="content"]:visible [data-part="item"][data-value="easy"]',
+      )
+      .click()
 
     // Should show validation error
-    await expect(page.getByText("duplicate").or(
-      page.getByText("Cannot have duplicate")
-    )).toBeVisible()
+    await expect(
+      page.getByText("duplicate").or(page.getByText("Cannot have duplicate")),
+    ).toBeVisible()
   })
 })
