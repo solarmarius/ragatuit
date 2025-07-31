@@ -337,6 +337,36 @@ export function getModuleQuestionTypeBreakdown(
 }
 
 /**
+ * Get detailed question batch breakdown per module including difficulty
+ * Returns: { moduleId: [ { questionType, count, difficulty } ] }
+ */
+export function getModuleQuestionBatchBreakdown(
+  quiz: Quiz,
+): Record<string, Array<{ questionType: string; count: number; difficulty: string }>> {
+  if (!quiz.selected_modules) return {}
+
+  const breakdown: Record<string, Array<{ questionType: string; count: number; difficulty: string }>> = {}
+
+  Object.entries(quiz.selected_modules).forEach(
+    ([moduleId, module]: [string, any]) => {
+      breakdown[moduleId] = []
+
+      if (module.question_batches) {
+        module.question_batches.forEach((batch: QuestionBatch) => {
+          breakdown[moduleId].push({
+            questionType: batch.question_type,
+            count: batch.count,
+            difficulty: batch.difficulty || 'medium', // Default to medium for backward compatibility
+          })
+        })
+      }
+    },
+  )
+
+  return breakdown
+}
+
+/**
  * Validate question batches for a module
  * Returns array of error messages (empty if valid)
  */
@@ -348,11 +378,11 @@ export function validateModuleBatches(batches: QuestionBatch[]): string[] {
     errors.push(VALIDATION_MESSAGES.MAX_BATCHES)
   }
 
-  // Check for duplicate question types
-  const types = batches.map((batch) => batch.question_type)
-  const uniqueTypes = new Set(types)
-  if (types.length !== uniqueTypes.size) {
-    errors.push(VALIDATION_MESSAGES.DUPLICATE_TYPES)
+  // Check for duplicate question type + difficulty combinations
+  const combinations = batches.map((batch) => `${batch.question_type}_${batch.difficulty || 'medium'}`)
+  const uniqueCombinations = new Set(combinations)
+  if (combinations.length !== uniqueCombinations.size) {
+    errors.push(VALIDATION_MESSAGES.DUPLICATE_COMBINATIONS)
   }
 
   // Check individual batch counts

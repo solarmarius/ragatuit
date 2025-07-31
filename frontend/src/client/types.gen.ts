@@ -44,7 +44,7 @@ export type ModuleSelection = {
 }
 
 /**
- * Schema for a batch of questions of a specific type.
+ * Schema for a batch of questions of a specific type and difficulty.
  */
 export type QuestionBatch = {
   question_type: QuestionType
@@ -52,6 +52,10 @@ export type QuestionBatch = {
    * Number of questions (1-20)
    */
   count: number
+  /**
+   * Question difficulty level
+   */
+  difficulty?: QuestionDifficulty
 }
 
 /**

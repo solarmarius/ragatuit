@@ -45,6 +45,24 @@ export const QUESTION_TYPE_LABELS = {
   true_false: "True/False",
 } as const
 
+export const QUESTION_DIFFICULTIES = {
+  EASY: "easy",
+  MEDIUM: "medium",
+  HARD: "hard",
+} as const
+
+export const QUESTION_DIFFICULTY_LABELS = {
+  easy: "Easy",
+  medium: "Medium",
+  hard: "Hard",
+} as const
+
+export const QUESTION_DIFFICULTY_DESCRIPTIONS = {
+  easy: "Basic recall and simple comprehension",
+  medium: "Application and moderate problem-solving",
+  hard: "Complex analysis and critical thinking",
+} as const
+
 export const QUIZ_LANGUAGES = {
   ENGLISH: "en",
   NORWEGIAN: "no",
@@ -266,6 +284,7 @@ export const VALIDATION_RULES = {
 export const VALIDATION_MESSAGES = {
   MAX_BATCHES: "Maximum 4 question batches per module",
   DUPLICATE_TYPES: "Cannot have duplicate question types in the same module",
+  DUPLICATE_COMBINATIONS: "Cannot have duplicate question type and difficulty combinations",
   INVALID_COUNT: "Question count must be between 1 and 20",
   NO_BATCHES: "Each module must have at least one question batch",
 } as const
@@ -273,6 +292,7 @@ export const VALIDATION_MESSAGES = {
 export const QUESTION_BATCH_DEFAULTS = {
   DEFAULT_QUESTION_TYPE: QUESTION_TYPES.MULTIPLE_CHOICE,
   DEFAULT_QUESTION_COUNT: 10,
+  DEFAULT_DIFFICULTY: QUESTION_DIFFICULTIES.MEDIUM,
 } as const
 
 // =============================================================================
