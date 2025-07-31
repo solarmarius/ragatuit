@@ -92,11 +92,12 @@ class ModuleBatchWorkflow:
         llm_provider: BaseLLMProvider,
         template_manager: TemplateManager | None = None,
         language: QuizLanguage = QuizLanguage.ENGLISH,
+        tone: str | None = None,
     ):
         self.llm_provider = llm_provider
         self.template_manager = template_manager or get_template_manager()
         self.language = language
-        # Removed: question_type initialization
+        self.tone = tone
         self.graph = self._build_graph()
 
     def _build_graph(self) -> Any:
@@ -190,6 +191,7 @@ class ModuleBatchWorkflow:
                 extra_variables={
                     "module_name": state.module_name,
                     "question_count": remaining_questions,
+                    "tone": self.tone,
                 },
             )
 
@@ -798,11 +800,12 @@ class ParallelModuleProcessor:
         llm_provider: BaseLLMProvider,
         template_manager: TemplateManager | None = None,
         language: QuizLanguage = QuizLanguage.ENGLISH,
+        tone: str | None = None,
     ):
         self.llm_provider = llm_provider
         self.template_manager = template_manager or get_template_manager()
         self.language = language
-        # Removed: question_type initialization
+        self.tone = tone
 
     async def process_all_modules_with_batches(
         self,
@@ -847,6 +850,7 @@ class ParallelModuleProcessor:
                     llm_provider=self.llm_provider,
                     template_manager=self.template_manager,
                     language=self.language,
+                    tone=self.tone,
                 )
 
                 # Create task for this batch
