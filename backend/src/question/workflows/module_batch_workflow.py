@@ -844,14 +844,7 @@ class ParallelModuleProcessor:
             for batch in module_info["batches"]:
                 question_type = batch["question_type"]
                 count = batch["count"]
-                difficulty_str = batch.get(
-                    "difficulty", "medium"
-                )  # Default to medium for backward compatibility
-                # Convert to enum here, like how language is handled
-                try:
-                    difficulty = QuestionDifficulty(difficulty_str)
-                except ValueError:
-                    difficulty = QuestionDifficulty.MEDIUM
+                difficulty = batch["difficulty"]
                 batch_key = batch["batch_key"]
 
                 # Create workflow for this specific batch

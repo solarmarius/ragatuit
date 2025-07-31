@@ -181,17 +181,18 @@ class Quiz(SQLModel, table=True):
                         f"Module {module_id} batch {i} count must be between 1 and 20"
                     )
 
-                # Auto-migrate existing batches without difficulty to MEDIUM
+                # Validate required difficulty field
                 if "difficulty" not in batch:
-                    batch["difficulty"] = "medium"
+                    raise ValueError(
+                        f"Module {module_id} batch {i} missing required 'difficulty' field"
+                    )
 
-                # Validate difficulty field if present
-                if "difficulty" in batch:
-                    valid_difficulties = ["easy", "medium", "hard"]
-                    if batch["difficulty"] not in valid_difficulties:
-                        raise ValueError(
-                            f"Module {module_id} batch {i} difficulty must be one of: {valid_difficulties}"
-                        )
+                # Validate difficulty field value
+                valid_difficulties = ["easy", "medium", "hard"]
+                if batch["difficulty"] not in valid_difficulties:
+                    raise ValueError(
+                        f"Module {module_id} batch {i} difficulty must be one of: {valid_difficulties}"
+                    )
 
             # Validate no duplicate question type + difficulty combinations in same module
             batch_combinations = [

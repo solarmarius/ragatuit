@@ -51,9 +51,7 @@ class QuestionBatch(SQLModel):
 
     question_type: QuestionType
     count: int = Field(ge=1, le=20, description="Number of questions (1-20)")
-    difficulty: QuestionDifficulty = Field(
-        default=QuestionDifficulty.MEDIUM, description="Question difficulty level"
-    )
+    difficulty: QuestionDifficulty
 
 
 class ModuleSelection(SQLModel):

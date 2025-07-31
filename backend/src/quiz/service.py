@@ -57,6 +57,11 @@ def create_quiz(session: Session, quiz_create: QuizCreate, owner_id: UUID) -> Qu
                         else batch["question_type"]
                     ),
                     "count": batch["count"],
+                    "difficulty": (
+                        batch["difficulty"].value
+                        if hasattr(batch.get("difficulty"), "value")
+                        else batch["difficulty"]
+                    ),
                 }
             )
         selected_modules[str(module_id)] = {
