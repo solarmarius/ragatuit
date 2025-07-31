@@ -33,7 +33,7 @@ class Quiz(SQLModel, table=True):
     question_count: int = Field(
         default=0, description="Total number of questions in the quiz"
     )
-    llm_model: str = Field(default="o3")
+    llm_model: str = Field(default="o4-mini-2025-04-16")
     llm_temperature: float = Field(default=1, ge=0.0, le=2.0)
     language: QuizLanguage = Field(
         default=QuizLanguage.ENGLISH,
