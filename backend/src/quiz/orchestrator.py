@@ -362,12 +362,12 @@ async def _execute_mixed_content_extraction_workflow(
                     }
                 ]
 
-                # Remove content and processing_metadata from selected_modules to prevent duplication
-                # Keep other fields like name, source_type, word_count, question_batches, etc.
+                # Remove content and metadata fields from selected_modules to prevent duplication
+                # Keep only essential fields like Canvas modules: name, source_type, question_batches
                 selected_modules[module_id] = {
                     key: value
                     for key, value in module_data.items()
-                    if key not in ["content", "processing_metadata"]
+                    if key in ["name", "source_type", "question_batches"]
                 }
 
         # Generate content summary for all modules
