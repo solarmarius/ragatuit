@@ -4,47 +4,49 @@ import type { CancelablePromise } from "./core/CancelablePromise"
 import { OpenAPI } from "./core/OpenAPI"
 import { request as __request } from "./core/request"
 import type {
-  AuthAuthCanvasResponse,
   AuthLoginCanvasResponse,
+  AuthAuthCanvasResponse,
   AuthLogoutCanvasResponse,
+  CanvasGetCoursesResponse,
   CanvasGetCourseModulesData,
   CanvasGetCourseModulesResponse,
-  CanvasGetCoursesResponse,
-  CanvasGetFileInfoData,
-  CanvasGetFileInfoResponse,
   CanvasGetModuleItemsData,
   CanvasGetModuleItemsResponse,
   CanvasGetPageContentData,
   CanvasGetPageContentResponse,
-  QuestionsApproveQuestionData,
-  QuestionsApproveQuestionResponse,
-  QuestionsCreateQuestionData,
-  QuestionsCreateQuestionResponse,
-  QuestionsDeleteQuestionData,
-  QuestionsDeleteQuestionResponse,
-  QuestionsGetQuestionData,
-  QuestionsGetQuestionResponse,
+  CanvasGetFileInfoData,
+  CanvasGetFileInfoResponse,
   QuestionsGetQuizQuestionsData,
   QuestionsGetQuizQuestionsResponse,
+  QuestionsCreateQuestionData,
+  QuestionsCreateQuestionResponse,
+  QuestionsGetQuestionData,
+  QuestionsGetQuestionResponse,
   QuestionsUpdateQuestionData,
   QuestionsUpdateQuestionResponse,
+  QuestionsDeleteQuestionData,
+  QuestionsDeleteQuestionResponse,
+  QuestionsApproveQuestionData,
+  QuestionsApproveQuestionResponse,
+  QuizGetUserQuizzesEndpointResponse,
   QuizCreateNewQuizData,
   QuizCreateNewQuizResponse,
+  QuizUploadManualModuleData,
+  QuizUploadManualModuleResponse,
+  QuizGetQuizData,
+  QuizGetQuizResponse,
   QuizDeleteQuizEndpointData,
   QuizDeleteQuizEndpointResponse,
-  QuizExportQuizToCanvasData,
-  QuizExportQuizToCanvasResponse,
-  QuizGetQuizData,
-  QuizGetQuizQuestionStatsData,
-  QuizGetQuizQuestionStatsResponse,
-  QuizGetQuizResponse,
-  QuizGetUserQuizzesEndpointResponse,
   QuizTriggerContentExtractionData,
   QuizTriggerContentExtractionResponse,
   QuizTriggerQuestionGenerationData,
   QuizTriggerQuestionGenerationResponse,
-  UsersDeleteUserMeResponse,
+  QuizGetQuizQuestionStatsData,
+  QuizGetQuizQuestionStatsResponse,
+  QuizExportQuizToCanvasData,
+  QuizExportQuizToCanvasResponse,
   UsersReadUserMeResponse,
+  UsersDeleteUserMeResponse,
   UsersUpdateUserMeData,
   UsersUpdateUserMeResponse,
   UtilsHealthCheckResponse,
@@ -741,6 +743,63 @@ export class QuizService {
       url: "/api/v1/quiz/",
       body: data.requestBody,
       mediaType: "application/json",
+      errors: {
+        422: "Validation Error",
+      },
+    })
+  }
+
+  /**
+   * Upload Manual Module
+   * Create a manual module from file upload or text content with immediate processing.
+   *
+   * This endpoint accepts either a PDF file upload OR direct text content to create
+   * a manual module. The content is immediately processed and a preview is returned.
+   *
+   * **Parameters:**
+   * name (str): Name for the manual module
+   * text_content (str, optional): Direct text content for the module
+   * file (UploadFile, optional): PDF file to upload and process
+   *
+   * **Returns:**
+   * ManualModuleResponse: Processed module with preview and metadata
+   *
+   * **Authentication:**
+   * Requires valid JWT token in Authorization header
+   *
+   * **Validation:**
+   * - Either file OR text_content must be provided (not both)
+   * - PDF files only, max 5MB
+   * - Text content cannot be empty if provided
+   *
+   * **Raises:**
+   * HTTPException: 400 if validation fails or no content provided
+   * HTTPException: 500 if content processing fails
+   *
+   * **Example Usage:**
+   *
+   * With file upload:
+   * ```bash
+   * curl -X POST "http://localhost:8000/api/v1/quiz/manual-modules/upload"              -H "Authorization: Bearer <token>"              -F "name=Lecture Transcript"              -F "file=@transcript.pdf"
+   * ```
+   *
+   * With text content:
+   * ```bash
+   * curl -X POST "http://localhost:8000/api/v1/quiz/manual-modules/upload"              -H "Authorization: Bearer <token>"              -F "name=Course Notes"              -F "text_content=This is the content of my course notes..."
+   * ```
+   * @param data The data for the request.
+   * @param data.formData
+   * @returns ManualModuleResponse Successful Response
+   * @throws ApiError
+   */
+  public static uploadManualModule(
+    data: QuizUploadManualModuleData,
+  ): CancelablePromise<QuizUploadManualModuleResponse> {
+    return __request(OpenAPI, {
+      method: "POST",
+      url: "/api/v1/quiz/manual-modules/upload",
+      formData: data.formData,
+      mediaType: "multipart/form-data",
       errors: {
         422: "Validation Error",
       },

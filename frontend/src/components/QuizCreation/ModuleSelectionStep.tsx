@@ -1,29 +1,43 @@
 import { Checkbox } from "@/components/ui/checkbox"
-import { Alert, Box, Card, HStack, Text, VStack } from "@chakra-ui/react"
+import { Alert, Box, Button, Card, HStack, Text, VStack } from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import type React from "react"
-import { useCallback, useMemo } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import { CanvasService } from "@/client"
 import { LoadingSkeleton } from "@/components/Common"
 import { analyzeCanvasError } from "@/lib/utils"
+import { ManualModuleDialog } from "./ManualModuleDialog"
 
 interface Module {
   id: number
   name: string
 }
 
+interface ManualModule {
+  id: string
+  name: string
+  contentPreview: string
+  wordCount: number
+  isManual: true
+}
+
 interface ModuleSelectionStepProps {
   courseId: number
-  selectedModules: { [id: number]: string }
-  onModulesSelect: (modules: { [id: number]: string }) => void
+  selectedModules: { [id: string]: string }
+  manualModules?: ManualModule[]
+  onModulesSelect: (modules: { [id: string]: string }) => void
+  onManualModuleAdd?: (module: ManualModule) => void
 }
 
 export function ModuleSelectionStep({
   courseId,
   selectedModules,
+  manualModules = [],
   onModulesSelect,
+  onManualModuleAdd,
 }: ModuleSelectionStepProps) {
+  const [isManualDialogOpen, setIsManualDialogOpen] = useState(false)
   // Show message if no course is selected
   if (!courseId || courseId <= 0) {
     return (
@@ -51,18 +65,45 @@ export function ModuleSelectionStep({
   })
 
   const handleModuleToggle = useCallback(
-    (module: Module, checked: boolean) => {
+    (module: Module | ManualModule, checked: boolean) => {
       const newSelectedModules = { ...selectedModules }
+      const moduleId = String(module.id)
 
       if (checked) {
-        newSelectedModules[module.id] = module.name
+        newSelectedModules[moduleId] = module.name
       } else {
-        delete newSelectedModules[module.id]
+        delete newSelectedModules[moduleId]
       }
 
       onModulesSelect(newSelectedModules)
     },
     [selectedModules, onModulesSelect],
+  )
+
+  const handleManualModuleCreated = useCallback(
+    (moduleData: {
+      moduleId: string
+      name: string
+      contentPreview: string
+      wordCount: number
+    }) => {
+      const manualModule: ManualModule = {
+        id: moduleData.moduleId,
+        name: moduleData.name,
+        contentPreview: moduleData.contentPreview,
+        wordCount: moduleData.wordCount,
+        isManual: true,
+      }
+
+      // Add the manual module to the list
+      onManualModuleAdd?.(manualModule)
+
+      // Automatically select the new manual module
+      const newSelectedModules = { ...selectedModules }
+      newSelectedModules[moduleData.moduleId] = moduleData.name
+      onModulesSelect(newSelectedModules)
+    },
+    [selectedModules, onModulesSelect, onManualModuleAdd],
   )
 
   const selectedCount = useMemo(
@@ -127,7 +168,44 @@ export function ModuleSelectionStep({
         </Text>
       </Box>
 
+      {/* Manual Module Creation Card */}
+      <Card.Root
+        variant="outline"
+        cursor="pointer"
+        _hover={{ borderColor: "green.300" }}
+        borderColor="green.200"
+        bg="green.50"
+        onClick={() => setIsManualDialogOpen(true)}
+        data-testid="add-manual-module-card"
+      >
+        <Card.Body p={4}>
+          <HStack gap={3}>
+            <Box fontSize="xl">➕</Box>
+            <Box flex={1}>
+              <Text fontWeight="medium" fontSize="md" color="green.700">
+                Add Manual Module
+              </Text>
+              <Text fontSize="sm" color="green.600" mt={1}>
+                Upload a PDF file or paste text content to create a custom module
+              </Text>
+            </Box>
+            <Button
+              size="sm"
+              colorScheme="green"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsManualDialogOpen(true)
+              }}
+            >
+              Add Module
+            </Button>
+          </HStack>
+        </Card.Body>
+      </Card.Root>
+
       <VStack gap={3} align="stretch">
+        {/* Canvas Modules */}
         {modules.map((module) => (
           <Card.Root
             key={module.id}
@@ -160,6 +238,56 @@ export function ModuleSelectionStep({
             </Card.Body>
           </Card.Root>
         ))}
+
+        {/* Manual Modules */}
+        {manualModules.map((module) => (
+          <Card.Root
+            key={module.id}
+            variant="outline"
+            cursor="pointer"
+            _hover={{ borderColor: "blue.300" }}
+            borderColor={selectedModules[module.id] ? "blue.500" : "gray.200"}
+            bg={selectedModules[module.id] ? "blue.50" : "white"}
+            onClick={() => {
+              handleModuleToggle(module, !selectedModules[module.id])
+            }}
+            data-testid={`manual-module-card-${module.id}`}
+          >
+            <Card.Body p={4}>
+              <HStack gap={3}>
+                <Checkbox
+                  checked={!!selectedModules[module.id]}
+                  inputProps={{
+                    onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
+                      handleModuleToggle(module, e.target.checked),
+                    onClick: (e: React.MouseEvent) => e.stopPropagation(),
+                  }}
+                />
+                <Box flex={1}>
+                  <HStack gap={2} align="center">
+                    <Text fontWeight="medium" fontSize="md" lineClamp={2}>
+                      {module.name || "Unnamed Module"}
+                    </Text>
+                    <Box
+                      px={2}
+                      py={1}
+                      bg="purple.100"
+                      color="purple.800"
+                      fontSize="xs"
+                      fontWeight="medium"
+                      borderRadius="md"
+                    >
+                      Manual
+                    </Box>
+                  </HStack>
+                  <Text fontSize="sm" color="gray.600" mt={1}>
+                    {module.wordCount.toLocaleString()} words
+                  </Text>
+                </Box>
+              </HStack>
+            </Card.Body>
+          </Card.Root>
+        ))}
       </VStack>
 
       {selectedCount > 0 && (
@@ -171,6 +299,13 @@ export function ModuleSelectionStep({
           </Alert.Description>
         </Alert.Root>
       )}
+
+      {/* Manual Module Dialog */}
+      <ManualModuleDialog
+        isOpen={isManualDialogOpen}
+        onOpenChange={setIsManualDialogOpen}
+        onModuleCreated={handleManualModuleCreated}
+      />
     </VStack>
   )
 }

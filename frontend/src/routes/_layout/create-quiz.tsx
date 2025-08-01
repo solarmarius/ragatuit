@@ -28,12 +28,23 @@ export const Route = createFileRoute("/_layout/create-quiz")({
   component: CreateQuiz,
 })
 
+interface ManualModule {
+  id: string
+  name: string
+  contentPreview: string
+  fullContent?: string
+  wordCount: number
+  processingMetadata?: Record<string, any>
+  isManual: true
+}
+
 interface QuizFormData {
   selectedCourse?: {
     id: number
     name: string
   }
-  selectedModules?: { [id: number]: string }
+  selectedModules?: { [id: string]: string }
+  manualModules?: ManualModule[]
   moduleQuestions?: { [id: string]: QuestionBatch[] }
   title?: string
   language?: QuizLanguage
@@ -71,7 +82,7 @@ function CreateQuiz() {
   }, [])
 
   const handleModuleSelection = useCallback(
-    (modules: { [id: number]: string }) => {
+    (modules: { [id: string]: string }) => {
       const moduleQuestions = { ...formData.moduleQuestions }
 
       // Initialize empty arrays for newly selected modules
@@ -83,7 +94,7 @@ function CreateQuiz() {
 
       // Remove deselected modules
       Object.keys(moduleQuestions).forEach((moduleId) => {
-        if (!modules[Number(moduleId)]) {
+        if (!modules[moduleId]) {
           delete moduleQuestions[moduleId]
         }
       })
@@ -94,6 +105,16 @@ function CreateQuiz() {
       })
     },
     [formData.moduleQuestions, updateFormData],
+  )
+
+  const handleManualModuleAdd = useCallback(
+    (module: ManualModule) => {
+      const currentManualModules = formData.manualModules || []
+      updateFormData({
+        manualModules: [...currentManualModules, module],
+      })
+    },
+    [formData.manualModules, updateFormData],
   )
 
   const handleModuleQuestionChange = useCallback(
@@ -126,13 +147,19 @@ function CreateQuiz() {
       const selectedModulesWithBatches = Object.entries(
         formData.selectedModules,
       ).reduce(
-        (acc, [moduleId, moduleName]) => ({
-          ...acc,
-          [moduleId]: {
-            name: moduleName,
-            question_batches: formData.moduleQuestions?.[moduleId] || [],
-          },
-        }),
+        (acc, [moduleId, moduleName]) => {
+          // Check if this is a manual module
+          const isManual = moduleId.startsWith("manual_")
+
+          return {
+            ...acc,
+            [moduleId]: {
+              name: moduleName,
+              question_batches: formData.moduleQuestions?.[moduleId] || [],
+              source_type: isManual ? "manual" : "canvas",
+            },
+          }
+        },
         {},
       )
 
@@ -198,7 +225,9 @@ function CreateQuiz() {
           <ModuleSelectionStep
             courseId={formData.selectedCourse?.id || 0}
             selectedModules={formData.selectedModules || {}}
+            manualModules={formData.manualModules || []}
             onModulesSelect={handleModuleSelection}
+            onManualModuleAdd={handleManualModuleAdd}
           />
         )
       case 3:
