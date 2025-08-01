@@ -1,17 +1,17 @@
 import { Button, HStack, Input, Text, VStack } from "@chakra-ui/react"
-import { memo, useState, useCallback } from "react"
+import { memo, useCallback, useState } from "react"
 
-import { QuizService } from "@/client"
 import {
   DialogBody,
   DialogCloseTrigger,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogRoot,
   DialogTitle,
-  DialogFooter
 } from "@/components/ui/dialog"
 import { useCustomToast } from "@/hooks/common"
+import { QuizService } from "@/client"
 import { ContentPreview } from "./ContentPreview"
 import { FileUploadZone } from "./FileUploadZone"
 import { TextContentEditor } from "./TextContentEditor"
@@ -64,7 +64,7 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
   const [currentStep, setCurrentStep] = useState<DialogStep>("input-method")
   const [inputMethod, setInputMethod] = useState<InputMethod | null>(null)
   const [moduleName, setModuleName] = useState("")
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [textContent, setTextContent] = useState("")
   const [isProcessing, setIsProcessing] = useState(false)
   const [previewData, setPreviewData] = useState<{
@@ -79,19 +79,22 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
   const toast = useCustomToast()
 
   // Reset dialog state when it closes
-  const handleOpenChange = useCallback((open: boolean) => {
-    if (!open) {
-      setCurrentStep("input-method")
-      setInputMethod(null)
-      setModuleName("")
-      setSelectedFile(null)
-      setTextContent("")
-      setIsProcessing(false)
-      setPreviewData(null)
-      setError(null)
-    }
-    onOpenChange(open)
-  }, [onOpenChange])
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        setCurrentStep("input-method")
+        setInputMethod(null)
+        setModuleName("")
+        setSelectedFiles([])
+        setTextContent("")
+        setIsProcessing(false)
+        setPreviewData(null)
+        setError(null)
+      }
+      onOpenChange(open)
+    },
+    [onOpenChange],
+  )
 
   // Handle method selection
   const handleMethodSelection = useCallback((method: InputMethod) => {
@@ -100,9 +103,9 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
     setError(null)
   }, [])
 
-  // Handle file selection
-  const handleFileSelect = useCallback((file: File | null) => {
-    setSelectedFile(file)
+  // Handle files selection
+  const handleFilesSelect = useCallback((files: File[]) => {
+    setSelectedFiles(files)
     setError(null)
   }, [])
 
@@ -119,8 +122,8 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
       return
     }
 
-    if (inputMethod === "file" && !selectedFile) {
-      setError("Please select a PDF file")
+    if (inputMethod === "file" && selectedFiles.length === 0) {
+      setError("Please select at least one PDF file")
       return
     }
 
@@ -133,24 +136,16 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
     setError(null)
 
     try {
-      // Prepare request data for the API call
-      const requestData: {
-        name: string
-        text_content?: string
-        file?: File
-      } = {
-        name: moduleName.trim()
+      // Prepare the form data for the OpenAPI client
+      const formData = {
+        name: moduleName.trim(),
+        text_content: inputMethod === "text" ? textContent.trim() : undefined,
+        files: inputMethod === "file" && selectedFiles.length > 0 ? selectedFiles : undefined,
       }
 
-      if (inputMethod === "file" && selectedFile) {
-        requestData.file = selectedFile
-      } else if (inputMethod === "text") {
-        requestData.text_content = textContent.trim()
-      }
-
-      // Call the backend API using the generated client
+      // Use the generated OpenAPI client with proper authentication
       const result = await QuizService.uploadManualModule({
-        formData: requestData
+        formData,
       })
 
       setPreviewData({
@@ -158,20 +153,20 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
         contentPreview: result.content_preview,
         fullContent: result.full_content,
         wordCount: result.word_count,
-        metadata: result.processing_metadata
+        metadata: result.processing_metadata,
       })
 
       setCurrentStep("preview")
       toast.showSuccessToast("Content processed successfully!")
-
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Failed to process content"
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to process content"
       setError(errorMessage)
       toast.showErrorToast(errorMessage)
     } finally {
       setIsProcessing(false)
     }
-  }, [moduleName, inputMethod, selectedFile, textContent, toast])
+  }, [moduleName, inputMethod, selectedFiles, textContent, toast])
 
   // Handle module creation confirmation
   const handleConfirmCreation = useCallback(() => {
@@ -182,7 +177,7 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
         contentPreview: previewData.contentPreview,
         fullContent: previewData.fullContent,
         wordCount: previewData.wordCount,
-        processingMetadata: previewData.metadata
+        processingMetadata: previewData.metadata,
       })
       handleOpenChange(false)
     }
@@ -195,7 +190,7 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
       case "text-input":
         setCurrentStep("input-method")
         setInputMethod(null)
-        setSelectedFile(null)
+        setSelectedFiles([])
         setTextContent("")
         setError(null)
         break
@@ -229,7 +224,7 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
 
     switch (currentStep) {
       case "file-upload":
-        return !!selectedFile
+        return selectedFiles.length > 0
       case "text-input":
         return !!textContent.trim()
       case "preview":
@@ -289,7 +284,8 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
                       <VStack align="start" gap={1}>
                         <Text fontWeight="semibold">Upload PDF File</Text>
                         <Text fontSize="sm" color="gray.600">
-                          Upload a PDF document (lecture notes, transcripts, etc.)
+                          Upload a PDF document (lecture notes, transcripts,
+                          etc.)
                         </Text>
                       </VStack>
                     </HStack>
@@ -318,7 +314,7 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
 
             {currentStep === "file-upload" && (
               <FileUploadZone
-                onFileSelect={handleFileSelect}
+                onFilesSelect={handleFilesSelect}
                 isLoading={isProcessing}
                 error={error}
               />
@@ -375,16 +371,18 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
                 >
                   Add Module
                 </Button>
-              ) : currentStep !== "input-method" && (
-                <Button
-                  colorScheme="blue"
-                  onClick={handleProcessContent}
-                  disabled={!canProceed() || isProcessing}
-                  loading={isProcessing}
-                  loadingText="Processing..."
-                >
-                  Process Content
-                </Button>
+              ) : (
+                currentStep !== "input-method" && (
+                  <Button
+                    colorScheme="blue"
+                    onClick={handleProcessContent}
+                    disabled={!canProceed() || isProcessing}
+                    loading={isProcessing}
+                    loadingText="Processing..."
+                  >
+                    Process Content
+                  </Button>
+                )
               )}
             </HStack>
           </HStack>

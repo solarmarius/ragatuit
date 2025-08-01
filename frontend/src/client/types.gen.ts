@@ -10,9 +10,13 @@ export type Body_quiz_upload_manual_module = {
    */
   text_content?: string | null
   /**
-   * PDF file upload
+   * Single PDF file upload (legacy)
    */
   file?: (Blob | File) | null
+  /**
+   * Multiple PDF files upload
+   */
+  files?: Array<Blob | File>
 }
 
 /**

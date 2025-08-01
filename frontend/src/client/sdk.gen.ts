@@ -751,15 +751,17 @@ export class QuizService {
 
   /**
    * Upload Manual Module
-   * Create a manual module from file upload or text content with immediate processing.
+   * Create a manual module from single/multiple file uploads or text content with immediate processing.
    *
-   * This endpoint accepts either a PDF file upload OR direct text content to create
+   * This endpoint accepts either PDF file upload(s) OR direct text content to create
    * a manual module. The content is immediately processed and a preview is returned.
+   * Multiple files are concatenated into a single content block.
    *
    * **Parameters:**
    * name (str): Name for the manual module
    * text_content (str, optional): Direct text content for the module
-   * file (UploadFile, optional): PDF file to upload and process
+   * file (UploadFile, optional): Single PDF file upload (for backward compatibility)
+   * files (list[UploadFile], optional): Multiple PDF files upload (up to 5 files, 25MB total)
    *
    * **Returns:**
    * ManualModuleResponse: Processed module with preview and metadata

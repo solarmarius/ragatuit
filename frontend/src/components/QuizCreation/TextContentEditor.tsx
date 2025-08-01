@@ -38,11 +38,14 @@ export const TextContentEditor = memo(function TextContentEditor({
   onChange,
   disabled = false,
   error,
-  placeholder = "Paste your course content here..."
+  placeholder = "Paste your course content here...",
 }: TextContentEditorProps) {
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onChange(e.target.value)
-  }, [onChange])
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      onChange(e.target.value)
+    },
+    [onChange],
+  )
 
   // Calculate basic stats
   const characterCount = value.length
@@ -67,11 +70,11 @@ export const TextContentEditor = memo(function TextContentEditor({
           bg={error ? "red.50" : "white"}
           _focus={{
             borderColor: error ? "red.400" : "blue.400",
-            boxShadow: error ? "0 0 0 1px red.400" : "0 0 0 1px blue.400"
+            boxShadow: error ? "0 0 0 1px red.400" : "0 0 0 1px blue.400",
           }}
           _disabled={{
             opacity: 0.6,
-            cursor: "not-allowed"
+            cursor: "not-allowed",
           }}
         />
 
@@ -94,7 +97,13 @@ export const TextContentEditor = memo(function TextContentEditor({
       </Box>
 
       {error && (
-        <Box p={3} bg="red.50" border="1px solid" borderColor="red.200" borderRadius="md">
+        <Box
+          p={3}
+          bg="red.50"
+          border="1px solid"
+          borderColor="red.200"
+          borderRadius="md"
+        >
           <Text fontSize="sm" color="red.600">
             {error}
           </Text>
@@ -102,8 +111,8 @@ export const TextContentEditor = memo(function TextContentEditor({
       )}
 
       <Text fontSize="sm" color="gray.600">
-        Enter the content you want to generate questions from. This could be lecture notes,
-        course materials, or any educational text content.
+        Enter the content you want to generate questions from. This could be
+        lecture notes, course materials, or any educational text content.
       </Text>
     </VStack>
   )

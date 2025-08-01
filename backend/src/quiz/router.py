@@ -150,18 +150,21 @@ async def upload_manual_module(
     current_user: CurrentUser,
     name: str = Form(..., description="Module name"),
     text_content: str | None = Form(None, description="Direct text content"),
-    file: UploadFile | None = File(None, description="PDF file upload"),
+    file: UploadFile | None = File(None, description="Single PDF file upload (legacy)"),
+    files: list[UploadFile] = File([], description="Multiple PDF files upload"),
 ) -> ManualModuleResponse:
     """
-    Create a manual module from file upload or text content with immediate processing.
+    Create a manual module from single/multiple file uploads or text content with immediate processing.
 
-    This endpoint accepts either a PDF file upload OR direct text content to create
+    This endpoint accepts either PDF file upload(s) OR direct text content to create
     a manual module. The content is immediately processed and a preview is returned.
+    Multiple files are concatenated into a single content block.
 
     **Parameters:**
         name (str): Name for the manual module
         text_content (str, optional): Direct text content for the module
-        file (UploadFile, optional): PDF file to upload and process
+        file (UploadFile, optional): Single PDF file upload (for backward compatibility)
+        files (list[UploadFile], optional): Multiple PDF files upload (up to 5 files, 25MB total)
 
     **Returns:**
         ManualModuleResponse: Processed module with preview and metadata
@@ -200,7 +203,9 @@ async def upload_manual_module(
         "manual_module_upload_initiated",
         user_id=str(current_user.id),
         module_name=name,
-        has_file=file is not None,
+        has_single_file=file is not None,
+        has_multiple_files=len(files) > 0,
+        files_count=len(files),
         has_text=text_content is not None,
     )
 
@@ -208,8 +213,8 @@ async def upload_manual_module(
         # Create ManualModuleCreate object
         module_data = ManualModuleCreate(name=name, text_content=text_content)
 
-        # Process the manual module
-        result = await create_manual_module(module_data, file)
+        # Process the manual module with single or multiple files
+        result = await create_manual_module(module_data, file, files)
 
         logger.info(
             "manual_module_upload_completed",

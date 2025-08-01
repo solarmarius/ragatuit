@@ -14,8 +14,10 @@ from .schemas import ManualModuleCreate, ManualModuleResponse
 
 logger = get_logger("manual_module_service")
 
-# File size limit: 5MB
+# File size limit: 5MB per file, 25MB total
 MAX_FILE_SIZE = 5 * 1024 * 1024
+MAX_TOTAL_FILE_SIZE = 25 * 1024 * 1024
+MAX_FILES_COUNT = 5
 
 
 async def process_uploaded_file(file: UploadFile) -> RawContent:
@@ -70,6 +72,157 @@ async def process_uploaded_file(file: UploadFile) -> RawContent:
     return raw_content
 
 
+async def process_multiple_uploaded_files(files: list[UploadFile]) -> RawContent:
+    """
+    Process multiple uploaded files and concatenate their content.
+
+    Args:
+        files: List of FastAPI UploadFile objects
+
+    Returns:
+        RawContent object with concatenated content ready for processing
+
+    Raises:
+        HTTPException: If file validation fails or total size exceeds limit
+    """
+    if not files:
+        raise HTTPException(
+            status_code=400, detail="At least one file must be provided"
+        )
+
+    if len(files) > MAX_FILES_COUNT:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Maximum {MAX_FILES_COUNT} files allowed per manual module",
+        )
+
+    # Validate each file and store content to avoid multiple reads
+    total_size = 0
+    file_names = []
+    file_contents = []  # Store the content during validation
+
+    for file in files:
+        # Validate file type
+        if not file.filename or not file.filename.lower().endswith(".pdf"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Only PDF files are supported. Invalid file: {file.filename}",
+            )
+
+        # Read file content once and store it
+        content_bytes = await file.read()
+        file_size = len(content_bytes)
+
+        # Validate individual file size
+        if file_size > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File '{file.filename}' exceeds maximum size of {MAX_FILE_SIZE / (1024*1024):.1f}MB",
+            )
+
+        total_size += file_size
+        file_names.append(file.filename)
+        file_contents.append(content_bytes)  # Store content for later use
+
+    # Validate total size
+    if total_size > MAX_TOTAL_FILE_SIZE:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Total file size ({total_size / (1024*1024):.1f}MB) exceeds maximum limit of {MAX_TOTAL_FILE_SIZE / (1024*1024):.1f}MB",
+        )
+
+    # Process each file and concatenate content
+    concatenated_content_parts = []
+    all_metadata: dict[str, Any] = {
+        "source": "manual_multi_upload",
+        "total_files": len(files),
+        "total_file_size": total_size,
+        "filenames": file_names,
+        "individual_file_sizes": [len(content) for content in file_contents],
+    }
+
+    # Process each PDF individually and extract text content
+    for i, (file, content_bytes) in enumerate(zip(files, file_contents, strict=False)):
+        # Create individual RawContent for each file
+        individual_raw_content = RawContent(
+            content=content_bytes.decode("latin-1"),
+            content_type="pdf",
+            title=file.filename or f"document_{i+1}.pdf",
+            metadata={
+                "source": "manual_multi_upload_individual",
+                "file_size": len(content_bytes),
+                "filename": file.filename,
+                "file_index": i + 1,
+            },
+        )
+
+        # Process individual PDF through content extraction pipeline
+        if individual_raw_content.content_type not in CONTENT_PROCESSORS:
+            logger.warning(
+                "unsupported_content_type_in_multi_upload",
+                content_type=individual_raw_content.content_type,
+                filename=file.filename,
+            )
+            continue
+
+        processor = CONTENT_PROCESSORS[individual_raw_content.content_type]
+        processed_individual = await process_content(individual_raw_content, processor)
+
+        if not processed_individual:
+            logger.warning(
+                "individual_file_processing_failed",
+                filename=file.filename,
+                file_index=i + 1,
+            )
+            continue
+
+        # Add document separator (except for first file)
+        if i > 0:
+            concatenated_content_parts.append(
+                f"\n\n--- Document {i + 1}: {file.filename} ---\n\n"
+            )
+
+        # Add the extracted text content, not raw binary data
+        concatenated_content_parts.append(processed_individual.content)
+
+        logger.info(
+            "multi_file_processed",
+            filename=file.filename,
+            file_size=len(content_bytes),
+            extracted_word_count=processed_individual.word_count,
+            file_index=i + 1,
+            total_files=len(files),
+        )
+
+    # Combine all content
+    combined_content = "".join(concatenated_content_parts)
+
+    # Create combined title
+    if len(files) == 1:
+        title = files[0].filename or "uploaded_file.pdf"
+    else:
+        first_filename = files[0].filename or "uploaded_file.pdf"
+        title = f"{first_filename} and {len(files) - 1} other file(s)"
+
+    # Create RawContent object with combined extracted text content
+    raw_content = RawContent(
+        content=combined_content,
+        content_type="text",  # Now it's extracted text, not raw PDF
+        title=title,
+        metadata=all_metadata,
+    )
+
+    logger.info(
+        "multi_file_upload_completed",
+        total_files=len(files),
+        total_size=total_size,
+        combined_content_length=len(combined_content),
+        title=title,
+    )
+
+    return raw_content
+
+
 async def process_text_content(text: str, module_name: str) -> RawContent:
     """
     Process direct text input and convert to RawContent.
@@ -99,14 +252,17 @@ async def process_text_content(text: str, module_name: str) -> RawContent:
 
 
 async def create_manual_module(
-    module_data: ManualModuleCreate, file: UploadFile | None = None
+    module_data: ManualModuleCreate,
+    file: UploadFile | None = None,
+    files: list[UploadFile] | None = None,
 ) -> ManualModuleResponse:
     """
-    Create a manual module from file upload or text content.
+    Create a manual module from single file, multiple files, or text content.
 
     Args:
         module_data: Manual module creation data
-        file: Optional uploaded file
+        file: Optional single uploaded file (for backward compatibility)
+        files: Optional list of uploaded files (for multi-file upload)
 
     Returns:
         ManualModuleResponse with processed content preview
@@ -114,17 +270,21 @@ async def create_manual_module(
     Raises:
         HTTPException: If processing fails or no content provided
     """
-    # Validate that either file or text content is provided
-    if not file and not module_data.text_content:
+    # Count how many input methods are provided
+    input_methods = sum(
+        [bool(file), bool(files and len(files) > 0), bool(module_data.text_content)]
+    )
+
+    if input_methods == 0:
         raise HTTPException(
             status_code=400,
-            detail="Either file upload or text content must be provided",
+            detail="Either file upload(s) or text content must be provided",
         )
 
-    if file and module_data.text_content:
+    if input_methods > 1:
         raise HTTPException(
             status_code=400,
-            detail="Provide either file upload or text content, not both",
+            detail="Provide either file upload(s) or text content, not both",
         )
 
     # Generate unique module ID
@@ -132,7 +292,9 @@ async def create_manual_module(
 
     try:
         # Process content based on input type
-        if file:
+        if files and len(files) > 0:
+            raw_content = await process_multiple_uploaded_files(files)
+        elif file:
             raw_content = await process_uploaded_file(file)
         else:
             # We already validated text_content exists above

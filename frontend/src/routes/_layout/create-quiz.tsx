@@ -146,36 +146,36 @@ function CreateQuiz() {
       // Transform data to new backend format
       const selectedModulesWithBatches = Object.entries(
         formData.selectedModules,
-      ).reduce(
-        (acc, [moduleId, moduleName]) => {
-          // Check if this is a manual module
-          const isManual = moduleId.startsWith("manual_")
+      ).reduce((acc, [moduleId, moduleName]) => {
+        // Check if this is a manual module
+        const isManual = moduleId.startsWith("manual_")
 
-          // Base module data
-          const moduleData: any = {
-            name: moduleName,
-            question_batches: formData.moduleQuestions?.[moduleId] || [],
-            source_type: isManual ? "manual" : "canvas",
-          }
+        // Base module data
+        const moduleData: any = {
+          name: moduleName,
+          question_batches: formData.moduleQuestions?.[moduleId] || [],
+          source_type: isManual ? "manual" : "canvas",
+        }
 
-          // For manual modules, add content fields
-          if (isManual) {
-            const manualModule = formData.manualModules?.find(m => m.id === moduleId)
-            if (manualModule) {
-              moduleData.content = manualModule.fullContent
-              moduleData.word_count = manualModule.wordCount
-              moduleData.processing_metadata = manualModule.processingMetadata || {}
-              moduleData.content_type = "text" // Default content type
-            }
+        // For manual modules, add content fields
+        if (isManual) {
+          const manualModule = formData.manualModules?.find(
+            (m) => m.id === moduleId,
+          )
+          if (manualModule) {
+            moduleData.content = manualModule.fullContent
+            moduleData.word_count = manualModule.wordCount
+            moduleData.processing_metadata =
+              manualModule.processingMetadata || {}
+            moduleData.content_type = "text" // Default content type
           }
+        }
 
-          return {
-            ...acc,
-            [moduleId]: moduleData,
-          }
-        },
-        {},
-      )
+        return {
+          ...acc,
+          [moduleId]: moduleData,
+        }
+      }, {})
 
       const quizData = {
         canvas_course_id: formData.selectedCourse.id,

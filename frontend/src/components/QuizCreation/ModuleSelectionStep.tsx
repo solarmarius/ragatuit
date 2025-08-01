@@ -1,5 +1,13 @@
 import { Checkbox } from "@/components/ui/checkbox"
-import { Alert, Box, Button, Card, HStack, Text, VStack } from "@chakra-ui/react"
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  HStack,
+  Text,
+  VStack,
+} from "@chakra-ui/react"
 import { useQuery } from "@tanstack/react-query"
 import type React from "react"
 import { useCallback, useMemo, useState } from "react"
@@ -192,7 +200,8 @@ export function ModuleSelectionStep({
                 Add Manual Module
               </Text>
               <Text fontSize="sm" color="green.600" mt={1}>
-                Upload a PDF file or paste text content to create a custom module
+                Upload a PDF file or paste text content to create a custom
+                module
               </Text>
             </Box>
             <Button
