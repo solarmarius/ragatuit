@@ -275,6 +275,131 @@ async def _execute_content_extraction_workflow(
         return None, "failed"
 
 
+async def _execute_mixed_content_extraction_workflow(
+    quiz_id: UUID,
+    canvas_course_id: int,
+    canvas_token: str,
+    selected_modules: dict[str, dict[str, Any]],
+    content_extractor: ContentExtractorFunc,
+    content_summarizer: ContentSummaryFunc,
+) -> tuple[dict[str, Any] | None, str]:
+    """
+    Execute content extraction workflow for mixed Canvas and manual modules.
+
+    This function handles both Canvas modules (using the injected content extractor)
+    and manual modules (using pre-stored content from quiz creation).
+
+    Args:
+        quiz_id: UUID of the quiz to extract content for
+        canvas_course_id: Canvas course ID
+        canvas_token: Canvas API authentication token
+        selected_modules: Dictionary of selected modules with source_type info
+        content_extractor: Function to extract content from Canvas modules
+        content_summarizer: Function to generate content summary
+
+    Returns:
+        Tuple of (extracted_content, final_status)
+    """
+    logger.info(
+        "mixed_content_extraction_started",
+        quiz_id=str(quiz_id),
+        canvas_course_id=canvas_course_id,
+        total_modules=len(selected_modules),
+    )
+
+    try:
+        all_extracted_content = {}
+        canvas_modules = []
+        manual_modules = []
+
+        # Separate Canvas and manual modules
+        for module_id, module_data in selected_modules.items():
+            source_type = module_data.get("source_type", "canvas")
+            if source_type == "canvas":
+                canvas_modules.append(int(module_id))
+            elif source_type == "manual":
+                manual_modules.append((module_id, module_data))
+
+        logger.info(
+            "mixed_content_modules_categorized",
+            quiz_id=str(quiz_id),
+            canvas_module_count=len(canvas_modules),
+            manual_module_count=len(manual_modules),
+        )
+
+        # Extract Canvas content if there are Canvas modules
+        if canvas_modules:
+            logger.info(
+                "extracting_canvas_content",
+                quiz_id=str(quiz_id),
+                canvas_module_ids=canvas_modules,
+            )
+            canvas_content = await content_extractor(
+                canvas_token, canvas_course_id, canvas_modules
+            )
+            all_extracted_content.update(canvas_content)
+
+        # Add manual content if there are manual modules
+        if manual_modules:
+            logger.info(
+                "processing_manual_content",
+                quiz_id=str(quiz_id),
+                manual_module_count=len(manual_modules),
+            )
+            for module_id, module_data in manual_modules:
+                # Manual modules already have processed content from quiz creation
+                # We just need to format it properly for the extracted_content structure
+                all_extracted_content[module_id] = {
+                    "name": module_data["name"],
+                    "source_type": "manual",
+                    "content": module_data.get("content", ""),
+                    "word_count": module_data.get("word_count", 0),
+                    "processing_metadata": module_data.get("processing_metadata", {}),
+                    "content_type": module_data.get("content_type", "text"),
+                }
+
+        # Generate content summary for all modules
+        content_summary = content_summarizer(all_extracted_content)
+
+        logger.info(
+            "mixed_content_extraction_completed",
+            quiz_id=str(quiz_id),
+            canvas_course_id=canvas_course_id,
+            modules_processed=content_summary["modules_processed"],
+            total_pages=content_summary["total_pages"],
+            total_word_count=content_summary["total_word_count"],
+            canvas_modules_processed=len(canvas_modules),
+            manual_modules_processed=len(manual_modules),
+        )
+
+        # Check if meaningful content was extracted
+        total_word_count = content_summary.get("total_word_count", 0)
+        total_pages = content_summary.get("total_pages", 0)
+
+        if total_word_count == 0 or total_pages == 0:
+            logger.warning(
+                "mixed_extraction_completed_but_no_content_found",
+                quiz_id=str(quiz_id),
+                canvas_course_id=canvas_course_id,
+                total_word_count=total_word_count,
+                total_pages=total_pages,
+            )
+            return None, "no_content"
+        else:
+            return all_extracted_content, "completed"
+
+    except Exception as e:
+        logger.error(
+            "mixed_content_extraction_failed",
+            quiz_id=str(quiz_id),
+            canvas_course_id=canvas_course_id,
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        return None, "failed"
+
+
 async def _execute_generation_workflow(
     quiz_id: UUID,
     _target_question_count: int,
@@ -681,6 +806,149 @@ async def orchestrate_quiz_content_extraction(
             "skipping_question_generation_no_content",
             quiz_id=str(quiz_id),
             reason="no_meaningful_content_extracted",
+        )
+
+
+@timeout_operation(OPERATION_TIMEOUTS["content_extraction"])
+async def orchestrate_mixed_content_extraction(
+    quiz_id: UUID,
+    canvas_course_id: int,
+    canvas_token: str,
+    content_extractor: ContentExtractorFunc,
+    content_summarizer: ContentSummaryFunc,
+) -> None:
+    """
+    Orchestrate content extraction for quizzes with mixed Canvas and manual modules.
+
+    This function handles both Canvas modules (extracted via Canvas API) and manual
+    modules (pre-processed content stored during quiz creation) in a single workflow.
+
+    Args:
+        quiz_id: UUID of the quiz to extract content for
+        canvas_course_id: Canvas course ID
+        canvas_token: Canvas API authentication token
+        content_extractor: Function to extract content from Canvas
+        content_summarizer: Function to generate content summary
+    """
+    logger.info(
+        "mixed_content_extraction_orchestration_started",
+        quiz_id=str(quiz_id),
+        canvas_course_id=canvas_course_id,
+    )
+
+    # === Transaction 1: Reserve the Job and Get Quiz Settings ===
+    async def _reserve_mixed_extraction_job(
+        session: Any, quiz_id: UUID
+    ) -> dict[str, Any] | None:
+        """Reserve extraction job and return quiz settings with selected_modules."""
+        from .service import reserve_quiz_job
+
+        return await reserve_quiz_job(session, quiz_id, "extraction")
+
+    quiz_settings = await execute_in_transaction(
+        _reserve_mixed_extraction_job,
+        quiz_id,
+        isolation_level="REPEATABLE READ",
+        retries=3,
+    )
+
+    if not quiz_settings:
+        logger.info(
+            "mixed_extraction_orchestration_skipped",
+            quiz_id=str(quiz_id),
+            reason="job_already_running_or_complete",
+        )
+        return
+
+    # Get selected_modules from quiz settings
+    selected_modules = quiz_settings.get("selected_modules", {})
+
+    # === Mixed Content Extraction (outside transaction) ===
+    extracted_content, final_status = await _execute_mixed_content_extraction_workflow(
+        quiz_id,
+        canvas_course_id,
+        canvas_token,
+        selected_modules,
+        content_extractor,
+        content_summarizer,
+    )
+
+    # === Transaction 2: Save the Result ===
+    async def _save_mixed_extraction_result(
+        session: Any,
+        quiz_id: UUID,
+        content: dict[str, Any] | None,
+        status: str,
+    ) -> None:
+        """Save the mixed extraction result to the quiz."""
+        from .service import update_quiz_status
+
+        additional_fields = {}
+        if status == "completed" and content is not None:
+            additional_fields["extracted_content"] = content
+
+        if status == "completed":
+            # Keep status as EXTRACTING_CONTENT to allow question generation to proceed
+            await update_quiz_status(
+                session,
+                quiz_id,
+                QuizStatus.EXTRACTING_CONTENT,
+                None,
+                **additional_fields,
+            )
+        elif status == "no_content":
+            # No meaningful content was extracted
+            failure_reason = FailureReason.NO_CONTENT_FOUND
+            await update_quiz_status(
+                session, quiz_id, QuizStatus.FAILED, failure_reason, **additional_fields
+            )
+        elif status == "failed":
+            # Technical failure during content extraction
+            failure_reason = FailureReason.CONTENT_EXTRACTION_ERROR
+            await update_quiz_status(
+                session, quiz_id, QuizStatus.FAILED, failure_reason, **additional_fields
+            )
+
+    await execute_in_transaction(
+        _save_mixed_extraction_result,
+        quiz_id,
+        extracted_content,
+        final_status,
+        isolation_level="REPEATABLE READ",
+        retries=3,
+    )
+
+    # If extraction was successful, trigger question generation
+    if final_status == "completed" and quiz_settings:
+        logger.info(
+            "auto_triggering_question_generation_from_mixed_content",
+            quiz_id=str(quiz_id),
+            target_questions=quiz_settings["target_questions"],
+            llm_model=quiz_settings["llm_model"],
+        )
+        try:
+            await orchestrate_quiz_question_generation(
+                quiz_id=quiz_id,
+                target_question_count=quiz_settings["target_questions"],
+                llm_model=quiz_settings["llm_model"],
+                llm_temperature=quiz_settings["llm_temperature"],
+                language=quiz_settings["language"],
+            )
+        except Exception as auto_trigger_error:
+            logger.error(
+                "auto_trigger_question_generation_failed_mixed_content",
+                quiz_id=str(quiz_id),
+                error=str(auto_trigger_error),
+                error_type=type(auto_trigger_error).__name__,
+                exc_info=True,
+            )
+            # Rollback: Reset status to allow manual retry but keep extracted content
+            await _rollback_auto_trigger_failure(quiz_id, auto_trigger_error)
+    elif final_status == "no_content":
+        logger.info(
+            "skipping_question_generation_no_mixed_content",
+            quiz_id=str(quiz_id),
+            reason="no_meaningful_content_extracted_from_mixed_sources",
         )
 
 

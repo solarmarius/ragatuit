@@ -141,6 +141,19 @@ class Quiz(SQLModel, table=True):
                     f"Module {module_id} missing required 'question_batches' field"
                 )
 
+            # Validate source_type field (defaults to canvas for backward compatibility)
+            source_type = module_data.get("source_type", "canvas")
+            if source_type not in ["canvas", "manual"]:
+                raise ValueError(
+                    f"Module {module_id} source_type must be 'canvas' or 'manual'"
+                )
+
+            # Validate module ID format based on source type
+            if source_type == "manual" and not module_id.startswith("manual_"):
+                raise ValueError(
+                    f"Manual module {module_id} must have 'manual_' prefix"
+                )
+
             # Validate types
             if not isinstance(module_data["name"], str):
                 raise ValueError(f"Module {module_id} name must be string")

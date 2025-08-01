@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
 
 from src.auth.dependencies import CurrentUser
 from src.canvas.dependencies import CanvasToken
@@ -17,14 +17,16 @@ from .dependencies import (
     validate_question_generation_ready_with_partial_support,
     validate_quiz_has_approved_questions,
 )
+from .manual import create_manual_module
 from .models import Quiz
 from .orchestrator import (
+    orchestrate_mixed_content_extraction,
     orchestrate_quiz_content_extraction,
     orchestrate_quiz_export_to_canvas,
     orchestrate_quiz_question_generation,
     safe_background_orchestration,
 )
-from .schemas import QuizCreate
+from .schemas import ManualModuleCreate, ManualModuleResponse, QuizCreate
 from .service import (
     create_quiz,
     delete_quiz,
@@ -104,19 +106,61 @@ async def create_new_quiz(
         # Import Canvas dependencies for injection
         from src.canvas.flows import extract_content_for_modules, get_content_summary
 
-        # Trigger content extraction in the background using safe orchestrator wrapper
-        background_tasks.add_task(
-            safe_background_orchestration,
-            orchestrate_quiz_content_extraction,
-            "content_extraction",
-            quiz.id,
-            quiz.id,
-            quiz_data.canvas_course_id,
-            [int(module_id) for module_id in quiz_data.selected_modules.keys()],
-            canvas_token,
-            extract_content_for_modules,  # Inject Canvas content extractor
-            get_content_summary,  # Inject content summarizer
-        )
+        # Check if quiz has manual modules to determine which orchestrator to use
+        has_manual_modules = False
+        for module_data in quiz_data.selected_modules.values():
+            if hasattr(module_data, "source_type"):
+                if module_data.source_type == "manual":
+                    has_manual_modules = True
+                    break
+            elif (
+                isinstance(module_data, dict)
+                and module_data.get("source_type") == "manual"
+            ):
+                has_manual_modules = True
+                break
+
+        if has_manual_modules:
+            # Use mixed content extraction for quizzes with manual modules
+            logger.info(
+                "triggering_mixed_content_extraction",
+                quiz_id=str(quiz.id),
+                has_manual_modules=True,
+                total_modules=len(quiz_data.selected_modules),
+            )
+            background_tasks.add_task(
+                safe_background_orchestration,
+                orchestrate_mixed_content_extraction,
+                "mixed_content_extraction",
+                quiz.id,
+                quiz.id,
+                quiz_data.canvas_course_id,
+                canvas_token,
+                extract_content_for_modules,  # Inject Canvas content extractor
+                get_content_summary,  # Inject content summarizer
+            )
+        else:
+            # Use Canvas-only content extraction for traditional quizzes
+            logger.info(
+                "triggering_canvas_content_extraction",
+                quiz_id=str(quiz.id),
+                has_manual_modules=False,
+                canvas_modules=[
+                    int(module_id) for module_id in quiz_data.selected_modules.keys()
+                ],
+            )
+            background_tasks.add_task(
+                safe_background_orchestration,
+                orchestrate_quiz_content_extraction,
+                "content_extraction",
+                quiz.id,
+                quiz.id,
+                quiz_data.canvas_course_id,
+                [int(module_id) for module_id in quiz_data.selected_modules.keys()],
+                canvas_token,
+                extract_content_for_modules,  # Inject Canvas content extractor
+                get_content_summary,  # Inject content summarizer
+            )
 
         logger.info(
             "quiz_creation_completed",
@@ -137,6 +181,99 @@ async def create_new_quiz(
             exc_info=True,
         )
         raise HTTPException(status_code=500, detail=ERROR_MESSAGES["creation_failed"])
+
+
+@router.post("/manual-modules/upload", response_model=ManualModuleResponse)
+async def upload_manual_module(
+    current_user: CurrentUser,
+    name: str = Form(..., description="Module name"),
+    text_content: str | None = Form(None, description="Direct text content"),
+    file: UploadFile | None = File(None, description="PDF file upload"),
+) -> ManualModuleResponse:
+    """
+    Create a manual module from file upload or text content with immediate processing.
+
+    This endpoint accepts either a PDF file upload OR direct text content to create
+    a manual module. The content is immediately processed and a preview is returned.
+
+    **Parameters:**
+        name (str): Name for the manual module
+        text_content (str, optional): Direct text content for the module
+        file (UploadFile, optional): PDF file to upload and process
+
+    **Returns:**
+        ManualModuleResponse: Processed module with preview and metadata
+
+    **Authentication:**
+        Requires valid JWT token in Authorization header
+
+    **Validation:**
+        - Either file OR text_content must be provided (not both)
+        - PDF files only, max 5MB
+        - Text content cannot be empty if provided
+
+    **Raises:**
+        HTTPException: 400 if validation fails or no content provided
+        HTTPException: 500 if content processing fails
+
+    **Example Usage:**
+
+        With file upload:
+        ```bash
+        curl -X POST "http://localhost:8000/api/v1/quiz/manual-modules/upload" \
+             -H "Authorization: Bearer <token>" \
+             -F "name=Lecture Transcript" \
+             -F "file=@transcript.pdf"
+        ```
+
+        With text content:
+        ```bash
+        curl -X POST "http://localhost:8000/api/v1/quiz/manual-modules/upload" \
+             -H "Authorization: Bearer <token>" \
+             -F "name=Course Notes" \
+             -F "text_content=This is the content of my course notes..."
+        ```
+    """
+    logger.info(
+        "manual_module_upload_initiated",
+        user_id=str(current_user.id),
+        module_name=name,
+        has_file=file is not None,
+        has_text=text_content is not None,
+    )
+
+    try:
+        # Create ManualModuleCreate object
+        module_data = ManualModuleCreate(name=name, text_content=text_content)
+
+        # Process the manual module
+        result = await create_manual_module(module_data, file)
+
+        logger.info(
+            "manual_module_upload_completed",
+            user_id=str(current_user.id),
+            module_id=result.module_id,
+            module_name=result.name,
+            word_count=result.word_count,
+        )
+
+        return result
+
+    except HTTPException:
+        # Re-raise HTTP exceptions from service layer
+        raise
+    except Exception as e:
+        logger.error(
+            "manual_module_upload_failed",
+            user_id=str(current_user.id),
+            module_name=name,
+            error=str(e),
+            error_type=type(e).__name__,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to process manual module. Please try again."
+        )
 
 
 @router.get("/{quiz_id}", response_model=Quiz)
