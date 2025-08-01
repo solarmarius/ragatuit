@@ -2213,3 +2213,438 @@ def test_create_quiz_mixed_difficulty_multiple_modules(session: Session):
 
     advanced_batches = quiz.selected_modules["advanced"]["question_batches"]
     assert all(batch["difficulty"] == "hard" for batch in advanced_batches)
+
+
+def test_create_quiz_with_manual_modules_only(session: Session):
+    """Test quiz creation with only manual modules."""
+    from src.question.types import QuestionDifficulty, QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Manual Content Course",
+        selected_modules={
+            "manual_abc123": ModuleSelection(
+                name="Manual Module 1",
+                source_type="manual",
+                content="This is manual content for testing",
+                word_count=7,
+                processing_metadata={"source": "manual_text"},
+                content_type="text",
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=8,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
+                ],
+            ),
+            "manual_def456": ModuleSelection(
+                name="Manual Module 2",
+                source_type="manual",
+                content="Another manual content block",
+                word_count=5,
+                processing_metadata={"source": "manual_pdf", "pages": 2},
+                content_type="text",
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.TRUE_FALSE,
+                        count=6,
+                        difficulty=QuestionDifficulty.EASY,
+                    )
+                ],
+            ),
+        },
+        title="Manual Only Quiz",
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify quiz creation
+    assert quiz.owner_id == user.id
+    assert quiz.canvas_course_id == 123
+    assert quiz.title == "Manual Only Quiz"
+    assert quiz.question_count == 14  # 8 + 6 from manual modules
+
+    # Verify manual module structure is preserved
+    expected_modules = {
+        "manual_abc123": {
+            "name": "Manual Module 1",
+            "source_type": "manual",
+            "content": "This is manual content for testing",
+            "word_count": 7,
+            "processing_metadata": {"source": "manual_text"},
+            "content_type": "text",
+            "question_batches": [
+                {
+                    "question_type": "multiple_choice",
+                    "count": 8,
+                    "difficulty": "medium",
+                }
+            ],
+        },
+        "manual_def456": {
+            "name": "Manual Module 2",
+            "source_type": "manual",
+            "content": "Another manual content block",
+            "word_count": 5,
+            "processing_metadata": {"source": "manual_pdf", "pages": 2},
+            "content_type": "text",
+            "question_batches": [
+                {
+                    "question_type": "true_false",
+                    "count": 6,
+                    "difficulty": "easy",
+                }
+            ],
+        },
+    }
+    assert quiz.selected_modules == expected_modules
+
+
+def test_create_quiz_with_mixed_canvas_and_manual_modules(session: Session):
+    """Test quiz creation with both Canvas and manual modules."""
+    from src.question.types import QuestionDifficulty, QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Mixed Content Course",
+        selected_modules={
+            # Canvas module
+            "456": ModuleSelection(
+                name="Canvas Module 1",
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
+                ],
+            ),
+            # Manual module
+            "manual_xyz789": ModuleSelection(
+                name="Manual Module 1",
+                source_type="manual",
+                content="Manual content for mixed quiz",
+                word_count=6,
+                processing_metadata={"source": "manual_upload"},
+                content_type="text",
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.FILL_IN_BLANK,
+                        count=5,
+                        difficulty=QuestionDifficulty.HARD,
+                    ),
+                    QuestionBatch(
+                        question_type=QuestionType.TRUE_FALSE,
+                        count=3,
+                        difficulty=QuestionDifficulty.EASY,
+                    ),
+                ],
+            ),
+            # Another Canvas module
+            "789": ModuleSelection(
+                name="Canvas Module 2",
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.MATCHING,
+                        count=4,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
+                ],
+            ),
+        },
+        title="Mixed Module Quiz",
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify quiz creation
+    assert quiz.owner_id == user.id
+    assert quiz.question_count == 22  # 10 + 5 + 3 + 4
+
+    # Verify mixed module structure
+    expected_modules = {
+        "456": {
+            "name": "Canvas Module 1",
+            "source_type": "canvas",  # Default for Canvas modules
+            "question_batches": [
+                {
+                    "question_type": "multiple_choice",
+                    "count": 10,
+                    "difficulty": "medium",
+                }
+            ],
+        },
+        "manual_xyz789": {
+            "name": "Manual Module 1",
+            "source_type": "manual",
+            "content": "Manual content for mixed quiz",
+            "word_count": 6,
+            "processing_metadata": {"source": "manual_upload"},
+            "content_type": "text",
+            "question_batches": [
+                {
+                    "question_type": "fill_in_blank",
+                    "count": 5,
+                    "difficulty": "hard",
+                },
+                {
+                    "question_type": "true_false",
+                    "count": 3,
+                    "difficulty": "easy",
+                },
+            ],
+        },
+        "789": {
+            "name": "Canvas Module 2",
+            "source_type": "canvas",
+            "question_batches": [
+                {
+                    "question_type": "matching",
+                    "count": 4,
+                    "difficulty": "medium",
+                }
+            ],
+        },
+    }
+    assert quiz.selected_modules == expected_modules
+
+
+def test_create_quiz_manual_module_validation_missing_fields(session: Session):
+    """Test quiz creation fails when manual modules are missing required fields."""
+    import pytest
+    from pydantic import ValidationError
+
+    from src.quiz.schemas import ModuleSelection, QuizCreate
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    # This should fail - manual modules with source_type="manual" must have content and word_count
+    with pytest.raises(ValidationError) as exc_info:
+        QuizCreate(
+            canvas_course_id=123,
+            canvas_course_name="Test Course",
+            selected_modules={
+                "manual_test123": ModuleSelection(
+                    name="Manual Module",
+                    source_type="manual",
+                    # Missing content, word_count, etc. - should fail validation
+                    question_batches=[
+                        {
+                            "question_type": "multiple_choice",
+                            "count": 5,
+                            "difficulty": "medium",
+                        }
+                    ],
+                ),
+            },
+            title="Test Quiz",
+        )
+
+    # Verify the validation error mentions required fields
+    error_message = str(exc_info.value)
+    assert "must have content" in error_message
+
+
+def test_create_quiz_manual_module_id_validation(session: Session):
+    """Test that manual module IDs are properly validated."""
+    from src.question.types import QuestionDifficulty, QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    # Valid manual module with proper ID prefix
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Manual ID Test Course",
+        selected_modules={
+            "manual_test123": ModuleSelection(
+                name="Valid Manual Module",
+                source_type="manual",
+                content="Test content",
+                word_count=2,
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=5,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    )
+                ],
+            ),
+        },
+        title="Manual ID Test Quiz",
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Should create successfully
+    assert quiz.question_count == 5
+    assert "manual_test123" in quiz.selected_modules
+    assert quiz.selected_modules["manual_test123"]["source_type"] == "manual"
+
+
+def test_create_quiz_question_count_calculation_mixed_modules(session: Session):
+    """Test question count calculation across mixed Canvas and manual modules."""
+    from src.question.types import QuestionDifficulty, QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Count Test Course",
+        selected_modules={
+            # Canvas module with multiple batches
+            "canvas_1": ModuleSelection(
+                name="Canvas Module",
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=8,
+                        difficulty=QuestionDifficulty.EASY,
+                    ),
+                    QuestionBatch(
+                        question_type=QuestionType.TRUE_FALSE,
+                        count=4,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    ),
+                ],
+            ),
+            # Manual module with multiple batches
+            "manual_count123": ModuleSelection(
+                name="Manual Module",
+                source_type="manual",
+                content="Manual content for count testing",
+                word_count=5,
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.FILL_IN_BLANK,
+                        count=6,
+                        difficulty=QuestionDifficulty.HARD,
+                    ),
+                    QuestionBatch(
+                        question_type=QuestionType.MATCHING,
+                        count=3,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    ),
+                    QuestionBatch(
+                        question_type=QuestionType.CATEGORIZATION,
+                        count=2,
+                        difficulty=QuestionDifficulty.HARD,
+                    ),
+                ],
+            ),
+        },
+        title="Question Count Test Quiz",
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Verify total question count: 8 + 4 + 6 + 3 + 2 = 23
+    assert quiz.question_count == 23
+
+    # Verify each module's question count
+    canvas_total = sum(
+        batch["count"]
+        for batch in quiz.selected_modules["canvas_1"]["question_batches"]
+    )
+    manual_total = sum(
+        batch["count"]
+        for batch in quiz.selected_modules["manual_count123"]["question_batches"]
+    )
+
+    assert canvas_total == 12  # 8 + 4
+    assert manual_total == 11  # 6 + 3 + 2
+    assert canvas_total + manual_total == quiz.question_count
+
+
+def test_create_quiz_module_batch_distribution_mixed(session: Session):
+    """Test module batch distribution property with mixed modules."""
+    from src.question.types import QuestionDifficulty, QuestionType
+    from src.quiz.schemas import ModuleSelection, QuestionBatch, QuizCreate
+    from src.quiz.service import create_quiz
+    from tests.conftest import create_user_in_session
+
+    user = create_user_in_session(session)
+
+    quiz_data = QuizCreate(
+        canvas_course_id=123,
+        canvas_course_name="Batch Distribution Course",
+        selected_modules={
+            "canvas_module": ModuleSelection(
+                name="Canvas Module",
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.MULTIPLE_CHOICE,
+                        count=10,
+                        difficulty=QuestionDifficulty.EASY,
+                    ),
+                    QuestionBatch(
+                        question_type=QuestionType.TRUE_FALSE,
+                        count=5,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    ),
+                ],
+            ),
+            "manual_batch123": ModuleSelection(
+                name="Manual Module",
+                source_type="manual",
+                content="Batch distribution test content",
+                word_count=4,
+                question_batches=[
+                    QuestionBatch(
+                        question_type=QuestionType.FILL_IN_BLANK,
+                        count=8,
+                        difficulty=QuestionDifficulty.HARD,
+                    ),
+                    QuestionBatch(
+                        question_type=QuestionType.MATCHING,
+                        count=4,
+                        difficulty=QuestionDifficulty.MEDIUM,
+                    ),
+                    QuestionBatch(
+                        question_type=QuestionType.CATEGORIZATION,
+                        count=3,
+                        difficulty=QuestionDifficulty.EASY,
+                    ),
+                ],
+            ),
+        },
+        title="Batch Distribution Quiz",
+    )
+
+    quiz = create_quiz(session, quiz_data, user.id)
+
+    # Test module batch distribution property
+    batch_distribution = quiz.module_batch_distribution
+
+    # Canvas module should have 2 batches
+    assert len(batch_distribution["canvas_module"]) == 2
+    assert batch_distribution["canvas_module"][0]["question_type"] == "multiple_choice"
+    assert batch_distribution["canvas_module"][0]["count"] == 10
+    assert batch_distribution["canvas_module"][1]["question_type"] == "true_false"
+    assert batch_distribution["canvas_module"][1]["count"] == 5
+
+    # Manual module should have 3 batches
+    assert len(batch_distribution["manual_batch123"]) == 3
+    assert batch_distribution["manual_batch123"][0]["question_type"] == "fill_in_blank"
+    assert batch_distribution["manual_batch123"][0]["count"] == 8
+    assert batch_distribution["manual_batch123"][1]["question_type"] == "matching"
+    assert batch_distribution["manual_batch123"][1]["count"] == 4
+    assert batch_distribution["manual_batch123"][2]["question_type"] == "categorization"
+    assert batch_distribution["manual_batch123"][2]["count"] == 3

@@ -569,5 +569,108 @@ def extracted_content_data() -> dict[str, Any]:
     }
 
 
+# Manual module test fixtures
+
+
+@pytest.fixture
+def sample_pdf_content() -> bytes:
+    """Sample PDF content for testing file uploads."""
+    return b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n>>\nendobj\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000074 00000 n \n0000000120 00000 n \ntrailer\n<<\n/Size 4\n/Root 1 0 R\n>>\nstartxref\n179\n%%EOF"
+
+
+@pytest.fixture
+def manual_module_data() -> dict[str, Any]:
+    """Sample manual module creation data."""
+    return {
+        "name": "Test Manual Module",
+        "text_content": "This is sample content for testing manual module creation.",
+    }
+
+
+@pytest.fixture
+def manual_module_response_data() -> dict[str, Any]:
+    """Sample manual module response data."""
+    return {
+        "module_id": "manual_test123",
+        "name": "Test Manual Module",
+        "content_preview": "This is sample content for testing...",
+        "full_content": "This is sample content for testing manual module creation.",
+        "word_count": 10,
+        "processing_metadata": {"source": "manual_text", "processing_time": 0.1},
+    }
+
+
+@pytest.fixture
+def mixed_quiz_data() -> dict[str, Any]:
+    """Quiz data with both Canvas and manual modules."""
+    return {
+        "canvas_course_id": 123,
+        "canvas_course_name": "Mixed Content Course",
+        "selected_modules": {
+            "456": {
+                "name": "Canvas Module",
+                "source_type": "canvas",
+                "question_batches": [
+                    {
+                        "question_type": "multiple_choice",
+                        "count": 10,
+                        "difficulty": "medium",
+                    }
+                ],
+            },
+            "manual_abc123": {
+                "name": "Manual Module",
+                "source_type": "manual",
+                "content": "Manual content for mixed quiz",
+                "word_count": 6,
+                "processing_metadata": {"source": "manual_upload"},
+                "content_type": "text",
+                "question_batches": [
+                    {"question_type": "true_false", "count": 5, "difficulty": "easy"}
+                ],
+            },
+        },
+        "title": "Mixed Module Quiz",
+    }
+
+
+@pytest.fixture
+def mock_content_processors():
+    """Mock content extraction processors."""
+    processors = MagicMock()
+    processors.__contains__ = MagicMock(return_value=True)
+    processors.__getitem__ = MagicMock(return_value=MagicMock())
+    return processors
+
+
+@pytest.fixture
+def mock_manual_module_factory():
+    """Factory for creating mock manual modules."""
+
+    def create_manual_module(
+        module_id: str = "manual_test123",
+        name: str = "Test Manual Module",
+        content: str = "Test manual content",
+        word_count: int = 3,
+        source_type: str = "manual",
+        content_type: str = "text",
+        processing_metadata: dict | None = None,
+    ) -> dict[str, Any]:
+        if processing_metadata is None:
+            processing_metadata = {"source": "manual_text"}
+
+        return {
+            "module_id": module_id,
+            "name": name,
+            "content": content,
+            "word_count": word_count,
+            "source_type": source_type,
+            "content_type": content_type,
+            "processing_metadata": processing_metadata,
+        }
+
+    return create_manual_module
+
+
 # Pytest configuration for async tests
 pytest_plugins = ("pytest_asyncio",)
