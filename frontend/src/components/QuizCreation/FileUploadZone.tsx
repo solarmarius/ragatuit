@@ -6,17 +6,17 @@ import {
   IconButton,
   Text,
   VStack,
-} from "@chakra-ui/react"
-import { memo, useCallback, useState } from "react"
-import { HiUpload, HiX } from "react-icons/hi"
+} from "@chakra-ui/react";
+import { memo, useCallback, useState } from "react";
+import { HiUpload, HiX } from "react-icons/hi";
 
 interface FileUploadZoneProps {
   /** Callback when files are selected */
-  onFilesSelect: (files: File[]) => void
+  onFilesSelect: (files: File[]) => void;
   /** Whether the upload is in progress */
-  isLoading?: boolean
+  isLoading?: boolean;
   /** Error message to display */
-  error?: string | null
+  error?: string | null;
 }
 
 /**
@@ -43,81 +43,83 @@ export const FileUploadZone = memo(function FileUploadZone({
   isLoading = false,
   error,
 }: FileUploadZoneProps) {
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const validateFiles = useCallback(
     (files: File[], existingFiles: File[] = []): string | null => {
-      const maxFiles = 5
-      const maxFileSize = 5 * 1024 * 1024 // 5MB per file
-      const maxTotalSize = 25 * 1024 * 1024 // 25MB total
+      const maxFiles = 5;
+      const maxFileSize = 5 * 1024 * 1024; // 5MB per file
+      const maxTotalSize = 25 * 1024 * 1024; // 25MB total
 
       // Check total file count
-      const totalFiles = files.length + existingFiles.length
+      const totalFiles = files.length + existingFiles.length;
       if (totalFiles > maxFiles) {
-        return `Maximum ${maxFiles} files allowed per manual module`
+        return `Maximum ${maxFiles} files allowed per manual module`;
       }
 
       // Check each file
       for (const file of files) {
         // Check file type
         if (!file.name.toLowerCase().endsWith(".pdf")) {
-          return `Only PDF files are supported. Invalid file: ${file.name}`
+          return `Only PDF files are supported. Invalid file: ${file.name}`;
         }
 
         // Check individual file size
         if (file.size > maxFileSize) {
           return `File '${file.name}' exceeds maximum size of ${
             maxFileSize / (1024 * 1024)
-          }MB`
+          }MB`;
         }
       }
 
       // Check total size
       const totalSize = [...files, ...existingFiles].reduce(
         (sum, file) => sum + file.size,
-        0,
-      )
+        0
+      );
       if (totalSize > maxTotalSize) {
         return `Total file size (${(totalSize / (1024 * 1024)).toFixed(
-          1,
-        )}MB) exceeds maximum limit of ${maxTotalSize / (1024 * 1024)}MB`
+          1
+        )}MB) exceeds maximum limit of ${maxTotalSize / (1024 * 1024)}MB`;
       }
 
-      return null
+      return null;
     },
-    [],
-  )
+    []
+  );
 
   const handleFileChange = useCallback(
     (details: { acceptedFiles: File[] }) => {
-      const newFiles = details.acceptedFiles
+      const newFiles = details.acceptedFiles;
 
       if (!newFiles.length) {
-        return
+        return;
       }
 
-      const validationError = validateFiles(newFiles, selectedFiles)
+      const validationError = validateFiles(newFiles, selectedFiles);
       if (validationError) {
         // Handle validation error - for now we'll just not add the files
         // In a more complete implementation, you might want to show the error
-        return
+        return;
       }
 
-      const updatedFiles = [...selectedFiles, ...newFiles]
-      setSelectedFiles(updatedFiles)
-      onFilesSelect(updatedFiles)
+      const updatedFiles = [...selectedFiles, ...newFiles];
+      setSelectedFiles(updatedFiles);
+      onFilesSelect(updatedFiles);
     },
-    [onFilesSelect, validateFiles, selectedFiles],
-  )
+    [onFilesSelect, validateFiles, selectedFiles]
+  );
 
   const handleRemoveFile = useCallback(
     (fileToRemove: File) => {
-      const updatedFiles = selectedFiles.filter((file) => file !== fileToRemove)
-      setSelectedFiles(updatedFiles)
-      onFilesSelect(updatedFiles)
+      const updatedFiles = selectedFiles.filter(
+        (file) => file !== fileToRemove
+      );
+      setSelectedFiles(updatedFiles);
+      onFilesSelect(updatedFiles);
     },
-    [selectedFiles, onFilesSelect],
-  )
+    [selectedFiles, onFilesSelect]
+  );
 
   return (
     <VStack gap={4} align="stretch">
@@ -228,25 +230,8 @@ export const FileUploadZone = memo(function FileUploadZone({
               </HStack>
             </Box>
           ))}
-          <Box
-            p={2}
-            bg="blue.50"
-            border="1px solid"
-            borderColor="blue.200"
-            borderRadius="md"
-          >
-            <Text fontSize="xs" color="blue.700">
-              Total:{" "}
-              {(
-                selectedFiles.reduce((sum, file) => sum + file.size, 0) /
-                1024 /
-                1024
-              ).toFixed(2)}{" "}
-              MB
-            </Text>
-          </Box>
         </VStack>
       )}
     </VStack>
-  )
-})
+  );
+});
