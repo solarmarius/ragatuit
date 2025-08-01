@@ -578,6 +578,9 @@ async def update_quiz_status(
         quiz.extracted_content = additional_fields["extracted_content"]
         quiz.content_extracted_at = datetime.now(timezone.utc)
 
+    if "selected_modules" in additional_fields:
+        quiz.selected_modules = additional_fields["selected_modules"]
+
     if new_status == QuizStatus.PUBLISHED:
         if "canvas_quiz_id" in additional_fields:
             quiz.canvas_quiz_id = additional_fields["canvas_quiz_id"]

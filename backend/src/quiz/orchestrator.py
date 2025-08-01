@@ -282,7 +282,7 @@ async def _execute_mixed_content_extraction_workflow(
     selected_modules: dict[str, dict[str, Any]],
     content_extractor: ContentExtractorFunc,
     content_summarizer: ContentSummaryFunc,
-) -> tuple[dict[str, Any] | None, str]:
+) -> tuple[dict[str, Any] | None, str, dict[str, dict[str, Any]] | None]:
     """
     Execute content extraction workflow for mixed Canvas and manual modules.
 
@@ -298,7 +298,7 @@ async def _execute_mixed_content_extraction_workflow(
         content_summarizer: Function to generate content summary
 
     Returns:
-        Tuple of (extracted_content, final_status)
+        Tuple of (extracted_content, final_status, cleaned_selected_modules)
     """
     logger.info(
         "mixed_content_extraction_started",
@@ -362,6 +362,14 @@ async def _execute_mixed_content_extraction_workflow(
                     }
                 ]
 
+                # Remove content and processing_metadata from selected_modules to prevent duplication
+                # Keep other fields like name, source_type, word_count, question_batches, etc.
+                selected_modules[module_id] = {
+                    key: value
+                    for key, value in module_data.items()
+                    if key not in ["content", "processing_metadata"]
+                }
+
         # Generate content summary for all modules
         content_summary = content_summarizer(all_extracted_content)
 
@@ -388,9 +396,9 @@ async def _execute_mixed_content_extraction_workflow(
                 total_word_count=total_word_count,
                 total_pages=total_pages,
             )
-            return None, "no_content"
+            return None, "no_content", selected_modules
         else:
-            return all_extracted_content, "completed"
+            return all_extracted_content, "completed", selected_modules
 
     except Exception as e:
         logger.error(
@@ -401,7 +409,7 @@ async def _execute_mixed_content_extraction_workflow(
             error_type=type(e).__name__,
             exc_info=True,
         )
-        return None, "failed"
+        return None, "failed", selected_modules
 
 
 async def _execute_generation_workflow(
@@ -868,7 +876,11 @@ async def orchestrate_mixed_content_extraction(
     selected_modules = quiz_settings.get("selected_modules", {})
 
     # === Mixed Content Extraction (outside transaction) ===
-    extracted_content, final_status = await _execute_mixed_content_extraction_workflow(
+    (
+        extracted_content,
+        final_status,
+        cleaned_selected_modules,
+    ) = await _execute_mixed_content_extraction_workflow(
         quiz_id,
         canvas_course_id,
         canvas_token,
@@ -883,6 +895,7 @@ async def orchestrate_mixed_content_extraction(
         quiz_id: UUID,
         content: dict[str, Any] | None,
         status: str,
+        cleaned_modules: dict[str, dict[str, Any]] | None = None,
     ) -> None:
         """Save the mixed extraction result to the quiz."""
         from .service import update_quiz_status
@@ -890,6 +903,10 @@ async def orchestrate_mixed_content_extraction(
         additional_fields = {}
         if status == "completed" and content is not None:
             additional_fields["extracted_content"] = content
+
+        # Save cleaned selected_modules to prevent content duplication
+        if cleaned_modules is not None:
+            additional_fields["selected_modules"] = cleaned_modules
 
         if status == "completed":
             # Keep status as EXTRACTING_CONTENT to allow question generation to proceed
@@ -918,6 +935,7 @@ async def orchestrate_mixed_content_extraction(
         quiz_id,
         extracted_content,
         final_status,
+        cleaned_selected_modules,
         isolation_level="REPEATABLE READ",
         retries=3,
     )
