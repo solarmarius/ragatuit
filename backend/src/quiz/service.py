@@ -429,6 +429,7 @@ async def reserve_quiz_job(
             "llm_temperature": quiz.llm_temperature,
             "language": quiz.language,
             "tone": quiz.tone,
+            "selected_modules": quiz.selected_modules,
         }
 
     elif job_type == "generation":

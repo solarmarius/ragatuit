@@ -348,15 +348,19 @@ async def _execute_mixed_content_extraction_workflow(
             )
             for module_id, module_data in manual_modules:
                 # Manual modules already have processed content from quiz creation
-                # We just need to format it properly for the extracted_content structure
-                all_extracted_content[module_id] = {
-                    "name": module_data["name"],
-                    "source_type": "manual",
-                    "content": module_data.get("content", ""),
-                    "word_count": module_data.get("word_count", 0),
-                    "processing_metadata": module_data.get("processing_metadata", {}),
-                    "content_type": module_data.get("content_type", "text"),
-                }
+                # Format as single-page content to match Canvas structure
+                all_extracted_content[module_id] = [
+                    {
+                        "content": module_data.get("content", ""),
+                        "word_count": module_data.get("word_count", 0),
+                        "source_type": "manual",
+                        "processing_metadata": module_data.get(
+                            "processing_metadata", {}
+                        ),
+                        "content_type": module_data.get("content_type", "text"),
+                        "title": module_data["name"],
+                    }
+                ]
 
         # Generate content summary for all modules
         content_summary = content_summarizer(all_extracted_content)
