@@ -64,10 +64,26 @@ def create_quiz(session: Session, quiz_create: QuizCreate, owner_id: UUID) -> Qu
                     ),
                 }
             )
-        selected_modules[str(module_id)] = {
+
+        # Build module data with all necessary fields
+        module_data = {
             "name": module_dict["name"],
             "question_batches": batches,
+            "source_type": module_dict.get("source_type", "canvas"),
         }
+
+        # For manual modules, preserve content fields if they exist
+        if module_dict.get("source_type") == "manual":
+            module_data.update(
+                {
+                    "content": module_dict.get("content", ""),
+                    "word_count": module_dict.get("word_count", 0),
+                    "processing_metadata": module_dict.get("processing_metadata", {}),
+                    "content_type": module_dict.get("content_type", "text"),
+                }
+            )
+
+        selected_modules[str(module_id)] = module_data
 
     quiz = Quiz(
         owner_id=owner_id,

@@ -166,6 +166,7 @@ async def create_manual_module(
             module_id=module_id,
             name=module_data.name,
             content_preview=content_preview,
+            full_content=processed_content.content,
             word_count=processed_content.word_count,
             processing_metadata=processed_content.processing_metadata,
         )
@@ -223,6 +224,33 @@ def create_manual_module_selection(
     }
 
 
+def create_manual_module_selection_from_response(
+    response: ManualModuleResponse, question_batches: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """
+    Create a complete manual module selection from ManualModuleResponse and question batches.
+
+    This function bridges the gap between the manual module upload response and the
+    data structure needed for quiz creation.
+
+    Args:
+        response: ManualModuleResponse from create_manual_module
+        question_batches: List of question batch configurations
+
+    Returns:
+        Dictionary suitable for use as ModuleSelection in quiz creation
+    """
+    return {
+        "name": response.name,
+        "source_type": "manual",
+        "content": response.full_content,  # Use full content for question generation
+        "word_count": response.word_count,
+        "processing_metadata": response.processing_metadata,
+        "content_type": "text",  # Default for now, could be enhanced
+        "question_batches": question_batches,
+    }
+
+
 async def prepare_manual_module_for_quiz(
     module_data: dict[str, Any], module_id: str
 ) -> dict[str, Any]:
@@ -263,3 +291,23 @@ async def prepare_manual_module_for_quiz(
     module_data["source_type"] = "manual"
 
     return module_data
+
+
+def get_full_manual_content(processed_content: ProcessedContent) -> str:
+    """
+    Get the full content for a manual module (not just the preview).
+
+    In the current implementation, we store the preview in the response,
+    but for question generation we need the full content. This function
+    would ideally retrieve the full content from a cache or storage system.
+
+    Args:
+        module_id: Manual module ID
+        processed_content: Full processed content object
+
+    Returns:
+        Full content string for question generation
+    """
+    # For now, return the full content directly
+    # In production, this might retrieve from Redis/cache using module_id
+    return processed_content.content

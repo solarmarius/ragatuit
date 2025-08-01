@@ -64,6 +64,20 @@ class ModuleSelection(SQLModel):
     source_type: str = Field(
         default="canvas", description="Module source: 'canvas' or 'manual'"
     )
+    # Optional fields for manual modules (populated when source_type is 'manual')
+    content: str | None = Field(
+        default=None, description="Full content for manual modules"
+    )
+    word_count: int | None = Field(
+        default=None, description="Word count for manual modules"
+    )
+    processing_metadata: dict[str, Any] | None = Field(
+        default=None, description="Processing metadata for manual modules"
+    )
+    content_type: str | None = Field(
+        default=None,
+        description="Content type for manual modules (e.g., 'text', 'pdf')",
+    )
 
     @property
     def total_questions(self) -> int:
@@ -91,6 +105,7 @@ class ManualModuleResponse(SQLModel):
     module_id: str = Field(description="Generated manual module ID")
     name: str = Field(description="Module name")
     content_preview: str = Field(description="Preview of processed content")
+    full_content: str = Field(description="Full processed content")
     word_count: int = Field(description="Word count of processed content")
     processing_metadata: dict[str, Any] = Field(
         default_factory=dict, description="Processing details"
@@ -143,6 +158,18 @@ class QuizCreate(SQLModel):
                     raise ValueError(
                         f"Manual module {module_id} must have 'manual_' prefix"
                     )
+
+                # Manual modules must have content fields
+                if module_selection.source_type == "manual":
+                    if not module_selection.content:
+                        raise ValueError(f"Manual module {module_id} must have content")
+                    if (
+                        module_selection.word_count is None
+                        or module_selection.word_count <= 0
+                    ):
+                        raise ValueError(
+                            f"Manual module {module_id} must have a valid word count"
+                        )
 
             # Validate batch count
             if len(module_selection.question_batches) > 4:
