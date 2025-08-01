@@ -5,7 +5,7 @@ from . import router
 from .constants import ERROR_MESSAGES, SUCCESS_MESSAGES
 from .models import Quiz
 from .orchestrator import (
-    orchestrate_quiz_content_extraction,
+    orchestrate_content_extraction,
     orchestrate_quiz_export_to_canvas,
     orchestrate_quiz_question_generation,
 )
@@ -41,7 +41,7 @@ __all__ = [
     "QuizExportData",
     "QuizOperationResult",
     "QuizOperationStatus",
-    "orchestrate_quiz_content_extraction",
+    "orchestrate_content_extraction",
     "orchestrate_quiz_question_generation",
     "orchestrate_quiz_export_to_canvas",
     "ERROR_MESSAGES",

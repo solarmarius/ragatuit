@@ -69,6 +69,7 @@ def test_create_quiz_success(session: Session):
                     "difficulty": "medium",
                 }
             ],
+            "source_type": "canvas",
         },
         "789": {
             "name": "Module 2",
@@ -79,6 +80,7 @@ def test_create_quiz_success(session: Session):
                     "difficulty": "medium",
                 }
             ],
+            "source_type": "canvas",
         },
     }
     assert quiz.title == "Test Quiz"
@@ -190,6 +192,7 @@ def test_create_quiz_with_multiple_question_types_per_module(session: Session):
                 },
                 {"question_type": "fill_in_blank", "count": 5, "difficulty": "medium"},
             ],
+            "source_type": "canvas",
         },
         "789": {
             "name": "Module 2",
@@ -197,6 +200,7 @@ def test_create_quiz_with_multiple_question_types_per_module(session: Session):
                 {"question_type": "matching", "count": 3, "difficulty": "medium"},
                 {"question_type": "categorization", "count": 2, "difficulty": "medium"},
             ],
+            "source_type": "canvas",
         },
     }
     assert quiz.selected_modules == expected_modules
@@ -267,6 +271,7 @@ def test_create_quiz_module_id_conversion(session: Session):
                     "difficulty": "medium",
                 }
             ],
+            "source_type": "canvas",
         },
         "222": {
             "name": "Module B",
@@ -277,12 +282,14 @@ def test_create_quiz_module_id_conversion(session: Session):
                     "difficulty": "medium",
                 }
             ],
+            "source_type": "canvas",
         },
         "333": {
             "name": "Module C",
             "question_batches": [
                 {"question_type": "multiple_choice", "count": 5, "difficulty": "medium"}
             ],
+            "source_type": "canvas",
         },
     }
     assert quiz.selected_modules == expected_modules
@@ -1866,12 +1873,14 @@ def test_create_quiz_with_difficulty_batches(session: Session):
                 {"question_type": "multiple_choice", "count": 5, "difficulty": "easy"},
                 {"question_type": "multiple_choice", "count": 10, "difficulty": "hard"},
             ],
+            "source_type": "canvas",
         },
         "789": {
             "name": "Module 2",
             "question_batches": [
                 {"question_type": "fill_in_blank", "count": 3, "difficulty": "medium"}
             ],
+            "source_type": "canvas",
         },
     }
     assert quiz.selected_modules == expected_modules
@@ -1917,6 +1926,7 @@ def test_create_quiz_with_default_difficulty(session: Session):
                     "difficulty": "medium",
                 }
             ],
+            "source_type": "canvas",
         }
     }
     assert quiz.selected_modules == expected_modules

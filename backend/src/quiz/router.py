@@ -20,8 +20,7 @@ from .dependencies import (
 from .manual import create_manual_module
 from .models import Quiz
 from .orchestrator import (
-    orchestrate_mixed_content_extraction,
-    orchestrate_quiz_content_extraction,
+    orchestrate_content_extraction,
     orchestrate_quiz_export_to_canvas,
     orchestrate_quiz_question_generation,
     safe_background_orchestration,
@@ -106,61 +105,24 @@ async def create_new_quiz(
         # Import Canvas dependencies for injection
         from src.canvas.flows import extract_content_for_modules, get_content_summary
 
-        # Check if quiz has manual modules to determine which orchestrator to use
-        has_manual_modules = False
-        for module_data in quiz_data.selected_modules.values():
-            if hasattr(module_data, "source_type"):
-                if module_data.source_type == "manual":
-                    has_manual_modules = True
-                    break
-            elif (
-                isinstance(module_data, dict)
-                and module_data.get("source_type") == "manual"
-            ):
-                has_manual_modules = True
-                break
-
-        if has_manual_modules:
-            # Use mixed content extraction for quizzes with manual modules
-            logger.info(
-                "triggering_mixed_content_extraction",
-                quiz_id=str(quiz.id),
-                has_manual_modules=True,
-                total_modules=len(quiz_data.selected_modules),
-            )
-            background_tasks.add_task(
-                safe_background_orchestration,
-                orchestrate_mixed_content_extraction,
-                "mixed_content_extraction",
-                quiz.id,
-                quiz.id,
-                quiz_data.canvas_course_id,
-                canvas_token,
-                extract_content_for_modules,  # Inject Canvas content extractor
-                get_content_summary,  # Inject content summarizer
-            )
-        else:
-            # Use Canvas-only content extraction for traditional quizzes
-            logger.info(
-                "triggering_canvas_content_extraction",
-                quiz_id=str(quiz.id),
-                has_manual_modules=False,
-                canvas_modules=[
-                    int(module_id) for module_id in quiz_data.selected_modules.keys()
-                ],
-            )
-            background_tasks.add_task(
-                safe_background_orchestration,
-                orchestrate_quiz_content_extraction,
-                "content_extraction",
-                quiz.id,
-                quiz.id,
-                quiz_data.canvas_course_id,
-                [int(module_id) for module_id in quiz_data.selected_modules.keys()],
-                canvas_token,
-                extract_content_for_modules,  # Inject Canvas content extractor
-                get_content_summary,  # Inject content summarizer
-            )
+        # Trigger unified content extraction - handles any combination of source types automatically
+        logger.info(
+            "triggering_content_extraction",
+            quiz_id=str(quiz.id),
+            canvas_course_id=quiz_data.canvas_course_id,
+            total_modules=len(quiz_data.selected_modules),
+        )
+        background_tasks.add_task(
+            safe_background_orchestration,
+            orchestrate_content_extraction,  # Single unified orchestrator
+            "content_extraction",
+            quiz.id,
+            quiz.id,
+            quiz_data.canvas_course_id,
+            canvas_token,
+            extract_content_for_modules,  # Inject Canvas content extractor
+            get_content_summary,  # Inject content summarizer
+        )
 
         logger.info(
             "quiz_creation_completed",
@@ -446,15 +408,14 @@ async def trigger_content_extraction(
         # Import Canvas dependencies for injection
         from src.canvas.flows import extract_content_for_modules, get_content_summary
 
-        # Trigger content extraction in the background using safe orchestrator wrapper
+        # Trigger unified content extraction in the background using safe orchestrator wrapper
         background_tasks.add_task(
             safe_background_orchestration,
-            orchestrate_quiz_content_extraction,
+            orchestrate_content_extraction,  # Use unified orchestrator
             "content_extraction",
             quiz.id,
             quiz.id,
             extraction_params["course_id"],
-            extraction_params["module_ids"],
             canvas_token,
             extract_content_for_modules,  # Inject Canvas content extractor
             get_content_summary,  # Inject content summarizer
