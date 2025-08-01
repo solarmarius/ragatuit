@@ -1,6 +1,7 @@
-import { Button, HStack, Input, Text, VStack } from "@chakra-ui/react";
-import { memo, useCallback, useState } from "react";
+import { Button, HStack, Input, Text, VStack } from "@chakra-ui/react"
+import { memo, useCallback, useState } from "react"
 
+import { QuizService, ApiError } from "@/client"
 import {
   DialogBody,
   DialogCloseTrigger,
@@ -9,30 +10,29 @@ import {
   DialogHeader,
   DialogRoot,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { useCustomToast } from "@/hooks/common";
-import { QuizService } from "@/client";
-import { ContentPreview } from "./ContentPreview";
-import { FileUploadZone } from "./FileUploadZone";
-import { TextContentEditor } from "./TextContentEditor";
+} from "@/components/ui/dialog"
+import { useCustomToast } from "@/hooks/common"
+import { ContentPreview } from "./ContentPreview"
+import { FileUploadZone } from "./FileUploadZone"
+import { TextContentEditor } from "./TextContentEditor"
 
-type DialogStep = "input-method" | "file-upload" | "text-input" | "preview";
-type InputMethod = "file" | "text";
+type DialogStep = "input-method" | "file-upload" | "text-input" | "preview"
+type InputMethod = "file" | "text"
 
 interface ManualModuleDialogProps {
   /** Whether the dialog is open */
-  isOpen: boolean;
+  isOpen: boolean
   /** Callback when dialog open state changes */
-  onOpenChange: (isOpen: boolean) => void;
+  onOpenChange: (isOpen: boolean) => void
   /** Callback when module is successfully created */
   onModuleCreated: (moduleData: {
-    moduleId: string;
-    name: string;
-    contentPreview: string;
-    fullContent: string;
-    wordCount: number;
-    processingMetadata?: Record<string, any>;
-  }) => void;
+    moduleId: string
+    name: string
+    contentPreview: string
+    fullContent: string
+    wordCount: number
+    processingMetadata?: Record<string, any>
+  }) => void
 }
 
 /**
@@ -61,79 +61,87 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
   onModuleCreated,
 }: ManualModuleDialogProps) {
   // State management
-  const [currentStep, setCurrentStep] = useState<DialogStep>("input-method");
-  const [inputMethod, setInputMethod] = useState<InputMethod | null>(null);
-  const [moduleName, setModuleName] = useState("");
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [textContent, setTextContent] = useState("");
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [currentStep, setCurrentStep] = useState<DialogStep>("input-method")
+  const [inputMethod, setInputMethod] = useState<InputMethod | null>(null)
+  const [moduleName, setModuleName] = useState("")
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [textContent, setTextContent] = useState("")
+  const [isProcessing, setIsProcessing] = useState(false)
   const [previewData, setPreviewData] = useState<{
-    moduleId: string;
-    contentPreview: string;
-    fullContent: string;
-    wordCount: number;
-    metadata?: Record<string, any>;
-  } | null>(null);
-  const [error, setError] = useState<string | null>(null);
+    moduleId: string
+    contentPreview: string
+    fullContent: string
+    wordCount: number
+    metadata?: Record<string, any>
+  } | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [validationError, setValidationError] = useState<string | null>(null)
 
-  const toast = useCustomToast();
+  const toast = useCustomToast()
 
   // Reset dialog state when it closes
   const handleOpenChange = useCallback(
     (open: boolean) => {
       if (!open) {
-        setCurrentStep("input-method");
-        setInputMethod(null);
-        setModuleName("");
-        setSelectedFiles([]);
-        setTextContent("");
-        setIsProcessing(false);
-        setPreviewData(null);
-        setError(null);
+        setCurrentStep("input-method")
+        setInputMethod(null)
+        setModuleName("")
+        setSelectedFiles([])
+        setTextContent("")
+        setIsProcessing(false)
+        setPreviewData(null)
+        setError(null)
+        setValidationError(null)
       }
-      onOpenChange(open);
+      onOpenChange(open)
     },
-    [onOpenChange]
-  );
+    [onOpenChange],
+  )
 
   // Handle method selection
   const handleMethodSelection = useCallback((method: InputMethod) => {
-    setInputMethod(method);
-    setCurrentStep(method === "file" ? "file-upload" : "text-input");
-    setError(null);
-  }, []);
+    setInputMethod(method)
+    setCurrentStep(method === "file" ? "file-upload" : "text-input")
+    setError(null)
+    setValidationError(null)
+  }, [])
 
   // Handle files selection
   const handleFilesSelect = useCallback((files: File[]) => {
-    setSelectedFiles(files);
-    setError(null);
-  }, []);
+    setSelectedFiles(files)
+    setError(null)
+  }, [])
+
+  // Handle validation errors from FileUploadZone
+  const handleValidationError = useCallback((error: string | null) => {
+    setValidationError(error)
+  }, [])
 
   // Handle text content change
   const handleTextChange = useCallback((text: string) => {
-    setTextContent(text);
-    setError(null);
-  }, []);
+    setTextContent(text)
+    setError(null)
+  }, [])
 
   // Process content and move to preview
   const handleProcessContent = useCallback(async () => {
     if (!moduleName.trim()) {
-      setError("Module name is required");
-      return;
+      setError("Module name is required")
+      return
     }
 
     if (inputMethod === "file" && selectedFiles.length === 0) {
-      setError("Please select at least one PDF file");
-      return;
+      setError("Please select at least one PDF file")
+      return
     }
 
     if (inputMethod === "text" && !textContent.trim()) {
-      setError("Please enter some text content");
-      return;
+      setError("Please enter some text content")
+      return
     }
 
-    setIsProcessing(true);
-    setError(null);
+    setIsProcessing(true)
+    setError(null)
 
     try {
       // Prepare the form data for the OpenAPI client
@@ -144,12 +152,12 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
           inputMethod === "file" && selectedFiles.length > 0
             ? selectedFiles
             : undefined,
-      };
+      }
 
       // Use the generated OpenAPI client with proper authentication
       const result = await QuizService.uploadManualModule({
         formData,
-      });
+      })
 
       setPreviewData({
         moduleId: result.module_id,
@@ -157,19 +165,30 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
         fullContent: result.full_content,
         wordCount: result.word_count,
         metadata: result.processing_metadata,
-      });
+      })
 
-      setCurrentStep("preview");
-      toast.showSuccessToast("Content processed successfully!");
+      setCurrentStep("preview")
+      toast.showSuccessToast("Content processed successfully!")
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Failed to process content";
-      setError(errorMessage);
-      toast.showErrorToast(errorMessage);
+      let errorMessage = "Failed to process content"
+
+      // Handle API errors with detailed error messages
+      if (err instanceof ApiError) {
+        if (err.body && typeof err.body === 'object' && 'detail' in err.body) {
+          errorMessage = (err.body as { detail: string }).detail
+        } else {
+          errorMessage = err.message
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message
+      }
+
+      setError(errorMessage)
+      toast.showErrorToast(errorMessage)
     } finally {
-      setIsProcessing(false);
+      setIsProcessing(false)
     }
-  }, [moduleName, inputMethod, selectedFiles, textContent, toast]);
+  }, [moduleName, inputMethod, selectedFiles, textContent, toast])
 
   // Handle module creation confirmation
   const handleConfirmCreation = useCallback(() => {
@@ -181,61 +200,65 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
         fullContent: previewData.fullContent,
         wordCount: previewData.wordCount,
         processingMetadata: previewData.metadata,
-      });
-      handleOpenChange(false);
+      })
+      handleOpenChange(false)
     }
-  }, [previewData, moduleName, onModuleCreated, handleOpenChange]);
+  }, [previewData, moduleName, onModuleCreated, handleOpenChange])
 
   // Handle back navigation
   const handleBack = useCallback(() => {
     switch (currentStep) {
       case "file-upload":
       case "text-input":
-        setCurrentStep("input-method");
-        setInputMethod(null);
-        setSelectedFiles([]);
-        setTextContent("");
-        setError(null);
-        break;
+        setCurrentStep("input-method")
+        setInputMethod(null)
+        setSelectedFiles([])
+        setTextContent("")
+        setError(null)
+        break
       case "preview":
-        setCurrentStep(inputMethod === "file" ? "file-upload" : "text-input");
-        setPreviewData(null);
-        setError(null);
-        break;
+        setCurrentStep(inputMethod === "file" ? "file-upload" : "text-input")
+        setPreviewData(null)
+        setError(null)
+        setValidationError(null)
+        break
     }
-  }, [currentStep, inputMethod]);
+  }, [currentStep, inputMethod])
 
   // Get dialog title based on current step
   const getDialogTitle = () => {
     switch (currentStep) {
       case "input-method":
-        return "Add Manual Module";
+        return "Add Manual Module"
       case "file-upload":
-        return "Upload PDF File";
+        return "Upload PDF File"
       case "text-input":
-        return "Enter Text Content";
+        return "Enter Text Content"
       case "preview":
-        return "Review Content";
+        return "Review Content"
       default:
-        return "Add Manual Module";
+        return "Add Manual Module"
     }
-  };
+  }
 
   // Check if next/process button should be enabled
   const canProceed = () => {
-    if (!moduleName.trim()) return false;
+    if (!moduleName.trim()) return false
+
+    // Block if there are validation errors
+    if (validationError) return false
 
     switch (currentStep) {
       case "file-upload":
-        return selectedFiles.length > 0;
+        return selectedFiles.length > 0
       case "text-input":
-        return !!textContent.trim();
+        return !!textContent.trim()
       case "preview":
-        return !!previewData;
+        return !!previewData
       default:
-        return false;
+        return false
     }
-  };
+  }
 
   return (
     <DialogRoot
@@ -256,7 +279,10 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
             {currentStep !== "input-method" && (
               <VStack gap={2} align="stretch">
                 <Text fontSize="sm" fontWeight="medium">
-                  Module Name <Text as="span" color="red.500">*</Text>
+                  Module Name{" "}
+                  <Text as="span" color="red.500">
+                    *
+                  </Text>
                 </Text>
                 <Input
                   value={moduleName}
@@ -327,6 +353,7 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
                 onFilesSelect={handleFilesSelect}
                 isLoading={isProcessing}
                 error={error}
+                onValidationError={handleValidationError}
               />
             )}
 
@@ -399,5 +426,5 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
         </DialogFooter>
       </DialogContent>
     </DialogRoot>
-  );
-});
+  )
+})

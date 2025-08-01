@@ -305,7 +305,9 @@ test.describe("ModuleSelectionStep Component", () => {
     // Check that Add Manual Module card is visible
     await expect(page.locator("text=Add Manual Module")).toBeVisible()
     await expect(
-      page.locator("text=Upload PDF files or paste text content to create a custom module")
+      page.locator(
+        "text=Upload PDF files or paste text content to create a custom module",
+      ),
     ).toBeVisible()
 
     // Check that the manual module card has correct styling
@@ -315,7 +317,9 @@ test.describe("ModuleSelectionStep Component", () => {
     await expect(manualCard).toHaveCSS("cursor", "pointer")
   })
 
-  test("should open manual module dialog when Add Manual Module is clicked", async ({ page }) => {
+  test("should open manual module dialog when Add Manual Module is clicked", async ({
+    page,
+  }) => {
     // Wait for modules to load
     await page.waitForSelector('[data-testid="module-card-173467"]')
 
@@ -326,15 +330,23 @@ test.describe("ModuleSelectionStep Component", () => {
     await expect(page.locator('[role="dialog"]')).toBeVisible()
     await expect(page.locator("text=Add Manual Module").first()).toBeVisible()
     await expect(
-      page.locator("text=How would you like to add content for this module?").first()
+      page
+        .locator("text=How would you like to add content for this module?")
+        .first(),
     ).toBeVisible()
 
     // Should show method selection options
-    await expect(page.locator("button:has-text('Upload PDF File')")).toBeVisible()
-    await expect(page.locator("button:has-text('Enter Text Content')")).toBeVisible()
+    await expect(
+      page.locator("button:has-text('Upload PDF File')"),
+    ).toBeVisible()
+    await expect(
+      page.locator("button:has-text('Enter Text Content')"),
+    ).toBeVisible()
   })
 
-  test("should show cancel button in manual module dialog", async ({ page }) => {
+  test("should show cancel button in manual module dialog", async ({
+    page,
+  }) => {
     // Wait for modules to load
     await page.waitForSelector('[data-testid="module-card-173467"]')
 
@@ -345,11 +357,17 @@ test.describe("ModuleSelectionStep Component", () => {
     await expect(page.locator('[role="dialog"]')).toBeVisible()
 
     // Cancel button should be visible and enabled
-    await expect(page.locator("button:has-text('Cancel')").first()).toBeVisible()
-    await expect(page.locator("button:has-text('Cancel')").first()).toBeEnabled()
+    await expect(
+      page.locator("button:has-text('Cancel')").first(),
+    ).toBeVisible()
+    await expect(
+      page.locator("button:has-text('Cancel')").first(),
+    ).toBeEnabled()
   })
 
-  test("should show Add Module button in manual module card", async ({ page }) => {
+  test("should show Add Module button in manual module card", async ({
+    page,
+  }) => {
     // Wait for modules to load
     await page.waitForSelector('[data-testid="module-card-173467"]')
 
@@ -362,9 +380,13 @@ test.describe("ModuleSelectionStep Component", () => {
     await page.waitForSelector('[data-testid="module-card-173467"]')
 
     // Check instruction text
-    await expect(page.locator("text=Select modules to include in the quiz")).toBeVisible()
     await expect(
-      page.locator("text=Choose which course modules you want to generate quiz questions from")
+      page.locator("text=Select modules to include in the quiz"),
+    ).toBeVisible()
+    await expect(
+      page.locator(
+        "text=Choose which course modules you want to generate quiz questions from",
+      ),
     ).toBeVisible()
   })
 })

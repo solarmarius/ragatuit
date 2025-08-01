@@ -8,7 +8,8 @@ test.describe("ContentPreview Component - Basic UI Tests", () => {
         json: {
           module_id: "manual_test123",
           name: "Test Preview Module",
-          content_preview: "This is a test content preview that demonstrates how the processed text will appear to users. It includes multiple sentences to test the layout and formatting of the preview component.",
+          content_preview:
+            "This is a test content preview that demonstrates how the processed text will appear to users. It includes multiple sentences to test the layout and formatting of the preview component.",
           full_content: "Full test content...",
           word_count: 1250,
           processing_metadata: {
@@ -35,32 +36,42 @@ test.describe("ContentPreview Component - Basic UI Tests", () => {
     })
 
     // Mock the modules API
-    await page.route("**/api/v1/canvas/courses/37823/modules", async (route) => {
-      await route.fulfill({
-        json: [
-          {
-            id: 173467,
-            name: "Test Module",
-          },
-        ],
-      })
-    })
+    await page.route(
+      "**/api/v1/canvas/courses/37823/modules",
+      async (route) => {
+        await route.fulfill({
+          json: [
+            {
+              id: 173467,
+              name: "Test Module",
+            },
+          ],
+        })
+      },
+    )
 
     // Navigate to manual module creation and process content
     await page.waitForTimeout(1000)
-    await page.waitForSelector('[data-testid="course-card-37823"]', { timeout: 5000 })
+    await page.waitForSelector('[data-testid="course-card-37823"]', {
+      timeout: 5000,
+    })
     await page.click('[data-testid="course-card-37823"]')
     await page.click("button:has-text('Next')")
 
-    await page.waitForSelector('[data-testid="add-manual-module-card"]', { timeout: 5000 })
+    await page.waitForSelector('[data-testid="add-manual-module-card"]', {
+      timeout: 5000,
+    })
     await page.click('[data-testid="add-manual-module-card"]')
 
     await page.waitForSelector('[role="dialog"]', { timeout: 5000 })
-    await page.getByRole('button', { name: 'Enter Text Content' }).click()
+    await page.getByRole("button", { name: "Enter Text Content" }).click()
 
     // Fill form and process
     await page.fill('input[placeholder*="Enter"]', "Test Preview Module")
-    await page.fill("textarea", "This is test content for previewing functionality")
+    await page.fill(
+      "textarea",
+      "This is test content for previewing functionality",
+    )
     await page.click("button:has-text('Process Content')")
 
     // Wait for preview step
@@ -68,7 +79,9 @@ test.describe("ContentPreview Component - Basic UI Tests", () => {
   })
 
   test("should display content preview header", async ({ page }) => {
-    await expect(page.getByText("Content Preview", { exact: true }).first()).toBeVisible()
+    await expect(
+      page.getByText("Content Preview", { exact: true }).first(),
+    ).toBeVisible()
   })
 
   test("should display word count", async ({ page }) => {
@@ -78,13 +91,15 @@ test.describe("ContentPreview Component - Basic UI Tests", () => {
 
   test("should display preview content", async ({ page }) => {
     await expect(
-      page.locator("text=This is a test content preview").first()
+      page.locator("text=This is a test content preview").first(),
     ).toBeVisible()
   })
 
   test("should show Add Module button in preview step", async ({ page }) => {
     // Use more specific locator for the button in the dialog
-    const dialogAddButton = page.locator('[role="dialog"] button:has-text("Add Module")')
+    const dialogAddButton = page.locator(
+      '[role="dialog"] button:has-text("Add Module")',
+    )
     await expect(dialogAddButton).toBeVisible()
     await expect(dialogAddButton).toBeEnabled()
   })
@@ -94,13 +109,17 @@ test.describe("ContentPreview Component - Basic UI Tests", () => {
     await page.click("button:has-text('Back')")
 
     // Should return to text input step - use heading locator to avoid duplication
-    await expect(page.getByRole('heading', { name: 'Enter Text Content' })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Enter Text Content" }),
+    ).toBeVisible()
     await expect(page.locator("textarea")).toBeVisible()
   })
 
   test("should handle Add Module action", async ({ page }) => {
     // Click Add Module in the dialog
-    const dialogAddButton = page.locator('[role="dialog"] button:has-text("Add Module")')
+    const dialogAddButton = page.locator(
+      '[role="dialog"] button:has-text("Add Module")',
+    )
     await dialogAddButton.click()
 
     // Dialog should close
@@ -109,17 +128,25 @@ test.describe("ContentPreview Component - Basic UI Tests", () => {
 
   test("should display content with proper styling", async ({ page }) => {
     // Check that content area is visible
-    const contentText = page.locator("text=This is a test content preview").first()
+    const contentText = page
+      .locator("text=This is a test content preview")
+      .first()
     await expect(contentText).toBeVisible()
   })
 
   test("should show dialog title as Review Content", async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Review Content' })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Review Content" }),
+    ).toBeVisible()
   })
 
   test("should have cancel button available", async ({ page }) => {
-    await expect(page.locator("button:has-text('Cancel')").first()).toBeVisible()
-    await expect(page.locator("button:has-text('Cancel')").first()).toBeEnabled()
+    await expect(
+      page.locator("button:has-text('Cancel')").first(),
+    ).toBeVisible()
+    await expect(
+      page.locator("button:has-text('Cancel')").first(),
+    ).toBeEnabled()
   })
 })
 
@@ -146,20 +173,27 @@ test.describe("ContentPreview Component - Word Count Formatting", () => {
       await route.fulfill({ json: [{ id: 37823, name: "Test Course" }] })
     })
 
-    await page.route("**/api/v1/canvas/courses/37823/modules", async (route) => {
-      await route.fulfill({ json: [{ id: 173467, name: "Test Module" }] })
-    })
+    await page.route(
+      "**/api/v1/canvas/courses/37823/modules",
+      async (route) => {
+        await route.fulfill({ json: [{ id: 173467, name: "Test Module" }] })
+      },
+    )
 
     await page.waitForTimeout(1000)
-    await page.waitForSelector('[data-testid="course-card-37823"]', { timeout: 5000 })
+    await page.waitForSelector('[data-testid="course-card-37823"]', {
+      timeout: 5000,
+    })
     await page.click('[data-testid="course-card-37823"]')
     await page.click("button:has-text('Next')")
 
-    await page.waitForSelector('[data-testid="add-manual-module-card"]', { timeout: 5000 })
+    await page.waitForSelector('[data-testid="add-manual-module-card"]', {
+      timeout: 5000,
+    })
     await page.click('[data-testid="add-manual-module-card"]')
 
     await page.waitForSelector('[role="dialog"]', { timeout: 5000 })
-    await page.getByRole('button', { name: 'Enter Text Content' }).click()
+    await page.getByRole("button", { name: "Enter Text Content" }).click()
 
     await page.fill('input[placeholder*="Enter"]', "Large Content Test")
     await page.fill("textarea", "This is content for large number testing")

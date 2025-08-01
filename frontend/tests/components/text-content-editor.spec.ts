@@ -18,33 +18,44 @@ test.describe("TextContentEditor Component - Basic UI Tests", () => {
     })
 
     // Mock the modules API
-    await page.route("**/api/v1/canvas/courses/37823/modules", async (route) => {
-      await route.fulfill({
-        json: [
-          {
-            id: 173467,
-            name: "Test Module",
-          },
-        ],
-      })
-    })
+    await page.route(
+      "**/api/v1/canvas/courses/37823/modules",
+      async (route) => {
+        await route.fulfill({
+          json: [
+            {
+              id: 173467,
+              name: "Test Module",
+            },
+          ],
+        })
+      },
+    )
 
     // Navigate to text content editor
     await page.waitForTimeout(1000)
-    await page.waitForSelector('[data-testid="course-card-37823"]', { timeout: 5000 })
+    await page.waitForSelector('[data-testid="course-card-37823"]', {
+      timeout: 5000,
+    })
     await page.click('[data-testid="course-card-37823"]')
     await page.click("button:has-text('Next')")
 
-    await page.waitForSelector('[data-testid="add-manual-module-card"]', { timeout: 5000 })
+    await page.waitForSelector('[data-testid="add-manual-module-card"]', {
+      timeout: 5000,
+    })
     await page.click('[data-testid="add-manual-module-card"]')
 
     await page.waitForSelector('[role="dialog"]', { timeout: 5000 })
-    await page.getByRole('button', { name: 'Enter Text Content' }).click()
+    await page.getByRole("button", { name: "Enter Text Content" }).click()
   })
 
-  test("should display text editor with correct initial state", async ({ page }) => {
+  test("should display text editor with correct initial state", async ({
+    page,
+  }) => {
     // Check that text editor components are visible using heading locator
-    await expect(page.getByRole('heading', { name: 'Enter Text Content' })).toBeVisible()
+    await expect(
+      page.getByRole("heading", { name: "Enter Text Content" }),
+    ).toBeVisible()
     await expect(page.locator("textarea")).toBeVisible()
 
     // Check initial word/character count
@@ -52,11 +63,15 @@ test.describe("TextContentEditor Component - Basic UI Tests", () => {
 
     // Check help text
     await expect(
-      page.locator("text=Enter the content you want to generate questions from")
+      page.locator(
+        "text=Enter the content you want to generate questions from",
+      ),
     ).toBeVisible()
   })
 
-  test("should update word and character count as user types", async ({ page }) => {
+  test("should update word and character count as user types", async ({
+    page,
+  }) => {
     const textarea = page.locator("textarea")
 
     // Initially should show 0 counts
@@ -110,7 +125,9 @@ Paragraph 2: Deep learning concepts
     await expect(page.locator("text=3 characters")).toBeVisible()
   })
 
-  test("should display word/character count overlay correctly", async ({ page }) => {
+  test("should display word/character count overlay correctly", async ({
+    page,
+  }) => {
     const textarea = page.locator("textarea")
 
     // Fill some content
@@ -121,7 +138,9 @@ Paragraph 2: Deep learning concepts
     await expect(page.locator("text=characters")).toBeVisible()
   })
 
-  test("should handle special characters and unicode in content", async ({ page }) => {
+  test("should handle special characters and unicode in content", async ({
+    page,
+  }) => {
     const textarea = page.locator("textarea")
 
     // Content with special characters and unicode
@@ -134,7 +153,9 @@ Numbers: 123,456.78`
 
     // Should show word and character counts for special content
     await expect(page.locator(".css-1663z47:has-text('words')")).toBeVisible()
-    await expect(page.locator(".css-1663z47:has-text('characters')")).toBeVisible()
+    await expect(
+      page.locator(".css-1663z47:has-text('characters')"),
+    ).toBeVisible()
 
     // Content should be displayed correctly in textarea
     await expect(textarea).toHaveValue(specialContent)
@@ -144,7 +165,8 @@ Numbers: 123,456.78`
     const textarea = page.locator("textarea")
 
     // Simulate pasting content
-    const pastedContent = "This is pasted content from external source with formatting."
+    const pastedContent =
+      "This is pasted content from external source with formatting."
 
     await textarea.fill(pastedContent)
 
@@ -154,7 +176,9 @@ Numbers: 123,456.78`
     await expect(textarea).toHaveValue(pastedContent)
   })
 
-  test("should validate content before enabling process button", async ({ page }) => {
+  test("should validate content before enabling process button", async ({
+    page,
+  }) => {
     const textarea = page.locator("textarea")
     const processButton = page.locator("button:has-text('Process Content')")
 
@@ -182,7 +206,10 @@ Numbers: 123,456.78`
     const textarea = page.locator("textarea")
 
     // Check placeholder text is set
-    await expect(textarea).toHaveAttribute("placeholder", "Paste your course content here...")
+    await expect(textarea).toHaveAttribute(
+      "placeholder",
+      "Paste your course content here...",
+    )
   })
 
   test("should allow text selection and editing", async ({ page }) => {
@@ -208,13 +235,17 @@ Numbers: 123,456.78`
     const textarea = page.locator("textarea")
 
     // Create large content
-    const largeContent = "This is a test sentence with multiple words. ".repeat(50)
+    const largeContent = "This is a test sentence with multiple words. ".repeat(
+      50,
+    )
 
     await textarea.fill(largeContent)
 
     // Should show word and character counts for large content
     await expect(page.locator(".css-1663z47:has-text('words')")).toBeVisible()
-    await expect(page.locator(".css-1663z47:has-text('characters')")).toBeVisible()
+    await expect(
+      page.locator(".css-1663z47:has-text('characters')"),
+    ).toBeVisible()
 
     // Should still be functional
     await expect(textarea).toBeVisible()
@@ -232,11 +263,15 @@ Numbers: 123,456.78`
   test("should show help text", async ({ page }) => {
     // Check that help text is displayed
     await expect(
-      page.locator("text=Enter the content you want to generate questions from. This could be")
+      page.locator(
+        "text=Enter the content you want to generate questions from. This could be",
+      ),
     ).toBeVisible()
 
     await expect(
-      page.locator("text=lecture notes, course materials, or any educational text content.")
+      page.locator(
+        "text=lecture notes, course materials, or any educational text content.",
+      ),
     ).toBeVisible()
   })
 })

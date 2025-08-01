@@ -174,6 +174,7 @@ async def process_multiple_uploaded_files(files: list[UploadFile]) -> RawContent
                 filename=file.filename,
                 file_index=i + 1,
             )
+            # Don't add error messages to content - just skip this file
             continue
 
         # Add document separator (except for first file)
@@ -196,6 +197,22 @@ async def process_multiple_uploaded_files(files: list[UploadFile]) -> RawContent
 
     # Combine all content
     combined_content = "".join(concatenated_content_parts)
+
+    # Check if we have any meaningful content
+    if not combined_content.strip():
+        logger.warning(
+            "multi_file_upload_no_content_extracted",
+            total_files=len(files),
+            filenames=file_names,
+        )
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Could not extract text from any of the uploaded PDF files. "
+                "The files may contain only images, be password-protected, or be corrupted. "
+                "Please try uploading PDF files with extractable text content."
+            ),
+        )
 
     # Create combined title
     if len(files) == 1:
@@ -314,10 +331,44 @@ async def create_manual_module(
         processed_content = await process_content(raw_content, processor)
 
         if not processed_content:
-            raise HTTPException(
-                status_code=400,
-                detail="Failed to process content. Please check file format and try again.",
+            # Determine more specific error message based on content type
+            if raw_content.content_type == "pdf":
+                error_msg = (
+                    "Could not extract text from the PDF file. "
+                    "This file may contain only images, be password-protected, "
+                    "or be corrupted. Please try a different PDF with extractable text."
+                )
+            else:
+                error_msg = "Failed to process content. Please check the content format and try again."
+
+            logger.warning(
+                "content_processing_returned_none",
+                content_type=raw_content.content_type,
+                title=raw_content.title,
+                module_name=module_data.name,
             )
+
+            raise HTTPException(status_code=400, detail=error_msg)
+
+        # Additional check for empty content
+        if not processed_content.content.strip():
+            logger.warning(
+                "processed_content_empty",
+                content_type=raw_content.content_type,
+                title=raw_content.title,
+                module_name=module_data.name,
+            )
+            if raw_content.content_type == "pdf":
+                error_msg = (
+                    "The PDF file appears to be empty or contains no extractable text. "
+                    "Please upload a PDF with readable text content."
+                )
+            else:
+                error_msg = (
+                    "The content appears to be empty. Please provide non-empty content."
+                )
+
+            raise HTTPException(status_code=400, detail=error_msg)
 
         # Create preview (first 500 characters)
         content_preview = processed_content.content[:500]

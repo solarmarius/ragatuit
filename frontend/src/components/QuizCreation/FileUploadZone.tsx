@@ -6,17 +6,19 @@ import {
   IconButton,
   Text,
   VStack,
-} from "@chakra-ui/react";
-import { memo, useCallback, useState } from "react";
-import { HiUpload, HiX } from "react-icons/hi";
+} from "@chakra-ui/react"
+import { memo, useCallback, useState } from "react"
+import { HiUpload, HiX } from "react-icons/hi"
 
 interface FileUploadZoneProps {
   /** Callback when files are selected */
-  onFilesSelect: (files: File[]) => void;
+  onFilesSelect: (files: File[]) => void
   /** Whether the upload is in progress */
-  isLoading?: boolean;
+  isLoading?: boolean
   /** Error message to display */
-  error?: string | null;
+  error?: string | null
+  /** Callback when validation errors occur */
+  onValidationError?: (error: string | null) => void
 }
 
 /**
@@ -42,84 +44,98 @@ export const FileUploadZone = memo(function FileUploadZone({
   onFilesSelect,
   isLoading = false,
   error,
+  onValidationError,
 }: FileUploadZoneProps) {
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [localValidationError, setLocalValidationError] = useState<
+    string | null
+  >(null)
 
   const validateFiles = useCallback(
     (files: File[], existingFiles: File[] = []): string | null => {
-      const maxFiles = 5;
-      const maxFileSize = 5 * 1024 * 1024; // 5MB per file
-      const maxTotalSize = 25 * 1024 * 1024; // 25MB total
+      const maxFiles = 5
+      const maxFileSize = 5 * 1024 * 1024 // 5MB per file
+      const maxTotalSize = 25 * 1024 * 1024 // 25MB total
 
       // Check total file count
-      const totalFiles = files.length + existingFiles.length;
+      const totalFiles = files.length + existingFiles.length
       if (totalFiles > maxFiles) {
-        return `Maximum ${maxFiles} files allowed per manual module`;
+        return `Maximum ${maxFiles} files allowed per manual module`
       }
 
       // Check each file
       for (const file of files) {
         // Check file type
         if (!file.name.toLowerCase().endsWith(".pdf")) {
-          return `Only PDF files are supported. Invalid file: ${file.name}`;
+          return `Only PDF files are supported. Invalid file: ${file.name}`
         }
 
         // Check individual file size
         if (file.size > maxFileSize) {
           return `File '${file.name}' exceeds maximum size of ${
             maxFileSize / (1024 * 1024)
-          }MB`;
+          }MB`
         }
       }
 
       // Check total size
       const totalSize = [...files, ...existingFiles].reduce(
         (sum, file) => sum + file.size,
-        0
-      );
+        0,
+      )
       if (totalSize > maxTotalSize) {
         return `Total file size (${(totalSize / (1024 * 1024)).toFixed(
-          1
-        )}MB) exceeds maximum limit of ${maxTotalSize / (1024 * 1024)}MB`;
+          1,
+        )}MB) exceeds maximum limit of ${maxTotalSize / (1024 * 1024)}MB`
       }
 
-      return null;
+      return null
     },
-    []
-  );
+    [],
+  )
 
   const handleFileChange = useCallback(
     (details: { acceptedFiles: File[] }) => {
-      const newFiles = details.acceptedFiles;
+      const newFiles = details.acceptedFiles
 
       if (!newFiles.length) {
-        return;
+        // Clear validation error when no files are selected
+        setLocalValidationError(null)
+        onValidationError?.(null)
+        return
       }
 
-      const validationError = validateFiles(newFiles, selectedFiles);
+      const validationError = validateFiles(newFiles, selectedFiles)
       if (validationError) {
-        // Handle validation error - for now we'll just not add the files
-        // In a more complete implementation, you might want to show the error
-        return;
+        // Set local validation error and notify parent
+        setLocalValidationError(validationError)
+        onValidationError?.(validationError)
+        return
       }
 
-      const updatedFiles = [...selectedFiles, ...newFiles];
-      setSelectedFiles(updatedFiles);
-      onFilesSelect(updatedFiles);
+      // Clear any previous validation errors on successful validation
+      setLocalValidationError(null)
+      onValidationError?.(null)
+
+      const updatedFiles = [...selectedFiles, ...newFiles]
+      setSelectedFiles(updatedFiles)
+      onFilesSelect(updatedFiles)
     },
-    [onFilesSelect, validateFiles, selectedFiles]
-  );
+    [onFilesSelect, validateFiles, selectedFiles, onValidationError],
+  )
 
   const handleRemoveFile = useCallback(
     (fileToRemove: File) => {
-      const updatedFiles = selectedFiles.filter(
-        (file) => file !== fileToRemove
-      );
-      setSelectedFiles(updatedFiles);
-      onFilesSelect(updatedFiles);
+      const updatedFiles = selectedFiles.filter((file) => file !== fileToRemove)
+      setSelectedFiles(updatedFiles)
+      onFilesSelect(updatedFiles)
+
+      // Clear validation errors when removing files
+      setLocalValidationError(null)
+      onValidationError?.(null)
     },
-    [selectedFiles, onFilesSelect]
-  );
+    [selectedFiles, onFilesSelect, onValidationError],
+  )
 
   return (
     <VStack gap={4} align="stretch">
@@ -140,14 +156,14 @@ export const FileUploadZone = memo(function FileUploadZone({
           <Box
             p={8}
             border="2px dashed"
-            borderColor={error ? "red.300" : "gray.300"}
+            borderColor={error || localValidationError ? "red.300" : "gray.300"}
             borderRadius="lg"
-            bg={error ? "red.50" : "gray.50"}
+            bg={error || localValidationError ? "red.50" : "gray.50"}
             cursor={isLoading ? "not-allowed" : "pointer"}
             opacity={isLoading ? 0.6 : 1}
             transition="all 0.2s"
             _hover={
-              !isLoading
+              !isLoading && !error && !localValidationError
                 ? {
                     borderColor: "blue.400",
                     bg: "blue.50",
@@ -180,7 +196,7 @@ export const FileUploadZone = memo(function FileUploadZone({
         {/* File list will be handled by our custom selectedFile display */}
       </FileUpload.Root>
 
-      {error && (
+      {(error || localValidationError) && (
         <Box
           p={3}
           bg="red.50"
@@ -189,7 +205,7 @@ export const FileUploadZone = memo(function FileUploadZone({
           borderRadius="md"
         >
           <Text fontSize="sm" color="red.600">
-            {error}
+            {error || localValidationError}
           </Text>
         </Box>
       )}
@@ -233,5 +249,5 @@ export const FileUploadZone = memo(function FileUploadZone({
         </VStack>
       )}
     </VStack>
-  );
-});
+  )
+})
