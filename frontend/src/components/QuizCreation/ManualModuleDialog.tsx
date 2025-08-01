@@ -29,7 +29,9 @@ interface ManualModuleDialogProps {
     moduleId: string
     name: string
     contentPreview: string
+    fullContent: string
     wordCount: number
+    processingMetadata?: Record<string, any>
   }) => void
 }
 
@@ -68,6 +70,7 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
   const [previewData, setPreviewData] = useState<{
     moduleId: string
     contentPreview: string
+    fullContent: string
     wordCount: number
     metadata?: Record<string, any>
   } | null>(null)
@@ -153,6 +156,7 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
       setPreviewData({
         moduleId: result.module_id,
         contentPreview: result.content_preview,
+        fullContent: result.full_content,
         wordCount: result.word_count,
         metadata: result.processing_metadata
       })
@@ -176,7 +180,9 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
         moduleId: previewData.moduleId,
         name: moduleName,
         contentPreview: previewData.contentPreview,
-        wordCount: previewData.wordCount
+        fullContent: previewData.fullContent,
+        wordCount: previewData.wordCount,
+        processingMetadata: previewData.metadata
       })
       handleOpenChange(false)
     }

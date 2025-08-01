@@ -18,7 +18,9 @@ interface ManualModule {
   id: string
   name: string
   contentPreview: string
+  fullContent: string
   wordCount: number
+  processingMetadata?: Record<string, any>
   isManual: true
 }
 
@@ -85,13 +87,17 @@ export function ModuleSelectionStep({
       moduleId: string
       name: string
       contentPreview: string
+      fullContent: string
       wordCount: number
+      processingMetadata?: Record<string, any>
     }) => {
       const manualModule: ManualModule = {
         id: moduleData.moduleId,
         name: moduleData.name,
         contentPreview: moduleData.contentPreview,
+        fullContent: moduleData.fullContent,
         wordCount: moduleData.wordCount,
+        processingMetadata: moduleData.processingMetadata,
         isManual: true,
       }
 

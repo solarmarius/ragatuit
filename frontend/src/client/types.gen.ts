@@ -64,6 +64,10 @@ export type ManualModuleResponse = {
    */
   content_preview: string
   /**
+   * Full processed content
+   */
+  full_content: string
+  /**
    * Word count of processed content
    */
   word_count: number
@@ -88,6 +92,24 @@ export type ModuleSelection = {
    * Module source: 'canvas' or 'manual'
    */
   source_type?: string
+  /**
+   * Full content for manual modules
+   */
+  content?: string | null
+  /**
+   * Word count for manual modules
+   */
+  word_count?: number | null
+  /**
+   * Processing metadata for manual modules
+   */
+  processing_metadata?: {
+    [key: string]: unknown
+  } | null
+  /**
+   * Content type for manual modules (e.g., 'text', 'pdf')
+   */
+  content_type?: string | null
 }
 
 /**

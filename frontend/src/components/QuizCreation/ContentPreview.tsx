@@ -1,15 +1,15 @@
-import { Box, Code, HStack, Spinner, Text, VStack } from "@chakra-ui/react"
-import { memo } from "react"
+import { Box, HStack, Spinner, Text, VStack } from "@chakra-ui/react";
+import { memo } from "react";
 
 interface ContentPreviewProps {
   /** Content preview text */
-  content: string
+  content: string;
   /** Word count of the full content */
-  wordCount: number
+  wordCount: number;
   /** Whether content is being processed */
-  isLoading?: boolean
+  isLoading?: boolean;
   /** Processing metadata */
-  metadata?: Record<string, any>
+  metadata?: Record<string, any>;
 }
 
 /**
@@ -35,7 +35,6 @@ export const ContentPreview = memo(function ContentPreview({
   content,
   wordCount,
   isLoading = false,
-  metadata
 }: ContentPreviewProps) {
   if (isLoading) {
     return (
@@ -50,17 +49,15 @@ export const ContentPreview = memo(function ContentPreview({
           </Text>
         </VStack>
       </VStack>
-    )
+    );
   }
 
   if (!content) {
     return (
       <Box p={6} bg="gray.50" borderRadius="md" textAlign="center">
-        <Text color="gray.600">
-          No content to preview yet
-        </Text>
+        <Text color="gray.600">No content to preview yet</Text>
       </Box>
-    )
+    );
   }
 
   return (
@@ -101,7 +98,6 @@ export const ContentPreview = memo(function ContentPreview({
           {content}
         </Text>
       </Box>
-
     </VStack>
-  )
-})
+  );
+});
