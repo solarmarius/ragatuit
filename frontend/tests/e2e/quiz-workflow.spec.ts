@@ -800,6 +800,7 @@ test.describe("Quiz Workflow End-to-End", () => {
             selected_modules: {
               "173467": {
                 name: "Introduction to Neural Networks",
+                source_type: "canvas",
                 question_batches: [
                   { question_type: "multiple_choice", count: 20 },
                 ],
@@ -875,6 +876,7 @@ test.describe("Quiz Workflow End-to-End", () => {
         question_batches: [
           { question_type: "multiple_choice", count: 20, difficulty: "medium" },
         ],
+        source_type: "canvas",
       },
     })
   })

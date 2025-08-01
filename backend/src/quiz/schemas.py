@@ -61,11 +61,55 @@ class ModuleSelection(SQLModel):
     question_batches: list[QuestionBatch] = Field(
         min_length=1, max_length=4, description="Question type batches (1-4 per module)"
     )
+    source_type: str = Field(
+        default="canvas", description="Module source: 'canvas' or 'manual'"
+    )
+    # Optional fields for manual modules (populated when source_type is 'manual')
+    content: str | None = Field(
+        default=None, description="Full content for manual modules"
+    )
+    word_count: int | None = Field(
+        default=None, description="Word count for manual modules"
+    )
+    processing_metadata: dict[str, Any] | None = Field(
+        default=None, description="Processing metadata for manual modules"
+    )
+    content_type: str | None = Field(
+        default=None,
+        description="Content type for manual modules (e.g., 'text', 'pdf')",
+    )
 
     @property
     def total_questions(self) -> int:
         """Calculate total questions across all batches."""
         return sum(batch.count for batch in self.question_batches)
+
+
+class ManualModuleCreate(SQLModel):
+    """Schema for creating a manual module with file upload or text content."""
+
+    name: str = Field(min_length=1, max_length=255, description="Module name")
+    text_content: str | None = Field(default=None, description="Direct text content")
+
+    @field_validator("text_content")
+    def validate_content_provided(cls, v: str | None) -> str | None:
+        """Ensure at least text content is provided."""
+        if v is not None and len(v.strip()) == 0:
+            raise ValueError("Text content cannot be empty")
+        return v
+
+
+class ManualModuleResponse(SQLModel):
+    """Response schema for manual module creation."""
+
+    module_id: str = Field(description="Generated manual module ID")
+    name: str = Field(description="Module name")
+    content_preview: str = Field(description="Preview of processed content")
+    full_content: str = Field(description="Full processed content")
+    word_count: int = Field(description="Word count of processed content")
+    processing_metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Processing details"
+    )
 
 
 class QuizCreate(SQLModel):
@@ -82,7 +126,7 @@ class QuizCreate(SQLModel):
 
     @field_validator("selected_modules")
     def validate_modules(cls, v: dict[str, Any]) -> dict[str, Any]:
-        """Validate selected modules structure."""
+        """Validate selected modules structure supporting both Canvas and manual modules."""
         if not v:
             raise ValueError("At least one module must be selected")
 
@@ -98,6 +142,34 @@ class QuizCreate(SQLModel):
                     raise ValueError(f"Module {module_id} has invalid structure: {e}")
             else:
                 module_selection = module_data
+
+            # Validate source_type
+            if hasattr(module_selection, "source_type"):
+                if module_selection.source_type not in ["canvas", "manual"]:
+                    raise ValueError(
+                        f"Module {module_id} source_type must be 'canvas' or 'manual'"
+                    )
+
+                # Manual modules should have manual_ prefix
+                if (
+                    module_selection.source_type == "manual"
+                    and not module_id.startswith("manual_")
+                ):
+                    raise ValueError(
+                        f"Manual module {module_id} must have 'manual_' prefix"
+                    )
+
+                # Manual modules must have content fields
+                if module_selection.source_type == "manual":
+                    if not module_selection.content:
+                        raise ValueError(f"Manual module {module_id} must have content")
+                    if (
+                        module_selection.word_count is None
+                        or module_selection.word_count <= 0
+                    ):
+                        raise ValueError(
+                            f"Manual module {module_id} must have a valid word count"
+                        )
 
             # Validate batch count
             if len(module_selection.question_batches) > 4:
