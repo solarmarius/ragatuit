@@ -13,7 +13,12 @@ from src.database import execute_in_transaction
 
 from ..constants import OPERATION_TIMEOUTS
 from ..schemas import FailureReason, QuizStatus
-from .core import ContentExtractorFunc, ContentSummaryFunc, timeout_operation
+from .core import (
+    ContentExtractorFunc,
+    ContentSummaryFunc,
+    rollback_quiz_to_status,
+    timeout_operation,
+)
 
 logger = get_logger("quiz_orchestrator_content_extraction")
 
@@ -328,65 +333,15 @@ async def orchestrate_content_extraction(
                 exc_info=True,
             )
             # Rollback: Reset status to allow manual retry but keep extracted content
-            await _rollback_auto_trigger_failure(quiz_id, auto_trigger_error)
+            await rollback_quiz_to_status(
+                quiz_id=quiz_id,
+                target_status=QuizStatus.EXTRACTING_CONTENT,
+                error=auto_trigger_error,
+                operation_context="auto_trigger_question_generation",
+            )
     elif final_status == "no_content":
         logger.info(
             "skipping_question_generation_no_content",
             quiz_id=str(quiz_id),
             reason="no_meaningful_content_extracted",
         )
-
-
-async def _rollback_auto_trigger_failure(quiz_id: UUID, error: Exception) -> None:
-    """
-    Rollback quiz state when auto-trigger question generation fails.
-
-    This prevents the quiz from being stuck in an inconsistent state where
-    content is extracted but generation failed silently.
-
-    Args:
-        quiz_id: UUID of the quiz to rollback
-        error: The exception that caused the auto-trigger failure
-    """
-    logger.warning(
-        "auto_trigger_rollback_initiated",
-        quiz_id=str(quiz_id),
-        error_type=type(error).__name__,
-        error_message=str(error),
-    )
-
-    async def _perform_rollback(session: Any, quiz_id: UUID) -> None:
-        """Reset quiz to extracting_content status to allow manual retry."""
-        from ..service import update_quiz_status
-
-        # Reset to EXTRACTING_CONTENT status but keep the extracted content
-        # This allows the user to manually trigger question generation
-        await update_quiz_status(
-            session,
-            quiz_id,
-            QuizStatus.EXTRACTING_CONTENT,
-            None,  # Clear any failure reason
-        )
-
-    try:
-        await execute_in_transaction(
-            _perform_rollback,
-            quiz_id,
-            isolation_level="REPEATABLE READ",
-            retries=3,
-        )
-        logger.info(
-            "auto_trigger_rollback_completed",
-            quiz_id=str(quiz_id),
-            new_status="extracting_content",
-        )
-    except Exception as rollback_error:
-        logger.error(
-            "auto_trigger_rollback_failed",
-            quiz_id=str(quiz_id),
-            rollback_error=str(rollback_error),
-            original_error=str(error),
-            exc_info=True,
-        )
-        # If rollback fails, the quiz might be in an inconsistent state
-        # Log this as a critical error for manual intervention

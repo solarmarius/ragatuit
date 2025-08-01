@@ -162,6 +162,80 @@ async def _handle_orchestration_failure(
         # If we can't update the status, log as critical for manual intervention
 
 
+async def rollback_quiz_to_status(
+    quiz_id: UUID,
+    target_status: "QuizStatus",
+    error: Exception,
+    operation_context: str = "auto_trigger",
+    correlation_id: str | None = None,
+) -> None:
+    """
+    Generic utility to rollback quiz to a specific status after a failure.
+
+    This function provides a reusable way to handle rollback scenarios across
+    different orchestration workflows, maintaining consistent logging and
+    error handling patterns.
+
+    Args:
+        quiz_id: UUID of the quiz to rollback
+        target_status: The status to rollback to
+        error: The exception that caused the rollback need
+        operation_context: Context of the operation for logging (e.g., "auto_trigger")
+        correlation_id: Optional correlation ID for tracking
+    """
+    correlation_id = correlation_id or str(uuid.uuid4())
+
+    logger.warning(
+        "quiz_rollback_initiated",
+        quiz_id=str(quiz_id),
+        target_status=target_status.value,
+        operation_context=operation_context,
+        correlation_id=correlation_id,
+        error_type=type(error).__name__,
+        error_message=str(error),
+    )
+
+    async def _perform_rollback(session: Any, quiz_id: UUID) -> None:
+        """Execute the status rollback within a transaction."""
+        from ..service import update_quiz_status
+
+        # Reset to target status and clear any failure reason
+        await update_quiz_status(
+            session,
+            quiz_id,
+            target_status,
+            None,  # Clear any failure reason
+        )
+
+    try:
+        await execute_in_transaction(
+            _perform_rollback,
+            quiz_id,
+            isolation_level="REPEATABLE READ",
+            retries=3,
+        )
+        logger.info(
+            "quiz_rollback_completed",
+            quiz_id=str(quiz_id),
+            target_status=target_status.value,
+            operation_context=operation_context,
+            correlation_id=correlation_id,
+        )
+    except Exception as rollback_error:
+        logger.error(
+            "quiz_rollback_failed",
+            quiz_id=str(quiz_id),
+            target_status=target_status.value,
+            operation_context=operation_context,
+            correlation_id=correlation_id,
+            rollback_error=str(rollback_error),
+            original_error=str(error),
+            exc_info=True,
+        )
+        # If rollback fails, the quiz might be in an inconsistent state
+        # Log this as a critical error for manual intervention
+
+
 def timeout_operation(
     timeout_seconds: int,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
