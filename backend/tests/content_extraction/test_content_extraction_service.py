@@ -5,6 +5,13 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+from tests.common_mocks import mock_time
+from tests.test_data import (
+    DEFAULT_EXTRACTED_CONTENT,
+    DEFAULT_FILE_CONTENT,
+    DEFAULT_PAGE_CONTENT,
+)
+
 
 @pytest.mark.asyncio
 async def test_process_content_success():
@@ -12,17 +19,18 @@ async def test_process_content_success():
     from src.content_extraction.models import ProcessedContent, RawContent
     from src.content_extraction.service import process_content
 
+    # Use centralized test data
     raw_content = RawContent(
-        content="<p>Test HTML content</p>",
+        content=DEFAULT_PAGE_CONTENT["body"],
         content_type="html",
-        title="Test Page",
+        title=DEFAULT_PAGE_CONTENT["title"],
         metadata={"source": "canvas"},
     )
 
     expected_processed = ProcessedContent(
-        title="Test Page",
-        content="Test HTML content",
-        word_count=3,
+        title=DEFAULT_PAGE_CONTENT["title"],
+        content="This is comprehensive test page content about programming concepts.",
+        word_count=9,
         content_type="text",
         processing_metadata={"original_type": "html"},
     )
@@ -104,16 +112,27 @@ async def test_process_content_batch_success():
     from src.content_extraction.models import ProcessedContent, RawContent
     from src.content_extraction.service import process_content_batch
 
+    # Use more realistic content based on centralized data
     raw_contents = [
-        RawContent("Content 1", "html", "Page 1"),
-        RawContent("Content 2", "text", "Page 2"),
-        RawContent("Content 3", "html", "Page 3"),
+        RawContent(DEFAULT_PAGE_CONTENT["body"], "html", "Page 1"),
+        RawContent("Plain text content for testing", "text", "Page 2"),
+        RawContent(DEFAULT_PAGE_CONTENT["body"], "html", "Page 3"),
     ]
 
     processed_contents = [
-        ProcessedContent("Page 1", "Content 1", 2, "text"),
-        ProcessedContent("Page 2", "Content 2", 2, "text"),
-        ProcessedContent("Page 3", "Content 3", 2, "text"),
+        ProcessedContent(
+            "Page 1",
+            "This is comprehensive test page content about programming concepts.",
+            9,
+            "text",
+        ),
+        ProcessedContent("Page 2", "Plain text content for testing", 5, "text"),
+        ProcessedContent(
+            "Page 3",
+            "This is comprehensive test page content about programming concepts.",
+            9,
+            "text",
+        ),
     ]
 
     # Mock get_processor function
@@ -183,17 +202,13 @@ async def test_process_content_batch_timing():
     processor_func = Mock(return_value=processed_content)
     get_processor = Mock(return_value=processor_func)
 
-    # Mock time.time to control timing
-    # We need to provide enough values since logging also calls time.time()
-    with patch("src.content_extraction.service.time.time") as mock_time:
-        # Return the same start time multiple times, then end time
-        mock_time.side_effect = [1000.0] * 10 + [1002.5] * 10  # 2.5 second difference
-
+    # Use centralized time mocking with fixed time for simplicity
+    with mock_time(fixed_time=1000.0) as mock_time_func:
         result = await process_content_batch(raw_contents, get_processor)
 
     assert len(result) == 1
-    # Verify time.time was called at least for start and end
-    assert mock_time.call_count >= 2
+    # Verify time.time was called multiple times (for logging and timing)
+    assert mock_time_func.time.call_count >= 2
 
 
 def test_create_processor_selector_html():

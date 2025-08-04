@@ -3,8 +3,17 @@
 import uuid
 from unittest.mock import MagicMock, patch
 
-import httpx
 import pytest
+
+from tests.common_mocks import mock_canvas_api
+from tests.test_data import (
+    DEFAULT_CANVAS_QUIZ_RESPONSE,
+    DEFAULT_FILE_CONTENT,
+    DEFAULT_FILE_INFO,
+    DEFAULT_MODULE_ITEMS,
+    DEFAULT_PAGE_CONTENT,
+    SAMPLE_QUESTIONS_BATCH,
+)
 
 
 @pytest.mark.asyncio
@@ -12,24 +21,11 @@ async def test_fetch_canvas_module_items_success():
     """Test successful module items fetch."""
     from src.canvas.service import fetch_canvas_module_items
 
-    mock_response_data = [
-        {"id": 123, "title": "Test Item 1", "type": "Page", "url": "test-page-1"},
-        {"id": 124, "title": "Test Item 2", "type": "File", "url": "test-file-1"},
-    ]
-
-    with patch("httpx.AsyncClient") as mock_client:
-        mock_response = MagicMock()
-        mock_response.json.return_value = mock_response_data
-        mock_response.raise_for_status.return_value = None
-
-        mock_client.return_value.__aenter__.return_value.get.return_value = (
-            mock_response
-        )
-
+    with mock_canvas_api(module_items=DEFAULT_MODULE_ITEMS) as _:
         result = await fetch_canvas_module_items("test_token", 456, 789)
 
-    assert result == mock_response_data
-    assert len(result) == 2
+    assert result == DEFAULT_MODULE_ITEMS
+    assert len(result) == 3
     assert result[0]["title"] == "Test Item 1"
 
 
@@ -63,15 +59,7 @@ async def test_fetch_canvas_module_items_404_returns_empty():
     """Test that 404 errors return empty list."""
     from src.canvas.service import fetch_canvas_module_items
 
-    with patch("httpx.AsyncClient") as mock_client:
-        mock_response = MagicMock()
-        mock_response.status_code = 404
-        error = httpx.HTTPStatusError(
-            "Not found", request=MagicMock(), response=mock_response
-        )
-
-        mock_client.return_value.__aenter__.return_value.get.side_effect = error
-
+    with mock_canvas_api(should_fail=True, status_code=404) as _:
         result = await fetch_canvas_module_items("test_token", 456, 789)
 
     assert result == []
@@ -83,15 +71,7 @@ async def test_fetch_canvas_module_items_http_error_raises_exception():
     from src.canvas.service import fetch_canvas_module_items
     from src.exceptions import ExternalServiceError
 
-    with patch("httpx.AsyncClient") as mock_client:
-        mock_response = MagicMock()
-        mock_response.status_code = 500
-        error = httpx.HTTPStatusError(
-            "Server error", request=MagicMock(), response=mock_response
-        )
-
-        mock_client.return_value.__aenter__.return_value.get.side_effect = error
-
+    with mock_canvas_api(should_fail=True, status_code=500) as _:
         with pytest.raises(ExternalServiceError) as exc_info:
             await fetch_canvas_module_items("test_token", 456, 789)
 
@@ -103,27 +83,12 @@ async def test_fetch_canvas_page_content_success():
     """Test successful page content fetch."""
     from src.canvas.service import fetch_canvas_page_content
 
-    mock_page_data = {
-        "title": "Test Page",
-        "body": "<p>This is test page content</p>",
-        "url": "test-page",
-        "created_at": "2024-01-01T00:00:00Z",
-    }
-
-    with patch("httpx.AsyncClient") as mock_client:
-        mock_response = MagicMock()
-        mock_response.json.return_value = mock_page_data
-        mock_response.raise_for_status.return_value = None
-
-        mock_client.return_value.__aenter__.return_value.get.return_value = (
-            mock_response
-        )
-
+    with mock_canvas_api(page_content=DEFAULT_PAGE_CONTENT) as _:
         result = await fetch_canvas_page_content("test_token", 456, "test-page")
 
-    assert result == mock_page_data
+    assert result == DEFAULT_PAGE_CONTENT
     assert result["title"] == "Test Page"
-    assert "test page content" in result["body"]
+    assert "comprehensive test page content" in result["body"]
 
 
 @pytest.mark.asyncio
@@ -131,15 +96,7 @@ async def test_fetch_canvas_page_content_404_returns_empty():
     """Test that 404 errors return empty dict."""
     from src.canvas.service import fetch_canvas_page_content
 
-    with patch("httpx.AsyncClient") as mock_client:
-        mock_response = MagicMock()
-        mock_response.status_code = 404
-        error = httpx.HTTPStatusError(
-            "Not found", request=MagicMock(), response=mock_response
-        )
-
-        mock_client.return_value.__aenter__.return_value.get.side_effect = error
-
+    with mock_canvas_api(should_fail=True, status_code=404) as _:
         result = await fetch_canvas_page_content("test_token", 456, "missing-page")
 
     assert result == {}
@@ -150,28 +107,11 @@ async def test_fetch_canvas_file_info_success():
     """Test successful file info fetch."""
     from src.canvas.service import fetch_canvas_file_info
 
-    mock_file_data = {
-        "id": 789,
-        "display_name": "test_file.pdf",
-        "filename": "test_file.pdf",
-        "content-type": "application/pdf",
-        "size": 12345,
-        "url": "https://canvas.example.com/files/789/download",
-    }
-
-    with patch("httpx.AsyncClient") as mock_client:
-        mock_response = MagicMock()
-        mock_response.json.return_value = mock_file_data
-        mock_response.raise_for_status.return_value = None
-
-        mock_client.return_value.__aenter__.return_value.get.return_value = (
-            mock_response
-        )
-
+    with mock_canvas_api(file_info=DEFAULT_FILE_INFO) as _:
         result = await fetch_canvas_file_info("test_token", 456, 789)
 
-    assert result == mock_file_data
-    assert result["display_name"] == "test_file.pdf"
+    assert result == DEFAULT_FILE_INFO
+    assert result["display_name"] == "test_document.pdf"
     assert result["size"] == 12345
 
 
@@ -180,20 +120,10 @@ async def test_download_canvas_file_content_success():
     """Test successful file content download."""
     from src.canvas.service import download_canvas_file_content
 
-    mock_content = b"This is test file content"
-
-    with patch("httpx.AsyncClient") as mock_client:
-        mock_response = MagicMock()
-        mock_response.content = mock_content
-        mock_response.raise_for_status.return_value = None
-
-        mock_client.return_value.__aenter__.return_value.get.return_value = (
-            mock_response
-        )
-
+    with mock_canvas_api(file_content=DEFAULT_FILE_CONTENT) as _:
         result = await download_canvas_file_content("https://example.com/file.pdf")
 
-    assert result == mock_content
+    assert result == DEFAULT_FILE_CONTENT
 
 
 @pytest.mark.asyncio
@@ -227,25 +157,10 @@ async def test_create_canvas_quiz_success():
     """Test successful quiz creation."""
     from src.canvas.service import create_canvas_quiz
 
-    mock_quiz_response = {
-        "id": "quiz_123",
-        "title": "Test Quiz",
-        "points_possible": 100,
-        "assignment_id": "assignment_456",
-    }
-
-    with patch("httpx.AsyncClient") as mock_client:
-        mock_response = MagicMock()
-        mock_response.json.return_value = mock_quiz_response
-        mock_response.raise_for_status.return_value = None
-
-        mock_client.return_value.__aenter__.return_value.post.return_value = (
-            mock_response
-        )
-
+    with mock_canvas_api(quiz_response=DEFAULT_CANVAS_QUIZ_RESPONSE) as _:
         result = await create_canvas_quiz("test_token", 123, "Test Quiz", 100)
 
-    assert result == mock_quiz_response
+    assert result == DEFAULT_CANVAS_QUIZ_RESPONSE
     assert result["title"] == "Test Quiz"
     assert result["points_possible"] == 100
 
@@ -291,38 +206,21 @@ async def test_create_canvas_quiz_items_success():
     """Test successful quiz items creation."""
     from src.canvas.service import create_canvas_quiz_items
 
+    # Use centralized sample questions
     mock_questions = [
         {
             "id": "q1",
-            "question_text": "What is 2+2?",
-            "option_a": "3",
-            "option_b": "4",
-            "option_c": "5",
-            "option_d": "6",
-            "correct_answer": "B",
+            **SAMPLE_QUESTIONS_BATCH[0],
             "question_type": "multiple_choice",
         },
         {
             "id": "q2",
-            "question_text": "What is 3+3?",
-            "option_a": "6",
-            "option_b": "7",
-            "option_c": "8",
-            "option_d": "9",
-            "correct_answer": "A",
+            **SAMPLE_QUESTIONS_BATCH[1],
             "question_type": "multiple_choice",
         },
     ]
 
-    with patch("httpx.AsyncClient") as mock_client:
-        mock_response = MagicMock()
-        mock_response.json.return_value = {"id": "item_123"}
-        mock_response.raise_for_status.return_value = None
-
-        mock_client.return_value.__aenter__.return_value.post.return_value = (
-            mock_response
-        )
-
+    with mock_canvas_api() as _:
         result = await create_canvas_quiz_items(
             "test_token", 123, "quiz_456", mock_questions
         )
