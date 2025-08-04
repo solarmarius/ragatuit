@@ -6,6 +6,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from tests.test_data import (
+    DEFAULT_FILL_IN_BLANK_DATA,
+    DEFAULT_MCQ_DATA,
+    SAMPLE_QUESTIONS_BATCH,
+)
+
 
 @pytest.mark.asyncio
 async def test_save_questions_success(async_session):
@@ -21,22 +27,14 @@ async def test_save_questions_success(async_session):
 
     questions_data = [
         {
-            "question_text": "What is 2+2?",
-            "option_a": "3",
-            "option_b": "4",
-            "option_c": "5",
-            "option_d": "6",
+            **SAMPLE_QUESTIONS_BATCH[0],
             "correct_answer": "B",
-            "explanation": "Basic arithmetic",
+            "explanation": SAMPLE_QUESTIONS_BATCH[0]["explanation"],
         },
         {
-            "question_text": "What is 3+3?",
-            "option_a": "6",
-            "option_b": "7",
-            "option_c": "8",
-            "option_d": "9",
-            "correct_answer": "A",
-            "explanation": "Simple addition",
+            **SAMPLE_QUESTIONS_BATCH[1],
+            "correct_answer": "C",
+            "explanation": SAMPLE_QUESTIONS_BATCH[1]["explanation"],
         },
     ]
 
@@ -185,14 +183,17 @@ async def test_get_questions_by_quiz_basic(async_session):
             id=uuid.uuid4(),
             quiz_id=quiz_id,
             question_type=QuestionType.MULTIPLE_CHOICE,
-            question_data={"question_text": "Test 1"},
+            question_data={
+                **DEFAULT_MCQ_DATA,
+                "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+            },
             is_approved=False,
         ),
         Question(
             id=uuid.uuid4(),
             quiz_id=quiz_id,
             question_type=QuestionType.FILL_IN_BLANK,
-            question_data={"question_text": "Test 2"},
+            question_data={**DEFAULT_FILL_IN_BLANK_DATA, "question_text": "Test 2"},
             is_approved=True,
         ),
     ]
@@ -205,7 +206,10 @@ async def test_get_questions_by_quiz_basic(async_session):
     result = await get_questions_by_quiz(async_session, quiz_id)
 
     assert len(result) == 2
-    assert result[0].question_data["question_text"] == "Test 1"
+    assert (
+        result[0].question_data["question_text"]
+        == SAMPLE_QUESTIONS_BATCH[0]["question_text"]
+    )
     assert result[1].question_data["question_text"] == "Test 2"
 
 

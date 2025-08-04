@@ -5,6 +5,14 @@ from uuid import UUID, uuid4
 
 import pytest
 
+from tests.common_mocks import mock_openai_api
+from tests.test_data import (
+    DEFAULT_MCQ_DATA,
+    DEFAULT_QUIZ_CONFIG,
+    SAMPLE_QUESTIONS_BATCH,
+    get_sample_module_content,
+)
+
 
 @pytest.fixture
 def generation_service():
@@ -93,16 +101,17 @@ def mock_quiz_with_tone():
 
 @pytest.fixture
 def extracted_content():
-    """Create mock extracted content."""
+    """Create mock extracted content using centralized data."""
+    module_content = get_sample_module_content()
     return {
-        "module_1": "This is content from module 1 about introduction topics.",
-        "module_2": "This is content from module 2 about advanced topics.",
+        "module_1": module_content["module_1"][0]["content"],
+        "module_2": module_content["module_2"][0]["content"],
     }
 
 
 @pytest.fixture
 def mock_questions():
-    """Create mock generated questions."""
+    """Create mock generated questions using centralized data."""
     from src.question.types import Question, QuestionType
 
     return [
@@ -110,12 +119,8 @@ def mock_questions():
             quiz_id=UUID("12345678-1234-5678-1234-567812345678"),
             question_type=QuestionType.MULTIPLE_CHOICE,
             question_data={
+                **DEFAULT_MCQ_DATA,
                 "question_text": "What is the main topic?",
-                "option_a": "Option A",
-                "option_b": "Option B",
-                "option_c": "Option C",
-                "option_d": "Option D",
-                "correct_answer": "A",
             },
             is_approved=False,
         ),
@@ -123,11 +128,8 @@ def mock_questions():
             quiz_id=UUID("12345678-1234-5678-1234-567812345678"),
             question_type=QuestionType.MULTIPLE_CHOICE,
             question_data={
+                **DEFAULT_MCQ_DATA,
                 "question_text": "What is advanced concept?",
-                "option_a": "Advanced A",
-                "option_b": "Advanced B",
-                "option_c": "Advanced C",
-                "option_d": "Advanced D",
                 "correct_answer": "B",
             },
             is_approved=False,

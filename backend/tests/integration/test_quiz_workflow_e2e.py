@@ -6,7 +6,20 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from sqlmodel import Session
 
+from tests.common_mocks import (
+    mock_content_extraction,
+    mock_database_operations,
+    mock_openai_api,
+)
 from tests.conftest import create_user_in_session
+from tests.test_data import (
+    DEFAULT_EXTRACTED_CONTENT,
+    DEFAULT_SELECTED_MODULES,
+    SAMPLE_QUESTIONS_BATCH,
+    get_unique_course_data,
+    get_unique_quiz_config,
+    get_unique_user_data,
+)
 
 
 @pytest.mark.asyncio
@@ -29,21 +42,25 @@ async def test_complete_canvas_workflow_integration(session: Session, caplog):
     from src.quiz.service import create_quiz
 
     # === 1. User Setup ===
+    user_data_config = get_unique_user_data()
     with patch(
         "src.auth.service.encrypt_token", side_effect=lambda t: f"encrypted_{t}"
     ):
         user_data = UserCreate(
-            canvas_id=12345,
-            name="Integration Test User",
-            access_token="canvas_access_token",
-            refresh_token="canvas_refresh_token",
+            canvas_id=user_data_config["canvas_id"],
+            name=user_data_config["name"],
+            access_token=user_data_config["access_token"],
+            refresh_token=user_data_config["refresh_token"],
         )
         user = create_user(session, user_data)
 
     # === 2. Quiz Creation ===
+    course_data = get_unique_course_data()
+    quiz_config = get_unique_quiz_config()
+
     quiz_create = QuizCreate(
-        canvas_course_id=67890,
-        canvas_course_name="Integration Test Course",
+        canvas_course_id=course_data["id"],
+        canvas_course_name=course_data["name"],
         selected_modules={
             "101": ModuleSelection(
                 name="Test Module 1",
@@ -66,9 +83,9 @@ async def test_complete_canvas_workflow_integration(session: Session, caplog):
                 ],
             ),
         },
-        title="E2E Integration Test Quiz",
-        llm_model="gpt-4",
-        llm_temperature=0.7,
+        title=quiz_config["title"],
+        llm_model=quiz_config["llm_model"],
+        llm_temperature=quiz_config["llm_temperature"],
         language=QuizLanguage.ENGLISH,
     )
 
@@ -112,7 +129,7 @@ async def test_complete_canvas_workflow_integration(session: Session, caplog):
         cleaned_modules,
     ) = await _execute_content_extraction_workflow(
         quiz.id,
-        67890,
+        course_data["id"],
         "canvas_token",
         selected_modules,
         mock_content_extractor,
@@ -127,11 +144,14 @@ async def test_complete_canvas_workflow_integration(session: Session, caplog):
     mock_generation_service.generate_questions_for_quiz_with_batch_tracking.return_value = (
         {
             "101": [
-                "Generated MC question 1",
-                "Generated MC question 2",
-                "Generated MC question 3",
+                SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+                SAMPLE_QUESTIONS_BATCH[0]["question_text"],
             ],
-            "102": ["Generated TF question 1", "Generated TF question 2"],
+            "102": [
+                SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+                SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+            ],
         },
         {
             "successful_batches": ["101_multiple_choice", "102_true_false"],
@@ -184,20 +204,32 @@ async def test_complete_canvas_workflow_integration(session: Session, caplog):
     ]
 
     export_data = {
-        "course_id": 67890,
-        "title": "E2E Test Quiz",
+        "course_id": course_data["id"],
+        "title": quiz_config["title"],
         "questions": [
-            {"id": "q1", "question_text": "What is ML?", "approved": True},
-            {"id": "q2", "question_text": "Define AI", "approved": True},
-            {"id": "q3", "question_text": "Neural networks?", "approved": True},
+            {
+                "id": "q1",
+                "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                "approved": True,
+            },
+            {
+                "id": "q2",
+                "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+                "approved": True,
+            },
+            {
+                "id": "q3",
+                "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                "approved": True,
+            },
             {
                 "id": "q4",
-                "question_text": "True or false: AI is complex",
+                "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
                 "approved": True,
             },
             {
                 "id": "q5",
-                "question_text": "True or false: ML uses data",
+                "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
                 "approved": True,
             },
         ],
@@ -226,7 +258,9 @@ async def test_complete_canvas_workflow_integration(session: Session, caplog):
     assert export_result["exported_questions"] == 5
 
     # Cross-workflow integration
-    mock_content_extractor.assert_called_once_with("canvas_token", 67890, [101, 102])
+    mock_content_extractor.assert_called_once_with(
+        "canvas_token", course_data["id"], [101, 102]
+    )
     mock_generation_service.generate_questions_for_quiz_with_batch_tracking.assert_called_once()
     mock_quiz_creator.assert_called_once()
     mock_question_exporter.assert_called_once()
@@ -254,11 +288,17 @@ async def test_manual_content_workflow_integration(session: Session, caplog):
     from src.quiz.service import create_quiz
 
     # === Setup ===
-    user = create_user_in_session(session)
+    user_data = get_unique_user_data()
+    user = create_user_in_session(
+        session, canvas_id=user_data["canvas_id"], name=user_data["name"]
+    )
+
+    course_data = get_unique_course_data()
+    quiz_config = get_unique_quiz_config()
 
     quiz_create = QuizCreate(
-        canvas_course_id=11111,
-        canvas_course_name="Manual Test Course",
+        canvas_course_id=course_data["id"],
+        canvas_course_name=course_data["name"],
         selected_modules={
             "manual_1": ModuleSelection(
                 name="Manual Module",
@@ -275,9 +315,9 @@ async def test_manual_content_workflow_integration(session: Session, caplog):
                 ],
             )
         },
-        title="Manual Content Quiz",
-        llm_model="gpt-4",
-        llm_temperature=0.8,
+        title=quiz_config["title"],
+        llm_model=quiz_config["llm_model"],
+        llm_temperature=quiz_config["llm_temperature"],
         language=QuizLanguage.ENGLISH,
     )
 
@@ -310,7 +350,7 @@ async def test_manual_content_workflow_integration(session: Session, caplog):
         cleaned_modules,
     ) = await _execute_content_extraction_workflow(
         quiz.id,
-        11111,
+        course_data["id"],
         "manual_token",
         selected_modules,
         mock_content_extractor,
@@ -353,11 +393,17 @@ async def test_mixed_content_workflow_integration(session: Session, caplog):
     from src.quiz.service import create_quiz
 
     # === Setup ===
-    user = create_user_in_session(session)
+    user_data = get_unique_user_data()
+    user = create_user_in_session(
+        session, canvas_id=user_data["canvas_id"], name=user_data["name"]
+    )
+
+    course_data = get_unique_course_data()
+    quiz_config = get_unique_quiz_config()
 
     quiz_create = QuizCreate(
-        canvas_course_id=22222,
-        canvas_course_name="Mixed Content Course",
+        canvas_course_id=course_data["id"],
+        canvas_course_name=course_data["name"],
         selected_modules={
             "101": ModuleSelection(
                 name="Canvas Module",
@@ -384,9 +430,9 @@ async def test_mixed_content_workflow_integration(session: Session, caplog):
                 ],
             ),
         },
-        title="Mixed Content Quiz",
-        llm_model="gpt-4",
-        llm_temperature=0.7,
+        title=quiz_config["title"],
+        llm_model=quiz_config["llm_model"],
+        llm_temperature=quiz_config["llm_temperature"],
         language=QuizLanguage.ENGLISH,
     )
 
@@ -428,7 +474,7 @@ async def test_mixed_content_workflow_integration(session: Session, caplog):
         cleaned_modules,
     ) = await _execute_content_extraction_workflow(
         quiz.id,
-        22222,
+        course_data["id"],
         "mixed_token",
         selected_modules,
         mock_content_extractor,
@@ -437,7 +483,9 @@ async def test_mixed_content_workflow_integration(session: Session, caplog):
 
     # === Assertions ===
     # Should call Canvas extractor only for Canvas module
-    mock_content_extractor.assert_called_once_with("mixed_token", 22222, [101])
+    mock_content_extractor.assert_called_once_with(
+        "mixed_token", course_data["id"], [101]
+    )
 
     # Should process both content types
     assert final_status == "completed"
@@ -476,11 +524,17 @@ async def test_error_propagation_integration(session: Session, caplog):
     from src.quiz.service import create_quiz
 
     # === Setup ===
-    user = create_user_in_session(session)
+    user_data = get_unique_user_data()
+    user = create_user_in_session(
+        session, canvas_id=user_data["canvas_id"], name=user_data["name"]
+    )
+
+    course_data = get_unique_course_data()
+    quiz_config = get_unique_quiz_config()
 
     quiz_create = QuizCreate(
-        canvas_course_id=33333,
-        canvas_course_name="Error Test Course",
+        canvas_course_id=course_data["id"],
+        canvas_course_name=course_data["name"],
         selected_modules={
             "201": ModuleSelection(
                 name="Error Module",
@@ -493,9 +547,9 @@ async def test_error_propagation_integration(session: Session, caplog):
                 ],
             )
         },
-        title="Error Propagation Test",
-        llm_model="gpt-4",
-        llm_temperature=0.7,
+        title=quiz_config["title"],
+        llm_model=quiz_config["llm_model"],
+        llm_temperature=quiz_config["llm_temperature"],
         language=QuizLanguage.ENGLISH,
     )
 
@@ -518,7 +572,7 @@ async def test_error_propagation_integration(session: Session, caplog):
         cleaned_modules,
     ) = await _execute_content_extraction_workflow(
         quiz.id,
-        33333,
+        course_data["id"],
         "error_token",
         selected_modules,
         mock_content_extractor,
@@ -559,11 +613,12 @@ async def test_authentication_token_integration(session: Session):
     from src.quiz.service import create_quiz
 
     # === OAuth Token Setup ===
+    user_config = get_unique_user_data()
     user_data = UserCreate(
-        canvas_id=54321,
-        name="Auth Test User",
-        access_token="encrypted_canvas_token",
-        refresh_token="encrypted_refresh_token",
+        canvas_id=user_config["canvas_id"],
+        name=user_config["name"],
+        access_token=user_config["access_token"],
+        refresh_token=user_config["refresh_token"],
     )
 
     with patch("src.auth.service.encrypt_token", side_effect=lambda t: f"enc_{t}"):
@@ -575,12 +630,15 @@ async def test_authentication_token_integration(session: Session):
 
         decrypted_token = get_decrypted_access_token(user)
         assert decrypted_token == "decrypted_canvas_token"
-        mock_decrypt.assert_called_once_with("enc_encrypted_canvas_token")
+        mock_decrypt.assert_called_once_with(f"enc_{user_config['access_token']}")
 
     # === Canvas API Integration with Token ===
+    course_data = get_unique_course_data()
+    quiz_config = get_unique_quiz_config()
+
     quiz_create = QuizCreate(
-        canvas_course_id=44444,
-        canvas_course_name="Auth Test Course",
+        canvas_course_id=course_data["id"],
+        canvas_course_name=course_data["name"],
         selected_modules={
             "301": ModuleSelection(
                 name="Protected Module",
@@ -593,9 +651,9 @@ async def test_authentication_token_integration(session: Session):
                 ],
             )
         },
-        title="Authentication Test Quiz",
-        llm_model="gpt-4",
-        llm_temperature=0.7,
+        title=quiz_config["title"],
+        llm_model=quiz_config["llm_model"],
+        llm_temperature=quiz_config["llm_temperature"],
         language=QuizLanguage.ENGLISH,
     )
 
@@ -631,7 +689,7 @@ async def test_authentication_token_integration(session: Session):
         cleaned_modules,
     ) = await _execute_content_extraction_workflow(
         quiz.id,
-        44444,
+        course_data["id"],
         canvas_token,
         selected_modules,
         mock_content_extractor,
@@ -640,7 +698,9 @@ async def test_authentication_token_integration(session: Session):
 
     # === Assertions ===
     # Canvas API should be called with the provided token
-    mock_content_extractor.assert_called_once_with(canvas_token, 44444, [301])
+    mock_content_extractor.assert_called_once_with(
+        canvas_token, course_data["id"], [301]
+    )
 
     # Workflow should complete with authenticated access
     assert final_status == "completed"
@@ -662,11 +722,17 @@ async def test_export_rollback_integration(session: Session, caplog):
     from src.quiz.service import create_quiz
 
     # === Setup ===
-    user = create_user_in_session(session)
+    user_data = get_unique_user_data()
+    user = create_user_in_session(
+        session, canvas_id=user_data["canvas_id"], name=user_data["name"]
+    )
+
+    course_data = get_unique_course_data()
+    quiz_config = get_unique_quiz_config()
 
     quiz_create = QuizCreate(
-        canvas_course_id=55555,
-        canvas_course_name="Rollback Test Course",
+        canvas_course_id=course_data["id"],
+        canvas_course_name=course_data["name"],
         selected_modules={
             "401": ModuleSelection(
                 name="Rollback Module",
@@ -679,9 +745,9 @@ async def test_export_rollback_integration(session: Session, caplog):
                 ],
             )
         },
-        title="Rollback Test Quiz",
-        llm_model="gpt-4",
-        llm_temperature=0.7,
+        title=quiz_config["title"],
+        llm_model=quiz_config["llm_model"],
+        llm_temperature=quiz_config["llm_temperature"],
         language=QuizLanguage.ENGLISH,
     )
 
@@ -705,11 +771,19 @@ async def test_export_rollback_integration(session: Session, caplog):
     ]
 
     export_data = {
-        "course_id": 55555,
-        "title": "Failed Export Quiz",
+        "course_id": course_data["id"],
+        "title": quiz_config["title"],
         "questions": [
-            {"id": "q1", "question_text": "Question 1?", "approved": True},
-            {"id": "q2", "question_text": "Question 2?", "approved": True},
+            {
+                "id": "q1",
+                "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                "approved": True,
+            },
+            {
+                "id": "q2",
+                "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+                "approved": True,
+            },
         ],
     }
 
@@ -748,10 +822,16 @@ async def test_language_workflow_integration(session: Session, caplog):
     from src.quiz.service import create_quiz
 
     # === Setup Norwegian Quiz ===
-    user = create_user_in_session(session)
+    user_data = get_unique_user_data()
+    user = create_user_in_session(
+        session, canvas_id=user_data["canvas_id"], name=user_data["name"]
+    )
+
+    course_data = get_unique_course_data()
+    quiz_config = get_unique_quiz_config()
 
     quiz_create = QuizCreate(
-        canvas_course_id=99999,
+        canvas_course_id=course_data["id"],
         canvas_course_name="Norsk Kurs",
         selected_modules={
             "601": ModuleSelection(
@@ -765,9 +845,9 @@ async def test_language_workflow_integration(session: Session, caplog):
                 ],
             )
         },
-        title="Norsk Quiz",
-        llm_model="gpt-4",
-        llm_temperature=0.7,
+        title=quiz_config["title"],
+        llm_model=quiz_config["llm_model"],
+        llm_temperature=quiz_config["llm_temperature"],
         language=QuizLanguage.NORWEGIAN,
     )
 
@@ -780,7 +860,12 @@ async def test_language_workflow_integration(session: Session, caplog):
         AsyncMock()
     )
     mock_generation_service.generate_questions_for_quiz_with_batch_tracking.return_value = (
-        {"601": ["Norsk spørsmål 1", "Norsk spørsmål 2"]},
+        {
+            "601": [
+                SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+            ]
+        },
         {"successful_batches": ["601_multiple_choice"], "failed_batches": []},
     )
 

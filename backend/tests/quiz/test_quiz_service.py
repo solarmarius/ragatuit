@@ -22,7 +22,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from sqlmodel import Session
 
+from tests.conftest import create_user_in_async_session
 from tests.factories import QuizFactory, UserFactory
+from tests.test_data import (
+    DEFAULT_EXTRACTED_CONTENT,
+    DEFAULT_QUIZ_CONFIG,
+    DEFAULT_SELECTED_MODULES,
+    get_unique_quiz_config,
+    get_unique_user_data,
+)
 
 
 def test_create_quiz_module_id_conversion(session: Session):
@@ -64,28 +72,20 @@ def test_create_quiz_module_id_conversion(session: Session):
 @pytest.mark.asyncio
 async def test_get_quiz_for_update(async_session):
     """Test getting quiz with row lock for update."""
-    from src.auth.models import User
     from src.quiz.models import Quiz
     from src.quiz.service import get_quiz_for_update
 
-    # Create a user first
-    user = User(
-        canvas_id=123,
-        name="Test User",
-        access_token="test_access_token",
-        refresh_token="test_refresh_token",
-    )
-    async_session.add(user)
-    await async_session.commit()
-    await async_session.refresh(user)
+    # Create a user using centralized helper
+    user = await create_user_in_async_session(async_session)
+
+    # Use centralized quiz config
+    quiz_config = get_unique_quiz_config()
 
     # Create a quiz in the session first
     quiz = Quiz(
         owner_id=user.id,
-        canvas_course_id=123,
-        canvas_course_name="Test Course",
-        selected_modules={"1": {"name": "Module 1", "question_batches": []}},
-        title="Test Quiz",
+        **quiz_config,
+        selected_modules=DEFAULT_SELECTED_MODULES,
     )
     async_session.add(quiz)
     await async_session.commit()
@@ -113,30 +113,20 @@ async def test_get_quiz_for_update_nonexistent(async_session):
 @pytest.mark.asyncio
 async def test_get_content_from_quiz(async_session):
     """Test getting extracted content from quiz."""
-    from src.auth.models import User
     from src.quiz.models import Quiz
     from src.quiz.service import get_content_from_quiz
 
-    content_data = {"modules": [{"id": "1", "content": "Test content"}]}
+    # Create a user using centralized helper
+    user = await create_user_in_async_session(async_session, canvas_id=124)
 
-    # Create a user first
-    user = User(
-        canvas_id=124,
-        name="Test User",
-        access_token="test_access_token",
-        refresh_token="test_refresh_token",
-    )
-    async_session.add(user)
-    await async_session.commit()
-    await async_session.refresh(user)
+    # Use centralized data
+    quiz_config = get_unique_quiz_config()
 
     quiz = Quiz(
         owner_id=user.id,
-        canvas_course_id=123,
-        canvas_course_name="Test Course",
-        selected_modules={"1": {"name": "Module 1", "question_batches": []}},
-        title="Test Quiz",
-        extracted_content=content_data,
+        **quiz_config,
+        selected_modules=DEFAULT_SELECTED_MODULES,
+        extracted_content=DEFAULT_EXTRACTED_CONTENT,
     )
     async_session.add(quiz)
     await async_session.commit()
@@ -144,34 +134,26 @@ async def test_get_content_from_quiz(async_session):
 
     content = await get_content_from_quiz(async_session, quiz.id)
 
-    assert content == content_data
+    assert content == DEFAULT_EXTRACTED_CONTENT
 
 
 @pytest.mark.asyncio
 async def test_get_question_counts(async_session):
     """Test getting question counts for a quiz."""
-    from src.auth.models import User
     from src.quiz.models import Quiz
     from src.quiz.service import get_question_counts
 
-    # Create a user first
-    user = User(
-        canvas_id=125,
-        name="Test User",
-        access_token="test_access_token",
-        refresh_token="test_refresh_token",
-    )
-    async_session.add(user)
-    await async_session.commit()
-    await async_session.refresh(user)
+    # Create a user using centralized helper
+    user = await create_user_in_async_session(async_session, canvas_id=125)
+
+    # Use centralized quiz config
+    quiz_config = get_unique_quiz_config()
 
     # Create quiz
     quiz = Quiz(
         owner_id=user.id,
-        canvas_course_id=123,
-        canvas_course_name="Test Course",
-        selected_modules={"1": {"name": "Module 1", "question_batches": []}},
-        title="Test Quiz",
+        **quiz_config,
+        selected_modules=DEFAULT_SELECTED_MODULES,
     )
     async_session.add(quiz)
     await async_session.commit()

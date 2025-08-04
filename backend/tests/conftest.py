@@ -26,6 +26,14 @@ from tests.database import (
     reset_test_database,
 )
 from tests.factories import QuestionFactory, QuizFactory, UserFactory
+from tests.test_data import (
+    DEFAULT_CANVAS_COURSE,
+    DEFAULT_CANVAS_MODULES,
+    DEFAULT_QUIZ_CONFIG,
+    DEFAULT_USER_DATA,
+    get_unique_quiz_config,
+    get_unique_user_data,
+)
 
 
 def pytest_configure(config: Any) -> None:
@@ -244,7 +252,10 @@ def multiple_questions(session: Session, quiz):
 def create_user_in_session(session: Session, **kwargs) -> User:
     """Helper to create a user properly in the given session."""
     UserFactory._meta.sqlalchemy_session = session
-    user = UserFactory.build(**kwargs)
+    # Use centralized defaults with overrides
+    user_data = get_unique_user_data()
+    user_data.update(kwargs)
+    user = UserFactory.build(**user_data)
     session.add(user)
     session.commit()
     session.refresh(user)
@@ -296,20 +307,15 @@ async def create_user_in_async_session(session, **kwargs) -> User:
 
     from src.auth.models import User
 
-    # Create user with defaults if not provided
-    user_data = {
-        "id": uuid.uuid4(),
-        "canvas_id": kwargs.get("canvas_id", 1000),
-        "name": kwargs.get("name", "Test User"),
-        "access_token": kwargs.get("access_token", "test_token"),
-        "refresh_token": kwargs.get("refresh_token", "test_refresh"),
-        "expires_at": kwargs.get(
-            "expires_at", datetime.now(timezone.utc) + timedelta(hours=1)
-        ),
-        "token_type": kwargs.get("token_type", "Bearer"),
-        "onboarding_completed": kwargs.get("onboarding_completed", False),
-        **kwargs,
-    }
+    # Use centralized defaults with overrides
+    user_data = get_unique_user_data()
+    user_data.update(
+        {
+            "id": uuid.uuid4(),
+            "expires_at": datetime.now(timezone.utc) + timedelta(hours=1),
+            **kwargs,
+        }
+    )
 
     user = User(**user_data)
     session.add(user)
@@ -327,7 +333,9 @@ async def create_quiz_in_async_session(session, owner: User = None, **kwargs):
     if owner is None:
         owner = await create_user_in_async_session(session)
 
-    # Create quiz with defaults if not provided
+    # Use centralized defaults with overrides
+    quiz_config = get_unique_quiz_config()
+
     # Handle question_count parameter for backward compatibility by converting to selected_modules
     if "selected_modules" not in kwargs:
         question_count = kwargs.get("question_count", 10)
@@ -350,26 +358,19 @@ async def create_quiz_in_async_session(session, owner: User = None, **kwargs):
     quiz_data = {
         "id": uuid.uuid4(),
         "owner_id": owner.id,
-        "canvas_course_id": kwargs.get("canvas_course_id", 100),
-        "canvas_course_name": kwargs.get("canvas_course_name", "Test Course"),
+        **quiz_config,
         "selected_modules": kwargs["selected_modules"],
-        "title": kwargs.get("title", "Test Quiz"),
         "question_count": question_count,
-        "llm_model": kwargs.get("llm_model", "o3"),
-        "llm_temperature": kwargs.get("llm_temperature", 1.0),
-        "status": kwargs.get("status", "created"),
-        "failure_reason": kwargs.get("failure_reason", None),
+        **kwargs,
     }
 
-    # Remove question_count from kwargs to avoid passing it to Quiz constructor
+    # Remove fields that shouldn't be passed to Quiz constructor
     filtered_kwargs = {
-        k: v
-        for k, v in kwargs.items()
-        if k not in ["question_count", "selected_modules"]
+        k: v for k, v in quiz_data.items() if k not in ["question_count"]
     }
-    quiz_data.update(filtered_kwargs)
 
-    quiz = Quiz(**quiz_data)
+    quiz = Quiz(**filtered_kwargs)
+    quiz.question_count = question_count  # Set after creation
     session.add(quiz)
     await session.flush()  # Use flush instead of commit to keep transaction open
     await session.refresh(quiz)
@@ -447,61 +448,23 @@ def auth_headers(user: User) -> dict[str, str]:
 
 @pytest.fixture
 def mock_canvas_api() -> Generator[MagicMock, None, None]:
-    """Mock Canvas API responses."""
-    mock = MagicMock()
+    """Mock Canvas API responses using centralized data."""
+    from tests.common_mocks import mock_canvas_api as _mock_canvas_api
 
-    # Default mock responses
-    mock.get_user_courses.return_value = [
-        {
-            "id": 123,
-            "name": "Test Course",
-            "course_code": "TEST101",
-            "enrollment_term_id": 1,
-            "workflow_state": "available",
-        }
-    ]
-
-    mock.get_course_modules.return_value = [
-        {
-            "id": 456,
-            "name": "Module 1",
-            "position": 1,
-            "workflow_state": "active",
-            "items_count": 5,
-        }
-    ]
-
-    mock.get_module_content.return_value = {
-        "content": "This is test module content...",
-        "content_length": 100,
-    }
-
-    mock.create_quiz.return_value = {
-        "id": "quiz_123",
-        "title": "Test Quiz",
-        "quiz_type": "assignment",
-    }
-
-    yield mock
+    with _mock_canvas_api(
+        courses=[DEFAULT_CANVAS_COURSE],
+        modules=DEFAULT_CANVAS_MODULES,
+    ) as mock:
+        yield mock
 
 
 @pytest.fixture
 def mock_openai_api() -> Generator[MagicMock, None, None]:
-    """Mock OpenAI API responses."""
-    mock = MagicMock()
+    """Mock OpenAI API responses using centralized utilities."""
+    from tests.common_mocks import mock_openai_api as _mock_openai_api
 
-    # Default mock response for question generation
-    mock.chat.completions.create.return_value = MagicMock(
-        choices=[
-            MagicMock(
-                message=MagicMock(
-                    content='{"questions": [{"question_text": "What is 2+2?", "options": [{"text": "4", "is_correct": true}, {"text": "5", "is_correct": false}], "explanation": "Basic arithmetic."}]}'
-                )
-            )
-        ]
-    )
-
-    yield mock
+    with _mock_openai_api() as mock:
+        yield mock
 
 
 # Canvas integration test data fixtures
@@ -509,37 +472,14 @@ def mock_openai_api() -> Generator[MagicMock, None, None]:
 
 @pytest.fixture
 def canvas_course_data() -> dict[str, Any]:
-    """Canvas course data for testing."""
-    return {
-        "id": 123,
-        "name": "Introduction to Computer Science",
-        "course_code": "CS101",
-        "enrollment_term_id": 1,
-        "workflow_state": "available",
-        "start_at": "2024-01-15T00:00:00Z",
-        "end_at": "2024-05-15T00:00:00Z",
-    }
+    """Canvas course data for testing using centralized data."""
+    return DEFAULT_CANVAS_COURSE.copy()
 
 
 @pytest.fixture
 def canvas_modules_data() -> list[dict[str, Any]]:
-    """Canvas modules data for testing."""
-    return [
-        {
-            "id": 456,
-            "name": "Introduction to Programming",
-            "position": 1,
-            "workflow_state": "active",
-            "items_count": 8,
-        },
-        {
-            "id": 457,
-            "name": "Data Structures and Algorithms",
-            "position": 2,
-            "workflow_state": "active",
-            "items_count": 12,
-        },
-    ]
+    """Canvas modules data for testing using centralized data."""
+    return [module.copy() for module in DEFAULT_CANVAS_MODULES]
 
 
 @pytest.fixture

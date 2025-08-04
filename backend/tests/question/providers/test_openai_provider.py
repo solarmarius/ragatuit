@@ -5,6 +5,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from src.question.providers.base import DEFAULT_OPENAI_MODEL, DEFAULT_TEMPERATURE
+from tests.common_mocks import mock_openai_api, mock_time
+from tests.test_data import DEFAULT_OPENAI_RESPONSE, NORWEGIAN_OPENAI_RESPONSE
 
 
 @pytest.fixture
@@ -107,15 +109,10 @@ async def test_generate_response_success(provider):
         )
     ]
 
+    # Use centralized test data
     mock_response = MagicMock()
-    mock_response.content = (
-        '{"question": "What is Python?", "options": ["A language", "A snake"]}'
-    )
-    mock_response.usage = {
-        "prompt_tokens": 20,
-        "completion_tokens": 50,
-        "total_tokens": 70,
-    }
+    mock_response.content = DEFAULT_OPENAI_RESPONSE["content"]
+    mock_response.usage = DEFAULT_OPENAI_RESPONSE["usage"]
 
     with patch.object(provider, "_client", None):  # Start with no client
         with patch(
@@ -127,12 +124,17 @@ async def test_generate_response_success(provider):
 
             response = await provider.generate(messages)
 
-        assert response.content == mock_response.content
+        assert response.content == DEFAULT_OPENAI_RESPONSE["content"]
         assert response.model == DEFAULT_OPENAI_MODEL
         assert response.provider == LLMProvider.OPENAI
-        assert response.prompt_tokens == 20
-        assert response.completion_tokens == 50
-        assert response.total_tokens == 70
+        assert (
+            response.prompt_tokens == DEFAULT_OPENAI_RESPONSE["usage"]["prompt_tokens"]
+        )
+        assert (
+            response.completion_tokens
+            == DEFAULT_OPENAI_RESPONSE["usage"]["completion_tokens"]
+        )
+        assert response.total_tokens == DEFAULT_OPENAI_RESPONSE["usage"]["total_tokens"]
         assert response.response_time > 0
 
 
@@ -150,7 +152,7 @@ async def test_generate_response_authentication_error(provider):
             "src.question.providers.openai_provider.ChatOpenAI"
         ) as mock_chat_openai:
             mock_client = AsyncMock()
-            # Mock LangChain exception that indicates auth error - use a keyword that triggers AuthenticationError
+            # Use centralized mock for auth error
             mock_client.ainvoke.side_effect = Exception("authentication failed")
             mock_chat_openai.return_value = mock_client
 
@@ -174,6 +176,7 @@ async def test_generate_response_rate_limit_error(provider):
             "src.question.providers.openai_provider.ChatOpenAI"
         ) as mock_chat_openai:
             mock_client = AsyncMock()
+            # Use centralized mock for rate limit error
             mock_client.ainvoke.side_effect = Exception("Rate limit exceeded")
             mock_chat_openai.return_value = mock_client
 
@@ -284,10 +287,10 @@ async def test_generate_response_measures_time(provider):
     with (
         patch.object(provider, "_client", None),
         patch("src.question.providers.openai_provider.ChatOpenAI") as mock_chat_openai,
-        patch("src.question.providers.openai_provider.time") as mock_time,
+        patch("src.question.providers.openai_provider.time") as mock_time_module,
     ):
         # Mock time.time to return specific values
-        mock_time.time.side_effect = [1000.0, 1002.5]  # 2.5 second difference
+        mock_time_module.time.side_effect = [1000.0, 1002.5]  # 2.5 second difference
 
         mock_client = AsyncMock()
         mock_client.ainvoke.return_value = mock_response

@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import factory
 from factory import Factory, Faker, LazyAttribute, Sequence, SubFactory
@@ -12,6 +12,18 @@ from src.auth.models import User
 from src.question.models import Question, QuestionDifficulty, QuestionType
 from src.quiz.models import Quiz
 from tests.database import get_test_session
+from tests.test_data import (
+    DEFAULT_CANVAS_COURSE,
+    DEFAULT_CANVAS_MODULES,
+    DEFAULT_EXTRACTED_CONTENT,
+    DEFAULT_FILE_INFO,
+    DEFAULT_FILL_IN_BLANK_DATA,
+    DEFAULT_MCQ_DATA,
+    DEFAULT_OPENAI_RESPONSE,
+    DEFAULT_QUIZ_CONFIG,
+    DEFAULT_USER_DATA,
+    SAMPLE_QUESTIONS_BATCH,
+)
 
 
 class BaseFactory(SQLAlchemyModelFactory):
@@ -258,3 +270,302 @@ def create_canvas_integration_data() -> Dict[str, Any]:
         "modules": [CanvasModuleDataFactory() for _ in range(3)],
         "extracted_content": ExtractedContentFactory(),
     }
+
+
+# Additional factories for API responses and external service data
+
+
+class OpenAIResponseFactory(Factory):
+    """Factory for OpenAI API response data."""
+
+    class Meta:
+        model = dict
+
+    content = DEFAULT_OPENAI_RESPONSE["content"]
+    usage = factory.LazyFunction(lambda: DEFAULT_OPENAI_RESPONSE["usage"].copy())
+
+    class Params:
+        norwegian = factory.Trait(
+            content='{"questions": [{"question_text": "Hva er hovedstaden i Norge?", "options": [{"text": "Oslo", "is_correct": true}, {"text": "Bergen", "is_correct": false}], "explanation": "Oslo er hovedstaden i Norge."}]}'
+        )
+        generation_error = factory.Trait(
+            content='{"error": "Failed to generate questions"}'
+        )
+
+
+class CanvasQuizResponseFactory(Factory):
+    """Factory for Canvas quiz creation response data."""
+
+    class Meta:
+        model = dict
+
+    id = Sequence(lambda n: f"quiz_{n}")
+    title = Faker("sentence", nb_words=3)
+    quiz_type = "assignment"
+    points_possible = 100
+    assignment_id = factory.LazyAttribute(lambda obj: f"assignment_{obj.id}")
+
+
+class CanvasQuizItemsResponseFactory(Factory):
+    """Factory for Canvas quiz items creation response data."""
+
+    class Meta:
+        model = dict
+
+    @classmethod
+    def create_batch(cls, size: int = 3, **kwargs) -> List[Dict[str, Any]]:
+        """Create a batch of quiz item responses."""
+        return [
+            {
+                "success": True,
+                "canvas_id": 8000 + i,
+                "question_id": f"q{i + 1}",
+                **kwargs,
+            }
+            for i in range(size)
+        ]
+
+    @classmethod
+    def create_with_failures(
+        cls, success_count: int = 2, failure_count: int = 1
+    ) -> List[Dict[str, Any]]:
+        """Create quiz item responses with some failures."""
+        successful = cls.create_batch(success_count)
+        failed = [
+            {
+                "success": False,
+                "canvas_id": None,
+                "question_id": f"failed_q{i + 1}",
+                "error": "Export failed",
+            }
+            for i in range(failure_count)
+        ]
+        return successful + failed
+
+
+class ManualModuleDataFactory(Factory):
+    """Factory for manual module data."""
+
+    class Meta:
+        model = dict
+
+    module_id = factory.LazyFunction(lambda: f"manual_{uuid.uuid4().hex[:8]}")
+    name = Faker("sentence", nb_words=3)
+    content = Faker("text", max_nb_chars=200)
+    word_count = factory.LazyAttribute(lambda obj: len(obj.content.split()))
+    source_type = "manual"
+    content_type = "text"
+    processing_metadata = factory.LazyFunction(lambda: {"source": "manual_text"})
+
+    class Params:
+        pdf_upload = factory.Trait(
+            content_type="pdf",
+            processing_metadata=factory.LazyFunction(
+                lambda: {"source": "manual_pdf", "pages": 3}
+            ),
+        )
+        text_input = factory.Trait(
+            content_type="text",
+            processing_metadata=factory.LazyFunction(lambda: {"source": "manual_text"}),
+        )
+
+
+class ContentExtractionResultFactory(Factory):
+    """Factory for content extraction results."""
+
+    class Meta:
+        model = dict
+
+    @classmethod
+    def create_for_modules(
+        cls, module_ids: List[str], **kwargs
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """Create extraction results for specific module IDs."""
+        result = {}
+        for i, module_id in enumerate(module_ids):
+            result[module_id] = [
+                {
+                    "content": f"Test content for module {module_id}",
+                    "word_count": 100 + (i * 50),
+                    "source_type": "canvas",
+                }
+            ]
+        return result
+
+    @classmethod
+    def create_mixed_canvas_manual(cls) -> Dict[str, List[Dict[str, Any]]]:
+        """Create extraction results with both Canvas and manual content."""
+        return {
+            "101": [
+                {
+                    "content": "Canvas module content about programming",
+                    "word_count": 200,
+                    "source_type": "canvas",
+                }
+            ],
+            "manual_abc123": [
+                {
+                    "content": "Manual content for testing",
+                    "word_count": 50,
+                    "source_type": "manual",
+                }
+            ],
+        }
+
+
+class QuestionGenerationResultFactory(Factory):
+    """Factory for question generation results."""
+
+    class Meta:
+        model = dict
+
+    @classmethod
+    def create_for_modules(
+        cls, module_ids: List[str], questions_per_module: int = 2
+    ) -> tuple[Dict[str, List[str]], Dict[str, List[str]]]:
+        """Create generation results for specific module IDs."""
+        questions = {}
+        successful_batches = []
+
+        for module_id in module_ids:
+            questions[module_id] = [
+                f"Generated question {i + 1} for module {module_id}"
+                for i in range(questions_per_module)
+            ]
+            successful_batches.append(f"{module_id}_multiple_choice")
+
+        batch_status = {
+            "successful_batches": successful_batches,
+            "failed_batches": [],
+        }
+
+        return questions, batch_status
+
+    @classmethod
+    def create_with_failures(
+        cls, successful_modules: List[str], failed_modules: List[str]
+    ) -> tuple[Dict[str, List[str]], Dict[str, List[str]]]:
+        """Create generation results with some failures."""
+        questions = {}
+        successful_batches = []
+        failed_batches = []
+
+        for module_id in successful_modules:
+            questions[module_id] = [f"Generated question for {module_id}"]
+            successful_batches.append(f"{module_id}_multiple_choice")
+
+        for module_id in failed_modules:
+            failed_batches.append(f"{module_id}_multiple_choice")
+
+        batch_status = {
+            "successful_batches": successful_batches,
+            "failed_batches": failed_batches,
+        }
+
+        return questions, batch_status
+
+
+class WorkflowStateFactory(Factory):
+    """Factory for creating complete workflow state scenarios."""
+
+    class Meta:
+        model = dict
+
+    @classmethod
+    def create_complete_success_scenario(cls) -> Dict[str, Any]:
+        """Create a complete successful workflow scenario."""
+        return {
+            "user_data": DEFAULT_USER_DATA.copy(),
+            "course_data": DEFAULT_CANVAS_COURSE.copy(),
+            "modules_data": DEFAULT_CANVAS_MODULES.copy(),
+            "quiz_config": DEFAULT_QUIZ_CONFIG.copy(),
+            "extraction_result": DEFAULT_EXTRACTED_CONTENT.copy(),
+            "generation_result": QuestionGenerationResultFactory.create_for_modules(
+                ["456", "457"]
+            ),
+            "questions_data": SAMPLE_QUESTIONS_BATCH.copy(),
+            "canvas_response": CanvasQuizResponseFactory(),
+        }
+
+    @classmethod
+    def create_extraction_failure_scenario(cls) -> Dict[str, Any]:
+        """Create a workflow scenario where content extraction fails."""
+        return {
+            "user_data": DEFAULT_USER_DATA.copy(),
+            "course_data": DEFAULT_CANVAS_COURSE.copy(),
+            "modules_data": DEFAULT_CANVAS_MODULES.copy(),
+            "quiz_config": DEFAULT_QUIZ_CONFIG.copy(),
+            "extraction_error": "Canvas API connection failed",
+        }
+
+    @classmethod
+    def create_manual_content_scenario(cls) -> Dict[str, Any]:
+        """Create a workflow scenario with manual content."""
+        manual_module = ManualModuleDataFactory()
+        return {
+            "user_data": DEFAULT_USER_DATA.copy(),
+            "course_data": DEFAULT_CANVAS_COURSE.copy(),
+            "quiz_config": {
+                **DEFAULT_QUIZ_CONFIG,
+                "selected_modules": {
+                    manual_module["module_id"]: {
+                        **manual_module,
+                        "question_batches": [
+                            {
+                                "question_type": "multiple_choice",
+                                "count": 5,
+                                "difficulty": "medium",
+                            }
+                        ],
+                    }
+                },
+            },
+            "extraction_result": {
+                manual_module["module_id"]: [
+                    {
+                        "content": manual_module["content"],
+                        "word_count": manual_module["word_count"],
+                        "source_type": "manual",
+                    }
+                ]
+            },
+        }
+
+
+# Enhanced utility functions with centralized data
+
+
+def create_standardized_user_data(**overrides) -> Dict[str, Any]:
+    """Create user data with standard defaults and optional overrides."""
+    return {**DEFAULT_USER_DATA, **overrides}
+
+
+def create_standardized_quiz_config(**overrides) -> Dict[str, Any]:
+    """Create quiz config with standard defaults and optional overrides."""
+    return {**DEFAULT_QUIZ_CONFIG, **overrides}
+
+
+def create_complete_test_scenario(
+    user_overrides: Dict[str, Any] = None,
+    quiz_overrides: Dict[str, Any] = None,
+    with_questions: bool = True,
+    with_extraction: bool = True,
+) -> Dict[str, Any]:
+    """Create a complete test scenario with all necessary data."""
+    scenario = {
+        "user": create_standardized_user_data(**(user_overrides or {})),
+        "quiz_config": create_standardized_quiz_config(**(quiz_overrides or {})),
+        "course": DEFAULT_CANVAS_COURSE.copy(),
+        "modules": DEFAULT_CANVAS_MODULES.copy(),
+    }
+
+    if with_extraction:
+        scenario["extracted_content"] = DEFAULT_EXTRACTED_CONTENT.copy()
+
+    if with_questions:
+        scenario["questions"] = SAMPLE_QUESTIONS_BATCH.copy()
+        scenario["generation_result"] = (
+            QuestionGenerationResultFactory.create_for_modules(["456", "457"])
+        )
+
+    return scenario

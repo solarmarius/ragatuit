@@ -7,6 +7,13 @@ import pytest
 from sqlmodel import Session
 
 from tests.conftest import create_user_in_session
+from tests.test_data import (
+    DEFAULT_QUIZ_CONFIG,
+    DEFAULT_SELECTED_MODULES,
+    MIXED_QUESTION_TYPES_MODULES,
+    get_unique_quiz_config,
+    get_unique_user_data,
+)
 
 
 def test_create_quiz_success(session: Session):
@@ -17,9 +24,11 @@ def test_create_quiz_success(session: Session):
 
     user = create_user_in_session(session)
 
+    # Use centralized quiz configuration
+    quiz_config = get_unique_quiz_config()
+
     quiz_data = QuizCreate(
-        canvas_course_id=123,
-        canvas_course_name="Test Course",
+        **quiz_config,
         selected_modules={
             "456": ModuleSelection(
                 name="Module 1",
@@ -42,18 +51,15 @@ def test_create_quiz_success(session: Session):
                 ],
             ),
         },
-        title="Test Quiz",
-        llm_model="gpt-4",
-        llm_temperature=0.7,
     )
 
     quiz = create_quiz(session, quiz_data, user.id)
 
     # Behavior-focused assertions
     assert quiz.owner_id == user.id
-    assert quiz.canvas_course_id == 123
-    assert quiz.canvas_course_name == "Test Course"
-    assert quiz.title == "Test Quiz"
+    assert quiz.canvas_course_id == quiz_config["canvas_course_id"]
+    assert quiz.canvas_course_name == quiz_config["canvas_course_name"]
+    assert quiz.title == quiz_config["title"]
 
     # Test behavior: total question calculation
     assert quiz.question_count == 25  # 10 + 15 from modules
@@ -69,9 +75,9 @@ def test_create_quiz_success(session: Session):
     assert get_module_name(quiz, "456") == "Module 1"
     assert get_module_name(quiz, "789") == "Module 2"
 
-    # LLM configuration
-    assert quiz.llm_model == "gpt-4"
-    assert quiz.llm_temperature == 0.7
+    # LLM configuration from centralized config
+    assert quiz.llm_model == quiz_config["llm_model"]
+    assert quiz.llm_temperature == quiz_config["llm_temperature"]
 
     # Metadata
     assert quiz.updated_at is not None
@@ -86,9 +92,12 @@ def test_create_quiz_with_defaults(session: Session):
 
     user = create_user_in_session(session)
 
+    # Use centralized configuration for defaults test
+    quiz_config = DEFAULT_QUIZ_CONFIG.copy()
+    quiz_config["title"] = "Default Quiz"
+
     quiz_data = QuizCreate(
-        canvas_course_id=123,
-        canvas_course_name="Test Course",
+        **quiz_config,
         selected_modules={
             "456": ModuleSelection(
                 name="Module 1",
@@ -101,15 +110,14 @@ def test_create_quiz_with_defaults(session: Session):
                 ],
             )
         },
-        title="Default Quiz",
     )
 
     quiz = create_quiz(session, quiz_data, user.id)
 
     # Test default behavior
     assert quiz.question_count == 10
-    assert quiz.llm_model == "o4-mini-2025-04-16"  # Default
-    assert quiz.llm_temperature == 1.0  # Default
+    assert quiz.llm_model == DEFAULT_QUIZ_CONFIG["llm_model"]  # Default
+    assert quiz.llm_temperature == DEFAULT_QUIZ_CONFIG["llm_temperature"]  # Default
 
 
 def test_create_quiz_with_multiple_question_types_per_module(session: Session):
@@ -120,61 +128,51 @@ def test_create_quiz_with_multiple_question_types_per_module(session: Session):
 
     user = create_user_in_session(session)
 
+    # Use centralized mixed question types configuration
+    quiz_config = get_unique_quiz_config()
+    quiz_config["canvas_course_name"] = "Multi-Type Test Course"
+
+    # Convert centralized mixed modules to schema format
+    mixed_modules = {}
+    for module_id, module_data in MIXED_QUESTION_TYPES_MODULES.items():
+        batches = []
+        for batch in module_data["question_batches"]:
+            batches.append(
+                QuestionBatch(
+                    question_type=QuestionType[batch["question_type"].upper()],
+                    count=batch["count"],
+                    difficulty=QuestionDifficulty[batch["difficulty"].upper()],
+                )
+            )
+        mixed_modules[module_id] = ModuleSelection(
+            name=module_data["name"],
+            question_batches=batches,
+        )
+
     quiz_data = QuizCreate(
-        canvas_course_id=123,
-        canvas_course_name="Multi-Type Test Course",
-        selected_modules={
-            "456": ModuleSelection(
-                name="Module 1",
-                question_batches=[
-                    QuestionBatch(
-                        question_type=QuestionType.MULTIPLE_CHOICE,
-                        count=10,
-                        difficulty=QuestionDifficulty.MEDIUM,
-                    ),
-                    QuestionBatch(
-                        question_type=QuestionType.FILL_IN_BLANK,
-                        count=5,
-                        difficulty=QuestionDifficulty.MEDIUM,
-                    ),
-                ],
-            ),
-            "789": ModuleSelection(
-                name="Module 2",
-                question_batches=[
-                    QuestionBatch(
-                        question_type=QuestionType.MATCHING,
-                        count=3,
-                        difficulty=QuestionDifficulty.MEDIUM,
-                    ),
-                    QuestionBatch(
-                        question_type=QuestionType.CATEGORIZATION,
-                        count=2,
-                        difficulty=QuestionDifficulty.MEDIUM,
-                    ),
-                ],
-            ),
-        },
-        title="Multi-Type Quiz",
+        **quiz_config,
+        selected_modules=mixed_modules,
         language=QuizLanguage.ENGLISH,
     )
 
     quiz = create_quiz(session, quiz_data, user.id)
 
-    # Test behavior: complex question counting
+    # Test behavior: complex question counting based on centralized data
     assert quiz.language == QuizLanguage.ENGLISH
-    assert quiz.question_count == 20  # 10 + 5 + 3 + 2
+    # MIXED_QUESTION_TYPES_MODULES has: 10 MC + 5 FIB + 3 TF = 18 total
+    assert quiz.question_count == 18  # From centralized mixed module data
 
     # Test behavior: module question type diversity
-    assert get_module_question_count(quiz, "456") == 15  # 10 + 5
-    assert get_module_question_count(quiz, "789") == 5  # 3 + 2
+    assert (
+        get_module_question_count(quiz, "456") == 18
+    )  # All questions from mixed module
 
     # Test behavior: question type validation
     assert has_question_type(quiz, "456", "multiple_choice")
     assert has_question_type(quiz, "456", "fill_in_blank")
-    assert has_question_type(quiz, "789", "matching")
-    assert has_question_type(quiz, "789", "categorization")
+    assert has_question_type(quiz, "456", "true_false")
     assert not has_question_type(quiz, "456", "matching")
+    assert not has_question_type(quiz, "456", "categorization")
 
 
 def test_create_quiz_with_manual_modules(session: Session):

@@ -5,32 +5,54 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from tests.common_mocks import (
+    mock_canvas_api,
+    mock_database_operations,
+)
+from tests.test_data import (
+    DEFAULT_CANVAS_QUIZ_RESPONSE,
+    DEFAULT_FILL_IN_BLANK_DATA,
+    DEFAULT_MCQ_DATA,
+    DEFAULT_QUIZ_ITEMS_RESPONSE,
+    DEFAULT_TRUE_FALSE_DATA,
+    FAILED_QUIZ_ITEMS_RESPONSE,
+    SAMPLE_QUESTIONS_BATCH,
+    get_unique_course_data,
+    get_unique_quiz_config,
+)
+
 
 @pytest.mark.asyncio
 async def test_orchestrate_export_canvas_success(caplog):
     """Test successful Canvas quiz export workflow."""
     from src.quiz.orchestrator.export import orchestrate_quiz_export_to_canvas
 
-    # Arrange
+    # Arrange - Generate consistent test data
     quiz_id = uuid.uuid4()
     canvas_token = "test_canvas_token"
+    course_data = get_unique_course_data()
+    quiz_config = get_unique_quiz_config()
 
-    # Mock Canvas functions
+    # Mock Canvas functions using centralized data
     mock_quiz_creator = AsyncMock()
-    mock_quiz_creator.return_value = {"id": 12345, "title": "Test Quiz"}
+    mock_quiz_creator.return_value = DEFAULT_CANVAS_QUIZ_RESPONSE
 
     mock_question_exporter = AsyncMock()
-    mock_question_exporter.return_value = [
-        {"success": True, "canvas_id": 1001, "question_id": "q1"},
-        {"success": True, "canvas_id": 1002, "question_id": "q2"},
-        {"success": True, "canvas_id": 1003, "question_id": "q3"},
-    ]
+    mock_question_exporter.return_value = DEFAULT_QUIZ_ITEMS_RESPONSE
 
-    # Mock question data preparation
+    # Mock question data preparation using centralized data
     mock_question_data = [
-        {"id": "q1", "question_text": "Question 1?", "approved": True},
-        {"id": "q2", "question_text": "Question 2?", "approved": True},
-        {"id": "q3", "question_text": "Question 3?", "approved": True},
+        {
+            "id": "q1",
+            "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+            "approved": True,
+        },
+        {
+            "id": "q2",
+            "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+            "approved": True,
+        },
+        {"id": "q3", "question_text": "What is Python?", "approved": True},
     ]
 
     with patch(
@@ -41,10 +63,10 @@ async def test_orchestrate_export_canvas_success(caplog):
         with patch(
             "src.quiz.orchestrator.export.execute_in_transaction"
         ) as mock_execute_transaction:
-            # Mock transaction calls: validate/reserve + save success results
+            # Mock transaction calls using generated data
             mock_export_data = {
-                "course_id": 67890,
-                "title": "Test Quiz Export",
+                "course_id": course_data["id"],
+                "title": quiz_config["title"],
                 "already_exported": False,
                 "questions": mock_question_data,
             }
@@ -53,7 +75,7 @@ async def test_orchestrate_export_canvas_success(caplog):
                 mock_export_data,  # Validate and reserve
                 {  # Save success results
                     "success": True,
-                    "canvas_quiz_id": 12345,
+                    "canvas_quiz_id": DEFAULT_CANVAS_QUIZ_RESPONSE["id"],
                     "exported_questions": 3,
                     "message": "Quiz successfully exported to Canvas",
                 },
@@ -66,15 +88,18 @@ async def test_orchestrate_export_canvas_success(caplog):
 
     # Assert
     assert result["success"] is True
-    assert result["canvas_quiz_id"] == 12345
+    assert result["canvas_quiz_id"] == DEFAULT_CANVAS_QUIZ_RESPONSE["id"]
     assert result["exported_questions"] == 3
 
     # Verify Canvas operations were called
     mock_quiz_creator.assert_called_once_with(
-        canvas_token, 67890, "Test Quiz Export", 3
+        canvas_token, course_data["id"], quiz_config["title"], 3
     )
     mock_question_exporter.assert_called_once_with(
-        canvas_token, 67890, 12345, mock_question_data
+        canvas_token,
+        course_data["id"],
+        DEFAULT_CANVAS_QUIZ_RESPONSE["id"],
+        mock_question_data,
     )
 
     # Verify logging
@@ -96,7 +121,13 @@ async def test_orchestrate_export_job_reservation(caplog):
     mock_quiz_creator = AsyncMock()
     mock_question_exporter = AsyncMock()
 
-    mock_question_data = [{"id": "q1", "question_text": "Test?", "approved": True}]
+    mock_question_data = [
+        {
+            "id": "q1",
+            "question_text": DEFAULT_MCQ_DATA["question_text"],
+            "approved": True,
+        }
+    ]
 
     with patch(
         "src.question.service.prepare_questions_for_export"
@@ -134,28 +165,35 @@ async def test_orchestrate_export_canvas_api_integration(caplog):
     """Test Canvas API integration for quiz creation and question export."""
     from src.quiz.orchestrator.export import orchestrate_quiz_export_to_canvas
 
-    # Arrange
+    # Arrange - Generate consistent test data
     quiz_id = uuid.uuid4()
     canvas_token = "integration_token"
-    course_id = 98765
+    course_data = get_unique_course_data()
+    course_id = course_data["id"]
+    quiz_config = get_unique_quiz_config()
 
-    # Mock Canvas API integration
+    # Mock Canvas API integration using centralized data
     mock_quiz_creator = AsyncMock()
     mock_quiz_creator.return_value = {
-        "id": 54321,
-        "title": "Integration Test Quiz",
+        "id": DEFAULT_CANVAS_QUIZ_RESPONSE["id"],
+        "title": quiz_config["title"],
         "course_id": course_id,
     }
 
     mock_question_exporter = AsyncMock()
-    mock_question_exporter.return_value = [
-        {"success": True, "canvas_id": 2001, "question_id": "q1"},
-        {"success": True, "canvas_id": 2002, "question_id": "q2"},
-    ]
+    mock_question_exporter.return_value = DEFAULT_QUIZ_ITEMS_RESPONSE[:2]
 
     mock_question_data = [
-        {"id": "q1", "question_text": "Integration question 1?", "approved": True},
-        {"id": "q2", "question_text": "Integration question 2?", "approved": True},
+        {
+            "id": "q1",
+            "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+            "approved": True,
+        },
+        {
+            "id": "q2",
+            "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+            "approved": True,
+        },
     ]
 
     with patch(
@@ -168,7 +206,7 @@ async def test_orchestrate_export_canvas_api_integration(caplog):
         ) as mock_execute_transaction:
             mock_export_data = {
                 "course_id": course_id,
-                "title": "Integration Test Quiz",
+                "title": quiz_config["title"],
                 "already_exported": False,
                 "questions": mock_question_data,
             }
@@ -177,7 +215,7 @@ async def test_orchestrate_export_canvas_api_integration(caplog):
                 mock_export_data,  # Validate and reserve
                 {  # Save success
                     "success": True,
-                    "canvas_quiz_id": 54321,
+                    "canvas_quiz_id": DEFAULT_CANVAS_QUIZ_RESPONSE["id"],
                     "exported_questions": 2,
                     "message": "Quiz successfully exported to Canvas",
                 },
@@ -190,13 +228,13 @@ async def test_orchestrate_export_canvas_api_integration(caplog):
 
     # Assert Canvas API integration
     mock_quiz_creator.assert_called_once_with(
-        canvas_token, course_id, "Integration Test Quiz", 2
+        canvas_token, course_id, quiz_config["title"], 2
     )
     mock_question_exporter.assert_called_once_with(
-        canvas_token, course_id, 54321, mock_question_data
+        canvas_token, course_id, DEFAULT_CANVAS_QUIZ_RESPONSE["id"], mock_question_data
     )
 
-    assert result["canvas_quiz_id"] == 54321
+    assert result["canvas_quiz_id"] == DEFAULT_CANVAS_QUIZ_RESPONSE["id"]
     assert result["exported_questions"] == 2
 
     # Verify integration logging
@@ -213,50 +251,54 @@ async def test_orchestrate_export_question_format_conversion(caplog):
     quiz_id = uuid.uuid4()
     canvas_token = "format_token"
 
+    quiz_config = get_unique_quiz_config()
     mock_quiz_creator = AsyncMock()
-    mock_quiz_creator.return_value = {"id": 99999, "title": "Format Test"}
+    mock_quiz_creator.return_value = {
+        "id": DEFAULT_CANVAS_QUIZ_RESPONSE["id"],
+        "title": quiz_config["title"],
+    }
 
     mock_question_exporter = AsyncMock()
     # Mock successful format conversion
     mock_question_exporter.return_value = [
         {
             "success": True,
-            "canvas_id": 3001,
+            "canvas_id": DEFAULT_QUIZ_ITEMS_RESPONSE[0]["canvas_id"],
             "question_id": "mc1",
             "converted_format": "multiple_choice_question",
         },
         {
             "success": True,
-            "canvas_id": 3002,
+            "canvas_id": DEFAULT_QUIZ_ITEMS_RESPONSE[1]["canvas_id"],
             "question_id": "tf1",
             "converted_format": "true_false_question",
         },
         {
             "success": True,
-            "canvas_id": 3003,
+            "canvas_id": DEFAULT_QUIZ_ITEMS_RESPONSE[2]["canvas_id"],
             "question_id": "fib1",
             "converted_format": "fill_in_multiple_blanks_question",
         },
     ]
 
-    # Mock various question types requiring format conversion
+    # Mock various question types using centralized data
     mock_question_data = [
         {
             "id": "mc1",
             "question_type": "multiple_choice",
-            "question_text": "MC Question?",
+            "question_text": DEFAULT_MCQ_DATA["question_text"],
             "approved": True,
         },
         {
             "id": "tf1",
             "question_type": "true_false",
-            "question_text": "TF Question?",
+            "question_text": DEFAULT_TRUE_FALSE_DATA["question_text"],
             "approved": True,
         },
         {
             "id": "fib1",
             "question_type": "fill_in_blank",
-            "question_text": "FIB: ___ is correct",
+            "question_text": DEFAULT_FILL_IN_BLANK_DATA["question_text"],
             "approved": True,
         },
     ]
@@ -269,9 +311,10 @@ async def test_orchestrate_export_question_format_conversion(caplog):
         with patch(
             "src.quiz.orchestrator.export.execute_in_transaction"
         ) as mock_execute_transaction:
+            course_data = get_unique_course_data()
             mock_export_data = {
-                "course_id": 11111,
-                "title": "Format Test Quiz",
+                "course_id": course_data["id"],
+                "title": quiz_config["title"],
                 "already_exported": False,
                 "questions": mock_question_data,
             }
@@ -280,7 +323,7 @@ async def test_orchestrate_export_question_format_conversion(caplog):
                 mock_export_data,
                 {
                     "success": True,
-                    "canvas_quiz_id": 99999,
+                    "canvas_quiz_id": DEFAULT_CANVAS_QUIZ_RESPONSE["id"],
                     "exported_questions": 3,
                     "message": "Quiz successfully exported to Canvas",
                 },
@@ -297,7 +340,10 @@ async def test_orchestrate_export_question_format_conversion(caplog):
 
     # Verify all question types were processed
     mock_question_exporter.assert_called_once_with(
-        canvas_token, 11111, 99999, mock_question_data
+        canvas_token,
+        course_data["id"],
+        DEFAULT_CANVAS_QUIZ_RESPONSE["id"],
+        mock_question_data,
     )
 
     # Verify format conversion logging
@@ -313,33 +359,36 @@ async def test_orchestrate_export_failure_rollback(caplog):
     # Arrange
     quiz_id = uuid.uuid4()
     canvas_token = "rollback_token"
-    course_id = 22222
+    course_data = get_unique_course_data()
+    course_id = course_data["id"]
+    quiz_config = get_unique_quiz_config()
 
     mock_quiz_creator = AsyncMock()
-    mock_quiz_creator.return_value = {"id": 77777, "title": "Failed Export Quiz"}
+    mock_quiz_creator.return_value = {
+        "id": DEFAULT_CANVAS_QUIZ_RESPONSE["id"],
+        "title": quiz_config["title"],
+    }
 
-    # Mock partial failure in question export
+    # Mock partial failure in question export using centralized data
     mock_question_exporter = AsyncMock()
-    mock_question_exporter.return_value = [
-        {"success": True, "canvas_id": 4001, "question_id": "q1"},
-        {
-            "success": False,
-            "canvas_id": None,
-            "question_id": "q2",
-            "error": "Format error",
-        },
-        {
-            "success": False,
-            "canvas_id": None,
-            "question_id": "q3",
-            "error": "Validation failed",
-        },
-    ]
+    mock_question_exporter.return_value = FAILED_QUIZ_ITEMS_RESPONSE
 
     mock_question_data = [
-        {"id": "q1", "question_text": "Good question?", "approved": True},
-        {"id": "q2", "question_text": "Bad question?", "approved": True},
-        {"id": "q3", "question_text": "Another bad question?", "approved": True},
+        {
+            "id": "q1",
+            "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+            "approved": True,
+        },
+        {
+            "id": "q2",
+            "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+            "approved": True,
+        },
+        {
+            "id": "q3",
+            "question_text": DEFAULT_MCQ_DATA["question_text"],
+            "approved": True,
+        },
     ]
 
     with patch(
@@ -352,7 +401,7 @@ async def test_orchestrate_export_failure_rollback(caplog):
         ) as mock_execute_transaction:
             mock_export_data = {
                 "course_id": course_id,
-                "title": "Failed Export Quiz",
+                "title": quiz_config["title"],
                 "already_exported": False,
                 "questions": mock_question_data,
             }
@@ -374,7 +423,9 @@ async def test_orchestrate_export_failure_rollback(caplog):
                     )
 
     # Assert rollback was attempted
-    mock_delete_quiz.assert_called_once_with(canvas_token, course_id, 77777)
+    mock_delete_quiz.assert_called_once_with(
+        canvas_token, course_id, DEFAULT_CANVAS_QUIZ_RESPONSE["id"]
+    )
 
     # Verify failure and rollback logging
     assert "canvas_export_failure_rollback_needed" in caplog.text
@@ -392,18 +443,27 @@ async def test_orchestrate_export_completion_status(caplog):
     quiz_id = uuid.uuid4()
     canvas_token = "completion_token"
 
+    quiz_config = get_unique_quiz_config()
     mock_quiz_creator = AsyncMock()
-    mock_quiz_creator.return_value = {"id": 55555, "title": "Completion Test"}
+    mock_quiz_creator.return_value = {
+        "id": DEFAULT_CANVAS_QUIZ_RESPONSE["id"],
+        "title": quiz_config["title"],
+    }
 
     mock_question_exporter = AsyncMock()
-    mock_question_exporter.return_value = [
-        {"success": True, "canvas_id": 5001, "question_id": "q1"},
-        {"success": True, "canvas_id": 5002, "question_id": "q2"},
-    ]
+    mock_question_exporter.return_value = DEFAULT_QUIZ_ITEMS_RESPONSE[:2]
 
     mock_question_data = [
-        {"id": "q1", "question_text": "Completion question 1?", "approved": True},
-        {"id": "q2", "question_text": "Completion question 2?", "approved": True},
+        {
+            "id": "q1",
+            "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+            "approved": True,
+        },
+        {
+            "id": "q2",
+            "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+            "approved": True,
+        },
     ]
 
     with patch(
@@ -414,16 +474,17 @@ async def test_orchestrate_export_completion_status(caplog):
         with patch(
             "src.quiz.orchestrator.export.execute_in_transaction"
         ) as mock_execute_transaction:
+            course_data = get_unique_course_data()
             mock_export_data = {
-                "course_id": 33333,
-                "title": "Completion Test Quiz",
+                "course_id": course_data["id"],
+                "title": quiz_config["title"],
                 "already_exported": False,
                 "questions": mock_question_data,
             }
 
             mock_completion_result = {
                 "success": True,
-                "canvas_quiz_id": 55555,
+                "canvas_quiz_id": DEFAULT_CANVAS_QUIZ_RESPONSE["id"],
                 "exported_questions": 2,
                 "message": "Quiz successfully exported to Canvas",
             }
@@ -441,7 +502,7 @@ async def test_orchestrate_export_completion_status(caplog):
     # Assert completion status
     assert result == mock_completion_result
     assert result["success"] is True
-    assert result["canvas_quiz_id"] == 55555
+    assert result["canvas_quiz_id"] == DEFAULT_CANVAS_QUIZ_RESPONSE["id"]
     assert result["exported_questions"] == 2
 
     # Verify status update transactions
@@ -465,7 +526,11 @@ async def test_orchestrate_export_already_exported_quiz(caplog):
     mock_question_exporter = AsyncMock()
 
     mock_question_data = [
-        {"id": "q1", "question_text": "Already exported?", "approved": True}
+        {
+            "id": "q1",
+            "question_text": DEFAULT_MCQ_DATA["question_text"],
+            "approved": True,
+        }
     ]
 
     with patch(
@@ -476,12 +541,14 @@ async def test_orchestrate_export_already_exported_quiz(caplog):
         with patch(
             "src.quiz.orchestrator.export.execute_in_transaction"
         ) as mock_execute_transaction:
-            # Mock already exported scenario
+            # Mock already exported scenario using centralized data
+            course_data = get_unique_course_data()
+            quiz_config = get_unique_quiz_config()
             mock_export_data = {
-                "course_id": 44444,
-                "title": "Already Exported Quiz",
+                "course_id": course_data["id"],
+                "title": quiz_config["title"],
                 "already_exported": True,
-                "canvas_quiz_id": 88888,
+                "canvas_quiz_id": DEFAULT_CANVAS_QUIZ_RESPONSE["id"],
                 "questions": mock_question_data,
             }
 
@@ -494,7 +561,7 @@ async def test_orchestrate_export_already_exported_quiz(caplog):
 
     # Assert
     assert result["success"] is True
-    assert result["canvas_quiz_id"] == 88888
+    assert result["canvas_quiz_id"] == DEFAULT_CANVAS_QUIZ_RESPONSE["id"]
     assert result["exported_questions"] == 0
     assert result["message"] == "Quiz already exported to Canvas"
     assert result["already_exported"] is True

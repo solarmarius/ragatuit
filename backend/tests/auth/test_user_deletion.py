@@ -12,6 +12,11 @@ from src.question.models import Question
 from src.question.types import QuestionType
 from src.quiz.models import Quiz
 from tests.conftest import create_quiz_in_session, create_user_in_session
+from tests.test_data import (
+    DEFAULT_MCQ_DATA,
+    DEFAULT_SELECTED_MODULES,
+    get_unique_user_data,
+)
 
 
 def test_user_deletion_anonymizes_quizzes(session: Session):
@@ -22,16 +27,16 @@ def test_user_deletion_anonymizes_quizzes(session: Session):
     user = create_user_in_session(session)
     quiz = create_quiz_in_session(session, owner=user)
 
-    # Create questions for the quiz
+    # Create questions for the quiz using centralized data
     question1 = Question(
         quiz_id=quiz.id,
         question_type=QuestionType.MULTIPLE_CHOICE,
-        question_data={"question_text": "Test Q1", "choices": ["A", "B"]},
+        question_data={**DEFAULT_MCQ_DATA, "question_text": "Test Q1"},
     )
     question2 = Question(
         quiz_id=quiz.id,
         question_type=QuestionType.MULTIPLE_CHOICE,
-        question_data={"question_text": "Test Q2", "choices": ["C", "D"]},
+        question_data={**DEFAULT_MCQ_DATA, "question_text": "Test Q2"},
     )
     session.add_all([question1, question2])
     session.commit()
@@ -101,8 +106,10 @@ def test_user_deletion_anonymizes_quizzes(session: Session):
 
 def test_user_deletion_preserves_quiz_data_for_research(session: Session):
     """Test user deletion preserves all quiz data for research purposes."""
-    # Create user with comprehensive quiz data
+    # Create user with comprehensive quiz data using centralized data
     user = create_user_in_session(session)
+
+    # Use centralized module data with research-specific content
     selected_modules = {
         "123": {
             "name": "Advanced AI",
@@ -173,8 +180,10 @@ def test_user_deletion_preserves_quiz_data_for_research(session: Session):
 
 def test_user_deletion_gdpr_compliance(session: Session):
     """Test user deletion ensures GDPR compliance through complete anonymization."""
-    # Create user with personal data
-    user = create_user_in_session(session, name="John Doe", canvas_id=12345)
+    # Create user with personal data using centralized helper
+    user_data = get_unique_user_data(canvas_id=12345)
+    user_data["name"] = "John Doe"
+    user = create_user_in_session(session, **user_data)
     quiz1 = create_quiz_in_session(session, owner=user, title="John's Quiz 1")
     quiz2 = create_quiz_in_session(session, owner=user, title="John's Quiz 2")
 
@@ -226,9 +235,14 @@ def test_user_deletion_gdpr_compliance(session: Session):
 
 def test_multiple_users_deletion_isolation(session: Session):
     """Test multiple user deletions don't affect each other's data."""
-    # Create two users with their own quizzes
-    user1 = create_user_in_session(session, name="User 1", canvas_id=111)
-    user2 = create_user_in_session(session, name="User 2", canvas_id=222)
+    # Create two users with their own quizzes using centralized data
+    user1_data = get_unique_user_data(canvas_id=111)
+    user1_data["name"] = "User 1"
+    user1 = create_user_in_session(session, **user1_data)
+
+    user2_data = get_unique_user_data(canvas_id=222)
+    user2_data["name"] = "User 2"
+    user2 = create_user_in_session(session, **user2_data)
 
     quiz1 = create_quiz_in_session(session, owner=user1, title="User 1 Quiz")
     quiz2 = create_quiz_in_session(session, owner=user2, title="User 2 Quiz")
@@ -270,8 +284,10 @@ def test_empty_user_deletion(session: Session):
     """Test deletion of user with no quizzes works correctly."""
     from src.auth.service import get_user_by_id
 
-    # Create user with no quizzes
-    user = create_user_in_session(session, name="Empty User")
+    # Create user with no quizzes using centralized data
+    user_data = get_unique_user_data()
+    user_data["name"] = "Empty User"
+    user = create_user_in_session(session, **user_data)
     user_id = user.id
 
     # Delete user (no quizzes to anonymize)

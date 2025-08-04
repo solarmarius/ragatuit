@@ -5,6 +5,20 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
+from tests.common_mocks import (
+    mock_content_extraction,
+    mock_database_operations,
+)
+from tests.test_data import (
+    DEFAULT_CANVAS_COURSE,
+    DEFAULT_EXTRACTED_CONTENT,
+    DEFAULT_SELECTED_MODULES,
+    DEFAULT_USER_DATA,
+    MANUAL_MODULE_DATA,
+    get_unique_course_data,
+    get_unique_user_data,
+)
+
 
 @pytest.mark.asyncio
 async def test_execute_content_extraction_workflow_canvas_only(caplog):
@@ -15,7 +29,8 @@ async def test_execute_content_extraction_workflow_canvas_only(caplog):
 
     # Arrange
     quiz_id = uuid.uuid4()
-    canvas_course_id = 12345
+    course_data = get_unique_course_data()
+    canvas_course_id = course_data["id"]
     canvas_token = "test_token"
     selected_modules = {
         "101": {
@@ -80,7 +95,8 @@ async def test_execute_content_extraction_workflow_manual_only(caplog):
 
     # Arrange
     quiz_id = uuid.uuid4()
-    canvas_course_id = 12345
+    course_data = get_unique_course_data()
+    canvas_course_id = course_data["id"]
     canvas_token = "test_token"
     selected_modules = {
         "manual_1": {
@@ -152,7 +168,8 @@ async def test_execute_content_extraction_workflow_mixed_sources(caplog):
 
     # Arrange
     quiz_id = uuid.uuid4()
-    canvas_course_id = 12345
+    course_data = get_unique_course_data()
+    canvas_course_id = course_data["id"]
     canvas_token = "test_token"
     selected_modules = {
         "101": {
@@ -217,7 +234,8 @@ async def test_execute_content_extraction_workflow_unknown_source_type(caplog):
 
     # Arrange
     quiz_id = uuid.uuid4()
-    canvas_course_id = 12345
+    course_data = get_unique_course_data()
+    canvas_course_id = course_data["id"]
     canvas_token = "test_token"
     selected_modules = {
         "103": {
@@ -271,7 +289,8 @@ async def test_execute_content_extraction_workflow_invalid_module_id_fallback(ca
 
     # Arrange
     quiz_id = uuid.uuid4()
-    canvas_course_id = 12345
+    course_data = get_unique_course_data()
+    canvas_course_id = course_data["id"]
     canvas_token = "test_token"
     selected_modules = {
         "invalid_id": {  # Cannot convert to int
@@ -323,7 +342,8 @@ async def test_execute_content_extraction_workflow_no_content_found(caplog):
 
     # Arrange
     quiz_id = uuid.uuid4()
-    canvas_course_id = 12345
+    course_data = get_unique_course_data()
+    canvas_course_id = course_data["id"]
     canvas_token = "test_token"
     selected_modules = {
         "104": {
@@ -372,7 +392,8 @@ async def test_execute_content_extraction_workflow_exception_handling(caplog):
 
     # Arrange
     quiz_id = uuid.uuid4()
-    canvas_course_id = 12345
+    course_data = get_unique_course_data()
+    canvas_course_id = course_data["id"]
     canvas_token = "test_token"
     selected_modules = {
         "105": {
@@ -421,7 +442,8 @@ async def test_execute_content_extraction_workflow_module_cleaning():
 
     # Arrange
     quiz_id = uuid.uuid4()
-    canvas_course_id = 12345
+    course_data = get_unique_course_data()
+    canvas_course_id = course_data["id"]
     canvas_token = "test_token"
     selected_modules = {
         "101": {
@@ -485,7 +507,8 @@ async def test_orchestrate_content_extraction_job_reservation_success(
 
     # Arrange
     quiz_id = uuid.uuid4()
-    canvas_course_id = 12345
+    course_data = get_unique_course_data()
+    canvas_course_id = course_data["id"]
     canvas_token = "test_token"
 
     # Mock job reservation success
@@ -542,7 +565,8 @@ async def test_orchestrate_content_extraction_job_already_running(
 
     # Arrange
     quiz_id = uuid.uuid4()
-    canvas_course_id = 12345
+    course_data = get_unique_course_data()
+    canvas_course_id = course_data["id"]
     canvas_token = "test_token"
 
     # Mock job reservation failure (returns None)

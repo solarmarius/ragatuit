@@ -6,7 +6,20 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from sqlmodel import Session
 
+from tests.common_mocks import (
+    mock_content_extraction,
+    mock_database_operations,
+    mock_openai_api,
+)
 from tests.conftest import create_user_in_session
+from tests.test_data import (
+    DEFAULT_EXTRACTED_CONTENT,
+    DEFAULT_SELECTED_MODULES,
+    SAMPLE_QUESTIONS_BATCH,
+    get_unique_course_data,
+    get_unique_quiz_config,
+    get_unique_user_data,
+)
 
 
 @pytest.mark.asyncio
@@ -27,33 +40,32 @@ async def test_concurrent_quiz_operations_isolation(session: Session, caplog):
     from src.quiz.service import create_quiz
 
     # === Setup Multiple Users and Quizzes ===
-    user1 = create_user_in_session(session, canvas_id=11111, name="User 1")
-    user2 = create_user_in_session(session, canvas_id=22222, name="User 2")
+    user1_data = get_unique_user_data()
+    user2_data = get_unique_user_data()
+    user1 = create_user_in_session(
+        session, canvas_id=user1_data["canvas_id"], name=user1_data["name"]
+    )
+    user2 = create_user_in_session(
+        session, canvas_id=user2_data["canvas_id"], name=user2_data["name"]
+    )
 
+    quiz_config = get_unique_quiz_config()
     quiz_template = {
-        "selected_modules": {
-            "501": ModuleSelection(
-                name="Concurrent Module",
-                question_batches=[
-                    QuestionBatch(
-                        question_type=QuestionType.MULTIPLE_CHOICE,
-                        count=1,
-                        difficulty=QuestionDifficulty.MEDIUM,
-                    )
-                ],
-            )
-        },
-        "llm_model": "gpt-4",
-        "llm_temperature": 0.7,
+        "selected_modules": DEFAULT_SELECTED_MODULES,
+        "llm_model": quiz_config["llm_model"],
+        "llm_temperature": quiz_config["llm_temperature"],
         "language": QuizLanguage.ENGLISH,
     }
+
+    course1_data = get_unique_course_data()
+    course2_data = get_unique_course_data()
 
     quiz1 = create_quiz(
         session,
         QuizCreate(
-            canvas_course_id=77777,
-            canvas_course_name="User 1 Course",
-            title="User 1 Quiz",
+            canvas_course_id=course1_data["id"],
+            canvas_course_name=course1_data["name"],
+            title=f"{user1_data['name']} Quiz",
             **quiz_template,
         ),
         user1.id,
@@ -62,9 +74,9 @@ async def test_concurrent_quiz_operations_isolation(session: Session, caplog):
     quiz2 = create_quiz(
         session,
         QuizCreate(
-            canvas_course_id=88888,
-            canvas_course_name="User 2 Course",
-            title="User 2 Quiz",
+            canvas_course_id=course2_data["id"],
+            canvas_course_name=course2_data["name"],
+            title=f"{user2_data['name']} Quiz",
             **quiz_template,
         ),
         user2.id,
@@ -73,14 +85,15 @@ async def test_concurrent_quiz_operations_isolation(session: Session, caplog):
     session.commit()
 
     # === Concurrent Operations Setup ===
+    module_id = list(DEFAULT_SELECTED_MODULES.keys())[0]
     mock_extractor_1 = AsyncMock()
     mock_extractor_1.return_value = {
-        "501": [{"content": "User 1 content", "word_count": 100}]
+        module_id: [{"content": f"{user1_data['name']} content", "word_count": 100}]
     }
 
     mock_extractor_2 = AsyncMock()
     mock_extractor_2.return_value = {
-        "501": [{"content": "User 2 content", "word_count": 150}]
+        module_id: [{"content": f"{user2_data['name']} content", "word_count": 150}]
     }
 
     mock_summarizer = Mock()
@@ -91,7 +104,7 @@ async def test_concurrent_quiz_operations_isolation(session: Session, caplog):
     }
 
     selected_modules = {
-        "501": {
+        module_id: {
             "name": "Concurrent Module",
             "source_type": "canvas",
             "question_batches": [],
@@ -102,7 +115,7 @@ async def test_concurrent_quiz_operations_isolation(session: Session, caplog):
     operations = [
         _execute_content_extraction_workflow(
             quiz1.id,
-            77777,
+            course1_data["id"],
             "token1",
             selected_modules,
             mock_extractor_1,
@@ -110,7 +123,7 @@ async def test_concurrent_quiz_operations_isolation(session: Session, caplog):
         ),
         _execute_content_extraction_workflow(
             quiz2.id,
-            88888,
+            course2_data["id"],
             "token2",
             selected_modules,
             mock_extractor_2,
@@ -126,12 +139,16 @@ async def test_concurrent_quiz_operations_isolation(session: Session, caplog):
     assert results[1][1] == "completed"  # final_status for quiz2
 
     # Each extractor should be called with correct parameters
-    mock_extractor_1.assert_called_once_with("token1", 77777, [501])
-    mock_extractor_2.assert_called_once_with("token2", 88888, [501])
+    mock_extractor_1.assert_called_once_with(
+        "token1", course1_data["id"], [int(module_id)]
+    )
+    mock_extractor_2.assert_called_once_with(
+        "token2", course2_data["id"], [int(module_id)]
+    )
 
     # Content should be isolated per quiz
-    assert results[0][0]["501"][0]["content"] == "User 1 content"
-    assert results[1][0]["501"][0]["content"] == "User 2 content"
+    assert results[0][0][module_id][0]["content"] == f"{user1_data['name']} content"
+    assert results[1][0][module_id][0]["content"] == f"{user2_data['name']} content"
 
     # Both quiz IDs should appear in logs
     assert str(quiz1.id) in caplog.text
@@ -152,11 +169,17 @@ async def test_partial_question_generation_recovery(session: Session, caplog):
     from src.quiz.service import create_quiz
 
     # === Setup ===
-    user = create_user_in_session(session)
+    user_data = get_unique_user_data()
+    user = create_user_in_session(
+        session, canvas_id=user_data["canvas_id"], name=user_data["name"]
+    )
+
+    course_data = get_unique_course_data()
+    quiz_config = get_unique_quiz_config()
 
     quiz_create = QuizCreate(
-        canvas_course_id=12345,
-        canvas_course_name="Partial Recovery Course",
+        canvas_course_id=course_data["id"],
+        canvas_course_name=course_data["name"],
         selected_modules={
             "101": ModuleSelection(
                 name="Module 1",
@@ -179,9 +202,9 @@ async def test_partial_question_generation_recovery(session: Session, caplog):
                 ],
             ),
         },
-        title="Partial Recovery Quiz",
-        llm_model="gpt-4",
-        llm_temperature=0.7,
+        title=quiz_config["title"],
+        llm_model=quiz_config["llm_model"],
+        llm_temperature=quiz_config["llm_temperature"],
         language=QuizLanguage.ENGLISH,
     )
 
@@ -196,8 +219,8 @@ async def test_partial_question_generation_recovery(session: Session, caplog):
     mock_generation_service.generate_questions_for_quiz_with_batch_tracking.return_value = (
         {
             "101": [
-                "Generated MC question 1",
-                "Generated MC question 2",
+                SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                SAMPLE_QUESTIONS_BATCH[1]["question_text"],
             ],  # Partial success
             "102": [],  # Failed module
         },
@@ -278,11 +301,17 @@ async def test_canvas_api_timeout_handling(session: Session, caplog):
     from src.quiz.service import create_quiz
 
     # === Setup ===
-    user = create_user_in_session(session)
+    user_data = get_unique_user_data()
+    user = create_user_in_session(
+        session, canvas_id=user_data["canvas_id"], name=user_data["name"]
+    )
+
+    course_data = get_unique_course_data()
+    quiz_config = get_unique_quiz_config()
 
     quiz_create = QuizCreate(
-        canvas_course_id=55555,
-        canvas_course_name="Timeout Test Course",
+        canvas_course_id=course_data["id"],
+        canvas_course_name=course_data["name"],
         selected_modules={
             "201": ModuleSelection(
                 name="Timeout Module",
@@ -295,9 +324,9 @@ async def test_canvas_api_timeout_handling(session: Session, caplog):
                 ],
             )
         },
-        title="Timeout Test Quiz",
-        llm_model="gpt-4",
-        llm_temperature=0.7,
+        title=quiz_config["title"],
+        llm_model=quiz_config["llm_model"],
+        llm_temperature=quiz_config["llm_temperature"],
         language=QuizLanguage.ENGLISH,
     )
 
@@ -324,7 +353,7 @@ async def test_canvas_api_timeout_handling(session: Session, caplog):
         cleaned_modules,
     ) = await _execute_content_extraction_workflow(
         quiz.id,
-        55555,
+        course_data["id"],
         "timeout_token",
         selected_modules,
         mock_content_extractor,
@@ -360,11 +389,17 @@ async def test_llm_provider_fallback_integration(session: Session, caplog):
     from src.quiz.service import create_quiz
 
     # === Setup ===
-    user = create_user_in_session(session)
+    user_data = get_unique_user_data()
+    user = create_user_in_session(
+        session, canvas_id=user_data["canvas_id"], name=user_data["name"]
+    )
+
+    course_data = get_unique_course_data()
+    quiz_config = get_unique_quiz_config()
 
     quiz_create = QuizCreate(
-        canvas_course_id=66666,
-        canvas_course_name="LLM Fallback Course",
+        canvas_course_id=course_data["id"],
+        canvas_course_name=course_data["name"],
         selected_modules={
             "301": ModuleSelection(
                 name="Fallback Module",
@@ -377,9 +412,9 @@ async def test_llm_provider_fallback_integration(session: Session, caplog):
                 ],
             )
         },
-        title="LLM Fallback Quiz",
-        llm_model="gpt-4",
-        llm_temperature=0.7,
+        title=quiz_config["title"],
+        llm_model=quiz_config["llm_model"],
+        llm_temperature=quiz_config["llm_temperature"],
         language=QuizLanguage.ENGLISH,
     )
 
@@ -396,7 +431,12 @@ async def test_llm_provider_fallback_integration(session: Session, caplog):
     mock_generation_service.generate_questions_for_quiz_with_batch_tracking.side_effect = [
         RuntimeError("OpenAI API rate limit exceeded"),
         (
-            {"301": ["Fallback question 1", "Fallback question 2"]},
+            {
+                "301": [
+                    SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                    SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+                ]
+            },
             {"successful_batches": ["301_multiple_choice"], "failed_batches": []},
         ),
     ]
@@ -465,11 +505,17 @@ async def test_database_transaction_rollback_integration(session: Session, caplo
     from src.quiz.service import create_quiz
 
     # === Setup ===
-    user = create_user_in_session(session)
+    user_data = get_unique_user_data()
+    user = create_user_in_session(
+        session, canvas_id=user_data["canvas_id"], name=user_data["name"]
+    )
+
+    course_data = get_unique_course_data()
+    quiz_config = get_unique_quiz_config()
 
     quiz_create = QuizCreate(
-        canvas_course_id=77777,
-        canvas_course_name="Transaction Test Course",
+        canvas_course_id=course_data["id"],
+        canvas_course_name=course_data["name"],
         selected_modules={
             "401": ModuleSelection(
                 name="Transaction Module",
@@ -482,9 +528,9 @@ async def test_database_transaction_rollback_integration(session: Session, caplo
                 ],
             )
         },
-        title="Transaction Test Quiz",
-        llm_model="gpt-4",
-        llm_temperature=0.7,
+        title=quiz_config["title"],
+        llm_model=quiz_config["llm_model"],
+        llm_temperature=quiz_config["llm_temperature"],
         language=QuizLanguage.ENGLISH,
     )
 
@@ -519,12 +565,24 @@ async def test_database_transaction_rollback_integration(session: Session, caplo
     ]
 
     export_data = {
-        "course_id": 77777,
-        "title": "Transaction Test Quiz",
+        "course_id": course_data["id"],
+        "title": quiz_config["title"],
         "questions": [
-            {"id": "q1", "question_text": "Question 1?", "approved": True},
-            {"id": "q2", "question_text": "Question 2?", "approved": True},
-            {"id": "q3", "question_text": "Question 3?", "approved": True},
+            {
+                "id": "q1",
+                "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                "approved": True,
+            },
+            {
+                "id": "q2",
+                "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+                "approved": True,
+            },
+            {
+                "id": "q3",
+                "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                "approved": True,
+            },
         ],
     }
 
@@ -564,11 +622,17 @@ async def test_content_format_validation_integration(session: Session, caplog):
     from src.quiz.service import create_quiz
 
     # === Setup Mixed Content Types ===
-    user = create_user_in_session(session)
+    user_data = get_unique_user_data()
+    user = create_user_in_session(
+        session, canvas_id=user_data["canvas_id"], name=user_data["name"]
+    )
+
+    course_data = get_unique_course_data()
+    quiz_config = get_unique_quiz_config()
 
     quiz_create = QuizCreate(
-        canvas_course_id=99999,
-        canvas_course_name="Format Validation Course",
+        canvas_course_id=course_data["id"],
+        canvas_course_name=course_data["name"],
         selected_modules={
             "manual_text_module": ModuleSelection(
                 name="Text Module",
@@ -599,9 +663,9 @@ async def test_content_format_validation_integration(session: Session, caplog):
                 ],
             ),
         },
-        title="Format Validation Quiz",
-        llm_model="gpt-4",
-        llm_temperature=0.7,
+        title=quiz_config["title"],
+        llm_model=quiz_config["llm_model"],
+        llm_temperature=quiz_config["llm_temperature"],
         language=QuizLanguage.ENGLISH,
     )
 
@@ -642,7 +706,7 @@ async def test_content_format_validation_integration(session: Session, caplog):
         cleaned_modules,
     ) = await _execute_content_extraction_workflow(
         quiz.id,
-        99999,
+        course_data["id"],
         "format_token",
         selected_modules,
         mock_content_extractor,
@@ -691,11 +755,17 @@ async def test_quiz_lifecycle_state_transitions(session: Session, caplog):
     from src.quiz.service import create_quiz
 
     # === Setup Complete Lifecycle ===
-    user = create_user_in_session(session)
+    user_data = get_unique_user_data()
+    user = create_user_in_session(
+        session, canvas_id=user_data["canvas_id"], name=user_data["name"]
+    )
+
+    course_data = get_unique_course_data()
+    quiz_config = get_unique_quiz_config()
 
     quiz_create = QuizCreate(
-        canvas_course_id=12121,
-        canvas_course_name="Lifecycle Course",
+        canvas_course_id=course_data["id"],
+        canvas_course_name=course_data["name"],
         selected_modules={
             "501": ModuleSelection(
                 name="Lifecycle Module",
@@ -708,9 +778,9 @@ async def test_quiz_lifecycle_state_transitions(session: Session, caplog):
                 ],
             )
         },
-        title="Lifecycle Quiz",
-        llm_model="gpt-4",
-        llm_temperature=0.7,
+        title=quiz_config["title"],
+        llm_model=quiz_config["llm_model"],
+        llm_temperature=quiz_config["llm_temperature"],
         language=QuizLanguage.ENGLISH,
     )
 
@@ -740,7 +810,7 @@ async def test_quiz_lifecycle_state_transitions(session: Session, caplog):
 
     content_result = await _execute_content_extraction_workflow(
         quiz.id,
-        12121,
+        course_data["id"],
         "lifecycle_token",
         selected_modules,
         mock_content_extractor,
@@ -753,7 +823,12 @@ async def test_quiz_lifecycle_state_transitions(session: Session, caplog):
         AsyncMock()
     )
     mock_generation_service.generate_questions_for_quiz_with_batch_tracking.return_value = (
-        {"501": ["Lifecycle question 1", "Lifecycle question 2"]},
+        {
+            "501": [
+                SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+            ]
+        },
         {"successful_batches": ["501_multiple_choice"], "failed_batches": []},
     )
 
@@ -792,11 +867,19 @@ async def test_quiz_lifecycle_state_transitions(session: Session, caplog):
     ]
 
     export_data = {
-        "course_id": 12121,
-        "title": "Lifecycle Quiz",
+        "course_id": course_data["id"],
+        "title": quiz_config["title"],
         "questions": [
-            {"id": "q1", "question_text": "Lifecycle question 1?", "approved": True},
-            {"id": "q2", "question_text": "Lifecycle question 2?", "approved": True},
+            {
+                "id": "q1",
+                "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                "approved": True,
+            },
+            {
+                "id": "q2",
+                "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+                "approved": True,
+            },
         ],
     }
 
@@ -839,10 +922,16 @@ async def test_multi_language_content_integration(session: Session, caplog):
     from src.quiz.service import create_quiz
 
     # === Setup Multi-Language Content ===
-    user = create_user_in_session(session)
+    user_data = get_unique_user_data()
+    user = create_user_in_session(
+        session, canvas_id=user_data["canvas_id"], name=user_data["name"]
+    )
+
+    course_data = get_unique_course_data()
+    quiz_config = get_unique_quiz_config()
 
     quiz_create = QuizCreate(
-        canvas_course_id=54321,
+        canvas_course_id=course_data["id"],
         canvas_course_name="Flerspråklig Kurs",
         selected_modules={
             "manual_norsk_modul": ModuleSelection(
@@ -874,9 +963,9 @@ async def test_multi_language_content_integration(session: Session, caplog):
                 ],
             ),
         },
-        title="Flerspråklig Quiz",
-        llm_model="gpt-4",
-        llm_temperature=0.7,
+        title=quiz_config["title"],
+        llm_model=quiz_config["llm_model"],
+        llm_temperature=quiz_config["llm_temperature"],
         language=QuizLanguage.NORWEGIAN,
     )
 
@@ -917,7 +1006,7 @@ async def test_multi_language_content_integration(session: Session, caplog):
         cleaned_modules,
     ) = await _execute_content_extraction_workflow(
         quiz.id,
-        54321,
+        course_data["id"],
         "multilang_token",
         selected_modules,
         mock_content_extractor,

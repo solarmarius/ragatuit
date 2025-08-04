@@ -5,59 +5,23 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from tests.test_data import (
+    DEFAULT_EXTRACTED_CONTENT,
+    DEFAULT_PAGE_CONTENT,
+    get_sample_module_content,
+)
+
 
 @pytest.fixture
 def sample_content_dict():
-    """Create sample content dictionary."""
-    return {
-        "module_1": [
-            {
-                "id": "page_1",
-                "title": "Introduction to Python",
-                "content": (
-                    "Python is a high-level programming language. " * 10 + "\n\n"
-                ),
-                "url": "intro-python",
-            },
-            {
-                "id": "page_2",
-                "title": "Variables and Data Types",
-                "content": (
-                    "Python has several built-in data types including integers, floats, strings, and booleans. "
-                    * 5
-                    + "\n\n"
-                ),
-                "url": "variables-data-types",
-            },
-        ],
-        "module_2": [
-            {
-                "id": "page_3",
-                "title": "Control Structures",
-                "content": (
-                    "Control structures in Python include if statements, loops, and exception handling. "
-                    * 8
-                ),
-                "url": "control-structures",
-            }
-        ],
-    }
+    """Create sample content dictionary using centralized data."""
+    return get_sample_module_content()
 
 
 @pytest.fixture
 def sample_large_content_dict():
     """Create sample content dictionary with large content."""
-    return {
-        "module_large": [
-            {
-                "id": "page_large",
-                "title": "Large Content",
-                "content": "This is a large content section. "
-                * 200,  # About 6600 characters
-                "url": "large-content",
-            }
-        ]
-    }
+    return get_sample_module_content(large_content=True)
 
 
 @pytest.mark.asyncio
@@ -66,7 +30,7 @@ async def test_get_content_from_quiz_success():
     from src.question.services.content_service import get_content_from_quiz
 
     quiz_id = uuid.uuid4()
-    mock_content = {"module_1": [{"id": "page_1", "content": "Test content"}]}
+    mock_content = get_sample_module_content()
 
     with patch(
         "src.question.services.content_service.get_async_session"
@@ -202,15 +166,7 @@ async def test_prepare_content_for_generation_with_quiz_content():
     from src.question.services.content_service import prepare_content_for_generation
 
     quiz_id = uuid.uuid4()
-    mock_content = {
-        "module_1": [
-            {
-                "id": "page_1",
-                "title": "Test",
-                "content": "Test content for generation. " * 10,
-            }
-        ]
-    }
+    mock_content = get_sample_module_content()
 
     with patch(
         "src.question.services.content_service.get_content_from_quiz",
@@ -220,7 +176,7 @@ async def test_prepare_content_for_generation_with_quiz_content():
 
         mock_get_content.assert_called_once_with(quiz_id)
         assert "module_1" in result
-        assert "## Test" in result["module_1"]
+        assert "## Introduction to Python" in result["module_1"]
 
 
 @pytest.mark.asyncio
@@ -229,20 +185,12 @@ async def test_prepare_content_for_generation_with_custom_content():
     from src.question.services.content_service import prepare_content_for_generation
 
     quiz_id = uuid.uuid4()
-    custom_content = {
-        "module_custom": [
-            {
-                "id": "page_custom",
-                "title": "Custom",
-                "content": "Custom content for testing. " * 10,
-            }
-        ]
-    }
+    custom_content = get_sample_module_content(module_suffix="_custom")
 
     result = await prepare_content_for_generation(quiz_id, custom_content)
 
-    assert "module_custom" in result
-    assert "## Custom" in result["module_custom"]
+    assert "module_1_custom" in result
+    assert "## Introduction to Python" in result["module_1_custom"]
 
 
 @pytest.mark.asyncio
@@ -251,12 +199,13 @@ async def test_prepare_and_validate_content_with_quality_filter():
     from src.question.services.content_service import prepare_and_validate_content
 
     quiz_id = uuid.uuid4()
+    # Use centralized content with mixed quality
     mock_content = {
         "module_high_quality": [
             {
                 "id": "page_1",
                 "title": "High Quality Content",
-                "content": "This is comprehensive content with substantial information. "
+                "content": "This is comprehensive content with substantial information and detailed explanations. "
                 * 50,
             }
         ],
@@ -484,15 +433,7 @@ async def test_functional_composition_pipeline():
     )
 
     quiz_id = uuid.uuid4()
-    mock_content = {
-        "module_1": [
-            {
-                "id": "page_1",
-                "title": "Test Content",
-                "content": "This is comprehensive test content for the module. " * 20,
-            }
-        ]
-    }
+    mock_content = get_sample_module_content()
 
     with patch(
         "src.question.services.content_service.get_content_from_quiz",

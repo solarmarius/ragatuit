@@ -6,6 +6,14 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from tests.common_mocks import (
+    mock_database_operations,
+)
+from tests.test_data import (
+    get_unique_course_data,
+    get_unique_user_data,
+)
+
 
 @pytest.mark.asyncio
 async def test_safe_background_orchestration_successful_execution(caplog):
