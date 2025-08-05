@@ -710,8 +710,8 @@ def test_prepare_question_generation_includes_language(session: Session):
     assert result["llm_temperature"] == 0.7
 
 
-def test_quiz_cascade_soft_delete_to_questions(session: Session):
-    """Test that quiz soft deletion cascades to associated questions."""
+def test_quiz_delete_preserves_questions(session: Session):
+    """Test that quiz soft deletion preserves associated questions."""
     from sqlmodel import select
 
     from src.question.models import Question
@@ -750,20 +750,20 @@ def test_quiz_cascade_soft_delete_to_questions(session: Session):
     result = delete_quiz(session, quiz.id, quiz.owner_id)
     assert result is True
 
-    # Verify questions are soft deleted
+    # Verify questions remain active (NOT deleted)
     active_questions = session.exec(
         select(Question)
         .where(Question.quiz_id == quiz.id)
         .where(Question.deleted == False)  # noqa: E712
     ).all()
-    assert len(active_questions) == 0
+    assert len(active_questions) == 2
 
-    # But can be retrieved with deleted filter
+    # Verify all questions are still not deleted
     all_questions = session.exec(
         select(Question).where(Question.quiz_id == quiz.id)
     ).all()
     assert len(all_questions) == 2
-    assert all(q.deleted is True for q in all_questions)
+    assert all(q.deleted is False for q in all_questions)
 
 
 # Difficulty Feature Tests
