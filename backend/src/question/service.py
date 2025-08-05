@@ -320,6 +320,25 @@ async def update_question(
         logger.warning("question_not_found_for_update", question_id=str(question_id))
         return None
 
+    # Generate edit log entries if question_data is being updated
+    if "question_data" in updates:
+        from .utils import generate_edit_log_entries
+
+        old_question_data = question.question_data or {}
+        new_question_data = updates["question_data"] or {}
+
+        edit_entries = generate_edit_log_entries(old_question_data, new_question_data)
+
+        # Only append if there are actual changes
+        if edit_entries:
+            existing_log = question.edit_log or []
+            question.edit_log = existing_log + edit_entries
+            logger.debug(
+                "edit_log_entries_generated",
+                question_id=str(question_id),
+                changes_count=len(edit_entries),
+            )
+
     # Apply updates
     for field, value in updates.items():
         if hasattr(question, field):

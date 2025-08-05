@@ -175,6 +175,13 @@ class Question(SQLModel, table=True):
         default=None, description="Canvas quiz item ID after export"
     )
 
+    # Edit tracking
+    edit_log: list[dict[str, Any]] | None = Field(
+        default=None,
+        sa_column=Column(JSONB, nullable=True, default=[]),
+        description="Field-level edit history for question_data changes",
+    )
+
     # Soft delete fields
     deleted: bool = Field(
         default=False,
