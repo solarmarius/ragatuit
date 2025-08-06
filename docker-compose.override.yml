@@ -5,7 +5,7 @@ services:
   # etc. To enable it, update .env, set:
   # DOMAIN=localhost.tiangolo.com
   proxy:
-    image: traefik:3.0
+    image: traefik:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
@@ -121,6 +121,18 @@ services:
       - ./frontend/test-results:/app/test-results
     ports:
       - 9323:9323
+
+  # Development overrides for local access
+  grafana:
+    ports:
+      - "3000:3000" # Local development access
+    environment:
+      - GF_SECURITY_COOKIE_SECURE=false # Allow non-HTTPS for local dev
+      - GF_SECURITY_STRICT_TRANSPORT_SECURITY=false # Disable HSTS for local dev
+
+  loki:
+    ports:
+      - "3100:3100" # Local development access
 
   canvas-mock:
     build:

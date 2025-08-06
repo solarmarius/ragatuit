@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: traefik:3.0
+    image: traefik:latest
     ports:
       # Listen on port 80, default for HTTP, necessary to redirect to HTTPS
       - 80:80
@@ -28,6 +28,17 @@ services:
       # https-redirect middleware to redirect HTTP to HTTPS
       - traefik.http.middlewares.https-redirect.redirectscheme.scheme=https
       - traefik.http.middlewares.https-redirect.redirectscheme.permanent=true
+      # Security headers middleware for XSS, HSTS, and other security protections
+      - traefik.http.middlewares.security-headers.headers.framedeny=true
+      - traefik.http.middlewares.security-headers.headers.contenttypenosniff=true
+      - traefik.http.middlewares.security-headers.headers.browserxssfilter=true
+      - traefik.http.middlewares.security-headers.headers.stsSeconds=31536000
+      - traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true
+      - traefik.http.middlewares.security-headers.headers.stsPreload=true
+      - traefik.http.middlewares.security-headers.headers.forceSTSHeader=true
+      - traefik.http.middlewares.security-headers.headers.customFrameOptionsValue=DENY
+      - traefik.http.middlewares.security-headers.headers.contentSecurityPolicy=default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'
+      - traefik.http.middlewares.security-headers.headers.referrerPolicy=strict-origin-when-cross-origin
       # traefik-http set up only to use the middleware to redirect to https
       - traefik.http.routers.traefik-dashboard-http.middlewares=https-redirect
       # admin-auth middleware with HTTP Basic auth

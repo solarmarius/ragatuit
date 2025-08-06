@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:12
+    image: postgres:17
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -19,26 +19,16 @@ services:
       - POSTGRES_DB=${POSTGRES_DB?Variable not set}
 
   adminer:
-    image: adminer
+    image: adminer:latest
     restart: always
     networks:
-      - traefik-public
       - default
+    ports:
+      - "127.0.0.1:8080:8080"
     depends_on:
       - db
     environment:
       - ADMINER_DESIGN=pepa-linha-dark
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=traefik-public
-      - traefik.constraint-label=traefik-public
-      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-http.rule=Host(`adminer.${DOMAIN?Variable not set}`)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-http.entrypoints=http
-      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-http.middlewares=https-redirect
-      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-https.rule=Host(`adminer.${DOMAIN?Variable not set}`)
-      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-https.entrypoints=https
-      - traefik.http.routers.${STACK_NAME?Variable not set}-adminer-https.tls=true
-      - traefik.http.services.${STACK_NAME?Variable not set}-adminer.loadbalancer.server.port=8080
 
   prestart:
     image: "${DOCKER_IMAGE_BACKEND?Variable not set}:${TAG-latest}"
@@ -187,10 +177,8 @@ services:
 
   # Logging and Observability Stack
   loki:
-    image: grafana/loki:3.0.0
+    image: grafana/loki:latest
     restart: unless-stopped
-    ports:
-      - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml
     volumes:
       - loki-data:/loki
@@ -210,20 +198,30 @@ services:
       - traefik.http.services.${STACK_NAME?Variable not set}-loki.loadbalancer.server.port=3100
 
   grafana:
-    image: grafana/grafana-oss:10.4.0
+    image: grafana/grafana-oss:latest
     restart: unless-stopped
-    ports:
-      - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD?Variable not set}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+      # Security configurations
+      - GF_SECURITY_ALLOW_EMBEDDING=false
+      - GF_SECURITY_COOKIE_SECURE=true
+      - GF_SECURITY_COOKIE_SAMESITE=strict
+      - GF_SECURITY_STRICT_TRANSPORT_SECURITY=true
+      - GF_SECURITY_STRICT_TRANSPORT_SECURITY_MAX_AGE_SECONDS=31536000
+      - GF_SECURITY_STRICT_TRANSPORT_SECURITY_PRELOAD=true
+      - GF_SECURITY_STRICT_TRANSPORT_SECURITY_SUBDOMAINS=true
+      - GF_SECURITY_X_CONTENT_TYPE_OPTIONS=true
+      - GF_SECURITY_X_XSS_PROTECTION=true
+      - GF_AUTH_DISABLE_LOGIN_FORM=false
+      - GF_USERS_AUTO_ASSIGN_ORG_ROLE=Viewer
+      - GF_SESSION_LIFE_TIME=86400
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
       - ./grafana/dashboards:/var/lib/grafana/dashboards
     networks:
-      - default
       - traefik-public
     depends_on:
       - loki
@@ -240,7 +238,7 @@ services:
       - traefik.http.services.${STACK_NAME?Variable not set}-grafana.loadbalancer.server.port=3000
 
   promtail:
-    image: grafana/promtail:3.0.0
+    image: grafana/promtail:latest
     restart: unless-stopped
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
