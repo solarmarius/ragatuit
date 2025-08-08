@@ -26,8 +26,9 @@ async def get_courses(
     """
     Fetch Canvas courses where the current user has teacher enrollment.
 
-    Returns a list of courses where the authenticated user is enrolled as a teacher.
-    This endpoint filters courses to only include those where the user can create quizzes.
+    Uses Canvas API's enrollment_type=teacher parameter to filter courses server-side,
+    returning only courses where the authenticated user is enrolled as a teacher.
+    This ensures users only see courses where they can create quizzes.
 
     **Returns:**
         List[CanvasCourse]: List of courses with id and name only
@@ -56,11 +57,14 @@ async def get_courses(
         # Canvas token is automatically refreshed by the CanvasToken dependency
         # if it's expiring within 5 minutes
 
-        # Call Canvas API to get courses
+        # Call Canvas API to get courses where user is enrolled as teacher
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(
-                    url_builder.build_url("courses"),
+                    url_builder.build_url(
+                        "courses",
+                        params={"enrollment_type": "teacher", "per_page": "100"},
+                    ),
                     headers={
                         "Authorization": f"Bearer {canvas_token}",
                         "Accept": "application/json",
@@ -101,7 +105,7 @@ async def get_courses(
                     status_code=503, detail="Failed to connect to Canvas API"
                 )
 
-        # Filter courses where user has teacher enrollment
+        # Process courses (Canvas already filtered by enrollment_type=teacher)
         teacher_courses = []
         for course in courses_data:
             try:
@@ -114,19 +118,12 @@ async def get_courses(
                     )
                     continue
 
-                # Check if course has enrollments and user is a teacher
-                enrollments = course.get("enrollments", [])
-                is_teacher = any(
-                    enrollment.get("type") == "teacher" for enrollment in enrollments
-                )
-
                 # Validate required fields and data types
                 course_id = course.get("id")
                 course_name = course.get("name")
 
                 if (
-                    is_teacher
-                    and course_id is not None
+                    course_id is not None
                     and course_name is not None
                     and isinstance(course_id, int | str)
                     and isinstance(course_name, str)

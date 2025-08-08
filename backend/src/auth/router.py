@@ -54,7 +54,7 @@ async def login_canvas() -> RedirectResponse:
         HTTPException: 400 if Canvas base URL is invalid or malformed
 
     **Example:**
-        GET /api/v1/auth/login/canvas
+        GET /auth/login/canvas
         -> Redirects to: https://canvas.example.com/login/oauth2/auth?client_id=...&state=...
     """
     # TODO: Store state in session/cache for CSRF validation
@@ -72,6 +72,7 @@ async def login_canvas() -> RedirectResponse:
             "response_type": "code",
             "redirect_uri": settings.CANVAS_REDIRECT_URI,
             "state": state,
+            "scope": "url:GET|/api/v1/courses url:GET|/api/v1/courses/:course_id/modules url:GET|/api/v1/courses/:course_id/modules/:module_id/items url:GET|/api/v1/courses/:course_id/pages/:url_or_id url:GET|/api/v1/courses/:course_id/files/:id url:POST|/api/quiz/v1/courses/:course_id/quizzes url:DELETE|/api/quiz/v1/courses/:course_id/quizzes/:assignment_id url:DELETE|/api/quiz/v1/courses/:course_id/quizzes/:assignment_id/items/:item_id url:POST|/api/quiz/v1/courses/:course_id/quizzes/:assignment_id/items",
         }
 
         auth_url = f"{canvas_base_url}/login/oauth2/auth?{urlencode(auth_params)}"
@@ -125,7 +126,7 @@ async def auth_canvas(session: SessionDep, request: Request) -> RedirectResponse
         HTTPException: 503 if unable to connect to Canvas
 
     **Example:**
-        GET /api/v1/auth/callback/canvas?code=abc123&state=xyz789
+        GET /auth/callback/canvas?code=abc123&state=xyz789
         -> Redirects to: http://localhost:5173/login/success?token=jwt_token
 
     **Error Handling:**

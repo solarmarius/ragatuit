@@ -63,7 +63,7 @@ async def test_get_available_models(provider):
 
     # Verify both models are available
     model_ids = [model.model_id for model in models]
-    assert "o4-mini-2025-04-16" in model_ids
+    assert "gpt-5-mini-2025-08-07" in model_ids
     assert "o3-2025-04-16" in model_ids
 
 
@@ -197,7 +197,7 @@ async def test_generate_response_with_custom_config():
     # Use different model and temperature
     custom_config = LLMConfiguration(
         provider=LLMProvider.OPENAI,
-        model="o4-mini-2025-04-16",
+        model="gpt-5-mini-2025-08-07",
         temperature=1.0,
         max_tokens=1000,
         timeout=60.0,

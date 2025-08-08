@@ -14,7 +14,7 @@ logger = get_logger("llm_provider")
 
 
 # Default LLM Configuration Constants
-DEFAULT_OPENAI_MODEL = "o4-mini-2025-04-16"
+DEFAULT_OPENAI_MODEL = "gpt-5-mini-2025-08-07"
 DEFAULT_TEMPERATURE = 1.0
 
 
