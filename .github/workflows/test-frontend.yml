@@ -83,6 +83,7 @@ jobs:
           CANVAS_CLIENT_SECRET=${{ secrets.CANVAS_CLIENT_SECRET }}
           CANVAS_REDIRECT_URI=${{ secrets.CANVAS_REDIRECT_URI }}
           CANVAS_BASE_URL=${{ secrets.CANVAS_BASE_URL }}
+          GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
           EOF
       - name: Install uv
         uses: astral-sh/setup-uv@v6
