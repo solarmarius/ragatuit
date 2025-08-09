@@ -1,41 +1,41 @@
-import { AuthService, OpenAPI, type UserPublic, UsersService } from "@/client"
-import { useQuery } from "@tanstack/react-query"
-import { useNavigate } from "@tanstack/react-router"
+import { AuthService, OpenAPI, type UserPublic, UsersService } from "@/client";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 
 const isLoggedIn = () => {
-  return localStorage.getItem("access_token") !== null
-}
+  return localStorage.getItem("access_token") !== null;
+};
 
 const useAuth = () => {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   const { data: user } = useQuery<UserPublic | null, Error>({
     queryKey: ["currentUser"],
     queryFn: UsersService.readUserMe,
     enabled: isLoggedIn(),
-  })
+  });
 
   const initiateCanvasLogin = () => {
     // Simply redirect to the backend endpoint - it will handle the Canvas redirect
-    window.location.href = `${OpenAPI.BASE}/api/v1/auth/login/canvas`
-  }
+    window.location.href = `${OpenAPI.BASE}/auth/login/canvas`;
+  };
 
   const logout = async () => {
     try {
-      await AuthService.logoutCanvas()
+      await AuthService.logoutCanvas();
     } catch (error) {
-      console.error("Logout error:", error)
+      console.error("Logout error:", error);
     } finally {
-      localStorage.removeItem("access_token")
-      navigate({ to: "/login" })
+      localStorage.removeItem("access_token");
+      navigate({ to: "/login" });
     }
-  }
+  };
 
   return {
     initiateCanvasLogin,
     logout,
     user,
-  }
-}
+  };
+};
 
-export { isLoggedIn }
-export default useAuth
+export { isLoggedIn };
+export default useAuth;

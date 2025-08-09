@@ -42,6 +42,9 @@ jobs:
       CANVAS_REDIRECT_URI: ${{ secrets.CANVAS_REDIRECT_URI }}
       CANVAS_BASE_URL: ${{ secrets.CANVAS_BASE_URL }}
 
+      # Grafana configuration
+      GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -69,6 +72,7 @@ jobs:
           CANVAS_CLIENT_SECRET=${{ secrets.CANVAS_CLIENT_SECRET }}
           CANVAS_REDIRECT_URI=${{ secrets.CANVAS_REDIRECT_URI }}
           CANVAS_BASE_URL=${{ secrets.CANVAS_BASE_URL }}
+          GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
           EOF
       - name: Set up Python
         uses: actions/setup-python@v5

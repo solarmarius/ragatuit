@@ -234,8 +234,8 @@ def test_multiple_users_quiz_isolation(session: Session):
     [
         ("gpt-4", 0.5),
         ("gpt-4", 1.0),
-        ("o4-mini-2025-04-16", 0.7),
-        ("o4-mini-2025-04-16", 1.5),
+        ("gpt-5-mini-2025-08-07", 0.7),
+        ("gpt-5-mini-2025-08-07", 1.5),
     ],
 )
 def test_create_quiz_with_various_parameters(

@@ -100,5 +100,5 @@ async def handle_general_error(request: Request, exc: Exception) -> JSONResponse
 
 logger.info("global_exception_handlers_added")
 
-app.include_router(api_router, prefix=settings.API_V1_STR)
+app.include_router(api_router)
 logger.info("api_router_included", prefix=settings.API_V1_STR)

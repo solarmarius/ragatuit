@@ -94,7 +94,7 @@ def test_question_generation_workflow_success(session: Session):
     params = prepare_question_generation(session, quiz.id, user.id)
 
     assert params["question_count"] == 10
-    assert params["llm_model"] == "o4-mini-2025-04-16"
+    assert params["llm_model"] == "gpt-5-mini-2025-08-07"
     assert params["llm_temperature"] == 1.0
     assert params["language"].value == "en"
     assert params["tone"].value == "academic"
@@ -509,7 +509,7 @@ def create_mock_quiz_with_content():
     mock_quiz.canvas_course_name = "Test Course"
     mock_quiz.title = "Test Quiz"
     mock_quiz.question_count = 10
-    mock_quiz.llm_model = "o4-mini-2025-04-16"
+    mock_quiz.llm_model = "gpt-5-mini-2025-08-07"
     mock_quiz.llm_temperature = 1.0
     mock_quiz.language = QuizLanguage.ENGLISH
     mock_quiz.tone = QuizTone.ACADEMIC

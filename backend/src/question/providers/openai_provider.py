@@ -34,12 +34,12 @@ class OpenAIProvider(BaseLLMProvider):
         self._models = [
             LLMModel(
                 provider=LLMProvider.OPENAI,
-                model_id="o4-mini-2025-04-16",
-                display_name="OpenAI o4 Mini",
-                max_tokens=200000,
+                model_id="gpt-5-mini-2025-08-07",
+                display_name="OpenAI GPT-5 Mini",
+                max_tokens=400000,
                 supports_streaming=False,
-                cost_per_1k_tokens=0.011,
-                description="Cost-efficient OpenAI o4 Mini model for development",
+                cost_per_1k_tokens=0.025,
+                description="Cost-efficient OpenAI GPT-5 Mini model for development",
             ),
             LLMModel(
                 provider=LLMProvider.OPENAI,

@@ -116,7 +116,7 @@ DEFAULT_QUIZ_CONFIG = {
     "canvas_course_id": 123,
     "canvas_course_name": "Introduction to Computer Science",
     "title": "Test Quiz",
-    "llm_model": "o4-mini-2025-04-16",
+    "llm_model": "gpt-5-mini-2025-08-07",
     "llm_temperature": 1.0,
 }
 
