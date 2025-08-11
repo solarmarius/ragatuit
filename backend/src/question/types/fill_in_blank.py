@@ -1,10 +1,12 @@
 """Fill-in-Blank Question type implementation."""
 
+import re
 import uuid
+from collections import Counter
 from collections.abc import Callable
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from src.canvas.constants import CanvasInteractionType, CanvasScoringAlgorithm
 
@@ -14,6 +16,103 @@ from .base import (
     QuestionType,
     generate_canvas_title,
 )
+
+
+def _extract_blank_tags(question_text: str) -> list[int]:
+    """
+    Extract all [blank_N] tag positions from question text.
+
+    Args:
+        question_text: The question text to parse
+
+    Returns:
+        List of blank position numbers found in the text
+    """
+    if not question_text:
+        return []
+
+    # Find all [blank_N] patterns where N is a number
+    pattern = r"\[blank_(\d+)\]"
+    matches = re.findall(pattern, question_text, re.IGNORECASE)
+
+    # Convert to integers and return
+    return [int(match) for match in matches]
+
+
+def _find_duplicate_blank_tags(question_text: str) -> list[int]:
+    """
+    Find duplicate [blank_N] tags in question text.
+
+    Args:
+        question_text: The question text to analyze
+
+    Returns:
+        List of blank positions that appear more than once
+    """
+    blank_positions = _extract_blank_tags(question_text)
+
+    # Count occurrences of each position
+    position_counts = Counter(blank_positions)
+
+    # Return positions that appear more than once
+    return [position for position, count in position_counts.items() if count > 1]
+
+
+def _validate_blank_tags_match_positions(
+    question_text: str, blank_positions: list[int]
+) -> tuple[bool, str]:
+    """
+    Validate that blank tags in question text match the configured blank positions.
+
+    Args:
+        question_text: The question text containing blank tags
+        blank_positions: List of positions from blank configurations
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    if not question_text:
+        if blank_positions:
+            return (
+                False,
+                "Question text is required when blank configurations are provided",
+            )
+        return True, ""
+
+    # Extract unique blank positions from question text
+    text_positions = list(set(_extract_blank_tags(question_text)))
+    text_positions.sort()
+
+    # Sort configured positions for comparison
+    config_positions = sorted(blank_positions)
+
+    # Check if they match exactly
+    if text_positions != config_positions:
+        if len(text_positions) != len(config_positions):
+            return (
+                False,
+                f"Number of [blank_N] tags in question text ({len(text_positions)}) does not match number of blank configurations ({len(config_positions)})",
+            )
+        else:
+            missing_in_text = [
+                pos for pos in config_positions if pos not in text_positions
+            ]
+            extra_in_text = [
+                pos for pos in text_positions if pos not in config_positions
+            ]
+
+            if missing_in_text:
+                return (
+                    False,
+                    f"Blank configurations exist for positions {missing_in_text} but corresponding [blank_N] tags are missing in question text",
+                )
+            if extra_in_text:
+                return (
+                    False,
+                    f"Question text contains [blank_N] tags for positions {extra_in_text} but no corresponding blank configurations exist",
+                )
+
+    return True, ""
 
 
 class BlankData(BaseModel):
@@ -141,6 +240,39 @@ class FillInBlankData(BaseQuestionData):
                 all_answers.extend(blank.answer_variations)
             answers[blank.position] = all_answers
         return answers
+
+    @model_validator(mode="after")
+    def validate_blank_tags(self) -> "FillInBlankData":
+        """
+        Validate that blank tags in question text match the blank configurations.
+
+        Ensures:
+        1. No duplicate [blank_N] tags in question text
+        2. Number of unique [blank_N] tags matches number of blank configurations
+        3. All blank positions have corresponding tags in question text
+        """
+        # Skip validation if no question text or blanks
+        if not self.question_text or not self.blanks:
+            return self
+
+        # Check for duplicate blank tags in question text
+        duplicate_positions = _find_duplicate_blank_tags(self.question_text)
+        if duplicate_positions:
+            duplicate_tags = [f"[blank_{pos}]" for pos in duplicate_positions]
+            raise ValueError(
+                f"Duplicate blank tags found in question text: {', '.join(duplicate_tags)}"
+            )
+
+        # Validate that blank tags match blank configurations
+        blank_positions = [blank.position for blank in self.blanks]
+        is_valid, error_message = _validate_blank_tags_match_positions(
+            self.question_text, blank_positions
+        )
+
+        if not is_valid:
+            raise ValueError(error_message)
+
+        return self
 
 
 class FillInBlankQuestionType(BaseQuestionType):
