@@ -1,22 +1,21 @@
-import { Heading, Text, VStack } from "@chakra-ui/react"
+import { Heading, Text, VStack } from "@chakra-ui/react";
 
-import DeleteConfirmation from "./DeleteConfirmation"
+import DeleteConfirmation from "./DeleteConfirmation";
 
 const DeleteAccount = () => {
   return (
     <VStack align="stretch" gap={4} w="75%">
       <Heading size="xl">Delete Account</Heading>
       <Text>
-        Permanently delete your user. The quizzes and question associated will
-        not be deleted, but the corresponding user ID of the quiz will be
-        nullified.
+        This will delete all your user data. Quizzes and questions you created
+        will not be deleted, but they will no longer be connected to your
+        account. The user ID of your quizzes will be set to "NULL".
       </Text>
       <Text>
-        Make sure that any ongoing quizzes are completed before proceeding, as
-        they will also be deleted.
+        Make sure that any ongoing quizzes are completed before proceeding.
       </Text>
       <DeleteConfirmation />
     </VStack>
-  )
-}
-export default DeleteAccount
+  );
+};
+export default DeleteAccount;
