@@ -383,13 +383,12 @@ def test_fill_in_blank_question_type_format_for_canvas():
     assert "scoring_data" in result
     # Working item body should have the answer filled in
     assert "Paris" in result["scoring_data"]["working_item_body"]
-    assert len(result["scoring_data"]["value"]) == 2  # Main answer + variation
+    assert len(result["scoring_data"]["value"]) == 1  # One entry with all answers
 
     # Check scoring algorithms
     scoring_values = result["scoring_data"]["value"]
-    assert scoring_values[0]["scoring_data"]["value"] == "Paris"
-    assert scoring_values[0]["scoring_algorithm"] == "TextContainsAnswer"
-    assert scoring_values[1]["scoring_data"]["value"] == "paris"
+    assert scoring_values[0]["scoring_data"]["value"] == ["Paris", "paris"]
+    assert scoring_values[0]["scoring_algorithm"] == "TextInChoices"
 
 
 def test_fill_in_blank_question_type_format_for_canvas_case_sensitive():
@@ -414,7 +413,7 @@ def test_fill_in_blank_question_type_format_for_canvas_case_sensitive():
 
     result = question_type.format_for_canvas(data)
     scoring_values = result["scoring_data"]["value"]
-    assert scoring_values[0]["scoring_algorithm"] == "TextContainsAnswer"
+    assert scoring_values[0]["scoring_algorithm"] == "TextInChoices"
 
 
 def test_fill_in_blank_question_type_format_for_canvas_multiple_blanks():
@@ -516,8 +515,8 @@ def test_fill_in_blank_end_to_end_workflow():
     assert canvas_format["interaction_type_slug"] == "rich-fill-blank"
     assert canvas_format["points_possible"] == 2
     assert len(canvas_format["interaction_data"]["blanks"]) == 2
-    # 2 blanks + 2 answer variations for first blank = 4 scoring entries
-    assert len(canvas_format["scoring_data"]["value"]) == 4
+    # 2 blanks = 2 scoring entries (answers grouped per blank)
+    assert len(canvas_format["scoring_data"]["value"]) == 2
     assert canvas_format["scoring_algorithm"] == "MultipleMethods"
 
 

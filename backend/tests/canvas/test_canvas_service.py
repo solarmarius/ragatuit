@@ -375,7 +375,7 @@ def test_convert_question_to_canvas_format_fill_in_blank_single_blank():
     entry = item["entry"]
     assert entry["interaction_type_slug"] == "rich-fill-blank"
     # Item body should have span tags with UUID instead of placeholder
-    assert '<span id="blank_' in entry["item_body"]
+    assert '<span id="' in entry["item_body"]
     assert entry["scoring_algorithm"] == "MultipleMethods"
 
     # Check interaction data
@@ -389,20 +389,18 @@ def test_convert_question_to_canvas_format_fill_in_blank_single_blank():
     # Check scoring data
     scoring_data = entry["scoring_data"]
     assert "value" in scoring_data
-    assert len(scoring_data["value"]) == 3  # Main answer + 2 variations
+    assert len(scoring_data["value"]) == 1  # Main answer + 2 variations
     # Working item body should have the answer filled in
     assert "Paris" in scoring_data["working_item_body"]
 
     # Check scoring values
     scoring_values = scoring_data["value"]
     answers = [sv["scoring_data"]["value"] for sv in scoring_values]
-    assert "Paris" in answers
-    assert "paris" in answers
-    assert "PARIS" in answers
+    assert ["Paris", "paris", "PARIS"] in answers
 
     # Check scoring algorithm
     for sv in scoring_values:
-        assert sv["scoring_algorithm"] == "TextContainsAnswer"
+        assert sv["scoring_algorithm"] == "TextInChoices"
 
 
 def test_convert_question_to_canvas_format_fill_in_blank_multiple_blanks():
@@ -446,7 +444,7 @@ def test_convert_question_to_canvas_format_fill_in_blank_multiple_blanks():
 
     # Check scoring data
     scoring_data = item["entry"]["scoring_data"]
-    assert len(scoring_data["value"]) == 4  # 3 main answers + 1 variation
+    assert len(scoring_data["value"]) == 3  # 3 main answers + 1 variation
 
     # Verify all blanks have unique UUIDs
     blank_ids = [blank["id"] for blank in interaction_data["blanks"]]
@@ -454,10 +452,9 @@ def test_convert_question_to_canvas_format_fill_in_blank_multiple_blanks():
 
     # Verify scoring values contain all expected answers
     answers = [sv["scoring_data"]["value"] for sv in scoring_data["value"]]
-    assert "France" in answers
-    assert "Paris" in answers
-    assert "paris" in answers
-    assert "Europe" in answers
+    assert ["France"] in answers
+    assert ["Paris", "paris"] in answers
+    assert ["Europe"] in answers
 
 
 def test_convert_question_to_canvas_format_fill_in_blank_case_sensitive():
@@ -485,8 +482,8 @@ def test_convert_question_to_canvas_format_fill_in_blank_case_sensitive():
 
     # Check scoring algorithm
     scoring_value = scoring_data["value"][0]
-    assert scoring_value["scoring_algorithm"] == "TextContainsAnswer"
-    assert scoring_value["scoring_data"]["value"] == "Au"
+    assert scoring_value["scoring_algorithm"] == "TextInChoices"
+    assert scoring_value["scoring_data"]["value"] == ["Au"]
 
 
 def test_convert_question_to_canvas_format_fill_in_blank_no_variations():
@@ -514,8 +511,8 @@ def test_convert_question_to_canvas_format_fill_in_blank_no_variations():
 
     # Check scoring value
     scoring_value = scoring_data["value"][0]
-    assert scoring_value["scoring_data"]["value"] == "Paris"
-    assert scoring_value["scoring_algorithm"] == "TextContainsAnswer"
+    assert scoring_value["scoring_data"]["value"] == ["Paris"]
+    assert scoring_value["scoring_algorithm"] == "TextInChoices"
 
 
 def test_convert_question_to_canvas_format_fill_in_blank_with_explanation():
@@ -541,7 +538,7 @@ def test_convert_question_to_canvas_format_fill_in_blank_with_explanation():
     # Canvas format should include the question but explanation handling
     # depends on Canvas New Quiz API capabilities
     # The item_body should have span tags with UUIDs for blanks
-    assert '<span id="blank_' in result["item"]["entry"]["item_body"]
+    assert '<span id="' in result["item"]["entry"]["item_body"]
     assert "The capital of France" in result["item"]["entry"]["item_body"]
 
 
@@ -672,4 +669,4 @@ def test_convert_question_to_canvas_format_mixed_case_sensitivity():
     algorithms = [sv["scoring_algorithm"] for sv in scoring_values]
     # All should use TextContainsAnswer in the new implementation
     for algorithm in algorithms:
-        assert algorithm == "TextContainsAnswer"
+        assert algorithm == "TextInChoices"
