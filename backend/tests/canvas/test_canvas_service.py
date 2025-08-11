@@ -190,6 +190,7 @@ async def test_create_canvas_quiz_with_correct_payload():
         "quiz": {
             "title": "Math Quiz",
             "points_possible": 50,
+            "published": False,
             "quiz_settings": {
                 "shuffle_questions": False,
                 "shuffle_answers": False,
