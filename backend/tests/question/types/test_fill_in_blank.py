@@ -215,7 +215,7 @@ def test_fill_in_blank_data_blanks_sorted():
         BlankData(position=2, correct_answer="Second"),
     ]
     data = FillInBlankData(
-        question_text="Test question",
+        question_text="Test [blank_3] question with [blank_1] and [blank_2]",
         blanks=blanks,
     )
     assert data.blanks[0].position == 1
@@ -279,7 +279,7 @@ def test_fill_in_blank_data_get_blank_by_position():
         BlankData(position=3, correct_answer="Third"),
     ]
     data = FillInBlankData(
-        question_text="Test question",
+        question_text="Test [blank_1] question with [blank_3]",
         blanks=blanks,
     )
 
@@ -308,7 +308,7 @@ def test_fill_in_blank_data_get_all_answers():
         BlankData(position=2, correct_answer="France"),
     ]
     data = FillInBlankData(
-        question_text="Test question",
+        question_text="Test [blank_1] question about [blank_2]",
         blanks=blanks,
     )
 
@@ -625,3 +625,253 @@ def test_fill_in_blank_validation_round_trip():
     assert revalidated_data.question_text == validated_data.question_text
     assert len(revalidated_data.blanks) == len(validated_data.blanks)
     assert revalidated_data.explanation == validated_data.explanation
+
+
+def test_fill_in_blank_data_duplicate_blank_tags_validation():
+    """Test validation fails when question text contains duplicate [blank_N] tags."""
+    from pydantic import ValidationError
+
+    from src.question.types.fill_in_blank import BlankData, FillInBlankData
+
+    blanks = [
+        BlankData(position=1, correct_answer="First"),
+    ]
+
+    # Test duplicate [blank_1] tags
+    with pytest.raises(ValidationError) as exc_info:
+        FillInBlankData(
+            question_text="The answer is [blank_1] and also [blank_1].",
+            blanks=blanks,
+        )
+    assert "Duplicate blank tags found in question text: [blank_1]" in str(
+        exc_info.value
+    )
+
+
+def test_fill_in_blank_data_multiple_duplicate_blank_tags():
+    """Test validation with multiple duplicate blank tags."""
+    from pydantic import ValidationError
+
+    from src.question.types.fill_in_blank import BlankData, FillInBlankData
+
+    blanks = [
+        BlankData(position=1, correct_answer="First"),
+        BlankData(position=2, correct_answer="Second"),
+    ]
+
+    # Test multiple duplicates
+    with pytest.raises(ValidationError) as exc_info:
+        FillInBlankData(
+            question_text="Test [blank_1], [blank_2], [blank_1], and [blank_2] again.",
+            blanks=blanks,
+        )
+    error_message = str(exc_info.value)
+    assert "Duplicate blank tags found in question text:" in error_message
+    assert "[blank_1]" in error_message
+    assert "[blank_2]" in error_message
+
+
+def test_fill_in_blank_data_blank_count_mismatch_too_few_tags():
+    """Test validation fails when there are fewer [blank_N] tags than blank configurations."""
+    from pydantic import ValidationError
+
+    from src.question.types.fill_in_blank import BlankData, FillInBlankData
+
+    blanks = [
+        BlankData(position=1, correct_answer="First"),
+        BlankData(position=2, correct_answer="Second"),
+        BlankData(position=3, correct_answer="Third"),
+    ]
+
+    # Only 2 blank tags but 3 blank configurations
+    with pytest.raises(ValidationError) as exc_info:
+        FillInBlankData(
+            question_text="The answer is [blank_1] and [blank_2].",
+            blanks=blanks,
+        )
+    assert (
+        "Number of [blank_N] tags in question text (2) does not match number of blank configurations (3)"
+        in str(exc_info.value)
+    )
+
+
+def test_fill_in_blank_data_blank_count_mismatch_too_many_tags():
+    """Test validation fails when there are more [blank_N] tags than blank configurations."""
+    from pydantic import ValidationError
+
+    from src.question.types.fill_in_blank import BlankData, FillInBlankData
+
+    blanks = [
+        BlankData(position=1, correct_answer="First"),
+    ]
+
+    # 3 blank tags but only 1 blank configuration
+    with pytest.raises(ValidationError) as exc_info:
+        FillInBlankData(
+            question_text="Test [blank_1], [blank_2], and [blank_3].",
+            blanks=blanks,
+        )
+    assert (
+        "Number of [blank_N] tags in question text (3) does not match number of blank configurations (1)"
+        in str(exc_info.value)
+    )
+
+
+def test_fill_in_blank_data_mismatched_blank_positions():
+    """Test validation fails when blank positions don't match tag positions."""
+    from pydantic import ValidationError
+
+    from src.question.types.fill_in_blank import BlankData, FillInBlankData
+
+    blanks = [
+        BlankData(position=1, correct_answer="First"),
+        BlankData(
+            position=3, correct_answer="Third"
+        ),  # Position 3 but no [blank_3] in text
+    ]
+
+    # Question has [blank_1] and [blank_2] but configuration has positions 1 and 3
+    with pytest.raises(ValidationError) as exc_info:
+        FillInBlankData(
+            question_text="Test [blank_1] and [blank_2].",
+            blanks=blanks,
+        )
+    error_message = str(exc_info.value)
+    assert (
+        "Blank configurations exist for positions [3] but corresponding [blank_N] tags are missing in question text"
+        in error_message
+        or "Question text contains [blank_N] tags for positions [2] but no corresponding blank configurations exist"
+        in error_message
+    )
+
+
+def test_fill_in_blank_data_valid_blank_tag_matching():
+    """Test validation passes when blank tags and configurations match perfectly."""
+    from src.question.types.fill_in_blank import BlankData, FillInBlankData
+
+    blanks = [
+        BlankData(position=1, correct_answer="First"),
+        BlankData(position=2, correct_answer="Second"),
+        BlankData(position=3, correct_answer="Third"),
+    ]
+
+    # Valid matching - all tags have corresponding blank configurations
+    data = FillInBlankData(
+        question_text="Test [blank_1], [blank_2], and [blank_3].",
+        blanks=blanks,
+    )
+
+    assert len(data.blanks) == 3
+    assert data.blanks[0].position == 1
+    assert data.blanks[1].position == 2
+    assert data.blanks[2].position == 3
+
+
+def test_fill_in_blank_data_case_insensitive_blank_tags():
+    """Test that blank tag validation is case-insensitive."""
+    from src.question.types.fill_in_blank import BlankData, FillInBlankData
+
+    blanks = [
+        BlankData(position=1, correct_answer="First"),
+        BlankData(position=2, correct_answer="Second"),
+    ]
+
+    # Mixed case should work
+    data = FillInBlankData(
+        question_text="Test [BLANK_1] and [Blank_2].",
+        blanks=blanks,
+    )
+
+    assert len(data.blanks) == 2
+
+
+def test_fill_in_blank_data_no_validation_when_empty():
+    """Test validation is skipped when question text or blanks are empty."""
+    from src.question.types.fill_in_blank import FillInBlankData
+
+    # Empty question text with no blanks should not fail validation
+    # (but will fail the field validator for required blanks)
+    try:
+        FillInBlankData(
+            question_text="",
+            blanks=[],
+        )
+    except Exception as e:
+        # Should fail on field validation, not blank tag validation
+        assert "At least one blank is required" in str(e)
+
+
+def test_extract_blank_tags_helper():
+    """Test the _extract_blank_tags helper function."""
+    from src.question.types.fill_in_blank import _extract_blank_tags
+
+    # Test normal cases
+    assert _extract_blank_tags("Test [blank_1]") == [1]
+    assert _extract_blank_tags("Test [blank_1] and [blank_2]") == [1, 2]
+    assert _extract_blank_tags("Mixed [blank_3], [blank_1], [blank_2]") == [3, 1, 2]
+
+    # Test case insensitive
+    assert _extract_blank_tags("Test [BLANK_1] and [Blank_2]") == [1, 2]
+
+    # Test duplicates (should return all occurrences)
+    assert _extract_blank_tags("[blank_1] and [blank_1]") == [1, 1]
+
+    # Test empty/invalid cases
+    assert _extract_blank_tags("") == []
+    assert _extract_blank_tags("No blanks here") == []
+    assert _extract_blank_tags("Invalid [blank_] tag") == []
+
+
+def test_find_duplicate_blank_tags_helper():
+    """Test the _find_duplicate_blank_tags helper function."""
+    from src.question.types.fill_in_blank import _find_duplicate_blank_tags
+
+    # Test no duplicates
+    assert _find_duplicate_blank_tags("Test [blank_1] and [blank_2]") == []
+
+    # Test single duplicate
+    assert _find_duplicate_blank_tags("Test [blank_1] and [blank_1]") == [1]
+
+    # Test multiple duplicates
+    duplicates = _find_duplicate_blank_tags(
+        "Test [blank_1], [blank_2], [blank_1], [blank_2]"
+    )
+    assert set(duplicates) == {1, 2}
+
+    # Test empty text
+    assert _find_duplicate_blank_tags("") == []
+
+
+def test_validate_blank_tags_match_positions_helper():
+    """Test the _validate_blank_tags_match_positions helper function."""
+    from src.question.types.fill_in_blank import _validate_blank_tags_match_positions
+
+    # Test perfect match
+    is_valid, message = _validate_blank_tags_match_positions(
+        "Test [blank_1] and [blank_2]", [1, 2]
+    )
+    assert is_valid is True
+    assert message == ""
+
+    # Test count mismatch
+    is_valid, message = _validate_blank_tags_match_positions("Test [blank_1]", [1, 2])
+    assert is_valid is False
+    assert (
+        "Number of [blank_N] tags in question text (1) does not match number of blank configurations (2)"
+        in message
+    )
+
+    # Test position mismatch
+    is_valid, message = _validate_blank_tags_match_positions(
+        "Test [blank_1] and [blank_3]", [1, 2]
+    )
+    assert is_valid is False
+    assert (
+        "missing in question text" in message
+        or "no corresponding blank configurations exist" in message
+    )
+
+    # Test empty text with configurations
+    is_valid, message = _validate_blank_tags_match_positions("", [1])
+    assert is_valid is False
+    assert "Question text is required when blank configurations are provided" in message
