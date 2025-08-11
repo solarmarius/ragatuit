@@ -49,6 +49,17 @@ export function analyzeCanvasError(error: unknown): CanvasErrorInfo {
 
   const isCanvasApiCall = error.url?.includes("/canvas") || false
 
+  // Handle 401 errors from Canvas API calls (token expired)
+  if (error.status === 401 && isCanvasApiCall) {
+    return {
+      isCanvasError: true,
+      isPermissionError: true,
+      userFriendlyMessage: "Your Canvas session has expired",
+      actionableGuidance:
+        "Please try again, or refresh your browser and log back in if the problem persists.",
+    }
+  }
+
   // Handle 403 errors from Canvas API calls
   if (error.status === 403 && isCanvasApiCall) {
     return {
