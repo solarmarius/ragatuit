@@ -56,15 +56,14 @@ async def test_get_available_models(provider):
         model for model in models if model.model_id == DEFAULT_OPENAI_MODEL
     )
     assert default_model.provider == LLMProvider.OPENAI
-    assert default_model.display_name == "OpenAI o4 Mini"
-    assert default_model.max_tokens == 200000
+    assert default_model.display_name == "OpenAI GPT-5 Mini"
+    assert default_model.max_tokens == 400000
     assert default_model.supports_streaming is False
-    assert default_model.cost_per_1k_tokens == 0.011
+    assert default_model.cost_per_1k_tokens == 0.025
 
     # Verify both models are available
     model_ids = [model.model_id for model in models]
     assert "gpt-5-mini-2025-08-07" in model_ids
-    assert "o3-2025-04-16" in model_ids
 
 
 def test_validate_model_valid(provider):

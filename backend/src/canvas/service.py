@@ -244,6 +244,7 @@ async def create_canvas_quiz(
         "quiz": {
             "title": title,
             "points_possible": total_points,
+            "published": False,
             "quiz_settings": {
                 "shuffle_questions": False,
                 "shuffle_answers": False,
