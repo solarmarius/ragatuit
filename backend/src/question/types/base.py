@@ -102,7 +102,7 @@ class BaseQuestionType(ABC):
         pass
 
 
-def generate_canvas_title(question_text: str, max_length: int = 50) -> str:
+def generate_canvas_title(question_text: str, max_length: int = 70) -> str:
     """Generate a Canvas-compatible title from question text.
 
     Args:
@@ -113,9 +113,9 @@ def generate_canvas_title(question_text: str, max_length: int = 50) -> str:
         Title formatted as "Question {truncated_text}..."
     """
     if len(question_text) <= max_length:
-        return f"Question {question_text}"
+        return f"{question_text}"
     else:
-        return f"Question {question_text[:max_length]}..."
+        return f"{question_text[:max_length]}..."
 
 
 class Question(SQLModel, table=True):

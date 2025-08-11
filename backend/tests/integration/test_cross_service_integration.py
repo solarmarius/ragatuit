@@ -570,18 +570,21 @@ async def test_database_transaction_rollback_integration(session: Session, caplo
         "questions": [
             {
                 "id": "q1",
-                "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                "question_type": "multiple_choice",
                 "approved": True,
+                **SAMPLE_QUESTIONS_BATCH[0],
             },
             {
                 "id": "q2",
-                "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+                "question_type": "multiple_choice",
                 "approved": True,
+                **SAMPLE_QUESTIONS_BATCH[1],
             },
             {
                 "id": "q3",
-                "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                "question_type": "multiple_choice",
                 "approved": True,
+                **SAMPLE_QUESTIONS_BATCH[0],
             },
         ],
     }
@@ -872,13 +875,15 @@ async def test_quiz_lifecycle_state_transitions(session: Session, caplog):
         "questions": [
             {
                 "id": "q1",
-                "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                "question_type": "multiple_choice",
                 "approved": True,
+                **SAMPLE_QUESTIONS_BATCH[0],
             },
             {
                 "id": "q2",
-                "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+                "question_type": "multiple_choice",
                 "approved": True,
+                **SAMPLE_QUESTIONS_BATCH[1],
             },
         ],
     }

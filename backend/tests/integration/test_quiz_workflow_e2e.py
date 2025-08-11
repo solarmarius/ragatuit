@@ -209,28 +209,33 @@ async def test_complete_canvas_workflow_integration(session: Session, caplog):
         "questions": [
             {
                 "id": "q1",
-                "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                "question_type": "multiple_choice",
                 "approved": True,
+                **SAMPLE_QUESTIONS_BATCH[0],
             },
             {
                 "id": "q2",
-                "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+                "question_type": "multiple_choice",
                 "approved": True,
+                **SAMPLE_QUESTIONS_BATCH[1],
             },
             {
                 "id": "q3",
-                "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                "question_type": "multiple_choice",
                 "approved": True,
+                **SAMPLE_QUESTIONS_BATCH[0],
             },
             {
                 "id": "q4",
-                "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+                "question_type": "multiple_choice",
                 "approved": True,
+                **SAMPLE_QUESTIONS_BATCH[1],
             },
             {
                 "id": "q5",
-                "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                "question_type": "multiple_choice",
                 "approved": True,
+                **SAMPLE_QUESTIONS_BATCH[0],
             },
         ],
     }
@@ -776,13 +781,15 @@ async def test_export_rollback_integration(session: Session, caplog):
         "questions": [
             {
                 "id": "q1",
-                "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+                "question_type": "multiple_choice",
                 "approved": True,
+                **SAMPLE_QUESTIONS_BATCH[0],
             },
             {
                 "id": "q2",
-                "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+                "question_type": "multiple_choice",
                 "approved": True,
+                **SAMPLE_QUESTIONS_BATCH[1],
             },
         ],
     }

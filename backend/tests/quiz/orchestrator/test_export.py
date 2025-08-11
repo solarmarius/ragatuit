@@ -143,8 +143,9 @@ async def test_orchestrate_export_job_reservation(caplog):
     mock_question_data = [
         {
             "id": "q1",
-            "question_text": DEFAULT_MCQ_DATA["question_text"],
+            "question_type": "multiple_choice",
             "approved": True,
+            **DEFAULT_MCQ_DATA,
         }
     ]
 
@@ -205,13 +206,15 @@ async def test_orchestrate_export_canvas_api_integration(caplog):
     mock_question_data = [
         {
             "id": "q1",
-            "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+            "question_type": "multiple_choice",
             "approved": True,
+            **SAMPLE_QUESTIONS_BATCH[0],
         },
         {
             "id": "q2",
-            "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+            "question_type": "multiple_choice",
             "approved": True,
+            **SAMPLE_QUESTIONS_BATCH[1],
         },
     ]
 
@@ -305,20 +308,20 @@ async def test_orchestrate_export_question_format_conversion(caplog):
         {
             "id": "mc1",
             "question_type": "multiple_choice",
-            "question_text": DEFAULT_MCQ_DATA["question_text"],
             "approved": True,
+            **DEFAULT_MCQ_DATA,
         },
         {
             "id": "tf1",
             "question_type": "true_false",
-            "question_text": DEFAULT_TRUE_FALSE_DATA["question_text"],
             "approved": True,
+            **DEFAULT_TRUE_FALSE_DATA,
         },
         {
             "id": "fib1",
             "question_type": "fill_in_blank",
-            "question_text": DEFAULT_FILL_IN_BLANK_DATA["question_text"],
             "approved": True,
+            **DEFAULT_FILL_IN_BLANK_DATA,
         },
     ]
 
@@ -395,18 +398,21 @@ async def test_orchestrate_export_failure_rollback(caplog):
     mock_question_data = [
         {
             "id": "q1",
-            "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+            "question_type": "multiple_choice",
             "approved": True,
+            **SAMPLE_QUESTIONS_BATCH[0],
         },
         {
             "id": "q2",
-            "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+            "question_type": "multiple_choice",
             "approved": True,
+            **SAMPLE_QUESTIONS_BATCH[1],
         },
         {
             "id": "q3",
-            "question_text": DEFAULT_MCQ_DATA["question_text"],
+            "question_type": "multiple_choice",
             "approved": True,
+            **DEFAULT_MCQ_DATA,
         },
     ]
 
@@ -475,13 +481,15 @@ async def test_orchestrate_export_completion_status(caplog):
     mock_question_data = [
         {
             "id": "q1",
-            "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
+            "question_type": "multiple_choice",
             "approved": True,
+            **SAMPLE_QUESTIONS_BATCH[0],
         },
         {
             "id": "q2",
-            "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
+            "question_type": "multiple_choice",
             "approved": True,
+            **SAMPLE_QUESTIONS_BATCH[1],
         },
     ]
 
@@ -547,8 +555,9 @@ async def test_orchestrate_export_already_exported_quiz(caplog):
     mock_question_data = [
         {
             "id": "q1",
-            "question_text": DEFAULT_MCQ_DATA["question_text"],
+            "question_type": "multiple_choice",
             "approved": True,
+            **DEFAULT_MCQ_DATA,
         }
     ]
 
