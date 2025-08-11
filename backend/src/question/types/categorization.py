@@ -352,10 +352,9 @@ class CategorizationQuestionType(BaseQuestionType):
                 "value": scoring_value,
                 "score_method": "all_or_nothing",
             },
-            "answer_feedback": {},
             "scoring_algorithm": CanvasScoringAlgorithm.CATEGORIZATION,
             "interaction_type_slug": CanvasInteractionType.CATEGORIZATION,
-            "feedback": {},
+            "feedback": {"neutral": data.explanation} if data.explanation else {},
             "points_possible": points_possible,
         }
 

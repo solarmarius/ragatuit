@@ -151,10 +151,9 @@ class MultipleChoiceQuestionType(BaseQuestionType):
                 "vary_points_by_answer": False,
             },
             "scoring_data": {"value": f"choice_{correct_index + 1}"},
-            "answer_feedback": {},
             "scoring_algorithm": CanvasScoringAlgorithm.EQUIVALENCE,
             "interaction_type_slug": CanvasInteractionType.CHOICE,
-            "feedback": {},
+            "feedback": {"neutral": data.explanation} if data.explanation else {},
             "points_possible": 1,
         }
 

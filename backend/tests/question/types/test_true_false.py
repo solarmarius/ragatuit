@@ -289,6 +289,14 @@ def test_true_false_question_type_format_for_canvas_true():
     # Validate scoring_data
     assert result["scoring_data"] == {"value": True}
 
+    # Validate feedback contains explanation
+    assert "feedback" in result
+    assert "neutral" in result["feedback"]
+    assert (
+        result["feedback"]["neutral"]
+        == "Python code is executed line by line by an interpreter."
+    )
+
 
 def test_true_false_question_type_format_for_canvas_false():
     """Test Canvas export formatting with False answer."""
@@ -306,6 +314,13 @@ def test_true_false_question_type_format_for_canvas_false():
     # Validate scoring_data for false answer
     assert result["scoring_data"] == {"value": False}
 
+    # Validate feedback contains explanation
+    assert "feedback" in result
+    assert "neutral" in result["feedback"]
+    assert (
+        result["feedback"]["neutral"] == "Python was first released in 1991, not 2000."
+    )
+
 
 def test_true_false_question_type_format_for_canvas_html_wrapping():
     """Test that question text gets wrapped in HTML tags."""
@@ -319,6 +334,9 @@ def test_true_false_question_type_format_for_canvas_html_wrapping():
     result = question_type.format_for_canvas(validated_data)
     assert result["item_body"] == "<p>Plain text question</p>"
 
+    # Validate feedback is empty when no explanation
+    assert result["feedback"] == {}
+
     # Test text already with HTML tags
     data_with_html = {
         "question_text": "<p>Already wrapped question</p>",
@@ -327,6 +345,9 @@ def test_true_false_question_type_format_for_canvas_html_wrapping():
     validated_data = question_type.validate_data(data_with_html)
     result = question_type.format_for_canvas(validated_data)
     assert result["item_body"] == "<p>Already wrapped question</p>"
+
+    # Validate feedback is empty when no explanation
+    assert result["feedback"] == {}
 
 
 def test_true_false_question_type_format_for_canvas_wrong_type():
@@ -337,6 +358,44 @@ def test_true_false_question_type_format_for_canvas_wrong_type():
 
     with pytest.raises(ValueError, match="Expected TrueFalseData"):
         question_type.format_for_canvas("wrong_type")
+
+
+def test_true_false_question_type_format_for_canvas_empty_explanation():
+    """Test Canvas export formatting with empty string explanation."""
+    from src.question.types.true_false import TrueFalseQuestionType
+
+    question_type = TrueFalseQuestionType()
+    data = {
+        "question_text": "The sky is blue.",
+        "correct_answer": True,
+        "explanation": "",
+    }
+    validated_data = question_type.validate_data(data)
+    result = question_type.format_for_canvas(validated_data)
+
+    # Validate feedback is empty dict when explanation is empty string
+    assert result["feedback"] == {}
+
+
+def test_true_false_question_type_format_for_canvas_max_explanation():
+    """Test Canvas export formatting with maximum length explanation."""
+    from src.question.types.true_false import TrueFalseQuestionType
+
+    question_type = TrueFalseQuestionType()
+    max_explanation = "x" * 1000  # Maximum allowed length
+    data = {
+        "question_text": "This is a test statement.",
+        "correct_answer": True,
+        "explanation": max_explanation,
+    }
+    validated_data = question_type.validate_data(data)
+    result = question_type.format_for_canvas(validated_data)
+
+    # Validate feedback contains full explanation
+    assert "feedback" in result
+    assert "neutral" in result["feedback"]
+    assert result["feedback"]["neutral"] == max_explanation
+    assert len(result["feedback"]["neutral"]) == 1000
 
 
 def test_true_false_question_type_format_for_export():

@@ -46,6 +46,9 @@ class CanvasScoringAlgorithm:
     TEXT_CONTAINS_ANSWER = (
         "TextContainsAnswer"  # Used for fill-in-blank individual answers
     )
+    TEXT_IN_CHOICES = (
+        "TextInChoices"  # Used for fill-in-blank with multiple answer choices
+    )
 
 
 class CanvasInteractionType:
