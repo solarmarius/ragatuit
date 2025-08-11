@@ -1,17 +1,18 @@
-import { Box, Button, Card, HStack, VStack } from "@chakra-ui/react";
-import { useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo, useState } from "react";
+import { Box, Button, Card, HStack, VStack } from "@chakra-ui/react"
+import { useQuery } from "@tanstack/react-query"
+import { useCallback, useMemo, useState } from "react"
 
 import {
   type QuestionResponse,
   type QuestionUpdateRequest,
   QuestionsService,
-} from "@/client";
-import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common";
-import { useApiMutation, useEditingState } from "@/hooks/common";
-import { UI_SIZES } from "@/lib/constants";
-import { queryKeys, questionsQueryConfig } from "@/lib/queryConfig";
-import { VirtualQuestionList } from "./VirtualQuestionList";
+  type QuizStatus,
+} from "@/client"
+import { EmptyState, ErrorState, LoadingSkeleton } from "@/components/Common"
+import { useApiMutation, useEditingState } from "@/hooks/common"
+import { UI_SIZES } from "@/lib/constants"
+import { queryKeys, questionsQueryConfig } from "@/lib/queryConfig"
+import { VirtualQuestionList } from "./VirtualQuestionList"
 
 /**
  * Props for the QuestionReview component.
@@ -40,13 +41,15 @@ import { VirtualQuestionList } from "./VirtualQuestionList";
  */
 interface QuestionReviewProps {
   /** The ID of the quiz whose questions should be reviewed */
-  quizId: string;
+  quizId: string
+  /** The current status of the quiz */
+  quizStatus?: QuizStatus
 }
 
-export function QuestionReview({ quizId }: QuestionReviewProps) {
-  const [filterView, setFilterView] = useState<"pending" | "all">("pending");
+export function QuestionReview({ quizId, quizStatus }: QuestionReviewProps) {
+  const [filterView, setFilterView] = useState<"pending" | "all">("pending")
   const { editingId, startEditing, cancelEditing, isEditing } =
-    useEditingState<QuestionResponse>((question) => question.id);
+    useEditingState<QuestionResponse>((question) => question.id)
 
   // Fetch questions with optimized caching
   const {
@@ -59,27 +62,27 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       const response = await QuestionsService.getQuizQuestions({
         quizId,
         approvedOnly: false, // Get all questions for review
-      });
-      return response;
+      })
+      return response
     },
     ...questionsQueryConfig,
-  });
+  })
 
   // Filter questions based on current view and calculate counts
   const { filteredQuestions, pendingCount, totalCount } = useMemo(() => {
     if (!questions) {
-      return { filteredQuestions: [], pendingCount: 0, totalCount: 0 };
+      return { filteredQuestions: [], pendingCount: 0, totalCount: 0 }
     }
 
-    const pending = questions.filter((q) => !q.is_approved);
-    const filtered = filterView === "pending" ? pending : questions;
+    const pending = questions.filter((q) => !q.is_approved)
+    const filtered = filterView === "pending" ? pending : questions
 
     return {
       filteredQuestions: filtered,
       pendingCount: pending.length,
       totalCount: questions.length,
-    };
-  }, [questions, filterView]);
+    }
+  }, [questions, filterView])
 
   // Approve question mutation
   const approveQuestionMutation = useApiMutation(
@@ -87,7 +90,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       return await QuestionsService.approveQuestion({
         quizId,
         questionId,
-      });
+      })
     },
     {
       successMessage: "Question approved",
@@ -95,8 +98,8 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
         queryKeys.quizQuestions(quizId),
         queryKeys.quizQuestionStats(quizId),
       ],
-    }
-  );
+    },
+  )
 
   // Update question mutation
   const updateQuestionMutation = useApiMutation(
@@ -104,23 +107,23 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       questionId,
       data,
     }: {
-      questionId: string;
-      data: QuestionUpdateRequest;
+      questionId: string
+      data: QuestionUpdateRequest
     }) => {
       return await QuestionsService.updateQuestion({
         quizId,
         questionId,
         requestBody: data,
-      });
+      })
     },
     {
       successMessage: "Question updated",
       invalidateQueries: [queryKeys.quizQuestions(quizId)],
       onSuccess: () => {
-        cancelEditing();
+        cancelEditing()
       },
-    }
-  );
+    },
+  )
 
   // Delete question mutation
   const deleteQuestionMutation = useApiMutation(
@@ -128,7 +131,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       return await QuestionsService.deleteQuestion({
         quizId,
         questionId,
-      });
+      })
     },
     {
       successMessage: "Question rejected",
@@ -137,8 +140,8 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
         queryKeys.quizQuestionStats(quizId),
         queryKeys.quiz(quizId), // Invalidate quiz cache to update question_count
       ],
-    }
-  );
+    },
+  )
 
   // Create a callback that binds the question ID for the editor
   const getSaveCallback = useCallback(
@@ -146,13 +149,13 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
       updateQuestionMutation.mutate({
         questionId: id,
         data: updateData,
-      });
+      })
     },
-    [updateQuestionMutation]
-  );
+    [updateQuestionMutation],
+  )
 
   if (isLoading) {
-    return <QuestionReviewSkeleton />;
+    return <QuestionReviewSkeleton />
   }
 
   if (error || !questions) {
@@ -166,7 +169,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
           />
         </Card.Body>
       </Card.Root>
-    );
+    )
   }
 
   if (!questions || questions.length === 0) {
@@ -179,7 +182,7 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
           />
         </Card.Body>
       </Card.Root>
-    );
+    )
   }
 
   return (
@@ -236,9 +239,10 @@ export function QuestionReview({ quizId }: QuestionReviewProps) {
         isUpdateLoading={updateQuestionMutation.isPending}
         isApproveLoading={approveQuestionMutation.isPending}
         isDeleteLoading={deleteQuestionMutation.isPending}
+        quizStatus={quizStatus}
       />
     </VStack>
-  );
+  )
 }
 
 function QuestionReviewSkeleton() {
@@ -299,5 +303,5 @@ function QuestionReviewSkeleton() {
         </Card.Root>
       ))}
     </VStack>
-  );
+  )
 }
