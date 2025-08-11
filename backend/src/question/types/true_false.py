@@ -98,10 +98,9 @@ class TrueFalseQuestionType(BaseQuestionType):
             },
             "properties": {},
             "scoring_data": {"value": data.correct_answer},
-            "answer_feedback": {},
             "scoring_algorithm": CanvasScoringAlgorithm.EQUIVALENCE,
             "interaction_type_slug": CanvasInteractionType.TRUE_FALSE,
-            "feedback": {},
+            "feedback": {"neutral": data.explanation} if data.explanation else {},
             "points_possible": 1,
         }
 

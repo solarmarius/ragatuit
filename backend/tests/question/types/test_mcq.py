@@ -505,6 +505,9 @@ def test_multiple_choice_question_type_format_for_canvas():
     assert properties["shuffle_rules"]["choices"]["shuffled"] is True
     assert properties["vary_points_by_answer"] is False
 
+    # Validate feedback - should be empty when no explanation
+    assert result["feedback"] == {}
+
 
 def test_multiple_choice_question_type_format_for_canvas_different_answers():
     """Test Canvas formatting with different correct answers."""
@@ -594,6 +597,87 @@ def test_multiple_choice_question_type_format_for_canvas_wrong_type():
 
     with pytest.raises(ValueError, match="Expected MultipleChoiceData"):
         question_type.format_for_canvas("wrong_type")
+
+
+def test_multiple_choice_question_type_format_for_canvas_with_explanation():
+    """Test Canvas export formatting with explanation."""
+    from src.question.types.mcq import (
+        MultipleChoiceData,
+        MultipleChoiceQuestionType,
+    )
+
+    question_type = MultipleChoiceQuestionType()
+    data = MultipleChoiceData(
+        question_text="What is the capital of France?",
+        option_a="Paris",
+        option_b="London",
+        option_c="Berlin",
+        option_d="Madrid",
+        correct_answer="A",
+        explanation="Paris is the capital city of France and its largest city.",
+    )
+
+    result = question_type.format_for_canvas(data)
+
+    # Validate feedback contains explanation
+    assert "feedback" in result
+    assert "neutral" in result["feedback"]
+    assert (
+        result["feedback"]["neutral"]
+        == "Paris is the capital city of France and its largest city."
+    )
+
+
+def test_multiple_choice_question_type_format_for_canvas_empty_explanation():
+    """Test Canvas export formatting with empty string explanation."""
+    from src.question.types.mcq import (
+        MultipleChoiceData,
+        MultipleChoiceQuestionType,
+    )
+
+    question_type = MultipleChoiceQuestionType()
+    data = MultipleChoiceData(
+        question_text="What is the capital of France?",
+        option_a="Paris",
+        option_b="London",
+        option_c="Berlin",
+        option_d="Madrid",
+        correct_answer="A",
+        explanation="",
+    )
+
+    result = question_type.format_for_canvas(data)
+
+    # Validate feedback is empty dict when explanation is empty string
+    assert result["feedback"] == {}
+
+
+def test_multiple_choice_question_type_format_for_canvas_max_explanation():
+    """Test Canvas export formatting with maximum length explanation."""
+    from src.question.types.mcq import (
+        MultipleChoiceData,
+        MultipleChoiceQuestionType,
+    )
+
+    question_type = MultipleChoiceQuestionType()
+    max_explanation = "x" * 1000  # Maximum allowed length
+    data = MultipleChoiceData(
+        question_text="What is the capital of France?",
+        option_a="Paris",
+        option_b="London",
+        option_c="Berlin",
+        option_d="Madrid",
+        correct_answer="A",
+        explanation=max_explanation,
+    )
+
+    result = question_type.format_for_canvas(data)
+
+    # Validate feedback contains full explanation
+    assert "feedback" in result
+    assert "neutral" in result["feedback"]
+    assert result["feedback"]["neutral"] == max_explanation
+    assert len(result["feedback"]["neutral"]) == 1000
 
 
 def test_multiple_choice_question_type_format_for_export():

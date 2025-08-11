@@ -238,10 +238,9 @@ class MatchingQuestionType(BaseQuestionType):
                     "distractors": data.distractors or [],
                 },
             },
-            "answer_feedback": {},
             "scoring_algorithm": CanvasScoringAlgorithm.PARTIAL_DEEP,
             "interaction_type_slug": CanvasInteractionType.MATCHING,
-            "feedback": {},
+            "feedback": {"neutral": data.explanation} if data.explanation else {},
             "points_possible": len(data.pairs),
         }
 

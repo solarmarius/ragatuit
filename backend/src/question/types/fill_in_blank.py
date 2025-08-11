@@ -206,11 +206,11 @@ class FillInBlankQuestionType(BaseQuestionType):
         blank_uuids = {blank.position: str(uuid.uuid4()) for blank in data.blanks}
 
         # Build the HTML body with span tags for blanks
-        # Replace [blank_N] placeholders with <span id="blank_uuid">
+        # Replace [blank_N] placeholders with <span id="uuid"> tags that Canvas needs
         item_body = self._replace_placeholders(
             data.question_text,
             data.blanks,
-            lambda blank: f'<span id="blank_{blank_uuids[blank.position]}"></span>',
+            lambda blank: f'<span id="{blank_uuids[blank.position]}"></span>',
         )
 
         # Wrap in paragraph tag if not already wrapped
@@ -236,34 +236,32 @@ class FillInBlankQuestionType(BaseQuestionType):
         for blank in data.blanks:
             blank_uuid = blank_uuids[blank.position]
 
-            # Primary correct answer
+            # Combine correct answer and variations into a single value array
+            all_answers = [blank.correct_answer]
+            if blank.answer_variations:
+                # Add variations that are different from correct answer
+                for variation in blank.answer_variations:
+                    if variation != blank.correct_answer:
+                        all_answers.append(variation)
+
+            # Create single scoring entry per blank with all answers
             scoring_values.append(
                 {
                     "id": blank_uuid,
                     "scoring_data": {
-                        "value": blank.correct_answer,
+                        "value": all_answers,
                         "blank_text": blank.correct_answer,
                     },
-                    "scoring_algorithm": CanvasScoringAlgorithm.TEXT_CONTAINS_ANSWER,
+                    "scoring_algorithm": CanvasScoringAlgorithm.TEXT_IN_CHOICES,
                 }
             )
 
-            # Add answer variations as additional scoring entries
-            if blank.answer_variations:
-                for variation in blank.answer_variations:
-                    scoring_values.append(
-                        {
-                            "id": blank_uuid,
-                            "scoring_data": {
-                                "value": variation,
-                                "blank_text": variation,
-                            },
-                            "scoring_algorithm": CanvasScoringAlgorithm.TEXT_CONTAINS_ANSWER,
-                        }
-                    )
-
-        # Build working_item_body with answers filled in
-        working_item_body = self._replace_placeholders(data.question_text, data.blanks)
+        # Build working_item_body with backticks around answers
+        working_item_body = self._replace_placeholders(
+            data.question_text,
+            data.blanks,
+            lambda blank: f"`{blank.correct_answer}`",
+        )
 
         # Wrap in paragraph tag if not already wrapped
         if not working_item_body.strip().startswith("<p>"):
@@ -280,12 +278,19 @@ class FillInBlankQuestionType(BaseQuestionType):
             "item_body": item_body,
             "calculator_type": "none",
             "interaction_data": interaction_data,
-            "properties": {"shuffle_rules": {"blanks": {}}},
+            "properties": {
+                "shuffle_rules": {
+                    "blanks": {
+                        "children": {
+                            str(i): {"children": None} for i in range(len(data.blanks))
+                        }
+                    }
+                }
+            },
             "scoring_data": scoring_data,
-            "answer_feedback": {},
             "scoring_algorithm": CanvasScoringAlgorithm.MULTIPLE_METHODS,
             "interaction_type_slug": CanvasInteractionType.RICH_FILL_BLANK,
-            "feedback": {},
+            "feedback": {"neutral": data.explanation} if data.explanation else {},
             "points_possible": len(
                 data.blanks
             ),  # Add points_possible for Canvas service
