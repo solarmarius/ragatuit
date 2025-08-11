@@ -295,36 +295,45 @@ class CategorizationQuestionType(BaseQuestionType):
         if not isinstance(data, CategorizationData):
             raise ValueError("Expected CategorizationData")
 
-        # Build categories dictionary for Canvas
+        # Generate fresh UUIDs for categories (Canvas New Quizzes API requirement)
+        category_uuid_mapping = {}
         canvas_categories = {}
         for category in data.categories:
-            canvas_categories[category.id] = {
-                "id": category.id,
+            new_category_uuid = str(uuid.uuid4())
+            category_uuid_mapping[category.id] = new_category_uuid
+            canvas_categories[new_category_uuid] = {
+                "id": new_category_uuid,
                 "item_body": category.name,
             }
 
-        # Canvas expects all items (including correct ones) in the distractors field
-        # The scoring_data determines which items belong to which categories
+        # Generate fresh UUIDs for all items (Canvas New Quizzes API requirement)
+        item_uuid_mapping = {}
         canvas_distractors = {}
         all_items = data.get_all_items()
 
         for item in all_items:
-            canvas_distractors[item.id] = {
-                "id": item.id,
+            new_item_uuid = str(uuid.uuid4())
+            item_uuid_mapping[item.id] = new_item_uuid
+            canvas_distractors[new_item_uuid] = {
+                "id": new_item_uuid,
                 "item_body": item.text,
             }
 
-        # Build category order (for consistent display)
-        category_order = [cat.id for cat in data.categories]
+        # Build category order using new UUIDs (for consistent display)
+        category_order = [category_uuid_mapping[cat.id] for cat in data.categories]
 
-        # Build scoring data (which items belong to which categories)
+        # Build scoring data with new UUIDs (which items belong to which categories)
         scoring_value = []
         for category in data.categories:
+            # Map old item IDs to new UUIDs in the correct_items list
+            mapped_correct_items = [
+                item_uuid_mapping[item_id] for item_id in category.correct_items
+            ]
             scoring_value.append(
                 {
-                    "id": category.id,
+                    "id": category_uuid_mapping[category.id],
                     "scoring_data": {
-                        "value": category.correct_items,
+                        "value": mapped_correct_items,
                     },
                     "scoring_algorithm": CanvasScoringAlgorithm.ALL_OR_NOTHING,
                 }

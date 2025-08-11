@@ -55,7 +55,48 @@ class BlankData(BaseModel):
                 seen.add(variation)
                 unique_variations.append(variation)
 
+        # Remove float equivalents of integers (e.g., remove "1.0" if "1" exists)
+        unique_variations = cls._remove_float_integer_duplicates_static(
+            unique_variations
+        )
+
         return unique_variations if unique_variations else None
+
+    @staticmethod
+    def _remove_float_integer_duplicates_static(answers: list[str]) -> list[str]:
+        """
+        Static version for use in validators.
+
+        Remove float representations that are equivalent to existing integers.
+        For example, if both "1" and "1.0" exist in the list, remove "1.0".
+        """
+        if not answers:
+            return answers
+
+        filtered_answers = []
+        seen_integers = set()
+
+        # Process answers to remove float equivalents of integers
+        for answer in answers:
+            try:
+                # Try to parse as float
+                float_val = float(answer)
+                # Check if it's actually an integer (no decimal part)
+                if float_val.is_integer():
+                    int_val = int(float_val)
+                    if int_val not in seen_integers:
+                        seen_integers.add(int_val)
+                        # Prefer integer format over float format
+                        filtered_answers.append(str(int_val))
+                    # Skip float representations like "1.0" if we already have "1"
+                else:
+                    # It's a float with decimal part, keep it
+                    filtered_answers.append(answer)
+            except (ValueError, TypeError):
+                # Not a number, keep as is
+                filtered_answers.append(answer)
+
+        return filtered_answers
 
 
 class FillInBlankData(BaseQuestionData):
