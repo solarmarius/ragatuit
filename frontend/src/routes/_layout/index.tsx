@@ -69,6 +69,20 @@ function Dashboard() {
               <RouterLink to="/create-quiz">Create New Quiz</RouterLink>
             </Button>
           </HStack>
+          {/* Warning Box */}
+          <Box
+            bg="orange.50"
+            border="1px"
+            borderColor="orange.200"
+            borderRadius="md"
+            px={4}
+            py={3}
+          >
+            <Text color="orange.700" fontWeight="medium">
+              ⚠️ This application is not yet officially released. Quiz data may
+              be deleted without notice.
+            </Text>
+          </Box>
 
           {/* Dashboard Panels */}
           <SimpleGrid
