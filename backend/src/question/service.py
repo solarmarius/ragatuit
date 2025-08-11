@@ -481,3 +481,102 @@ async def update_question_canvas_ids(
                 question_obj.canvas_item_id = export_result.get("item_id")
 
     logger.debug("question_canvas_ids_updated")
+
+
+def calculate_total_points_for_questions(question_data: list[dict[str, Any]]) -> int:
+    """
+    Calculate the total points for a list of questions based on their Canvas export format.
+
+    This function uses the same formatting logic that Canvas export uses to ensure
+    consistency between point calculation and actual Canvas quiz creation.
+
+    Args:
+        question_data: List of question data dictionaries as prepared for export
+
+    Returns:
+        Total points as sum of all individual question points
+
+    Raises:
+        ValueError: If question data is invalid or contains unsupported question types
+    """
+    if not question_data:
+        logger.warning("calculate_total_points_called_with_empty_questions")
+        return 0
+
+    from src.question.types import QuestionType, get_question_type_registry
+
+    question_registry = get_question_type_registry()
+    total_points = 0
+
+    logger.debug("calculating_total_points", question_count=len(question_data))
+
+    for i, question in enumerate(question_data):
+        try:
+            question_type_str = question.get("question_type", "multiple_choice")
+
+            # Map string to QuestionType enum
+            question_type_map = {
+                "multiple_choice": QuestionType.MULTIPLE_CHOICE,
+                "fill_in_blank": QuestionType.FILL_IN_BLANK,
+                "matching": QuestionType.MATCHING,
+                "categorization": QuestionType.CATEGORIZATION,
+                "true_false": QuestionType.TRUE_FALSE,
+            }
+
+            question_type_enum = question_type_map.get(question_type_str)
+            if not question_type_enum:
+                logger.error(
+                    "unsupported_question_type_for_points_calculation",
+                    question_index=i,
+                    question_id=question.get("id"),
+                    question_type=question_type_str,
+                )
+                raise ValueError(
+                    f"Unsupported question type for point calculation: {question_type_str}"
+                )
+
+            # Get the question type implementation from registry
+            question_type_impl = question_registry.get_question_type(question_type_enum)
+
+            # Filter out fields that aren't part of the data model
+            data_for_validation = {
+                k: v
+                for k, v in question.items()
+                if k not in ["id", "question_type", "approved"]
+            }
+
+            # Validate and format the question data
+            question_data_obj = question_type_impl.validate_data(data_for_validation)
+            canvas_format = question_type_impl.format_for_canvas(question_data_obj)
+
+            # Extract points_possible from Canvas format
+            question_points = canvas_format.get("points_possible", 1)
+            total_points += question_points
+
+            logger.debug(
+                "question_points_calculated",
+                question_index=i,
+                question_id=question.get("id"),
+                question_type=question_type_str,
+                points=question_points,
+            )
+
+        except Exception as e:
+            logger.error(
+                "question_points_calculation_failed",
+                question_index=i,
+                question_id=question.get("id"),
+                error=str(e),
+                error_type=type(e).__name__,
+            )
+            raise ValueError(
+                f"Failed to calculate points for question {i + 1}: {str(e)}"
+            )
+
+    logger.info(
+        "total_points_calculated",
+        question_count=len(question_data),
+        total_points=total_points,
+    )
+
+    return total_points
