@@ -5,41 +5,40 @@ import {
   SimpleGrid,
   Text,
   VStack,
-} from "@chakra-ui/react"
-import { Link as RouterLink, createFileRoute } from "@tanstack/react-router"
+} from "@chakra-ui/react";
+import { Link as RouterLink, createFileRoute } from "@tanstack/react-router";
 
-import { ErrorState } from "@/components/Common"
-import { OnboardingModal } from "@/components/Onboarding/OnboardingModal"
+import { ErrorState } from "@/components/Common";
+import { OnboardingModal } from "@/components/Onboarding/OnboardingModal";
 import {
   HelpPanel,
   QuizGenerationPanel,
   QuizReviewPanel,
-} from "@/components/dashboard"
-import { Button } from "@/components/ui/button"
-import { useUserQuizzes } from "@/hooks/api"
-import { useAuth } from "@/hooks/auth"
-import { useCustomToast, useOnboarding } from "@/hooks/common"
+} from "@/components/dashboard";
+import { Button } from "@/components/ui/button";
+import { useUserQuizzes } from "@/hooks/api";
+import { useAuth } from "@/hooks/auth";
+import { useCustomToast, useOnboarding } from "@/hooks/common";
 
 export const Route = createFileRoute("/_layout/")({
   component: Dashboard,
-})
+});
 
 function Dashboard() {
-  const { user: currentUser } = useAuth()
-  const { showErrorToast } = useCustomToast()
+  const { user: currentUser } = useAuth();
+  const { showErrorToast } = useCustomToast();
   const {
     currentStep,
     isOpen,
     nextStep,
     previousStep,
     markOnboardingCompleted,
-    skipOnboarding,
-  } = useOnboarding()
+  } = useOnboarding();
 
-  const { data: quizzes, isLoading, error } = useUserQuizzes()
+  const { data: quizzes, isLoading, error } = useUserQuizzes();
 
   if (error) {
-    showErrorToast("Failed to load quizzes")
+    showErrorToast("Failed to load quizzes");
     return (
       <Container maxW="6xl" py={8}>
         <ErrorState
@@ -48,7 +47,7 @@ function Dashboard() {
           showRetry={false}
         />
       </Container>
-    )
+    );
   }
 
   return (
@@ -93,8 +92,7 @@ function Dashboard() {
         onNext={nextStep}
         onPrevious={previousStep}
         onComplete={markOnboardingCompleted}
-        onSkip={skipOnboarding}
       />
     </>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-import { Button, Card, HStack, Stack, Text } from "@chakra-ui/react"
+import { Button, Card, HStack, Stack, Text } from "@chakra-ui/react";
 import {
   DialogBackdrop,
   DialogBody,
@@ -6,18 +6,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogRoot,
-} from "../ui/dialog"
-import { FeatureStep } from "./steps/FeatureStep"
-import { SetupStep } from "./steps/SetupStep"
-import { WelcomeStep } from "./steps/WelcomeStep"
+} from "../ui/dialog";
+import { FeatureStep } from "./steps/FeatureStep";
+import { PrivacyPolicyStep } from "./steps/PrivacyPolicyStep";
+import { SetupStep } from "./steps/SetupStep";
+import { WelcomeStep } from "./steps/WelcomeStep";
 
 interface OnboardingModalProps {
-  isOpen: boolean
-  currentStep: number
-  onNext: () => void
-  onPrevious: () => void
-  onComplete: () => void
-  onSkip: () => void
+  isOpen: boolean;
+  currentStep: number;
+  onNext: () => void;
+  onPrevious: () => void;
+  onComplete: () => void;
 }
 
 export const OnboardingModal = ({
@@ -26,26 +26,27 @@ export const OnboardingModal = ({
   onNext,
   onPrevious,
   onComplete,
-  onSkip,
 }: OnboardingModalProps) => {
-  const totalSteps = 3
-  const progressValue = (currentStep / totalSteps) * 100
+  const totalSteps = 4;
+  const progressValue = (currentStep / totalSteps) * 100;
 
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 1:
-        return <WelcomeStep />
+        return <WelcomeStep />;
       case 2:
-        return <FeatureStep />
+        return <SetupStep />;
       case 3:
-        return <SetupStep />
+        return <FeatureStep />;
+      case 4:
+        return <PrivacyPolicyStep />;
       default:
-        return <WelcomeStep />
+        return <WelcomeStep />;
     }
-  }
+  };
 
-  const isLastStep = currentStep === totalSteps
-  const isFirstStep = currentStep === 1
+  const isLastStep = currentStep === totalSteps;
+  const isFirstStep = currentStep === 1;
 
   return (
     <DialogRoot open={isOpen} size="lg" placement="center">
@@ -57,9 +58,6 @@ export const OnboardingModal = ({
               <Text fontSize="sm" color="gray.500">
                 Step {currentStep} of {totalSteps}
               </Text>
-              <Button variant="ghost" size="sm" onClick={onSkip}>
-                Skip
-              </Button>
             </HStack>
             <Stack bg="gray.100" h="2" borderRadius="full" overflow="hidden">
               <Stack
@@ -108,5 +106,5 @@ export const OnboardingModal = ({
         </DialogFooter>
       </DialogContent>
     </DialogRoot>
-  )
-}
+  );
+};
