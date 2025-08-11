@@ -1,4 +1,4 @@
-import { Checkbox } from "@/components/ui/checkbox"
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Alert,
   Box,
@@ -7,37 +7,37 @@ import {
   HStack,
   Text,
   VStack,
-} from "@chakra-ui/react"
-import { useQuery } from "@tanstack/react-query"
-import type React from "react"
-import { useCallback, useMemo, useState } from "react"
+} from "@chakra-ui/react";
+import { useQuery } from "@tanstack/react-query";
+import type React from "react";
+import { useCallback, useMemo, useState } from "react";
 
-import { CanvasService } from "@/client"
-import { LoadingSkeleton } from "@/components/Common"
-import { analyzeCanvasError } from "@/lib/utils"
-import { ManualModuleDialog } from "./ManualModuleDialog"
+import { CanvasService } from "@/client";
+import { LoadingSkeleton } from "@/components/Common";
+import { analyzeCanvasError } from "@/lib/utils";
+import { ManualModuleDialog } from "./ManualModuleDialog";
 
 interface Module {
-  id: number
-  name: string
+  id: number;
+  name: string;
 }
 
 interface ManualModule {
-  id: string
-  name: string
-  contentPreview: string
-  fullContent: string
-  wordCount: number
-  processingMetadata?: Record<string, any>
-  isManual: true
+  id: string;
+  name: string;
+  contentPreview: string;
+  fullContent: string;
+  wordCount: number;
+  processingMetadata?: Record<string, any>;
+  isManual: true;
 }
 
 interface ModuleSelectionStepProps {
-  courseId: number
-  selectedModules: { [id: string]: string }
-  manualModules?: ManualModule[]
-  onModulesSelect: (modules: { [id: string]: string }) => void
-  onManualModuleAdd?: (module: ManualModule) => void
+  courseId: number;
+  selectedModules: { [id: string]: string };
+  manualModules?: ManualModule[];
+  onModulesSelect: (modules: { [id: string]: string }) => void;
+  onManualModuleAdd?: (module: ManualModule) => void;
 }
 
 export function ModuleSelectionStep({
@@ -47,7 +47,7 @@ export function ModuleSelectionStep({
   onModulesSelect,
   onManualModuleAdd,
 }: ModuleSelectionStepProps) {
-  const [isManualDialogOpen, setIsManualDialogOpen] = useState(false)
+  const [isManualDialogOpen, setIsManualDialogOpen] = useState(false);
   // Show message if no course is selected
   if (!courseId || courseId <= 0) {
     return (
@@ -58,13 +58,15 @@ export function ModuleSelectionStep({
           Please go back to the previous step and select a course first.
         </Alert.Description>
       </Alert.Root>
-    )
+    );
   }
 
   const {
     data: modules,
     isLoading,
     error,
+    refetch,
+    isFetching,
   } = useQuery({
     queryKey: ["canvas-modules", courseId],
     queryFn: () => CanvasService.getCourseModules({ courseId }),
@@ -72,32 +74,32 @@ export function ModuleSelectionStep({
     retryDelay: 1000,
     staleTime: 30000,
     enabled: !!courseId && courseId > 0,
-  })
+  });
 
   const handleModuleToggle = useCallback(
     (module: Module | ManualModule, checked: boolean) => {
-      const newSelectedModules = { ...selectedModules }
-      const moduleId = String(module.id)
+      const newSelectedModules = { ...selectedModules };
+      const moduleId = String(module.id);
 
       if (checked) {
-        newSelectedModules[moduleId] = module.name
+        newSelectedModules[moduleId] = module.name;
       } else {
-        delete newSelectedModules[moduleId]
+        delete newSelectedModules[moduleId];
       }
 
-      onModulesSelect(newSelectedModules)
+      onModulesSelect(newSelectedModules);
     },
-    [selectedModules, onModulesSelect],
-  )
+    [selectedModules, onModulesSelect]
+  );
 
   const handleManualModuleCreated = useCallback(
     (moduleData: {
-      moduleId: string
-      name: string
-      contentPreview: string
-      fullContent: string
-      wordCount: number
-      processingMetadata?: Record<string, any>
+      moduleId: string;
+      name: string;
+      contentPreview: string;
+      fullContent: string;
+      wordCount: number;
+      processingMetadata?: Record<string, any>;
     }) => {
       const manualModule: ManualModule = {
         id: moduleData.moduleId,
@@ -107,50 +109,61 @@ export function ModuleSelectionStep({
         wordCount: moduleData.wordCount,
         processingMetadata: moduleData.processingMetadata,
         isManual: true,
-      }
+      };
 
       // Add the manual module to the list
-      onManualModuleAdd?.(manualModule)
+      onManualModuleAdd?.(manualModule);
 
       // Automatically select the new manual module
-      const newSelectedModules = { ...selectedModules }
-      newSelectedModules[moduleData.moduleId] = moduleData.name
-      onModulesSelect(newSelectedModules)
+      const newSelectedModules = { ...selectedModules };
+      newSelectedModules[moduleData.moduleId] = moduleData.name;
+      onModulesSelect(newSelectedModules);
     },
-    [selectedModules, onModulesSelect, onManualModuleAdd],
-  )
+    [selectedModules, onModulesSelect, onManualModuleAdd]
+  );
 
   const selectedCount = useMemo(
     () => Object.keys(selectedModules).length,
-    [selectedModules],
-  )
+    [selectedModules]
+  );
 
-  if (isLoading) {
+  if (isLoading || isFetching) {
     return (
       <VStack gap={4} align="stretch">
         <Text fontSize="lg" fontWeight="semibold">
-          Loading course modules...
+          {isLoading ? "Loading course modules..." : "Retrying..."}
         </Text>
         <LoadingSkeleton height="60px" lines={4} />
       </VStack>
-    )
+    );
   }
 
   if (error) {
-    const errorInfo = analyzeCanvasError(error)
+    const errorInfo = analyzeCanvasError(error);
 
     return (
       <Alert.Root status="error">
         <Alert.Indicator />
         <Alert.Title>Failed to load course modules</Alert.Title>
         <Alert.Description>
-          <Text mb={2}>{errorInfo.userFriendlyMessage}</Text>
-          <Text fontSize="sm" color="gray.600">
-            {errorInfo.actionableGuidance}
-          </Text>
+          <VStack gap={3} align="stretch">
+            <Text>{errorInfo.userFriendlyMessage}</Text>
+            <Text fontSize="sm" color="gray.600">
+              {errorInfo.actionableGuidance}
+            </Text>
+            <Button
+              variant="solid"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              loading={isFetching}
+            >
+              Try Again
+            </Button>
+          </VStack>
         </Alert.Description>
       </Alert.Root>
-    )
+    );
   }
 
   if (!modules || modules.length === 0) {
@@ -163,7 +176,7 @@ export function ModuleSelectionStep({
           the course in Canvas before generating a quiz.
         </Alert.Description>
       </Alert.Root>
-    )
+    );
   }
 
   return (
@@ -208,8 +221,8 @@ export function ModuleSelectionStep({
               colorScheme="green"
               variant="outline"
               onClick={(e) => {
-                e.stopPropagation()
-                setIsManualDialogOpen(true)
+                e.stopPropagation();
+                setIsManualDialogOpen(true);
               }}
             >
               Add Module
@@ -229,7 +242,7 @@ export function ModuleSelectionStep({
             borderColor={selectedModules[module.id] ? "blue.500" : "gray.200"}
             bg={selectedModules[module.id] ? "blue.50" : "white"}
             onClick={() => {
-              handleModuleToggle(module, !selectedModules[module.id])
+              handleModuleToggle(module, !selectedModules[module.id]);
             }}
             data-testid={`module-card-${module.id}`}
           >
@@ -263,7 +276,7 @@ export function ModuleSelectionStep({
             borderColor={selectedModules[module.id] ? "blue.500" : "gray.200"}
             bg={selectedModules[module.id] ? "blue.50" : "white"}
             onClick={() => {
-              handleModuleToggle(module, !selectedModules[module.id])
+              handleModuleToggle(module, !selectedModules[module.id]);
             }}
             data-testid={`manual-module-card-${module.id}`}
           >
@@ -321,5 +334,5 @@ export function ModuleSelectionStep({
         onModuleCreated={handleManualModuleCreated}
       />
     </VStack>
-  )
+  );
 }

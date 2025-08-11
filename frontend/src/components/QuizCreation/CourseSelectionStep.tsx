@@ -1,30 +1,31 @@
 import {
   Alert,
   Box,
+  Button,
   Card,
   HStack,
   Input,
   RadioGroup,
   Text,
   VStack,
-} from "@chakra-ui/react"
-import { useQuery } from "@tanstack/react-query"
+} from "@chakra-ui/react";
+import { useQuery } from "@tanstack/react-query";
 
-import { CanvasService } from "@/client"
-import { LoadingSkeleton } from "@/components/Common"
-import { Field } from "@/components/ui/field"
-import { analyzeCanvasError } from "@/lib/utils"
+import { CanvasService } from "@/client";
+import { LoadingSkeleton } from "@/components/Common";
+import { Field } from "@/components/ui/field";
+import { analyzeCanvasError } from "@/lib/utils";
 
 interface Course {
-  id: number
-  name: string
+  id: number;
+  name: string;
 }
 
 interface CourseSelectionStepProps {
-  selectedCourse?: Course
-  onCourseSelect: (course: Course) => void
-  title?: string
-  onTitleChange: (title: string) => void
+  selectedCourse?: Course;
+  onCourseSelect: (course: Course) => void;
+  title?: string;
+  onTitleChange: (title: string) => void;
 }
 
 export function CourseSelectionStep({
@@ -37,40 +38,53 @@ export function CourseSelectionStep({
     data: courses,
     isLoading,
     error,
+    refetch,
+    isFetching,
   } = useQuery({
     queryKey: ["canvas-courses"],
     queryFn: CanvasService.getCourses,
     retry: 1, // Only retry once instead of default 3 times
     retryDelay: 1000, // Wait 1 second between retries
     staleTime: 30000, // Consider data stale after 30 seconds
-  })
+  });
 
-  if (isLoading) {
+  if (isLoading || isFetching) {
     return (
       <VStack gap={4} align="stretch">
         <Text fontSize="lg" fontWeight="semibold">
-          Loading your courses...
+          {isLoading ? "Loading your courses..." : "Retrying..."}
         </Text>
         <LoadingSkeleton height="60px" lines={3} />
       </VStack>
-    )
+    );
   }
 
   if (error) {
-    const errorInfo = analyzeCanvasError(error)
+    const errorInfo = analyzeCanvasError(error);
 
     return (
       <Alert.Root status="error">
         <Alert.Indicator />
         <Alert.Title>Failed to load courses</Alert.Title>
         <Alert.Description>
-          <Text mb={2}>{errorInfo.userFriendlyMessage}</Text>
-          <Text fontSize="sm" color="gray.600">
-            {errorInfo.actionableGuidance}
-          </Text>
+          <VStack gap={3} align="stretch">
+            <Text>{errorInfo.userFriendlyMessage}</Text>
+            <Text fontSize="sm" color="gray.600">
+              {errorInfo.actionableGuidance}
+            </Text>
+            <Button
+              variant="solid"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              loading={isFetching}
+            >
+              Try Again
+            </Button>
+          </VStack>
         </Alert.Description>
       </Alert.Root>
-    )
+    );
   }
 
   if (!courses || courses.length === 0) {
@@ -83,7 +97,7 @@ export function CourseSelectionStep({
           check your Canvas account or contact your administrator.
         </Alert.Description>
       </Alert.Root>
-    )
+    );
   }
 
   return (
@@ -114,7 +128,7 @@ export function CourseSelectionStep({
               }
               bg={selectedCourse?.id === course.id ? "blue.50" : "white"}
               onClick={() => {
-                onCourseSelect(course)
+                onCourseSelect(course);
               }}
               data-testid={`course-card-${course.id}`}
             >
@@ -164,5 +178,5 @@ export function CourseSelectionStep({
         </VStack>
       )}
     </VStack>
-  )
+  );
 }
