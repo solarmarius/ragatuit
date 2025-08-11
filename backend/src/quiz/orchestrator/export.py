@@ -32,12 +32,16 @@ async def _execute_export_workflow(
     Returns:
         Export result dictionary with success status
     """
+    from src.question.service import calculate_total_points_for_questions
+
     total_questions = len(export_data["questions"])
+    total_points = calculate_total_points_for_questions(export_data["questions"])
 
     logger.info(
         "canvas_export_workflow_started",
         quiz_id=str(quiz_id),
         total_questions=total_questions,
+        total_points=total_points,
         course_id=export_data["course_id"],
     )
 
@@ -46,7 +50,7 @@ async def _execute_export_workflow(
         canvas_token,
         export_data["course_id"],
         export_data["title"],
-        total_questions,
+        total_points,
     )
 
     logger.info(

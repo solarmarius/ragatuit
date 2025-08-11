@@ -40,19 +40,38 @@ async def test_orchestrate_export_canvas_success(caplog):
     mock_question_exporter = AsyncMock()
     mock_question_exporter.return_value = DEFAULT_QUIZ_ITEMS_RESPONSE
 
-    # Mock question data preparation using centralized data
+    # Mock question data preparation using centralized data with question types
     mock_question_data = [
         {
             "id": "q1",
+            "question_type": "multiple_choice",
             "question_text": SAMPLE_QUESTIONS_BATCH[0]["question_text"],
-            "approved": True,
+            "option_a": SAMPLE_QUESTIONS_BATCH[0]["option_a"],
+            "option_b": SAMPLE_QUESTIONS_BATCH[0]["option_b"],
+            "option_c": SAMPLE_QUESTIONS_BATCH[0]["option_c"],
+            "option_d": SAMPLE_QUESTIONS_BATCH[0]["option_d"],
+            "correct_answer": SAMPLE_QUESTIONS_BATCH[0]["correct_answer"],
         },
         {
             "id": "q2",
+            "question_type": "multiple_choice",
             "question_text": SAMPLE_QUESTIONS_BATCH[1]["question_text"],
-            "approved": True,
+            "option_a": SAMPLE_QUESTIONS_BATCH[1]["option_a"],
+            "option_b": SAMPLE_QUESTIONS_BATCH[1]["option_b"],
+            "option_c": SAMPLE_QUESTIONS_BATCH[1]["option_c"],
+            "option_d": SAMPLE_QUESTIONS_BATCH[1]["option_d"],
+            "correct_answer": SAMPLE_QUESTIONS_BATCH[1]["correct_answer"],
         },
-        {"id": "q3", "question_text": "What is Python?", "approved": True},
+        {
+            "id": "q3",
+            "question_type": "multiple_choice",
+            "question_text": "What is Python?",
+            "option_a": "A snake",
+            "option_b": "A programming language",
+            "option_c": "A movie",
+            "option_d": "A book",
+            "correct_answer": "B",
+        },
     ]
 
     with patch(
