@@ -1,8 +1,8 @@
-import { Box, Stack, Text } from "@chakra-ui/react"
+import { Box, Stack, Text } from "@chakra-ui/react";
 
 export const FeatureStep = () => {
   return (
-    <Stack gap={6} align="center" py={8}>
+    <Stack align="center" minH="300px" justify="center">
       <Box textAlign="left">
         <Text
           fontSize="2xl"
@@ -13,16 +13,19 @@ export const FeatureStep = () => {
         >
           Prepare your courses
         </Text>
-        <Text fontSize="md" color="gray.600" maxW="400px" lineHeight="tall">
+        <Text fontSize="lg" color="gray.600" lineHeight="tall">
           To generate the best questions for the material, ensure that
         </Text>
-        <Text fontSize="md" color="gray.600" maxW="400px" lineHeight="tall">
+        <Text fontSize="lg" color="gray.600" lineHeight="tall">
           - Content are using "pages" or uploaded as PDFs
         </Text>
-        <Text fontSize="md" color="gray.600" maxW="400px" lineHeight="tall">
-          - Describe any diagrams/images/equations in text
+        <Text fontSize="lg" color="gray.600" lineHeight="tall">
+          - All content is being referenced with a module
+        </Text>
+        <Text fontSize="lg" color="gray.600" lineHeight="tall">
+          - Describe any diagrams/images/equations with plain text
         </Text>
       </Box>
     </Stack>
-  )
-}
+  );
+};
