@@ -1,5 +1,6 @@
 """Multiple Choice Question type implementation."""
 
+import uuid
 from typing import Any
 
 from pydantic import Field, field_validator
@@ -119,21 +120,18 @@ class MultipleChoiceQuestionType(BaseQuestionType):
         correct_answer_map = {"A": 0, "B": 1, "C": 2, "D": 3}
         correct_index = correct_answer_map.get(data.correct_answer, 0)
 
+        # Generate UUID for each choice (Canvas New Quizzes API requirement)
+        choice_options = [data.option_a, data.option_b, data.option_c, data.option_d]
+        choice_uuids = [str(uuid.uuid4()) for _ in choice_options]
+
         # Build choices array for Canvas
         choices = [
             {
-                "id": f"choice_{i + 1}",
+                "id": choice_uuids[i],
                 "position": i + 1,
                 "item_body": f"<p>{choice}</p>",
             }
-            for i, choice in enumerate(
-                [
-                    data.option_a,
-                    data.option_b,
-                    data.option_c,
-                    data.option_d,
-                ]
-            )
+            for i, choice in enumerate(choice_options)
         ]
 
         # Wrap question text in paragraph tag if not already wrapped
@@ -150,7 +148,7 @@ class MultipleChoiceQuestionType(BaseQuestionType):
                 "shuffle_rules": {"choices": {"shuffled": True}},
                 "vary_points_by_answer": False,
             },
-            "scoring_data": {"value": f"choice_{correct_index + 1}"},
+            "scoring_data": {"value": choice_uuids[correct_index]},
             "scoring_algorithm": CanvasScoringAlgorithm.EQUIVALENCE,
             "interaction_type_slug": CanvasInteractionType.CHOICE,
             "feedback": {"neutral": data.explanation} if data.explanation else {},

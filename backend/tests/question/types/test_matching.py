@@ -441,11 +441,6 @@ def test_matching_question_type_format_for_canvas():
     assert len(scoring_data["edit_data"]["matches"]) == 3
     assert scoring_data["edit_data"]["distractors"] == ["Madrid", "London"]
 
-    # Validate shuffle rules
-    properties = result["properties"]
-    assert properties["shuffle_rules"]["questions"]["shuffled"] is False
-    assert properties["shuffle_rules"]["answers"]["shuffled"] is True
-
 
 def test_matching_question_type_format_for_canvas_no_distractors():
     """Test Canvas export formatting without distractors."""
@@ -671,3 +666,114 @@ def test_matching_complex_validation_scenario():
     canvas_format = matching_type.format_for_canvas(validated_data)
     assert canvas_format["points_possible"] == 10
     assert len(canvas_format["interaction_data"]["answers"]) == 13  # 10 + 3 distractors
+
+
+def test_matching_question_type_format_for_canvas_hybrid_ids_four_pairs():
+    """Test Canvas export with 4 pairs - all should get 5-digit IDs."""
+    import re
+
+    from src.question.types.matching import (
+        MatchingData,
+        MatchingPair,
+        MatchingQuestionType,
+    )
+
+    question_type = MatchingQuestionType()
+    pairs = [
+        MatchingPair(question="France", answer="Paris"),
+        MatchingPair(question="Germany", answer="Berlin"),
+        MatchingPair(question="Italy", answer="Rome"),
+        MatchingPair(question="Spain", answer="Madrid"),
+    ]
+    data = MatchingData(
+        question_text="Match countries to their capitals",
+        pairs=pairs,
+        distractors=["London"],
+    )
+
+    result = question_type.format_for_canvas(data)
+
+    # All question IDs should be 5-digit numbers
+    questions = result["interaction_data"]["questions"]
+    assert len(questions) == 4
+
+    five_digit_pattern = re.compile(r"^\d{5}$")
+    for question in questions:
+        assert five_digit_pattern.match(
+            question["id"]
+        ), f"ID {question['id']} is not a 5-digit number"
+
+    # Check scoring_data uses the same IDs
+    scoring_value = result["scoring_data"]["value"]
+    for question_id in scoring_value.keys():
+        assert five_digit_pattern.match(
+            question_id
+        ), f"Scoring ID {question_id} is not a 5-digit number"
+
+    # Check edit_data matches use the same IDs
+    matches = result["scoring_data"]["edit_data"]["matches"]
+    for match in matches:
+        assert five_digit_pattern.match(
+            match["question_id"]
+        ), f"Match ID {match['question_id']} is not a 5-digit number"
+
+
+def test_matching_question_type_format_for_canvas_hybrid_ids_six_pairs():
+    """Test Canvas export with 6 pairs - first 4 should get 5-digit IDs, last 2 should get UUIDs."""
+    import re
+
+    from src.question.types.matching import (
+        MatchingData,
+        MatchingPair,
+        MatchingQuestionType,
+    )
+
+    question_type = MatchingQuestionType()
+    pairs = [
+        MatchingPair(question="France", answer="Paris"),
+        MatchingPair(question="Germany", answer="Berlin"),
+        MatchingPair(question="Italy", answer="Rome"),
+        MatchingPair(question="Spain", answer="Madrid"),
+        MatchingPair(question="Portugal", answer="Lisbon"),
+        MatchingPair(question="Netherlands", answer="Amsterdam"),
+    ]
+    data = MatchingData(
+        question_text="Match countries to their capitals",
+        pairs=pairs,
+        distractors=["London"],
+    )
+
+    result = question_type.format_for_canvas(data)
+
+    # Get question IDs from the interaction_data
+    questions = result["interaction_data"]["questions"]
+    assert len(questions) == 6
+
+    five_digit_pattern = re.compile(r"^\d{5}$")
+    uuid_pattern = re.compile(
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    )
+
+    # First 4 questions should have 5-digit IDs
+    five_digit_count = 0
+    uuid_count = 0
+
+    for question in questions:
+        question_id = question["id"]
+        if five_digit_pattern.match(question_id):
+            five_digit_count += 1
+        elif uuid_pattern.match(question_id):
+            uuid_count += 1
+        else:
+            assert False, f"ID {question_id} is neither 5-digit nor UUID format"
+
+    # Should have exactly 4 five-digit IDs and 2 UUIDs
+    assert five_digit_count == 4, f"Expected 4 five-digit IDs, got {five_digit_count}"
+    assert uuid_count == 2, f"Expected 2 UUIDs, got {uuid_count}"
+
+    # Verify scoring_data and edit_data use the same ID formats
+    scoring_value = result["scoring_data"]["value"]
+    assert len(scoring_value) == 6
+
+    matches = result["scoring_data"]["edit_data"]["matches"]
+    assert len(matches) == 6

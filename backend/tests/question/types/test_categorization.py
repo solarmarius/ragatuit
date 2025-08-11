@@ -975,6 +975,118 @@ def test_categorization_question_type_format_for_canvas():
         assert category_score["scoring_algorithm"] == "AllOrNothing"
 
 
+def test_categorization_question_type_format_for_canvas_uuid_compliance():
+    """Test that Canvas formatting always generates fresh UUIDs regardless of input IDs."""
+    import re
+    import uuid
+
+    from src.question.types.categorization import (
+        CategorizationData,
+        CategorizationQuestionType,
+        Category,
+        CategoryItem,
+    )
+
+    question_type = CategorizationQuestionType()
+
+    # Use simple string IDs (like what might come from manual editing or LLM)
+    categories = [
+        Category(id="cat1", name="Machine Learning", correct_items=["ml1", "ml2"]),
+        Category(id="cat2", name="Deep Learning", correct_items=["dl1", "dl2"]),
+    ]
+    items = [
+        CategoryItem(id="ml1", text="Decision Trees"),
+        CategoryItem(id="ml2", text="Random Forest"),
+        CategoryItem(id="dl1", text="Neural Networks"),
+        CategoryItem(id="dl2", text="CNN"),
+    ]
+    distractors = [
+        CategoryItem(id="d1", text="Database"),
+        CategoryItem(id="d2", text="Web Server"),
+    ]
+
+    data = CategorizationData(
+        question_text="Categorize these AI techniques",
+        categories=categories,
+        items=items,
+        distractors=distractors,
+    )
+
+    result = question_type.format_for_canvas(data)
+
+    # UUID pattern for validation (Version 4)
+    uuid_pattern = (
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    )
+
+    # Validate all category IDs are UUIDs
+    categories_data = result["interaction_data"]["categories"]
+    category_order = result["interaction_data"]["category_order"]
+
+    assert len(categories_data) == 2
+    assert len(category_order) == 2
+
+    for category_uuid in categories_data.keys():
+        assert re.match(
+            uuid_pattern, category_uuid
+        ), f"Category ID '{category_uuid}' should be a valid UUID"
+        uuid.UUID(category_uuid)  # Should parse without error
+        assert categories_data[category_uuid]["id"] == category_uuid
+
+    # Validate category order uses UUIDs
+    for category_uuid in category_order:
+        assert re.match(
+            uuid_pattern, category_uuid
+        ), f"Category order ID '{category_uuid}' should be a valid UUID"
+        assert category_uuid in categories_data
+
+    # Validate all distractor/item IDs are UUIDs
+    distractors_data = result["interaction_data"]["distractors"]
+    assert len(distractors_data) == 6  # 4 items + 2 distractors
+
+    for item_uuid in distractors_data.keys():
+        assert re.match(
+            uuid_pattern, item_uuid
+        ), f"Item ID '{item_uuid}' should be a valid UUID"
+        uuid.UUID(item_uuid)  # Should parse without error
+        assert distractors_data[item_uuid]["id"] == item_uuid
+
+    # Validate scoring data uses UUIDs
+    scoring_data = result["scoring_data"]["value"]
+    assert len(scoring_data) == 2
+
+    for category_scoring in scoring_data:
+        category_uuid = category_scoring["id"]
+        assert re.match(
+            uuid_pattern, category_uuid
+        ), f"Scoring category ID '{category_uuid}' should be a valid UUID"
+        assert category_uuid in categories_data
+
+        # All correct item IDs should be UUIDs
+        correct_items = category_scoring["scoring_data"]["value"]
+        assert len(correct_items) == 2  # Each category has 2 items
+
+        for item_uuid in correct_items:
+            assert re.match(
+                uuid_pattern, item_uuid
+            ), f"Scoring item ID '{item_uuid}' should be a valid UUID"
+            assert item_uuid in distractors_data
+
+    # Verify all UUIDs are unique
+    all_uuids = list(categories_data.keys()) + list(distractors_data.keys())
+    assert len(set(all_uuids)) == len(all_uuids), "All UUIDs should be unique"
+
+    # Verify original simple IDs are NOT present in the Canvas export
+    original_ids = ["cat1", "cat2", "ml1", "ml2", "dl1", "dl2", "d1", "d2"]
+    for original_id in original_ids:
+        assert original_id not in categories_data
+        assert original_id not in distractors_data
+        # Check scoring data too
+        for category_scoring in scoring_data:
+            assert category_scoring["id"] != original_id
+            assert original_id not in category_scoring["scoring_data"]["value"]
+
+
 def test_categorization_question_type_format_for_canvas_no_distractors():
     """Test Canvas export formatting without distractors."""
     from src.question.types.categorization import (

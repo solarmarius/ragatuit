@@ -1,5 +1,8 @@
 """Tests for Multiple Choice Question type implementation."""
 
+import re
+import uuid
+
 import pytest
 
 
@@ -488,17 +491,37 @@ def test_multiple_choice_question_type_format_for_canvas():
     assert "choices" in interaction_data
     assert len(interaction_data["choices"]) == 4
 
-    # Check choice structure
+    # Check choice structure and validate UUIDs
     choices = interaction_data["choices"]
-    assert choices[0]["id"] == "choice_1"
+    uuid_pattern = (
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    )
+
+    # Validate first choice
+    assert re.match(
+        uuid_pattern, choices[0]["id"]
+    ), "First choice ID should be a valid UUID"
     assert choices[0]["position"] == 1
     assert choices[0]["item_body"] == "<p>Paris</p>"
+
+    # Validate other choice content (IDs are UUIDs, content should match)
     assert choices[1]["item_body"] == "<p>London</p>"
     assert choices[2]["item_body"] == "<p>Berlin</p>"
     assert choices[3]["item_body"] == "<p>Madrid</p>"
 
-    # Validate scoring data (A=0, so choice_1)
-    assert result["scoring_data"]["value"] == "choice_1"
+    # Validate all choice IDs are proper UUIDs
+    for i, choice in enumerate(choices):
+        assert re.match(
+            uuid_pattern, choice["id"]
+        ), f"Choice {i} ID should be a valid UUID"
+        assert choice["position"] == i + 1
+
+    # Validate scoring data uses UUID (A=0, so first choice UUID)
+    scoring_value = result["scoring_data"]["value"]
+    assert (
+        scoring_value == choices[0]["id"]
+    ), "Scoring value should be the UUID of the correct choice"
+    assert re.match(uuid_pattern, scoring_value)
 
     # Validate properties
     properties = result["properties"]
@@ -509,14 +532,69 @@ def test_multiple_choice_question_type_format_for_canvas():
     assert result["feedback"] == {}
 
 
-def test_multiple_choice_question_type_format_for_canvas_different_answers():
-    """Test Canvas formatting with different correct answers."""
+def test_multiple_choice_question_type_format_for_canvas_uuid_compliance():
+    """Test that Canvas formatting uses proper UUIDs as per Canvas New Quizzes API requirements."""
     from src.question.types.mcq import (
         MultipleChoiceData,
         MultipleChoiceQuestionType,
     )
 
     question_type = MultipleChoiceQuestionType()
+    data = MultipleChoiceData(
+        question_text="Which language is used for web development?",
+        option_a="JavaScript",
+        option_b="Python",
+        option_c="Java",
+        option_d="C++",
+        correct_answer="A",
+    )
+
+    result = question_type.format_for_canvas(data)
+
+    # Validate that all choice IDs are proper UUIDs (Version 4)
+    uuid_pattern = (
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    )
+    choices = result["interaction_data"]["choices"]
+
+    assert len(choices) == 4
+    choice_ids = []
+    for i, choice in enumerate(choices):
+        choice_id = choice["id"]
+        choice_ids.append(choice_id)
+        # Validate UUID format
+        assert re.match(
+            uuid_pattern, choice_id
+        ), f"Choice {i} ID '{choice_id}' is not a valid UUID4"
+        # Validate UUID can be parsed
+        uuid.UUID(choice_id)  # Should not raise exception
+        # Validate position is correct
+        assert choice["position"] == i + 1
+
+    # Validate all UUIDs are unique
+    assert len(set(choice_ids)) == 4, "All choice UUIDs should be unique"
+
+    # Validate scoring data uses the correct choice UUID (A=0, so first choice)
+    scoring_value = result["scoring_data"]["value"]
+    assert (
+        scoring_value == choice_ids[0]
+    ), "Scoring value should be the UUID of the correct choice"
+    assert re.match(
+        uuid_pattern, scoring_value
+    ), "Scoring value should be a valid UUID4"
+
+
+def test_multiple_choice_question_type_format_for_canvas_different_answers():
+    """Test Canvas formatting with different correct answers uses correct UUIDs."""
+    from src.question.types.mcq import (
+        MultipleChoiceData,
+        MultipleChoiceQuestionType,
+    )
+
+    question_type = MultipleChoiceQuestionType()
+    uuid_pattern = (
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    )
 
     # Test answer B (index 1)
     data_b = MultipleChoiceData(
@@ -528,7 +606,9 @@ def test_multiple_choice_question_type_format_for_canvas_different_answers():
         correct_answer="B",
     )
     result_b = question_type.format_for_canvas(data_b)
-    assert result_b["scoring_data"]["value"] == "choice_2"
+    choices_b = result_b["interaction_data"]["choices"]
+    assert result_b["scoring_data"]["value"] == choices_b[1]["id"]  # Second choice UUID
+    assert re.match(uuid_pattern, result_b["scoring_data"]["value"])
 
     # Test answer C (index 2)
     data_c = MultipleChoiceData(
@@ -540,7 +620,9 @@ def test_multiple_choice_question_type_format_for_canvas_different_answers():
         correct_answer="C",
     )
     result_c = question_type.format_for_canvas(data_c)
-    assert result_c["scoring_data"]["value"] == "choice_3"
+    choices_c = result_c["interaction_data"]["choices"]
+    assert result_c["scoring_data"]["value"] == choices_c[2]["id"]  # Third choice UUID
+    assert re.match(uuid_pattern, result_c["scoring_data"]["value"])
 
     # Test answer D (index 3)
     data_d = MultipleChoiceData(
@@ -552,7 +634,9 @@ def test_multiple_choice_question_type_format_for_canvas_different_answers():
         correct_answer="D",
     )
     result_d = question_type.format_for_canvas(data_d)
-    assert result_d["scoring_data"]["value"] == "choice_4"
+    choices_d = result_d["interaction_data"]["choices"]
+    assert result_d["scoring_data"]["value"] == choices_d[3]["id"]  # Fourth choice UUID
+    assert re.match(uuid_pattern, result_d["scoring_data"]["value"])
 
 
 def test_multiple_choice_question_type_format_for_canvas_html_wrapping():
@@ -831,9 +915,13 @@ def test_multiple_choice_end_to_end_workflow():
 
     # Validate data consistency
     assert display_format["correct_answer"] == "A"
-    assert (
-        canvas_format["scoring_data"]["value"] == "choice_1"
-    )  # A = index 0 = choice_1
+    # Canvas should use UUID for correct answer (A = index 0 = first choice UUID)
+    choices = canvas_format["interaction_data"]["choices"]
+    assert canvas_format["scoring_data"]["value"] == choices[0]["id"]
+    assert re.match(
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        canvas_format["scoring_data"]["value"],
+    )
     assert export_format["correct_answer"] == "A"
 
     # Validate question content consistency
@@ -956,21 +1044,24 @@ def test_multiple_choice_all_answer_options():
         "option_d": "Option D",
     }
 
-    # Test each correct answer
-    answer_to_choice_mapping = {
-        "A": "choice_1",
-        "B": "choice_2",
-        "C": "choice_3",
-        "D": "choice_4",
-    }
+    # Test each correct answer with UUID validation
+    uuid_pattern = (
+        r"^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    )
+    answer_to_index = {"A": 0, "B": 1, "C": 2, "D": 3}
 
-    for correct_answer, expected_choice in answer_to_choice_mapping.items():
+    for correct_answer, expected_index in answer_to_index.items():
         data = {**base_data, "correct_answer": correct_answer}
         validated_data = mcq_type.validate_data(data)
 
-        # Test Canvas format
+        # Test Canvas format uses UUIDs
         canvas_format = mcq_type.format_for_canvas(validated_data)
-        assert canvas_format["scoring_data"]["value"] == expected_choice
+        choices = canvas_format["interaction_data"]["choices"]
+        scoring_value = canvas_format["scoring_data"]["value"]
+
+        # Validate scoring uses the correct choice UUID
+        assert scoring_value == choices[expected_index]["id"]
+        assert re.match(uuid_pattern, scoring_value)
 
         # Test display format
         display_format = mcq_type.format_for_display(validated_data)

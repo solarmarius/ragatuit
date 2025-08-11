@@ -271,16 +271,16 @@ def test_convert_question_to_canvas_format_multiple_choice():
 
 
 @pytest.mark.parametrize(
-    "correct_letter,expected_choice",
+    "correct_letter,expected_index",
     [
-        ("A", "choice_1"),
-        ("B", "choice_2"),
-        ("C", "choice_3"),
-        ("D", "choice_4"),
-        ("X", "choice_1"),  # Invalid answer defaults to A
+        ("A", 0),  # A = index 0
+        ("B", 1),  # B = index 1
+        ("C", 2),  # C = index 2
+        ("D", 3),  # D = index 3
+        ("X", 0),  # Invalid answer defaults to A = index 0
     ],
 )
-def test_convert_question_correct_answer_mapping(correct_letter, expected_choice):
+def test_convert_question_correct_answer_mapping(correct_letter, expected_index):
     """Test correct answer mapping for different options."""
     from src.canvas.service import convert_question_to_canvas_format
 
@@ -296,9 +296,15 @@ def test_convert_question_correct_answer_mapping(correct_letter, expected_choice
     }
 
     result = convert_question_to_canvas_format(question, 1)
-    scoring_value = result["item"]["entry"]["scoring_data"]["value"]
 
-    assert scoring_value == expected_choice
+    # Get the choices and scoring data
+    entry = result["item"]["entry"]
+    choices = entry["interaction_data"]["choices"]
+    scoring_value = entry["scoring_data"]["value"]
+
+    # The scoring value should match the UUID of the choice at the expected index
+    expected_choice_id = choices[expected_index]["id"]
+    assert scoring_value == expected_choice_id
 
 
 @pytest.mark.asyncio
@@ -617,9 +623,12 @@ def test_convert_question_to_canvas_format_multiple_choice():
     assert "choices" in interaction_data
     assert len(interaction_data["choices"]) == 4
 
-    # Check scoring data
+    # Check scoring data - should be UUID format now
     scoring_data = entry["scoring_data"]
-    assert scoring_data["value"] == "choice_2"  # B = index 1, so choice_2
+    # The correct answer should correspond to option B (index 1 in choices)
+    choices = interaction_data["choices"]
+    option_b_id = choices[1]["id"]  # Get the UUID for option B
+    assert scoring_data["value"] == option_b_id
 
 
 def test_convert_question_to_canvas_format_unsupported_type():

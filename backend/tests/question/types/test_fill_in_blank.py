@@ -50,6 +50,75 @@ def test_blank_data_position_validation():
     assert "Input should be less than or equal to 100" in str(exc_info.value)
 
 
+def test_answer_variations_integer_float_duplicate_removal():
+    """Test that integer/float duplicates are removed from answer variations."""
+    from src.question.types.fill_in_blank import BlankData
+
+    # Test case where "1" and "1.0" are both provided - should keep only "1"
+    blank = BlankData(
+        position=1,
+        correct_answer="1",
+        answer_variations=["1.0", "2", "2.0", "1", "3.5"],
+    )
+
+    # Should remove "1.0" and "2.0" since "1" and "2" exist as integers
+    # Should keep "3.5" since it's a true float with decimal part
+    # Note: "1" will be kept in variations even if it duplicates correct_answer
+    # since the validator doesn't compare with correct_answer, only within variations
+    expected_variations = ["1", "2", "3.5"]
+    assert blank.answer_variations == expected_variations
+
+
+def test_fill_in_blank_canvas_format_with_validation_only():
+    """Test that Canvas format works correctly with only validation-time deduplication."""
+    from src.question.types.fill_in_blank import (
+        BlankData,
+        FillInBlankData,
+        FillInBlankQuestionType,
+    )
+
+    # Create test data - validation has already cleaned answer_variations
+    data = FillInBlankData(
+        question_text="The answer is [blank_1] and also [blank_2]",
+        blanks=[
+            BlankData(
+                position=1,
+                correct_answer="1",
+                answer_variations=[
+                    "2",
+                    "one",
+                ],  # Clean variations (no integer/float duplicates)
+            ),
+            BlankData(
+                position=2,
+                correct_answer="3.5",  # Float with decimal part
+                answer_variations=["4", "three-and-half"],  # Clean variations
+            ),
+        ],
+        explanation="Test explanation",
+    )
+
+    question_type = FillInBlankQuestionType()
+    canvas_format = question_type.format_for_canvas(data)
+
+    # Check the scoring data values
+    scoring_values = canvas_format["scoring_data"]["value"]
+
+    # First blank should have all values without duplicates
+    blank1_values = scoring_values[0]["scoring_data"]["value"]
+    expected_values1 = ["1", "2", "one"]
+    assert len(blank1_values) == 3
+    for value in expected_values1:
+        assert value in blank1_values
+
+    # Second blank should have all values without duplicates
+    blank2_values = scoring_values[1]["scoring_data"]["value"]
+    expected_values2 = ["3.5", "4", "three-and-half"]
+    assert len(blank2_values) == 3
+    for value in expected_values2:
+        assert value in blank2_values
+
+
 def test_blank_data_answer_validation():
     """Test answer validation for BlankData."""
     from pydantic import ValidationError

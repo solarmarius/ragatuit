@@ -1,5 +1,6 @@
 """Matching Question type implementation."""
 
+import random
 import uuid
 from typing import Any
 
@@ -183,8 +184,21 @@ class MatchingQuestionType(BaseQuestionType):
         if not isinstance(data, MatchingData):
             raise ValueError("Expected MatchingData")
 
-        # Generate unique IDs for Canvas questions
-        question_ids = {pair.question: str(uuid.uuid4()) for pair in data.pairs}
+        # Generate IDs: 5-digit for first 4 pairs, UUID for additional pairs
+        question_ids = {}
+        used_ids = set()
+
+        for i, pair in enumerate(data.pairs):
+            if i < 4:  # First 4 pairs get 5-digit numeric IDs
+                # Generate unique 5-digit ID, avoiding collisions
+                while True:
+                    candidate_id = str(random.randint(10000, 99999))
+                    if candidate_id not in used_ids:
+                        question_ids[pair.question] = candidate_id
+                        used_ids.add(candidate_id)
+                        break
+            else:  # Additional pairs get UUIDs
+                question_ids[pair.question] = str(uuid.uuid4())
 
         # Build answers list (correct answers + distractors)
         answers = [pair.answer for pair in data.pairs]
@@ -224,12 +238,6 @@ class MatchingQuestionType(BaseQuestionType):
             "interaction_data": {
                 "answers": answers,
                 "questions": canvas_questions,
-            },
-            "properties": {
-                "shuffle_rules": {
-                    "questions": {"shuffled": False},
-                    "answers": {"shuffled": True},
-                }
             },
             "scoring_data": {
                 "value": scoring_value,
