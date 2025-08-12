@@ -9,6 +9,8 @@ This module contains flows for Canvas operations without any Quiz domain logic:
 from datetime import datetime
 from typing import Any
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.config import get_logger
 from src.content_extraction import (
     RawContent,
@@ -532,7 +534,11 @@ async def create_canvas_quiz_flow(
 
 
 async def export_questions_batch_flow(
-    canvas_token: str, course_id: int, quiz_id: str, questions: list[dict[str, Any]]
+    canvas_token: str,
+    course_id: int,
+    quiz_id: str,
+    questions: list[dict[str, Any]],
+    session: AsyncSession,
 ) -> list[dict[str, Any]]:
     """
     Pure Canvas operation to export questions to a Canvas quiz.
@@ -545,12 +551,13 @@ async def export_questions_batch_flow(
         course_id: Canvas course ID
         quiz_id: Canvas quiz ID
         questions: List of question data dicts
+        session: Database session for question unapproval on 502 errors
 
     Returns:
         List of export results for each question
     """
     raw_exported_items = await create_canvas_quiz_items(
-        canvas_token, course_id, quiz_id, questions
+        canvas_token, course_id, quiz_id, questions, session
     )
 
     successful_items = len([r for r in raw_exported_items if r.get("success")])

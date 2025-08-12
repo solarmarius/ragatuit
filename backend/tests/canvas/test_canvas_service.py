@@ -1,7 +1,7 @@
 """Tests for Canvas service layer."""
 
 import uuid
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -203,7 +203,7 @@ async def test_create_canvas_quiz_with_correct_payload():
 
 
 @pytest.mark.asyncio
-async def test_create_canvas_quiz_items_success():
+async def test_create_canvas_quiz_items_success(async_session):
     """Test successful quiz items creation."""
     from src.canvas.service import create_canvas_quiz_items
 
@@ -223,7 +223,7 @@ async def test_create_canvas_quiz_items_success():
 
     with mock_canvas_api() as _:
         result = await create_canvas_quiz_items(
-            "test_token", 123, "quiz_456", mock_questions
+            "test_token", 123, "quiz_456", mock_questions, async_session
         )
 
     assert len(result) == 2
@@ -679,3 +679,316 @@ def test_convert_question_to_canvas_format_mixed_case_sensitivity():
     # All should use TextContainsAnswer in the new implementation
     for algorithm in algorithms:
         assert algorithm == "TextInChoices"
+
+
+# Canvas Export 502 Error Handling Tests
+
+
+@pytest.mark.asyncio
+async def test_create_canvas_quiz_items_502_error_triggers_unapproval(async_session):
+    """Test that 502 error during Canvas export triggers question unapproval."""
+    # Create approved questions with proper timestamps
+    from datetime import datetime, timezone
+
+    from src.canvas.service import create_canvas_quiz_items
+    from tests.conftest import create_question_in_async_session
+
+    approved_at = datetime.now(timezone.utc)
+
+    question1 = await create_question_in_async_session(
+        async_session, is_approved=True, approved_at=approved_at
+    )
+    question2 = await create_question_in_async_session(
+        async_session, is_approved=True, approved_at=approved_at
+    )
+
+    # Capture IDs while session is active
+    question1_id = question1.id
+    question2_id = question2.id
+
+    # Mock questions data for export (with proper MCQ structure)
+    questions = [
+        {
+            "id": question1_id,
+            "question_text": "Question 1",
+            "option_a": "A",
+            "option_b": "B",
+            "option_c": "C",
+            "option_d": "D",
+            "correct_answer": "A",
+            "question_type": "multiple_choice",
+        },
+        {
+            "id": question2_id,
+            "question_text": "Question 2",
+            "option_a": "A",
+            "option_b": "B",
+            "option_c": "C",
+            "option_d": "D",
+            "correct_answer": "B",
+            "question_type": "multiple_choice",
+        },
+    ]
+
+    # Use mock that simulates 502 error for item creation
+    with patch("httpx.AsyncClient") as mock_client:
+
+        def mock_post_response(url, **kwargs):
+            # Create response that will raise 502 error when raise_for_status is called
+            mock_response = MagicMock()
+            mock_response.status_code = 502
+            mock_response.text = '{"message":"Bad Gateway"}'
+
+            import httpx
+
+            mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+                "502 Bad Gateway", request=MagicMock(), response=mock_response
+            )
+            return mock_response
+
+        # Only the first question will fail with 502, second will succeed
+        responses = [
+            mock_post_response(None),  # First question - 502 error
+            MagicMock(
+                raise_for_status=MagicMock(return_value=None),
+                json=MagicMock(return_value={"id": "item_123"}),
+            ),  # Second question - success
+        ]
+
+        mock_client.return_value.__aenter__.return_value.post.side_effect = responses
+
+        results = await create_canvas_quiz_items(
+            canvas_token="test_token",
+            course_id=123,
+            quiz_id="canvas_quiz_456",
+            questions=questions,
+            session=async_session,
+        )
+
+    # Verify results
+    assert len(results) == 2
+    assert results[0]["success"] is False
+    assert results[0]["question_id"] == question1_id
+    assert "502" in results[0]["error"]
+    assert results[1]["success"] is True
+    assert results[1]["question_id"] == question2_id
+
+    # Verify question unapproval - question 1 should be unapproved due to 502 error
+    from src.question.service import get_question_by_id
+
+    updated_question1 = await get_question_by_id(async_session, question1_id)
+    updated_question2 = await get_question_by_id(async_session, question2_id)
+
+    assert updated_question1.is_approved is False
+    assert updated_question1.approved_at is None
+
+    # Question 2 should remain approved (successful export)
+    assert updated_question2.is_approved is True
+    assert updated_question2.approved_at is not None
+
+
+@pytest.mark.asyncio
+async def test_create_canvas_quiz_items_non_502_error_no_unapproval(async_session):
+    """Test that non-502 HTTP errors do not trigger question unapproval."""
+    # Create approved question with proper timestamp
+    from datetime import datetime, timezone
+
+    from src.canvas.service import create_canvas_quiz_items
+    from tests.conftest import create_question_in_async_session
+
+    approved_at = datetime.now(timezone.utc)
+
+    question = await create_question_in_async_session(
+        async_session, is_approved=True, approved_at=approved_at
+    )
+
+    # Capture ID while session is active
+    question_id = question.id
+
+    questions = [
+        {
+            "id": question_id,
+            "question_text": "Test question",
+            "option_a": "A",
+            "option_b": "B",
+            "option_c": "C",
+            "option_d": "D",
+            "correct_answer": "A",
+            "question_type": "multiple_choice",
+        }
+    ]
+
+    # Mock httpx.AsyncClient to simulate 429 error (rate limiting)
+    with patch("httpx.AsyncClient") as mock_client:
+
+        def mock_post_response(url, **kwargs):
+            # Create response that will raise 429 error when raise_for_status is called
+            mock_response = MagicMock()
+            mock_response.status_code = 429
+            mock_response.text = '{"message":"Rate limit exceeded"}'
+
+            import httpx
+
+            mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+                "429 Too Many Requests", request=MagicMock(), response=mock_response
+            )
+            return mock_response
+
+        mock_client.return_value.__aenter__.return_value.post.side_effect = (
+            mock_post_response
+        )
+
+        results = await create_canvas_quiz_items(
+            canvas_token="test_token",
+            course_id=123,
+            quiz_id="canvas_quiz_456",
+            questions=questions,
+            session=async_session,
+        )
+
+    # Verify results
+    assert len(results) == 1
+    assert results[0]["success"] is False
+    assert results[0]["question_id"] == question_id
+    assert "429" in results[0]["error"]
+
+    # Verify question remains approved (429 should not trigger unapproval)
+    from src.question.service import get_question_by_id
+
+    updated_question = await get_question_by_id(async_session, question_id)
+    assert updated_question.is_approved is True
+    assert updated_question.approved_at is not None
+
+
+@pytest.mark.asyncio
+async def test_create_canvas_quiz_items_general_exception_no_unapproval(async_session):
+    """Test that general exceptions do not trigger question unapproval."""
+    # Create approved question with proper timestamp
+    from datetime import datetime, timezone
+
+    from src.canvas.service import create_canvas_quiz_items
+    from tests.conftest import create_question_in_async_session
+
+    approved_at = datetime.now(timezone.utc)
+
+    question = await create_question_in_async_session(
+        async_session, is_approved=True, approved_at=approved_at
+    )
+
+    # Capture ID while session is active
+    question_id = question.id
+
+    questions = [
+        {
+            "id": question_id,
+            "question_text": "Test question",
+            "option_a": "A",
+            "option_b": "B",
+            "option_c": "C",
+            "option_d": "D",
+            "correct_answer": "A",
+            "question_type": "multiple_choice",
+        }
+    ]
+
+    # Mock httpx.AsyncClient to raise a general exception
+    with patch("httpx.AsyncClient") as mock_client:
+
+        def mock_post_exception(url, **kwargs):
+            raise Exception("Network timeout")
+
+        mock_client.return_value.__aenter__.return_value.post.side_effect = (
+            mock_post_exception
+        )
+
+        results = await create_canvas_quiz_items(
+            canvas_token="test_token",
+            course_id=123,
+            quiz_id="canvas_quiz_456",
+            questions=questions,
+            session=async_session,
+        )
+
+    # Verify results
+    assert len(results) == 1
+    assert results[0]["success"] is False
+    assert results[0]["question_id"] == question_id
+    assert "Network timeout" in results[0]["error"]
+
+    # Verify question remains approved (general exceptions should not trigger unapproval)
+    from src.question.service import get_question_by_id
+
+    updated_question = await get_question_by_id(async_session, question_id)
+    assert updated_question.is_approved is True
+    assert updated_question.approved_at is not None
+
+
+@pytest.mark.asyncio
+async def test_create_canvas_quiz_items_502_unapproval_db_error_graceful(async_session):
+    """Test that Canvas export continues even if question unapproval fails."""
+    # Create approved question with proper timestamp
+    from datetime import datetime, timezone
+
+    from src.canvas.service import create_canvas_quiz_items
+    from tests.conftest import create_question_in_async_session
+
+    approved_at = datetime.now(timezone.utc)
+
+    question = await create_question_in_async_session(
+        async_session, is_approved=True, approved_at=approved_at
+    )
+
+    # Capture ID while session is active
+    question_id = question.id
+
+    questions = [
+        {
+            "id": question_id,
+            "question_text": "Test question",
+            "option_a": "A",
+            "option_b": "B",
+            "option_c": "C",
+            "option_d": "D",
+            "correct_answer": "A",
+            "question_type": "multiple_choice",
+        }
+    ]
+
+    # Mock httpx.AsyncClient to simulate 502 error
+    with patch("httpx.AsyncClient") as mock_client:
+
+        def mock_post_response(url, **kwargs):
+            # Create response that will raise 502 error when raise_for_status is called
+            mock_response = MagicMock()
+            mock_response.status_code = 502
+            mock_response.text = '{"message":"Bad Gateway"}'
+
+            import httpx
+
+            mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+                "502 Bad Gateway", request=MagicMock(), response=mock_response
+            )
+            return mock_response
+
+        mock_client.return_value.__aenter__.return_value.post.side_effect = (
+            mock_post_response
+        )
+
+        # Mock unapprove_question to raise an exception
+        with patch(
+            "src.question.service.unapprove_question", side_effect=Exception("DB error")
+        ):
+            # Should not raise exception, should continue processing
+            results = await create_canvas_quiz_items(
+                canvas_token="test_token",
+                course_id=123,
+                quiz_id="canvas_quiz_456",
+                questions=questions,
+                session=async_session,
+            )
+
+    # Verify that export continues and returns results even with unapproval failure
+    assert len(results) == 1
+    assert results[0]["success"] is False
+    assert results[0]["question_id"] == question_id
+    assert "502" in results[0]["error"]

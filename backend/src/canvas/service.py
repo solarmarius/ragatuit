@@ -5,6 +5,7 @@ Canvas services for content extraction and quiz export.
 from typing import Any
 
 import httpx
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.config import get_logger, settings
 from src.exceptions import ExternalServiceError
@@ -299,7 +300,11 @@ async def create_canvas_quiz(
 
 
 async def create_canvas_quiz_items(
-    canvas_token: str, course_id: int, quiz_id: str, questions: list[dict[str, Any]]
+    canvas_token: str,
+    course_id: int,
+    quiz_id: str,
+    questions: list[dict[str, Any]],
+    session: AsyncSession,
 ) -> list[dict[str, Any]]:
     """
     Create quiz items (questions) in Canvas for the given quiz.
@@ -311,6 +316,7 @@ async def create_canvas_quiz_items(
         course_id: Canvas course ID
         quiz_id: Canvas quiz assignment ID
         questions: List of question dictionaries to create
+        session: Database session for question unapproval on 502 errors
 
     Returns:
         List of results for each question creation attempt
@@ -370,6 +376,38 @@ async def create_canvas_quiz_items(
                     status_code=e.response.status_code,
                     response_text=e.response.text,
                 )
+
+                # Unapprove question only on 502 errors (question content issues)
+                if e.response.status_code == 502:
+                    from src.question.service import unapprove_question
+
+                    try:
+                        unapproval_success = await unapprove_question(
+                            session, question["id"]
+                        )
+                        if unapproval_success:
+                            logger.info(
+                                "question_unapproved_due_to_502_error",
+                                question_id=str(question["id"]),
+                                canvas_quiz_id=quiz_id,
+                                position=i + 1,
+                            )
+                        else:
+                            logger.warning(
+                                "question_unapproval_failed_502_error",
+                                question_id=str(question["id"]),
+                                canvas_quiz_id=quiz_id,
+                                position=i + 1,
+                            )
+                    except Exception as unapproval_error:
+                        logger.error(
+                            "question_unapproval_exception_502_error",
+                            question_id=str(question["id"]),
+                            canvas_quiz_id=quiz_id,
+                            position=i + 1,
+                            error=str(unapproval_error),
+                        )
+
                 # Continue with other questions even if one fails
                 results.append(
                     {

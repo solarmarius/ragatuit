@@ -1426,3 +1426,105 @@ async def test_prepare_questions_for_export_fill_in_blank_with_answer_variations
     assert blank["correct_answer"] == "Paris"
     assert blank["answer_variations"] == ["paris", "PARIS", "Paříž", "パリ"]
     assert blank["case_sensitive"] is False
+
+
+# Question Unapproval Tests
+
+
+@pytest.mark.asyncio
+async def test_unapprove_approved_question_success(async_session):
+    """Test successfully unapproving an approved question."""
+    from src.question.service import unapprove_question
+    from tests.conftest import create_question_in_async_session
+
+    # Create an approved question
+    question = await create_question_in_async_session(async_session, is_approved=True)
+
+    # Unapprove the question
+    result = await unapprove_question(async_session, question.id)
+
+    # Verify result and question state
+    assert result is True
+    from src.question.service import get_question_by_id
+
+    updated_question = await get_question_by_id(async_session, question.id)
+    assert updated_question.is_approved is False
+    assert updated_question.approved_at is None
+    assert updated_question.updated_at is not None
+
+
+@pytest.mark.asyncio
+async def test_unapprove_already_unapproved_question(async_session):
+    """Test unapproving a question that is already unapproved."""
+    from src.question.service import unapprove_question
+    from tests.conftest import create_question_in_async_session
+
+    # Create an unapproved question
+    question = await create_question_in_async_session(
+        async_session, is_approved=False, approved_at=None
+    )
+
+    # Try to unapprove the question
+    result = await unapprove_question(async_session, question.id)
+
+    # Should return False as it was already unapproved
+    assert result is False
+    from src.question.service import get_question_by_id
+
+    updated_question = await get_question_by_id(async_session, question.id)
+    assert updated_question.is_approved is False
+    assert updated_question.approved_at is None
+
+
+@pytest.mark.asyncio
+async def test_unapprove_nonexistent_question(async_session):
+    """Test unapproving a question that doesn't exist."""
+    from src.question.service import unapprove_question
+
+    # Try to unapprove a non-existent question
+    nonexistent_id = uuid.uuid4()
+    result = await unapprove_question(async_session, nonexistent_id)
+
+    # Should return False
+    assert result is False
+
+
+@pytest.mark.asyncio
+async def test_unapprove_soft_deleted_question(async_session):
+    """Test unapproving a soft-deleted question."""
+    from src.question.service import unapprove_question
+    from tests.conftest import create_question_in_async_session
+
+    # Create a soft-deleted approved question
+    question = await create_question_in_async_session(
+        async_session, is_approved=True, deleted=True
+    )
+
+    # Try to unapprove the soft-deleted question
+    result = await unapprove_question(async_session, question.id)
+
+    # Should return False as soft-deleted questions are filtered out
+    assert result is False
+
+
+@pytest.mark.asyncio
+async def test_unapprove_question_updates_timestamp(async_session):
+    """Test that unapproving updates the updated_at timestamp."""
+    from src.question.service import unapprove_question
+    from tests.conftest import create_question_in_async_session
+
+    # Create an approved question
+    question = await create_question_in_async_session(async_session, is_approved=True)
+    old_updated_at = question.updated_at or question.created_at
+
+    # Unapprove the question
+    result = await unapprove_question(async_session, question.id)
+
+    # Verify timestamp was updated
+    assert result is True
+    from src.question.service import get_question_by_id
+
+    updated_question = await get_question_by_id(async_session, question.id)
+    assert updated_question.updated_at > old_updated_at
+    assert updated_question.is_approved is False
+    assert updated_question.approved_at is None

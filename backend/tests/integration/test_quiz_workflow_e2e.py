@@ -240,9 +240,17 @@ async def test_complete_canvas_workflow_integration(session: Session, caplog):
         ],
     }
 
-    export_result = await _execute_export_workflow(
-        quiz.id, "canvas_token", mock_quiz_creator, mock_question_exporter, export_data
-    )
+    from src.database import get_async_session
+
+    async with get_async_session() as canvas_session:
+        export_result = await _execute_export_workflow(
+            quiz.id,
+            "canvas_token",
+            mock_quiz_creator,
+            mock_question_exporter,
+            export_data,
+            canvas_session,
+        )
 
     # === Integration Assertions ===
     # Content extraction should succeed
@@ -716,6 +724,7 @@ async def test_authentication_token_integration(session: Session):
 @pytest.mark.asyncio
 async def test_export_rollback_integration(session: Session, caplog):
     """Test export failure and rollback integration."""
+    from src.database import get_async_session
     from src.question.types import QuestionDifficulty, QuestionType
     from src.quiz.orchestrator.export import _execute_export_workflow
     from src.quiz.schemas import (
@@ -794,13 +803,15 @@ async def test_export_rollback_integration(session: Session, caplog):
         ],
     }
 
-    export_result = await _execute_export_workflow(
-        quiz.id,
-        "rollback_token",
-        mock_quiz_creator,
-        mock_question_exporter,
-        export_data,
-    )
+    async with get_async_session() as rollback_session:
+        export_result = await _execute_export_workflow(
+            quiz.id,
+            "rollback_token",
+            mock_quiz_creator,
+            mock_question_exporter,
+            export_data,
+            rollback_session,
+        )
 
     # === Assertions ===
     # Export should fail due to partial success
