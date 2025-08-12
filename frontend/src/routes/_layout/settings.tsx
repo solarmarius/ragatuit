@@ -2,7 +2,6 @@ import { Box, Container, Tabs, Text, VStack } from "@chakra-ui/react"
 import { createFileRoute } from "@tanstack/react-router"
 import { useState } from "react"
 
-import Appearance from "@/components/UserSettings/Appearance"
 import DeleteAccount from "@/components/UserSettings/DeleteAccount"
 import UserInformation from "@/components/UserSettings/UserInformation"
 import useAuth from "@/hooks/useCanvasAuth"
@@ -40,19 +39,12 @@ function UserSettings() {
         >
           <Tabs.List>
             <Tabs.Trigger value="my-profile">My profile</Tabs.Trigger>
-            <Tabs.Trigger value="appearance">Appearance</Tabs.Trigger>
             <Tabs.Trigger value="danger-zone">Danger zone</Tabs.Trigger>
           </Tabs.List>
 
           <Tabs.Content value="my-profile">
             <Box mt={6}>
               <UserInformation />
-            </Box>
-          </Tabs.Content>
-
-          <Tabs.Content value="appearance">
-            <Box mt={6}>
-              <Appearance />
             </Box>
           </Tabs.Content>
 
