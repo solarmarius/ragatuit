@@ -1,7 +1,7 @@
 import { Button, HStack, Input, Text, VStack } from "@chakra-ui/react"
 import { memo, useCallback, useState } from "react"
 
-import { QuizService, ApiError } from "@/client"
+import { ApiError, QuizService } from "@/client"
 import {
   DialogBody,
   DialogCloseTrigger,
@@ -174,7 +174,7 @@ export const ManualModuleDialog = memo(function ManualModuleDialog({
 
       // Handle API errors with detailed error messages
       if (err instanceof ApiError) {
-        if (err.body && typeof err.body === 'object' && 'detail' in err.body) {
+        if (err.body && typeof err.body === "object" && "detail" in err.body) {
           errorMessage = (err.body as { detail: string }).detail
         } else {
           errorMessage = err.message

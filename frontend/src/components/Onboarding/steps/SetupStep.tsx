@@ -1,4 +1,4 @@
-import { AspectRatio, Box, Stack, Text } from "@chakra-ui/react";
+import { AspectRatio, Box, Stack, Text } from "@chakra-ui/react"
 
 export const SetupStep = () => {
   return (
@@ -24,5 +24,5 @@ export const SetupStep = () => {
         </AspectRatio>
       </Box>
     </Stack>
-  );
-};
+  )
+}

@@ -10,8 +10,8 @@ import {
   UsersService,
 } from "@/client"
 import { FormField, FormGroup } from "@/components/forms"
+import { useAuth } from "@/hooks/auth"
 import { useCustomToast, useErrorHandler } from "@/hooks/common"
-import useAuth from "@/hooks/useCanvasAuth"
 
 const UserInformation = () => {
   const queryClient = useQueryClient()

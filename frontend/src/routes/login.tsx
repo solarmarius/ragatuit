@@ -6,12 +6,12 @@ import {
   Image,
   Text,
   VStack,
-} from "@chakra-ui/react";
-import { createFileRoute, redirect } from "@tanstack/react-router";
+} from "@chakra-ui/react"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 
-import CanvasLoginButton from "@/components/ui/canvas-button";
-import { isLoggedIn } from "@/hooks/useCanvasAuth";
-import Illustration from "/assets/images/test-illustration.svg";
+import CanvasLoginButton from "@/components/ui/canvas-button"
+import { isLoggedIn } from "@/hooks/auth"
+import Illustration from "/assets/images/test-illustration.svg"
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -19,18 +19,18 @@ export const Route = createFileRoute("/login")({
     if (isLoggedIn()) {
       throw redirect({
         to: "/",
-      });
+      })
     }
   },
   validateSearch: (search: Record<string, unknown>) => {
     return {
       error: typeof search.error === "string" ? search.error : undefined,
-    };
+    }
   },
-});
+})
 
 function Login() {
-  const { error } = Route.useSearch();
+  const { error } = Route.useSearch()
 
   return (
     <Container
@@ -97,5 +97,5 @@ function Login() {
         </Box>
       </VStack>
     </Container>
-  );
+  )
 }
