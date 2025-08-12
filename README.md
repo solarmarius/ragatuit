@@ -1,187 +1,156 @@
-# Rag@UiT – Generating multiple-choice questions with a language model
+# Rag@UiT - AI-Powered Quiz Generator for Canvas
 
-Rag@UiT is an application that helps instructors and course coordinators generate multiple-choice questions (MCQs) based on the content of their courses from the Canvas LMS. The goal is to streamline the creation of a question bank that can be used to build quizzes and exams.
+Rag@UiT is a powerful web application designed to help instructors and course coordinators streamline the creation of high-quality quizzes for their courses in the Canvas LMS. By leveraging the power of Large Language Models (LLMs), Rag@UiT analyzes your course materials and automatically generates relevant questions, significantly reducing the time and effort required to create a robust question bank.
 
 ## Key Features
 
-- **Canvas Integration:**
-  - Secure login using Canvas credentials (OAuth2).
-  - Browse your Canvas courses and select content (modules, pages, files) for question generation.
-- **AI-Powered Question Generation:**
-  - Utilizes a Language Model (LLM) to analyze course materials (text, PDFs).
-  - Generates relevant multiple-choice questions based on the selected content.
-  - **Multi-language support:** Generate questions in English or Norwegian.
-- **Question Review & Management:**
-  - Review generated MCQs, including questions and answer choices.
-  - Approve, skip, or edit questions to ensure quality and accuracy.
-- **Export to Canvas:**
-  - Compile approved questions into a quiz.
-  - Export the quiz directly back to your Canvas course.
-  - Option to export questions in JSON format.
-- **User-Friendly Interface:**
-  - Modern, responsive web interface.
-  - Progress tracking for question generation tasks.
-
-_(Planned Enhancements: Saving drafts, support for multiple LLM models, expanded question types beyond MCQ.)_
-
-## Tech Stack
-
-**Backend:**
-
-- **Framework:** FastAPI (Python)
-- **ORM:** SQLModel (Pydantic + SQLAlchemy)
-- **Database:** PostgreSQL
-- **Async Support:** `httpx` for Canvas API calls
-- **Authentication:** JWT, Passlib, python-jose (for Canvas OAuth2 callback handling)
-- **Migrations:** Alembic
-- **Content Parsing:** Beautiful Soup (bs4), PyPDF
-
-**Frontend:**
-
-- **Framework:** React (with TypeScript)
-- **Build Tool:** Vite
-- **UI Library:** Chakra UI
-- **Routing:** TanStack Router
-- **Data Fetching/State:** TanStack Query
-- **API Client:** Auto-generated from OpenAPI spec using `@hey-api/openapi-ts`
-
-**Infrastructure & DevOps:**
-
-- **Containerization:** Docker, Docker Compose
-- **Reverse Proxy & Load Balancer:** Traefik (handles routing, SSL)
-- **Database Admin:** Adminer
-- **Logging & Monitoring:** Grafana, Loki, Promtail
-- **Testing:**
-  - Backend: Pytest, Coverage
-  - Frontend: Playwright (E2E)
-- **CI/CD:** GitHub Actions
-- **Linting/Formatting:** Ruff, Mypy, Bandit (Backend); Biome (Frontend); pre-commit hooks
+-   **Seamless Canvas Integration**:
+    -   Securely log in using your existing Canvas credentials via OAuth2.
+    -   Browse your Canvas courses and select content (modules, pages, files) to be used for question generation.
+-   **AI-Powered Question Generation**:
+    -   Utilizes LLMs to analyze course materials, including text and PDF files.
+    -   Generates a variety of question types (initially Multiple-Choice Questions).
+    -   Supports question generation in multiple languages (English and Norwegian).
+-   **Comprehensive Review Workflow**:
+    -   Review, edit, approve, or reject generated questions to ensure quality and accuracy.
+    -   A clear and intuitive interface for managing the question bank.
+-   **Direct-to-Canvas Export**:
+    -   Compile approved questions into a quiz.
+    -   Export the quiz directly back to your Canvas course with a single click.
+-   **Real-time Progress Tracking**:
+    -   A consolidated status system tracks the entire quiz creation lifecycle, from content extraction to final publication.
+    -   Visual indicators provide immediate feedback on the status of your quiz generation tasks.
 
 ## Architecture Overview
 
-Rag@UiT is a full-stack web application with a monorepo structure:
+Rag@UiT is a full-stack web application built with a modern, containerized architecture.
 
-- **Backend (`/backend`):** A FastAPI application serving a RESTful API. It handles business logic, Canvas API interactions, LLM communication, user authentication, and database operations (PostgreSQL via SQLModel).
-- **Frontend (`/frontend`):** A React (TypeScript) single-page application (SPA) providing the user interface. It communicates with the backend API to display information and trigger actions.
-- **Database:** PostgreSQL stores user data, course information, generated questions, etc. Alembic manages schema migrations.
-- **Services:** Docker Compose manages all services, including the application containers, database, Traefik, Adminer, and the logging stack (Loki, Promtail, Grafana).
-- **`/docs`:** Contains detailed documentation on development, deployment, roadmap, etc.
-- **`/scripts`:** Utility scripts for tasks like building, testing, and generating the API client.
+-   **Backend**: A robust API built with **FastAPI** (Python) that handles all business logic, including Canvas API communication, LLM interactions, user authentication, and database operations.
+-   **Frontend**: A responsive and user-friendly single-page application (SPA) built with **React** and **TypeScript**. It provides a rich user interface for interacting with the backend services.
+-   **Database**: A **PostgreSQL** database stores all application data, including users, courses, quizzes, and questions. **Alembic** is used for database migrations.
+-   **Infrastructure**: The entire application stack is containerized using **Docker** and managed with **Docker Compose**. This includes the application services, database, a **Traefik** reverse proxy, and a **Grafana/Loki** stack for monitoring and logging.
+
+### Status System
+
+A core feature of the application is its robust status system, which tracks a quiz through its entire lifecycle. This provides clear feedback to the user and allows for detailed error tracking.
+
+-   **States**: `created` -> `extracting_content` -> `generating_questions` -> `ready_for_review` -> `exporting_to_canvas` -> `published`
+-   **Failure Tracking**: A `failed` state, coupled with a specific reason, allows for easy debugging of issues in the generation process.
+
+## Tech Stack
+
+| Category             | Technology                                                                                                  |
+| -------------------- | ----------------------------------------------------------------------------------------------------------- |
+| **Backend**          | [Python](https://www.python.org/), [FastAPI](https://fastapi.tiangolo.com/), [SQLModel](https://sqlmodel.tiangolo.com/), [SQLAlchemy](https://www.sqlalchemy.org/), [Alembic](https://alembic.sqlalchemy.org/) |
+| **Frontend**         | [TypeScript](https://www.typescriptlang.org/), [React](https://reactjs.org/), [Vite](https://vitejs.dev/), [TanStack Router & Query](https://tanstack.com/), [Chakra UI](https://chakra-ui.com/) |
+| **Database**         | [PostgreSQL](https://www.postgresql.org/)                                                                   |
+| **Infrastructure**   | [Docker](https://www.docker.com/), [Docker Compose](https://docs.docker.com/compose/), [Traefik](https://traefik.io/traefik/) |
+| **Testing**          | [Pytest](https://pytest.org/) (Backend), [Playwright](https://playwright.dev/) (Frontend E2E)                 |
+| **DevOps & Linting** | [GitHub Actions](https://github.com/features/actions), [uv](https://github.com/astral-sh/uv), [Ruff](https://beta.ruff.rs/), [MyPy](https://mypy-lang.org/), [Biome](https://biomejs.dev/), [pre-commit](https://pre-commit.com/) |
+| **Monitoring**       | [Grafana](https://grafana.com/), [Loki](https://grafana.com/oss/loki/), [Promtail](https://grafana.com/docs/loki/latest/clients/promtail/) |
+
+## Project Structure
+
+The project is organized as a monorepo to facilitate development and deployment.
+
+```
+/
+├── backend/          # FastAPI backend application
+├── frontend/         # React frontend application
+├── docs/             # In-depth project documentation
+├── scripts/          # Utility and helper scripts
+├── .github/          # GitHub Actions CI/CD workflows
+├── docker-compose.yml# Main Docker Compose configuration
+└── README.md         # This file
+```
 
 ## Getting Started (Local Development)
 
-The quickest way to get the full application stack running locally is with Docker Compose.
+The fastest way to get the entire application stack running locally is with Docker.
 
 **Prerequisites:**
+*   Git
+*   Docker & Docker Compose
 
-- Git
-- Docker and Docker Compose
+**1. Clone the repository:**
 
-**Steps:**
+```bash
+git clone <repository-url>
+cd <repository-name>
+```
 
-1.  **Clone the repository:**
+**2. Configure your environment:**
 
-    ```bash
-    git clone <repository-url>
-    cd <repository-name>
-    ```
+Create a `.env` file in the project root by copying the example.
+A `.env.example` file is provided at the root of this project. Copy this file to `.env` and fill in the required values.
 
-2.  **Create and configure the environment file:**
+```bash
+cp .env.example .env
+```
 
-    - The application uses a `.env` file in the project root for configuration. You'll need to create this file.
-    - Populate `.env` with the necessary variables. Key variables include:
+You will need to fill in the following critical variables:
+*   `SECRET_KEY`: A strong, unique secret key. You can generate one with `openssl rand -hex 32`.
+*   `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`: Credentials for your local database.
+*   `CANVAS_CLIENT_ID`, `CANVAS_CLIENT_SECRET`: Your Canvas Developer Key credentials.
+*   `CANVAS_BASE_URL`: The base URL of your Canvas instance (e.g., `https://canvas.uit.no`).
 
-      ```env
-      # .env (Example - Replace with your actual values)
-      PROJECT_NAME="Rag@UiT"
+**3. Start the application:**
 
-      # PostgreSQL Settings
-      POSTGRES_SERVER=db
-      POSTGRES_USER=myuser         # Choose a username
-      POSTGRES_PASSWORD=mypassword # Choose a strong password
-      POSTGRES_DB=rag_uit_dev      # Choose a database name
+```bash
+docker compose watch
+```
 
-      # Backend Settings
-      SECRET_KEY=your_very_strong_and_unique_secret_key # Generate with: openssl rand -hex 32
-      FRONTEND_HOST=http://localhost:5173
-      ENVIRONMENT=local # local, staging, or production
+This command builds the Docker images and starts all services with hot-reloading enabled for the frontend and backend.
 
-      # Canvas API Credentials (Register your app in Canvas Developer Keys)
-      CANVAS_CLIENT_ID=your_canvas_client_id
-      CANVAS_CLIENT_SECRET=your_canvas_client_secret
-      CANVAS_REDIRECT_URI=http://localhost:8000/api/v1/auth/canvas/callback # Adjust if your backend runs elsewhere
-      CANVAS_BASE_URL=https://your-canvas-instance.instructure.com # e.g., https://canvas.uit.no
+**4. Access the services:**
 
-      # Default Admin User (created by prestart script)
-      FIRST_SUPERUSER=admin@example.com
-      FIRST_SUPERUSER_PASSWORD=your_admin_password # Choose a strong password
+Once the stack is running, you can access the different parts of the application:
 
-      # Domain for Traefik (optional for basic local dev, needed for domain-based routing)
-      # If you want to test with subdomains like api.localhost.tiangolo.com:
-      # DOMAIN=localhost.tiangolo.com
-      # STACK_NAME=raguit # Used for Traefik labels, can be any string
+-   **Frontend**: [http://localhost:5173](http://localhost:5173)
+-   **Backend API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
+-   **Traefik Dashboard**: [http://localhost:8090](http://localhost:8090)
+-   **Grafana Dashboard**: [http://localhost:3000](http://localhost:3000)
 
-      # SMTP Settings (Optional, for email features like password recovery)
-      # SMTP_HOST=
-      # SMTP_PORT=
-      # SMTP_USER=
-      # SMTP_PASSWORD=
-      # EMAILS_FROM_EMAIL=
-      ```
+## Development Workflow
 
-    - **Important:** Replace placeholder values with your actual configuration, especially `SECRET_KEY`, database credentials, and Canvas API details.
-    - Refer to `backend/app/core/config.py` for a comprehensive list of backend settings.
+While the entire stack runs in Docker, development is typically focused on either the backend or the frontend. For detailed instructions on setting up a local development environment, running linters, and other service-specific tasks, please refer to the README files in their respective directories:
 
-3.  **Start the application stack:**
+-   **Backend Development**: [`backend/README.md`](backend/README.md)
+-   **Frontend Development**: [`frontend/README.md`](frontend/README.md)
 
-    ```bash
-    docker compose watch
-    ```
+### Generating the Frontend API Client
 
-    This command builds the Docker images (if not already built) and starts all services. The `watch` command enables live reloading for some services during development.
+The frontend uses a generated TypeScript client to communicate with the backend API. After making changes to the backend API, you should regenerate this client by running the script from the project root:
 
-4.  **Access the application:**
-
-    - **Frontend:** [http://localhost:5173](http://localhost:5173)
-    - **Backend API:** [http://localhost:8000](http://localhost:8000)
-    - **API Documentation (Swagger UI):** [http://localhost:8000/docs](http://localhost:8000/docs)
-    - **Adminer (Database Admin):** [http://localhost:8080](http://localhost:8080)
-    - **Traefik Dashboard:** [http://localhost:8090](http://localhost:8090) (If Traefik is part of the default compose setup, or if `DOMAIN` is set)
-
-    _Note: The first time you start, it might take a few minutes for the database to initialize and migrations to run._
-
-## Development
-
-For more detailed information on:
-
-- Setting up individual backend or frontend development environments (without Docker for those specific parts).
-- Running linters, formatters, and pre-commit hooks.
-- Generating the API client.
-
-Please refer to the [Development Documentation (`docs/development.md`)](docs/development.md).
-
-- Backend specific details: [`backend/README.md`](backend/README.md)
-- Frontend specific details: [`frontend/README.md`](frontend/README.md)
+```bash
+./scripts/generate-client.sh
+```
 
 ## Testing
 
-- **Backend tests (Pytest):**
-  ```bash
-  # From the project root
-  docker compose exec backend bash scripts/tests-start.sh
-  # Or, to run tests with the local Python environment (see backend/README.md):
-  # cd backend
-  # pytest
-  ```
-- **Frontend End-to-End tests (Playwright):**
-  Ensure the Docker stack is running (`docker compose up -d --wait backend`).
-  ```bash
-  # From the project root
-  cd frontend
-  npx playwright test
-  ```
-  Refer to `frontend/README.md` for more on Playwright testing.
+The project includes a comprehensive test suite for both the backend and frontend.
+
+-   **Backend (Pytest)**:
+    ```bash
+    # Run tests against the running services
+    docker compose exec backend bash scripts/tests-start.sh
+    ```
+-   **Frontend (Playwright E2E)**:
+    ```bash
+    # Ensure the stack is running, then run from the frontend directory
+    cd frontend
+    npx playwright test
+    ```
+
+For more detailed testing instructions, see the service-specific READMEs.
+
+## CI/CD
+
+This project uses **GitHub Actions** for Continuous Integration and Continuous Deployment. Workflows are defined in the `.github/workflows` directory and include jobs for:
+-   Linting and formatting checks
+-   Running backend and frontend tests
+-   Building and pushing Docker images
 
 ## License
 
-This project is licensed under the [MIT License]
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
