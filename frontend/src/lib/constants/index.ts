@@ -213,7 +213,7 @@ export const UI_TEXT = {
     [FAILURE_REASON.CANVAS_EXPORT_ERROR]: {
       TITLE: "Export to Canvas Failed",
       MESSAGE:
-        "There was an error exporting your quiz to Canvas. Your questions are shown below and you can try exporting again.",
+        "There was an error exporting your quiz to Canvas. Review any questions that may be failing and try exporting again.",
     },
     [FAILURE_REASON.CONTENT_EXTRACTION_ERROR]: {
       TITLE: "Content Extraction Failed",

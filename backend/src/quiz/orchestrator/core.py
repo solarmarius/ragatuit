@@ -286,4 +286,4 @@ def timeout_operation(
 ContentExtractorFunc = Callable[[str, int, list[int]], Any]
 ContentSummaryFunc = Callable[[dict[str, list[dict[str, str]]]], dict[str, Any]]
 QuizCreatorFunc = Callable[[str, int, str, int], Any]
-QuestionExporterFunc = Callable[[str, int, str, list[dict[str, Any]]], Any]
+QuestionExporterFunc = Callable[[str, int, str, list[dict[str, Any]], Any], Any]

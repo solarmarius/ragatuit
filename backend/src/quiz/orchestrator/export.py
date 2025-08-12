@@ -8,6 +8,8 @@ approach and automatic rollback on failures.
 from typing import Any
 from uuid import UUID
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.config import get_logger
 from src.database import execute_in_transaction
 
@@ -24,6 +26,7 @@ async def _execute_export_workflow(
     quiz_creator: QuizCreatorFunc,
     question_exporter: QuestionExporterFunc,
     export_data: dict[str, Any],
+    session: AsyncSession,
 ) -> dict[str, Any]:
     """
     Execute the Canvas export workflow with all-or-nothing approach.
@@ -65,6 +68,7 @@ async def _execute_export_workflow(
         export_data["course_id"],
         canvas_quiz["id"],
         export_data["questions"],
+        session,
     )
 
     # Analyze export results - ALL questions must succeed
@@ -190,10 +194,19 @@ async def orchestrate_quiz_export_to_canvas(
         }
 
     # === Canvas Operations (outside transaction) ===
+    # Create session for question unapproval during Canvas operations
+    from src.database import get_async_session
+
     try:
-        workflow_result = await _execute_export_workflow(
-            quiz_id, canvas_token, quiz_creator, question_exporter, export_data
-        )
+        async with get_async_session() as session:
+            workflow_result = await _execute_export_workflow(
+                quiz_id,
+                canvas_token,
+                quiz_creator,
+                question_exporter,
+                export_data,
+                session,
+            )
         canvas_quiz_id = workflow_result["canvas_quiz_id"]
         exported_items = workflow_result["exported_items"]
         export_success = workflow_result["success"]

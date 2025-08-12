@@ -589,13 +589,17 @@ async def test_database_transaction_rollback_integration(session: Session, caplo
         ],
     }
 
-    export_result = await _execute_export_workflow(
-        quiz.id,
-        "transaction_token",
-        mock_quiz_creator,
-        mock_question_exporter,
-        export_data,
-    )
+    from src.database import get_async_session
+
+    async with get_async_session() as async_session:
+        export_result = await _execute_export_workflow(
+            quiz.id,
+            "transaction_token",
+            mock_quiz_creator,
+            mock_question_exporter,
+            export_data,
+            async_session,
+        )
 
     # === Assertions ===
     # Export should fail completely
@@ -743,6 +747,7 @@ async def test_content_format_validation_integration(session: Session, caplog):
 @pytest.mark.asyncio
 async def test_quiz_lifecycle_state_transitions(session: Session, caplog):
     """Test complete quiz lifecycle with proper state transitions."""
+    from src.database import get_async_session
     from src.question.types import QuestionDifficulty, QuestionType
     from src.quiz.orchestrator.content_extraction import (
         _execute_content_extraction_workflow,
@@ -888,13 +893,15 @@ async def test_quiz_lifecycle_state_transitions(session: Session, caplog):
         ],
     }
 
-    export_result = await _execute_export_workflow(
-        quiz.id,
-        "lifecycle_token",
-        mock_quiz_creator,
-        mock_question_exporter,
-        export_data,
-    )
+    async with get_async_session() as lifecycle_session:
+        export_result = await _execute_export_workflow(
+            quiz.id,
+            "lifecycle_token",
+            mock_quiz_creator,
+            mock_question_exporter,
+            export_data,
+            lifecycle_session,
+        )
 
     # === Lifecycle Assertions ===
     # Each phase should complete successfully

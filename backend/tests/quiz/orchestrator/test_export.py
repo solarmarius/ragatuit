@@ -114,12 +114,14 @@ async def test_orchestrate_export_canvas_success(caplog):
     mock_quiz_creator.assert_called_once_with(
         canvas_token, course_data["id"], quiz_config["title"], 3
     )
-    mock_question_exporter.assert_called_once_with(
-        canvas_token,
-        course_data["id"],
-        DEFAULT_CANVAS_QUIZ_RESPONSE["id"],
-        mock_question_data,
-    )
+    # Check that the session parameter was passed (we can't easily check exact session object)
+    mock_question_exporter.assert_called_once()
+    call_args = mock_question_exporter.call_args
+    assert call_args[0][0] == canvas_token
+    assert call_args[0][1] == course_data["id"]
+    assert call_args[0][2] == DEFAULT_CANVAS_QUIZ_RESPONSE["id"]
+    assert call_args[0][3] == mock_question_data
+    assert call_args[0][4] is not None  # Session should be passed
 
     # Verify logging
     assert "quiz_export_orchestration_started" in caplog.text
@@ -252,9 +254,14 @@ async def test_orchestrate_export_canvas_api_integration(caplog):
     mock_quiz_creator.assert_called_once_with(
         canvas_token, course_id, quiz_config["title"], 2
     )
-    mock_question_exporter.assert_called_once_with(
-        canvas_token, course_id, DEFAULT_CANVAS_QUIZ_RESPONSE["id"], mock_question_data
-    )
+    # Check that the session parameter was passed for second test
+    mock_question_exporter.assert_called_once()
+    call_args = mock_question_exporter.call_args
+    assert call_args[0][0] == canvas_token
+    assert call_args[0][1] == course_id
+    assert call_args[0][2] == DEFAULT_CANVAS_QUIZ_RESPONSE["id"]
+    assert call_args[0][3] == mock_question_data
+    assert call_args[0][4] is not None  # Session should be passed
 
     assert result["canvas_quiz_id"] == DEFAULT_CANVAS_QUIZ_RESPONSE["id"]
     assert result["exported_questions"] == 2
@@ -361,12 +368,13 @@ async def test_orchestrate_export_question_format_conversion(caplog):
     assert result["exported_questions"] == 3
 
     # Verify all question types were processed
-    mock_question_exporter.assert_called_once_with(
-        canvas_token,
-        course_data["id"],
-        DEFAULT_CANVAS_QUIZ_RESPONSE["id"],
-        mock_question_data,
-    )
+    mock_question_exporter.assert_called_once()
+    call_args = mock_question_exporter.call_args
+    assert call_args[0][0] == canvas_token
+    assert call_args[0][1] == course_data["id"]
+    assert call_args[0][2] == DEFAULT_CANVAS_QUIZ_RESPONSE["id"]
+    assert call_args[0][3] == mock_question_data
+    assert call_args[0][4] is not None  # Session should be passed
 
     # Verify format conversion logging
     assert "canvas_export_results_analyzed" in caplog.text

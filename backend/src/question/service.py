@@ -580,3 +580,49 @@ def calculate_total_points_for_questions(question_data: list[dict[str, Any]]) ->
     )
 
     return total_points
+
+
+async def unapprove_question(session: AsyncSession, question_id: UUID) -> bool:
+    """
+    Revert approval status for a single question by its ID.
+
+    This function is used when a question fails during Canvas export with a 502 error,
+    indicating an issue with the question content that requires user review.
+
+    Args:
+        session: Database session
+        question_id: Question ID to unapprove
+
+    Returns:
+        True if question was successfully unapproved, False if not found or already unapproved
+    """
+    logger.debug("question_unapproval_started", question_id=str(question_id))
+
+    # Get the question
+    question = await get_question_by_id(session, question_id)
+    if not question:
+        logger.warning(
+            "question_not_found_for_unapproval", question_id=str(question_id)
+        )
+        return False
+
+    # Check if already unapproved
+    if not question.is_approved:
+        logger.debug("question_already_unapproved", question_id=str(question_id))
+        return False
+
+    # Revert approval status
+    question.is_approved = False
+    question.approved_at = None
+    question.updated_at = datetime.now(timezone.utc)
+
+    session.add(question)
+    await session.commit()
+    await session.refresh(question)
+
+    logger.info(
+        "question_unapproved_successfully",
+        question_id=str(question_id),
+        quiz_id=str(question.quiz_id),
+    )
+    return True
