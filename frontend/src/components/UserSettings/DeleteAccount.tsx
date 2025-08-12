@@ -1,6 +1,6 @@
-import { Heading, Text, VStack } from "@chakra-ui/react";
+import { Heading, Text, VStack } from "@chakra-ui/react"
 
-import DeleteConfirmation from "./DeleteConfirmation";
+import DeleteConfirmation from "./DeleteConfirmation"
 
 const DeleteAccount = () => {
   return (
@@ -16,6 +16,6 @@ const DeleteAccount = () => {
       </Text>
       <DeleteConfirmation />
     </VStack>
-  );
-};
-export default DeleteAccount;
+  )
+}
+export default DeleteAccount

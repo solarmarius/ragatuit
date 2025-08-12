@@ -1,9 +1,9 @@
 import type { QuestionResponse } from "@/client"
+import { ErrorState } from "@/components/Common"
 import { extractQuestionData } from "@/types/questionTypes"
 import { Box, HStack, Text, VStack } from "@chakra-ui/react"
 import { memo } from "react"
 import { ExplanationBox } from "../shared/ExplanationBox"
-import { ErrorDisplay } from "./ErrorDisplay"
 
 interface TrueFalseDisplayProps {
   question: QuestionResponse
@@ -75,6 +75,13 @@ export const TrueFalseDisplay = memo(function TrueFalseDisplay({
       </VStack>
     )
   } catch (error) {
-    return <ErrorDisplay error="Error loading true/false question data" />
+    return (
+      <ErrorState
+        title="Display Error"
+        message="Error loading true/false question data"
+        variant="inline"
+        showRetry={false}
+      />
+    )
   }
 })

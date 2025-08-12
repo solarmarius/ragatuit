@@ -1,5 +1,5 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
-import { Link } from "@tanstack/react-router";
+import { Box, Stack, Text } from "@chakra-ui/react"
+import { Link } from "@tanstack/react-router"
 
 export const PrivacyPolicyStep = () => {
   return (
@@ -29,5 +29,5 @@ export const PrivacyPolicyStep = () => {
         </Text>
       </Box>
     </Stack>
-  );
-};
+  )
+}

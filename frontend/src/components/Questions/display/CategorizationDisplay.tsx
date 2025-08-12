@@ -1,9 +1,9 @@
 import type { QuestionResponse } from "@/client"
+import { ErrorState } from "@/components/Common"
 import { extractQuestionData } from "@/types/questionTypes"
 import { Badge, Box, Card, SimpleGrid, Text, VStack } from "@chakra-ui/react"
 import { memo } from "react"
 import { ExplanationBox } from "../shared/ExplanationBox"
-import { ErrorDisplay } from "./ErrorDisplay"
 
 interface CategorizationDisplayProps {
   question: QuestionResponse
@@ -107,7 +107,14 @@ function CategorizationDisplayComponent({
     )
   } catch (error) {
     console.error("Error rendering categorization question:", error)
-    return <ErrorDisplay error="Error loading categorization question data" />
+    return (
+      <ErrorState
+        title="Display Error"
+        message="Error loading categorization question data"
+        variant="inline"
+        showRetry={false}
+      />
+    )
   }
 }
 

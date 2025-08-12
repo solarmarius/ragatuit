@@ -13,12 +13,7 @@ export const API_ROUTES = {
   QUIZ: {
     USER_QUIZZES: "/quiz/user",
   },
-} as const;
-
-export const QUERY_KEYS = {
-  CURRENT_USER: ["currentUser"],
-  USER_QUIZZES: ["user-quizzes"],
-} as const;
+} as const
 
 // =============================================================================
 // Application Constants
@@ -27,7 +22,7 @@ export const QUERY_KEYS = {
 export const STORAGE_KEYS = {
   ACCESS_TOKEN: "access_token",
   ONBOARDING_COMPLETED: "onboarding_completed",
-} as const;
+} as const
 
 export const QUESTION_TYPES = {
   MULTIPLE_CHOICE: "multiple_choice",
@@ -35,7 +30,7 @@ export const QUESTION_TYPES = {
   MATCHING: "matching",
   CATEGORIZATION: "categorization",
   TRUE_FALSE: "true_false",
-} as const;
+} as const
 
 export const QUESTION_TYPE_LABELS = {
   multiple_choice: "Multiple Choice",
@@ -43,49 +38,49 @@ export const QUESTION_TYPE_LABELS = {
   matching: "Matching",
   categorization: "Categorization",
   true_false: "True/False",
-} as const;
+} as const
 
 export const QUESTION_DIFFICULTIES = {
   EASY: "easy",
   MEDIUM: "medium",
   HARD: "hard",
-} as const;
+} as const
 
 export const QUESTION_DIFFICULTY_LABELS = {
   easy: "Easy",
   medium: "Medium",
   hard: "Hard",
-} as const;
+} as const
 
 export const QUESTION_DIFFICULTY_DESCRIPTIONS = {
   easy: "Basic recall and simple comprehension",
   medium: "Application and moderate problem-solving",
   hard: "Complex analysis and critical thinking",
-} as const;
+} as const
 
 export const QUIZ_LANGUAGES = {
   ENGLISH: "en",
   NORWEGIAN: "no",
-} as const;
+} as const
 
 export const QUIZ_LANGUAGE_LABELS = {
   en: "English",
   no: "Norwegian",
-} as const;
+} as const
 
 export const QUIZ_TONES = {
   ACADEMIC: "academic",
   CASUAL: "casual",
   ENCOURAGING: "encouraging",
   PROFESSIONAL: "professional",
-} as const;
+} as const
 
 export const QUIZ_TONE_LABELS = {
   academic: "Formal/Academic",
   casual: "Casual/Conversational",
   encouraging: "Friendly/Encouraging",
   professional: "Professional/Business",
-} as const;
+} as const
 
 export const QUIZ_STATUS = {
   CREATED: "created",
@@ -96,7 +91,7 @@ export const QUIZ_STATUS = {
   EXPORTING_TO_CANVAS: "exporting_to_canvas",
   PUBLISHED: "published",
   FAILED: "failed",
-} as const;
+} as const
 
 export const FAILURE_REASON = {
   CONTENT_EXTRACTION_ERROR: "content_extraction_error",
@@ -106,7 +101,7 @@ export const FAILURE_REASON = {
   CANVAS_EXPORT_ERROR: "canvas_export_error",
   NETWORK_ERROR: "network_error",
   VALIDATION_ERROR: "validation_error",
-} as const;
+} as const
 
 // =============================================================================
 // UI Constants
@@ -158,7 +153,7 @@ export const UI_SIZES = {
   CONTAINER: {
     MAX_WIDTH: "6xl",
   },
-} as const;
+} as const
 
 export const UI_COLORS = {
   STATUS: {
@@ -185,7 +180,7 @@ export const UI_COLORS = {
     GREEN: "green.50",
     RED: "red.50",
   },
-} as const;
+} as const
 
 export const UI_TEXT = {
   EMPTY_STATES: {
@@ -251,7 +246,7 @@ export const UI_TEXT = {
         "An error occurred while processing your quiz. Please try again or contact support if the problem persists.",
     },
   },
-} as const;
+} as const
 
 // =============================================================================
 // Validation Constants
@@ -269,7 +264,7 @@ export const VALIDATION = {
     RETRY_ATTEMPTS: 3,
     RETRY_DELAY: 1000, // 1 second
   },
-} as const;
+} as const
 
 // =============================================================================
 // Question Batch Validation Constants
@@ -279,7 +274,7 @@ export const VALIDATION_RULES = {
   MAX_BATCHES_PER_MODULE: 4,
   MIN_QUESTIONS_PER_BATCH: 1,
   MAX_QUESTIONS_PER_BATCH: 20,
-} as const;
+} as const
 
 export const VALIDATION_MESSAGES = {
   MAX_BATCHES: "Maximum 4 question batches per module",
@@ -288,13 +283,13 @@ export const VALIDATION_MESSAGES = {
     "Cannot have duplicate question type and difficulty combinations",
   INVALID_COUNT: "Question count must be between 1 and 20",
   NO_BATCHES: "Each module must have at least one question batch",
-} as const;
+} as const
 
 export const QUESTION_BATCH_DEFAULTS = {
   DEFAULT_QUESTION_TYPE: QUESTION_TYPES.MULTIPLE_CHOICE,
   DEFAULT_QUESTION_COUNT: 10,
   DEFAULT_DIFFICULTY: QUESTION_DIFFICULTIES.MEDIUM,
-} as const;
+} as const
 
 // =============================================================================
 // Feature Flags
@@ -304,4 +299,4 @@ export const FEATURES = {
   ONBOARDING_ENABLED: true,
   ANALYTICS_ENABLED: false,
   DEV_TOOLS_ENABLED: process.env.NODE_ENV === "development",
-} as const;
+} as const

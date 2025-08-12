@@ -24,7 +24,8 @@ export interface StatusLightProps {
   size?: "sm" | "md" | "lg"
 }
 
-export interface LoadingSkeletonProps extends Omit<SkeletonProps, 'height' | 'width'> {
+export interface LoadingSkeletonProps
+  extends Omit<SkeletonProps, "height" | "width"> {
   height?: string
   width?: string
   lines?: number

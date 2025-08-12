@@ -10,8 +10,8 @@ import {
   UsersService,
 } from "@/client"
 import { FormField, FormGroup } from "@/components/forms"
-import { useCustomToast, useErrorHandler } from "@/hooks/common"
 import { useAuth } from "@/hooks/auth"
+import { useCustomToast, useErrorHandler } from "@/hooks/common"
 
 const UserInformation = () => {
   const queryClient = useQueryClient()

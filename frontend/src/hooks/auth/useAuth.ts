@@ -1,36 +1,36 @@
-import { AuthService, type UserPublic, UsersService } from "@/client";
-import { queryKeys } from "@/lib/api";
-import { clearAuthToken, isAuthenticated } from "@/lib/api/client";
-import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { AuthService, type UserPublic, UsersService } from "@/client"
+import { clearAuthToken, isAuthenticated } from "@/lib/api/client"
+import { queryKeys } from "@/lib/queryConfig"
+import { useQuery } from "@tanstack/react-query"
+import { useNavigate } from "@tanstack/react-router"
 
 export function useAuth() {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   const {
     data: user,
     isLoading,
     error,
   } = useQuery<UserPublic | null, Error>({
-    queryKey: queryKeys.auth.currentUser(),
+    queryKey: queryKeys.user(),
     queryFn: UsersService.readUserMe,
     enabled: isAuthenticated(),
-  });
+  })
 
   const initiateCanvasLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL}/auth/login/canvas`;
-  };
+    window.location.href = `${import.meta.env.VITE_API_URL}/auth/login/canvas`
+  }
 
   const logout = async () => {
     try {
-      await AuthService.logoutCanvas();
+      await AuthService.logoutCanvas()
     } catch (error) {
-      console.error("Logout error:", error);
+      console.error("Logout error:", error)
     } finally {
-      clearAuthToken();
-      navigate({ to: "/login" });
+      clearAuthToken()
+      navigate({ to: "/login" })
     }
-  };
+  }
 
   return {
     user,
@@ -39,8 +39,8 @@ export function useAuth() {
     isAuthenticated: isAuthenticated(),
     initiateCanvasLogin,
     logout,
-  };
+  }
 }
 
 // Export alias for backward compatibility
-export const isLoggedIn = isAuthenticated;
+export const isLoggedIn = isAuthenticated

@@ -1,4 +1,4 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
+import { Box, Stack, Text } from "@chakra-ui/react"
 
 export const FeatureStep = () => {
   return (
@@ -27,5 +27,5 @@ export const FeatureStep = () => {
         </Text>
       </Box>
     </Stack>
-  );
-};
+  )
+}

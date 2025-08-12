@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 
-import { type ApiError } from "@/client"
+import type { ApiError } from "@/client"
 import {
   DialogActionTrigger,
   DialogBody,

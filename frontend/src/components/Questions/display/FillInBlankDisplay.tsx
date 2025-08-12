@@ -1,10 +1,10 @@
 import type { QuestionResponse } from "@/client"
+import { ErrorState } from "@/components/Common"
 import { extractQuestionData } from "@/types/questionTypes"
 import { Box, Text, VStack } from "@chakra-ui/react"
 import { memo } from "react"
 import { ExplanationBox } from "../shared/ExplanationBox"
 import { FillInBlankAnswersBox } from "../shared/FillInBlankAnswersBox"
-import { ErrorDisplay } from "./ErrorDisplay"
 
 interface FillInBlankDisplayProps {
   question: QuestionResponse
@@ -34,6 +34,13 @@ export const FillInBlankDisplay = memo(function FillInBlankDisplay({
       </VStack>
     )
   } catch (error) {
-    return <ErrorDisplay error="Error loading Fill in Blank question data" />
+    return (
+      <ErrorState
+        title="Display Error"
+        message="Error loading Fill in Blank question data"
+        variant="inline"
+        showRetry={false}
+      />
+    )
   }
 })

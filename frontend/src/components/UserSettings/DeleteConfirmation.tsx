@@ -1,6 +1,7 @@
 import { UsersService } from "@/client"
 import ConfirmationDialog from "@/components/ui/confirmation-dialog"
 import { useAuth } from "@/hooks/auth"
+import { queryKeys } from "@/lib/queryConfig"
 
 const DeleteConfirmation = () => {
   const { logout } = useAuth()
@@ -15,7 +16,7 @@ const DeleteConfirmation = () => {
       successMessage="Your account has been successfully deleted"
       mutationFn={() => UsersService.deleteUserMe()}
       onSuccess={logout}
-      invalidateQueries={[["currentUser"]]}
+      invalidateQueries={[[...queryKeys.user()]]}
     />
   )
 }
