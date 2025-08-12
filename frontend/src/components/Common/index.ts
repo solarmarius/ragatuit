@@ -7,7 +7,7 @@ export * from "./PageHeader"
 // Quiz display components
 export * from "./QuizTable"
 export * from "./QuizTableRow"
-export * from "./QuizListCard"
+export * from "./QuizCard"
 export * from "./QuizTableSkeleton"
 export * from "./QuestionTypeBreakdown"
 export * from "./ModuleQuestionSummary"

@@ -3,11 +3,10 @@ import { Link as RouterLink } from "@tanstack/react-router"
 import { memo, useMemo } from "react"
 
 import type { Quiz } from "@/client/types.gen"
-import { EmptyState } from "@/components/Common"
+import { EmptyState, QuizCard } from "@/components/Common"
 import { Button } from "@/components/ui/button"
 import { UI_SIZES, UI_TEXT } from "@/lib/constants"
 import { getQuizzesBeingGenerated } from "@/lib/utils"
-import { QuizGenerationCard } from "../QuizGenerationCard"
 import { QuizGenerationPanelSkeleton } from "../QuizGenerationPanelSkeleton"
 
 interface QuizGenerationPanelProps {
@@ -61,7 +60,7 @@ export const QuizGenerationPanel = memo(function QuizGenerationPanel({
             {generatingQuizzes
               .slice(0, UI_SIZES.PANEL.MAX_ITEMS)
               .map((quiz) => (
-                <QuizGenerationCard key={quiz.id} quiz={quiz} />
+                <QuizCard key={quiz.id} quiz={quiz} variant="processing" />
               ))}
 
             {generatingQuizzes.length > UI_SIZES.PANEL.MAX_ITEMS && (

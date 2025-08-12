@@ -3,7 +3,7 @@ import { Link as RouterLink } from "@tanstack/react-router"
 import { memo, useMemo } from "react"
 
 import type { Quiz } from "@/client/types.gen"
-import { EmptyState, LoadingSkeleton, QuizListCard } from "@/components/Common"
+import { EmptyState, LoadingSkeleton, QuizCard } from "@/components/Common"
 import { Button } from "@/components/ui/button"
 import { UI_SIZES, UI_TEXT } from "@/lib/constants"
 import { getQuizzesNeedingReview } from "@/lib/utils"
@@ -50,7 +50,7 @@ export const QuizReviewPanel = memo(function QuizReviewPanel({
         ) : (
           <VStack gap={4} align="stretch">
             {reviewQuizzes.slice(0, UI_SIZES.PANEL.MAX_ITEMS).map((quiz) => (
-              <QuizListCard
+              <QuizCard
                 key={quiz.id}
                 quiz={quiz}
                 actionButton={{

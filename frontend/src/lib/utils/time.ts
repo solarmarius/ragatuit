@@ -16,41 +16,6 @@ function isValidDate(date: Date): boolean {
   return !Number.isNaN(date.getTime())
 }
 
-/**
- * Format a date as a localized date string
- */
-export function formatDate(date: string | Date, locale = "en-GB"): string {
-  const dateObj = parseDate(date)
-
-  if (!isValidDate(dateObj)) {
-    return "Invalid date"
-  }
-
-  return dateObj.toLocaleDateString(locale, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  })
-}
-
-/**
- * Format a date as a localized date and time string
- */
-export function formatDateTime(date: string | Date, locale = "en-GB"): string {
-  const dateObj = parseDate(date)
-
-  if (!isValidDate(dateObj)) {
-    return "Invalid date"
-  }
-
-  return dateObj.toLocaleString(locale, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  })
-}
 
 /**
  * Format a timestamp as a relative time string (e.g., "2 hours ago")
