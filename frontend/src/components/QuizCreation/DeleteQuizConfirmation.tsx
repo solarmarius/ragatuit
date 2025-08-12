@@ -23,7 +23,7 @@ const DeleteQuizConfirmation = ({
       triggerButtonText="Delete"
       triggerButtonSize="sm"
       title="Delete Quiz"
-      message={`Are you sure you want to delete the quiz <strong>"${quizTitle}"</strong>?<br/><br/><span style="font-weight: 600; color: #E53E3E;">This action cannot be undone.</span>`}
+      message={`Are you sure you want to delete the quiz "${quizTitle}"? This action cannot be undone.`}
       confirmButtonText="Delete Quiz"
       successMessage="Quiz deleted successfully"
       mutationFn={() => QuizService.deleteQuizEndpoint({ quizId })}

@@ -11,7 +11,7 @@ const DeleteConfirmation = () => {
       triggerButtonText="Delete"
       triggerButtonProps={{ mt: 4 }}
       title="Confirmation Required"
-      message="All your account data will be <strong>permanently deleted.</strong> If you are sure, please click <strong>'Delete'</strong> to proceed. This action cannot be undone."
+      message="All your account data will be permanently deleted. If you are sure, please click 'Delete' to proceed. This action cannot be undone."
       confirmButtonText="Delete"
       successMessage="Your account has been successfully deleted"
       mutationFn={() => UsersService.deleteUserMe()}

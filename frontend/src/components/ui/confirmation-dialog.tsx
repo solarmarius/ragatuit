@@ -100,7 +100,7 @@ const ConfirmationDialog = ({
             <DialogTitle>{title}</DialogTitle>
           </DialogHeader>
           <DialogBody>
-            <Text mb={4} dangerouslySetInnerHTML={{ __html: message }} />
+            <Text mb={4}>{message}</Text>
           </DialogBody>
 
           <DialogFooter gap={2}>
