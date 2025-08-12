@@ -5,11 +5,8 @@ import { memo } from "react"
 import type { Quiz } from "@/client/types.gen"
 import { Button } from "@/components/ui/button"
 import { StatusLight } from "@/components/ui/status-light"
-import {
-  getQuizStatusText,
-  getSelectedModulesCount,
-} from "@/lib/utils"
 import { useFormattedDate } from "@/hooks"
+import { getQuizStatusText, getSelectedModulesCount } from "@/lib/utils"
 
 interface QuizTableRowProps {
   quiz: Quiz
@@ -53,9 +50,7 @@ export const QuizTableRow = memo(function QuizTableRow({
         </HStack>
       </Table.Cell>
       <Table.Cell>
-        <Text fontSize="sm">
-          {formattedCreatedAt || "Unknown"}
-        </Text>
+        <Text fontSize="sm">{formattedCreatedAt || "Unknown"}</Text>
       </Table.Cell>
       <Table.Cell>
         <HStack gap={2}>

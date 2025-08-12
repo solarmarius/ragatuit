@@ -16,7 +16,6 @@ function isValidDate(date: Date): boolean {
   return !Number.isNaN(date.getTime())
 }
 
-
 /**
  * Format a timestamp as a relative time string (e.g., "2 hours ago")
  */
