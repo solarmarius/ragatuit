@@ -44,30 +44,36 @@ scrape_configs:
           service:
           version:
 
-      # For backend logs, parse structured logging data
+      # For backend logs, handle both HTTP access logs and JSON structured logs
       - match:
           selector: '{service="backend"}'
           stages:
-            # Extract log level
+            # Extract status codes from HTTP access logs (200, 404, etc.)
             - regex:
-                expression: '\[\033\[32m\033\[1m(?P<level>\w+)\s+\033\[0m\]'
+                expression: 'HTTP/[\d.]+"\s+(?P<status_code>\d{3})'
                 source: log
 
-            # Extract status code
-            - regex:
-                expression: 'status_code\033\[0m=\033\[35m(?P<status_code>\d+)\033\[0m'
+            # Extract status codes from JSON logs (502, etc.)
+            - json:
+                expressions:
+                  json_status_code: status_code
+                  level: level
+                  method: method
+                  event: event
+                  logger: logger
                 source: log
 
-            # Extract duration in milliseconds
-            - regex:
-                expression: 'duration_ms\033\[0m=\033\[35m(?P<duration_ms>[\d.]+)\033\[0m'
-                source: log
+            # Merge both status code extractions into one field
+            - template:
+                source: status_code
+                template: '{{ if .json_status_code }}{{ .json_status_code }}{{ else }}{{ .status_code }}{{ end }}'
 
-            # Add extracted fields as labels
+            # Add labels
             - labels:
-                level:
                 status_code:
-                duration_ms:
+                level:
+                event:
+                logger:
 
       # Set the final log output
       - output:
