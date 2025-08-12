@@ -173,7 +173,6 @@ services:
   loki:
     image: grafana/loki:latest
     restart: unless-stopped
-    command: -config.file=/etc/loki/local-config.yaml
     volumes:
       - loki-data:/loki
     networks:

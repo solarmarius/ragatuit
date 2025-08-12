@@ -44,30 +44,40 @@ scrape_configs:
           service:
           version:
 
-      # For backend logs, parse structured logging data
+      # For backend logs, parse structured JSON logging data
       - match:
           selector: '{service="backend"}'
           stages:
-            # Extract log level
-            - regex:
-                expression: '\[\033\[32m\033\[1m(?P<level>\w+)\s+\033\[0m\]'
+            # Parse JSON log structure
+            - json:
+                expressions:
+                  level: level
+                  status_code: status_code
+                  method: method
+                  path: path
+                  user_id: user_id
+                  event: event
+                  logger: logger
+                  request_id: request_id
+                  duration_ms: duration_ms
+                  response_time: response_time
+                  error_type: error_type
+                  quiz_id: quiz_id
+                  course_id: course_id
+                  canvas_quiz_id: canvas_quiz_id
+                  position: position
+                  successful_exports: successful_exports
+                  failed_exports: failed_exports
                 source: log
 
-            # Extract status code
-            - regex:
-                expression: 'status_code\033\[0m=\033\[35m(?P<status_code>\d+)\033\[0m'
-                source: log
-
-            # Extract duration in milliseconds
-            - regex:
-                expression: 'duration_ms\033\[0m=\033\[35m(?P<duration_ms>[\d.]+)\033\[0m'
-                source: log
-
-            # Add extracted fields as labels
+            # Add extracted fields as labels (only add essential ones to avoid high cardinality)
             - labels:
                 level:
                 status_code:
-                duration_ms:
+                method:
+                event:
+                logger:
+                error_type:
 
       # Set the final log output
       - output:

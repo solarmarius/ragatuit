@@ -92,9 +92,10 @@
             "uid": "Loki"
           },
           "editorMode": "code",
-          "expr": "sum by (status_code) (rate({service=\"backend\"} |~ \"request_completed\" [$__interval]))",
+          "expr": "sum by (status_code) (rate({service=\"backend\"} |~ \"canvas_quiz_item_creation_failed|request_completed\" | json | status_code != \"\" [$__interval]))",
           "queryType": "",
-          "refId": "A"
+          "refId": "A",
+          "legendFormat": "{{status_code}}"
         }
       ],
       "title": "HTTP Status Codes",
@@ -184,13 +185,199 @@
             "uid": "Loki"
           },
           "editorMode": "code",
-          "expr": "avg(avg_over_time({service=\"backend\"} |~ \"request_completed\" | unwrap duration_ms [$__interval]))",
+          "expr": "avg(avg_over_time({service=\"backend\"} |~ \"request_completed\" | json | duration_ms != \"\" | unwrap duration_ms [$__interval]))",
           "queryType": "",
           "refId": "A",
-          "legendFormat": "Avg Response Time"
+          "legendFormat": "Avg Response Time (ms)"
         }
       ],
       "title": "Response Times",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "vis": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "id": 4,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "(sum(rate({service=\"backend\"} | json | status_code=~\"5..|4..\" [$__interval])) / sum(rate({service=\"backend\"} | json | status_code != \"\" [$__interval]))) * 100",
+          "queryType": "",
+          "refId": "A",
+          "legendFormat": "Error Rate (%)"
+        }
+      ],
+      "title": "Error Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "loki",
+        "uid": "Loki"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "vis": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "reqps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "loki",
+            "uid": "Loki"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate({service=\"backend\"} | json | status_code != \"\" [$__interval]))",
+          "queryType": "",
+          "refId": "A",
+          "legendFormat": "Requests/sec"
+        }
+      ],
+      "title": "Request Rate",
       "type": "timeseries"
     },
     {
@@ -202,7 +389,7 @@
         "h": 9,
         "w": 24,
         "x": 0,
-        "y": 9
+        "y": 18
       },
       "id": 3,
       "options": {
@@ -222,7 +409,7 @@
             "uid": "Loki"
           },
           "editorMode": "code",
-          "expr": "{service=\"backend\"} |~ \"request_completed|canvas_|user_\"",
+          "expr": "{service=\"backend\"} | json | level=~\"warning|error\" | line_format \"{{.timestamp}} [{{.level}}] {{.logger}}: {{.event}} - {{.message}}\"",
           "queryType": "",
           "refId": "A"
         }
