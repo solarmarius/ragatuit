@@ -1,7 +1,7 @@
 import { Button } from "@chakra-ui/react"
 import { SiCanvas } from "react-icons/si"
 
-import useCanvasAuth from "@/hooks/useCanvasAuth"
+import { useAuth } from "@/hooks/auth"
 
 interface CanvasLoginButtonProps {
   size?: "sm" | "md" | "lg"
@@ -14,7 +14,7 @@ const CanvasLoginButton = ({
   variant = "solid",
   isLoading = false,
 }: CanvasLoginButtonProps) => {
-  const { initiateCanvasLogin } = useCanvasAuth()
+  const { initiateCanvasLogin } = useAuth()
 
   return (
     <Button

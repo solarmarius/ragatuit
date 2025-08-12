@@ -10,7 +10,7 @@ import {
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 import CanvasLoginButton from "@/components/ui/canvas-button";
-import { isLoggedIn } from "@/hooks/useCanvasAuth";
+import { isLoggedIn } from "@/hooks/auth";
 import Illustration from "/assets/images/test-illustration.svg";
 
 export const Route = createFileRoute("/login")({

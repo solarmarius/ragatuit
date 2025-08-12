@@ -1,4 +1,5 @@
 import type { QuestionResponse } from "@/client"
+import type { SkeletonProps } from "@chakra-ui/react"
 
 // Base props for all question display components
 export interface BaseQuestionDisplayProps {
@@ -23,8 +24,9 @@ export interface StatusLightProps {
   size?: "sm" | "md" | "lg"
 }
 
-export interface LoadingSkeletonProps {
+export interface LoadingSkeletonProps extends Omit<SkeletonProps, 'height' | 'width'> {
   height?: string
   width?: string
   lines?: number
+  gap?: string | number
 }

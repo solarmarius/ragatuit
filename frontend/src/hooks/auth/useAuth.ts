@@ -41,3 +41,6 @@ export function useAuth() {
     logout,
   };
 }
+
+// Export alias for backward compatibility
+export const isLoggedIn = isAuthenticated;

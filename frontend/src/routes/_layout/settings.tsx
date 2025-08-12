@@ -4,7 +4,7 @@ import { useState } from "react"
 
 import DeleteAccount from "@/components/UserSettings/DeleteAccount"
 import UserInformation from "@/components/UserSettings/UserInformation"
-import useAuth from "@/hooks/useCanvasAuth"
+import { useAuth } from "@/hooks/auth"
 
 export const Route = createFileRoute("/_layout/settings")({
   component: UserSettings,
