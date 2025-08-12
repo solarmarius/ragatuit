@@ -92,7 +92,7 @@
             "uid": "Loki"
           },
           "editorMode": "code",
-          "expr": "sum by (status_code) (rate({service=\"backend\"} |~ \"canvas_quiz_item_creation_failed|request_completed\" | json | status_code != \"\" [$__interval]))",
+          "expr": "sum by (status_code) (rate({service=\"backend\"} [$__interval]))",
           "queryType": "",
           "refId": "A",
           "legendFormat": "{{status_code}}"
@@ -185,13 +185,13 @@
             "uid": "Loki"
           },
           "editorMode": "code",
-          "expr": "avg(avg_over_time({service=\"backend\"} |~ \"request_completed\" | json | duration_ms != \"\" | unwrap duration_ms [$__interval]))",
+          "expr": "count(rate({service=\"backend\"} [$__interval]))",
           "queryType": "",
           "refId": "A",
-          "legendFormat": "Avg Response Time (ms)"
+          "legendFormat": "Request Count"
         }
       ],
-      "title": "Response Times",
+      "title": "Request Count",
       "type": "timeseries"
     },
     {
@@ -278,7 +278,7 @@
             "uid": "Loki"
           },
           "editorMode": "code",
-          "expr": "(sum(rate({service=\"backend\"} | json | status_code=~\"5..|4..\" [$__interval])) / sum(rate({service=\"backend\"} | json | status_code != \"\" [$__interval]))) * 100",
+          "expr": "sum(rate({service=\"backend\"} |~ \"error|failed|502|500|400|404\" [$__interval]))",
           "queryType": "",
           "refId": "A",
           "legendFormat": "Error Rate (%)"
@@ -371,7 +371,7 @@
             "uid": "Loki"
           },
           "editorMode": "code",
-          "expr": "sum(rate({service=\"backend\"} | json | status_code != \"\" [$__interval]))",
+          "expr": "sum(rate({service=\"backend\"} [$__interval]))",
           "queryType": "",
           "refId": "A",
           "legendFormat": "Requests/sec"
@@ -409,7 +409,7 @@
             "uid": "Loki"
           },
           "editorMode": "code",
-          "expr": "{service=\"backend\"} | json | level=~\"warning|error\" | line_format \"{{.timestamp}} [{{.level}}] {{.logger}}: {{.event}} - {{.message}}\"",
+          "expr": "{service=\"backend\"} |~ \"warning|error\"",
           "queryType": "",
           "refId": "A"
         }

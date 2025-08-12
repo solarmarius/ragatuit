@@ -44,40 +44,36 @@ scrape_configs:
           service:
           version:
 
-      # For backend logs, parse structured JSON logging data
+      # For backend logs, handle both HTTP access logs and JSON structured logs
       - match:
           selector: '{service="backend"}'
           stages:
-            # Parse JSON log structure
-            - json:
-                expressions:
-                  level: level
-                  status_code: status_code
-                  method: method
-                  path: path
-                  user_id: user_id
-                  event: event
-                  logger: logger
-                  request_id: request_id
-                  duration_ms: duration_ms
-                  response_time: response_time
-                  error_type: error_type
-                  quiz_id: quiz_id
-                  course_id: course_id
-                  canvas_quiz_id: canvas_quiz_id
-                  position: position
-                  successful_exports: successful_exports
-                  failed_exports: failed_exports
+            # Extract status codes from HTTP access logs (200, 404, etc.)
+            - regex:
+                expression: 'HTTP/[\d.]+"\s+(?P<status_code>\d{3})'
                 source: log
 
-            # Add extracted fields as labels (only add essential ones to avoid high cardinality)
+            # Extract status codes from JSON logs (502, etc.)
+            - json:
+                expressions:
+                  json_status_code: status_code
+                  level: level
+                  method: method
+                  event: event
+                  logger: logger
+                source: log
+
+            # Merge both status code extractions into one field
+            - template:
+                source: status_code
+                template: '{{ if .json_status_code }}{{ .json_status_code }}{{ else }}{{ .status_code }}{{ end }}'
+
+            # Add labels
             - labels:
-                level:
                 status_code:
-                method:
+                level:
                 event:
                 logger:
-                error_type:
 
       # Set the final log output
       - output:
